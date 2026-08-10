@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import ethiopianLogo from "@/assets/ethiopian-airlines-logo.svg";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
-import { MouseEvent, ReactNode } from "react";
+import { MouseEvent, ReactNode, useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";
 
 export function Card3DWrapper({ children, className }: { children: ReactNode; className?: string }) {
@@ -96,14 +96,134 @@ const MastercardLogo = ({ isLight = false }: { isLight?: boolean }) => (
   </div>
 );
 
+// Hologram-style Mastercard detail for the card back
+const HologramPatch = () => (
+  <div className="relative w-[clamp(2rem,10cqw,2.75rem)] h-[clamp(1.4rem,7cqw,1.9rem)] rounded-[4px] overflow-hidden border border-white/20 shrink-0"
+    style={{
+      background: "conic-gradient(from 210deg at 50% 50%, #f6d365, #96e6a1, #84fab0, #a1c4fd, #c2e9fb, #fbc2eb, #f6d365)",
+      opacity: 0.85,
+    }}
+  >
+    <div className="absolute inset-0 mix-blend-overlay" style={{ backgroundImage: noisePattern }} />
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="flex items-center scale-[0.55]">
+        <div className="w-4 h-4 rounded-full bg-[#EB001B]/70 -mr-1.5" />
+        <div className="w-4 h-4 rounded-full bg-[#F79E1B]/70" />
+      </div>
+    </div>
+    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent" />
+  </div>
+);
+
+interface BackTheme {
+  bgClass: string;
+  shadowClass: string;
+  stripeClass: string;
+  textClass: string;
+  subTextClass: string;
+  issuerLine: string;
+}
+
+const backThemes: Record<CreditCardProps["variant"], BackTheme> = {
+  charge: {
+    bgClass: "bg-gradient-to-br from-[#0C1D13] via-[#1B3B2B] to-[#14301F]",
+    shadowClass: "shadow-[0_20px_50px_-12px_rgba(27,59,43,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)]",
+    stripeClass: "bg-gradient-to-b from-[#0b0b0e] via-[#1c1c22] to-[#0b0b0e]",
+    textClass: "text-white/80",
+    subTextClass: "text-white/40",
+    issuerLine: "Samra Pay Charge · Issued by Samra Financial S.C., Addis Ababa",
+  },
+  airlines: {
+    bgClass: "bg-gradient-to-br from-[#b38b22] via-[#D4AF37] to-[#E6C27A]",
+    shadowClass: "shadow-[0_20px_50px_-12px_rgba(212,175,55,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]",
+    stripeClass: "bg-gradient-to-b from-[#141210] via-[#26221c] to-[#141210]",
+    textClass: "text-black/75",
+    subTextClass: "text-black/50",
+    issuerLine: "Samra Pay × Ethiopian Airlines · Issued by Samra Financial S.C.",
+  },
+  debit: {
+    bgClass: "bg-gradient-to-tr from-[#1A1A24] via-[#2D2D3F] to-[#1A1A24]",
+    shadowClass: "shadow-[0_20px_50px_-12px_rgba(45,45,63,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)]",
+    stripeClass: "bg-gradient-to-b from-[#0b0b0e] via-[#1c1c22] to-[#0b0b0e]",
+    textClass: "text-white/80",
+    subTextClass: "text-white/40",
+    issuerLine: "Samra Pay Debit · Issued by Samra Financial S.C., Addis Ababa",
+  },
+};
+
+function CardBack({ variant, last4 }: { variant: CreditCardProps["variant"]; last4: string }) {
+  const t = backThemes[variant];
+  const isGold = variant === "airlines";
+
+  return (
+    <div className={cn(
+      "@container absolute inset-0 rounded-[clamp(1rem,4cqw,1.25rem)] overflow-hidden flex flex-col border border-white/10",
+      t.bgClass,
+      t.shadowClass,
+    )}>
+      {/* Texture layers */}
+      <div className="absolute inset-0 mix-blend-overlay pointer-events-none" style={{ backgroundImage: noisePattern }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: axumPattern, backgroundSize: '60px' }} />
+
+      {/* Magnetic stripe */}
+      <div className={cn("relative z-10 h-[18%] mt-[9%] w-full", t.stripeClass)}>
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10" />
+        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-black/40" />
+      </div>
+
+      {/* Signature panel + CVV */}
+      <div className="relative z-10 px-[clamp(0.75rem,4cqw,1.5rem)] mt-[clamp(0.5rem,3.5cqw,1rem)]">
+        <div className="flex items-stretch gap-[clamp(0.375rem,2cqw,0.625rem)]">
+          <div className="flex-1 h-[clamp(1.5rem,9cqw,2.25rem)] rounded-[3px] overflow-hidden relative bg-[#f4f1e8]"
+            style={{
+              backgroundImage: "repeating-linear-gradient(0deg, transparent 0px, transparent 5px, rgba(0,0,0,0.06) 5px, rgba(0,0,0,0.06) 6px)",
+            }}
+          >
+            {/* AUTHORIZED SIGNATURE microtext */}
+            <div className="absolute top-[2px] left-[6px] text-[clamp(4px,1.4cqw,5px)] tracking-[0.2em] text-black/30 uppercase">Authorized Signature</div>
+            <div className="absolute inset-0 flex items-center pl-[clamp(0.5rem,3cqw,1rem)]">
+              <span className="font-serif italic text-black/70 text-[clamp(0.65rem,4cqw,1rem)] leading-none" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                Selam T.
+              </span>
+            </div>
+          </div>
+          <div className="w-[clamp(2.25rem,13cqw,3.25rem)] h-[clamp(1.5rem,9cqw,2.25rem)] rounded-[3px] bg-white/90 flex flex-col items-center justify-center gap-[1px] shrink-0">
+            <span className="text-[clamp(4px,1.4cqw,5px)] tracking-[0.15em] text-black/40 uppercase">CVV</span>
+            <span className="font-mono text-black/80 text-[clamp(0.6rem,3.2cqw,0.8rem)] leading-none tracking-widest">•••</span>
+          </div>
+        </div>
+        <div className={cn("mt-[clamp(2px,1cqw,4px)] font-mono text-[clamp(0.5rem,2.4cqw,0.65rem)] tracking-[0.2em]", t.subTextClass)}>
+          •••• {last4}
+        </div>
+      </div>
+
+      {/* Legal microcopy + hologram */}
+      <div className="relative z-10 mt-auto px-[clamp(0.75rem,4cqw,1.5rem)] pb-[clamp(0.625rem,3.5cqw,1.125rem)] flex items-end justify-between gap-[clamp(0.5rem,3cqw,1rem)]">
+        <div className="min-w-0">
+          <p className={cn("text-[clamp(4.5px,1.6cqw,6.5px)] leading-[1.5] max-w-full", t.subTextClass)}>
+            This card is the property of the issuer and must be returned upon request. Use is subject to the cardholder agreement. If found, please return to any Samra Pay branch. Not transferable.
+          </p>
+          <p className={cn("mt-[clamp(2px,1cqw,4px)] text-[clamp(5px,1.8cqw,7px)] tracking-wider uppercase font-medium", t.textClass)}>
+            {t.issuerLine}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-[clamp(2px,1cqw,4px)] shrink-0">
+          <HologramPatch />
+          <span className={cn("text-[clamp(4.5px,1.6cqw,6px)] tracking-widest uppercase", isGold ? "text-black/50" : "text-white/40")}>Mastercard</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242", expiry = "08/29", className }: CreditCardProps) {
-  
+  const [flipped, setFlipped] = useState(false);
+
   const CardBase = ({ children, bgClass, shadowClass }: { children: ReactNode, bgClass: string, shadowClass: string }) => (
     <div className={cn(
-      "@container relative w-full aspect-[1.586/1] rounded-[clamp(1rem,4cqw,1.25rem)] overflow-hidden p-[clamp(1rem,4cqw,1.5rem)] flex flex-col justify-between border border-white/10 transition-shadow duration-500",
+      "@container absolute inset-0 rounded-[clamp(1rem,4cqw,1.25rem)] overflow-hidden p-[clamp(1rem,4cqw,1.5rem)] flex flex-col justify-between border border-white/10 transition-shadow duration-500",
       bgClass,
       shadowClass,
-      className
     )}>
       {/* Texture layers */}
       <div className="absolute inset-0 mix-blend-overlay pointer-events-none" style={{ backgroundImage: noisePattern }} />
@@ -115,10 +235,12 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
 
   const embossedText = "drop-shadow-[1px_1px_0px_rgba(255,255,255,0.15)] drop-shadow-[-1px_-1px_0px_rgba(0,0,0,0.8)]";
 
+  let front: ReactNode;
+
   if (variant === "airlines") {
     const embossedTextGold = "drop-shadow-[1px_1px_0px_rgba(255,255,255,0.4)] drop-shadow-[-1px_-1px_0px_rgba(0,0,0,0.2)]";
 
-    return (
+    front = (
       <CardBase 
         bgClass="bg-gradient-to-br from-[#E6C27A] via-[#D4AF37] to-[#b38b22]"
         shadowClass="shadow-[0_20px_50px_-12px_rgba(212,175,55,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]"
@@ -156,10 +278,8 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
         </div>
       </CardBase>
     );
-  }
-
-  if (variant === "charge") {
-    return (
+  } else if (variant === "charge") {
+    front = (
       <CardBase 
         bgClass="bg-gradient-to-br from-[#14301F] via-[#1B3B2B] to-[#0C1D13]"
         shadowClass="shadow-[0_20px_50px_-12px_rgba(27,59,43,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)]"
@@ -197,41 +317,72 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
         </div>
       </CardBase>
     );
+  } else {
+    front = (
+      <CardBase 
+        bgClass="bg-gradient-to-tr from-[#1A1A24] via-[#2D2D3F] to-[#1A1A24]"
+        shadowClass="shadow-[0_20px_50px_-12px_rgba(45,45,63,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)]"
+      >
+        <div className="relative z-10 flex justify-between items-start">
+          <SamraLogo size="sm" showWordmark={true} />
+          <span className="text-white/40 text-[clamp(8px,2cqw,10px)] font-medium tracking-widest uppercase">Debit</span>
+        </div>
+        
+        <div className="relative z-10 space-y-[clamp(0.5rem,3cqw,1rem)] mt-auto">
+          <div className="flex justify-between items-end">
+            <EMVChip />
+            <div className="w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] opacity-80 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white/50">
+                <path d="M4 12a8 8 0 018-8m0 0a8 8 0 018 8m-8-8v16m-8-8a8 8 0 008 8m0 0a8 8 0 008-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div className={cn("font-mono text-white/90 whitespace-nowrap text-[clamp(0.85rem,5cqw,1.5rem)]", embossedText)} style={{ letterSpacing: 'clamp(0.1em, 0.5cqw, 0.25em)' }}>
+            •••• •••• •••• {last4}
+          </div>
+          <div className="flex justify-between items-end">
+            <div className="flex flex-col gap-[clamp(2px,1cqw,4px)]">
+              <div className="flex items-center gap-[clamp(4px,2cqw,8px)]">
+                <div className="text-[clamp(7px,2cqw,9px)] leading-[1.1] text-white/60 tracking-wider font-semibold">VALID<br/>THRU</div>
+                <div className={cn("font-mono text-white/90 tracking-widest text-[clamp(0.7rem,3cqw,0.875rem)]", embossedText)}>{expiry}</div>
+              </div>
+              <div className={cn("font-mono text-white/90 tracking-widest uppercase text-[clamp(0.7rem,3cqw,0.875rem)] overflow-hidden text-ellipsis max-w-[clamp(8rem,40cqw,14rem)]", embossedText)}>{cardholderName}</div>
+            </div>
+            <MastercardLogo />
+          </div>
+        </div>
+      </CardBase>
+    );
   }
 
   return (
-    <CardBase 
-      bgClass="bg-gradient-to-tr from-[#1A1A24] via-[#2D2D3F] to-[#1A1A24]"
-      shadowClass="shadow-[0_20px_50px_-12px_rgba(45,45,63,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)]"
+    <div
+      className={cn("relative w-full aspect-[1.586/1] perspective-[1500px] cursor-pointer select-none", className)}
+      onClick={() => setFlipped((f) => !f)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setFlipped((f) => !f);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-pressed={flipped}
+      aria-label={flipped ? "Show card front" : "Show card back"}
     >
-      <div className="relative z-10 flex justify-between items-start">
-        <SamraLogo size="sm" showWordmark={true} />
-        <span className="text-white/40 text-[clamp(8px,2cqw,10px)] font-medium tracking-widest uppercase">Debit</span>
-      </div>
-      
-      <div className="relative z-10 space-y-[clamp(0.5rem,3cqw,1rem)] mt-auto">
-        <div className="flex justify-between items-end">
-          <EMVChip />
-          <div className="w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] opacity-80 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white/50">
-              <path d="M4 12a8 8 0 018-8m0 0a8 8 0 018 8m-8-8v16m-8-8a8 8 0 008 8m0 0a8 8 0 008-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+      <motion.div
+        className="relative w-full h-full"
+        style={{ transformStyle: "preserve-3d" }}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.7, ease: [0.32, 0.72, 0.25, 1] }}
+      >
+        <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
+          {front}
         </div>
-        <div className={cn("font-mono text-white/90 whitespace-nowrap text-[clamp(0.85rem,5cqw,1.5rem)]", embossedText)} style={{ letterSpacing: 'clamp(0.1em, 0.5cqw, 0.25em)' }}>
-          •••• •••• •••• {last4}
+        <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+          <CardBack variant={variant} last4={last4} />
         </div>
-        <div className="flex justify-between items-end">
-          <div className="flex flex-col gap-[clamp(2px,1cqw,4px)]">
-            <div className="flex items-center gap-[clamp(4px,2cqw,8px)]">
-              <div className="text-[clamp(7px,2cqw,9px)] leading-[1.1] text-white/60 tracking-wider font-semibold">VALID<br/>THRU</div>
-              <div className={cn("font-mono text-white/90 tracking-widest text-[clamp(0.7rem,3cqw,0.875rem)]", embossedText)}>{expiry}</div>
-            </div>
-            <div className={cn("font-mono text-white/90 tracking-widest uppercase text-[clamp(0.7rem,3cqw,0.875rem)] overflow-hidden text-ellipsis max-w-[clamp(8rem,40cqw,14rem)]", embossedText)}>{cardholderName}</div>
-          </div>
-          <MastercardLogo />
-        </div>
-      </div>
-    </CardBase>
+      </motion.div>
+    </div>
   );
 }
