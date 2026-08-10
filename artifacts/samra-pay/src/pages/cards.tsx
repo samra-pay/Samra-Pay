@@ -38,7 +38,10 @@ export default function Cards() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold tracking-widest uppercase mb-6">
               Card Portfolio
             </div>
-            <h1 className="font-serif text-5xl md:text-6xl mb-6">Designed for your journey</h1>
+            <h1 className="font-serif text-5xl md:text-6xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
+              Designed for <br/>
+              <span className="italic text-primary">your journey.</span>
+            </h1>
             <p className="text-xl text-muted-foreground font-light">
               Whether you're establishing your financial footing in the US or optimizing your travel home, we have a card crafted for your specific reality.
             </p>

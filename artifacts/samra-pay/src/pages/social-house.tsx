@@ -56,8 +56,9 @@ export default function SocialHouse() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6 backdrop-blur-md">
                 Members Only
               </div>
-              <h1 className="font-serif text-6xl md:text-8xl mb-8 leading-[1.05]">
-                Where culture<br/>meets <i className="text-primary/90">capital.</i>
+              <h1 className="font-serif text-6xl md:text-8xl mb-8 leading-[1.05] font-normal tracking-tight text-[#F9F7F1]">
+                Where culture<br/>
+                <span className="italic text-primary">meets capital.</span>
               </h1>
               <p className="text-xl md:text-2xl text-white/80 max-w-2xl font-light leading-relaxed">
                 An exclusive hub for members. Experience the warmth of a traditional coffee ceremony wrapped in the atmosphere of a modern listening bar.
@@ -76,7 +77,10 @@ export default function SocialHouse() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
               >
-                <h2 className="text-4xl md:text-5xl font-serif mb-8 leading-tight">More than an account.<br/>A community.</h2>
+                <h2 className="text-4xl md:text-5xl font-serif mb-8 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
+                  More than an account.<br/>
+                  <span className="italic text-primary">A community.</span>
+                </h2>
                 <div className="space-y-6 text-lg text-muted-foreground font-light leading-relaxed">
                   <p>
                     The Samra Pay Social House is our physical footprint—a place where the diaspora gathers to share ideas, build networks, and grow wealth. By day, it’s a co-working space infused with the aroma of freshly roasted Ethiopian beans.
@@ -134,7 +138,7 @@ export default function SocialHouse() {
           <div className="container mx-auto px-6 relative z-10">
             <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
               <div>
-                <h2 className="text-4xl font-serif mb-4">Upcoming Calendar</h2>
+                <h2 className="text-4xl font-serif mb-4 font-normal tracking-tight text-[#F9F7F1]">Upcoming <span className="italic text-primary">Calendar</span></h2>
                 <p className="text-muted-foreground font-light text-lg">Curated experiences for the mind and soul.</p>
               </div>
               <Button asChild variant="outline" className="rounded-full px-6">

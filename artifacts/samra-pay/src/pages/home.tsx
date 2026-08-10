@@ -55,9 +55,10 @@ export default function Home() {
                 Designed in Addis. Polished in NY.
               </motion.div>
               
-              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-medium leading-[1.05] mb-8">
-                Build your <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFE29F] via-[#D4AF37] to-[#b38b22] italic pr-2">American credit.</span><br/>
-                Honor your roots.
+              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-8 text-[#F9F7F1]">
+                Your financial home.<br/>
+                Built for life here<br/>
+                <span className="italic text-primary">and home.</span>
               </motion.h1>
               
               <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed max-w-lg font-light">
@@ -147,7 +148,10 @@ export default function Home() {
         <section className="py-32 relative">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-24">
-              <h2 className="font-serif text-4xl md:text-5xl mb-6">Financial tools with soul.</h2>
+              <h2 className="font-serif text-4xl md:text-5xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
+                Financial tools<br/>
+                <span className="italic text-primary">with soul.</span>
+              </h2>
               <p className="text-xl text-muted-foreground font-light">
                 We didn't just put a new coat of paint on a banking app. We built features specifically designed for the financial reality of the diaspora.
               </p>
@@ -223,8 +227,8 @@ export default function Home() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6">
                   Premium Tier
                 </div>
-                <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight">
-                  The ultimate <br/><i className="text-primary/90">upgrade.</i>
+                <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl mb-6 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
+                  The ultimate <br/><span className="italic text-primary">upgrade.</span>
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 font-light leading-relaxed">
                   Elevate your travel with the Ethiopian Airlines Co-branded Card. 3x points on EA flights, discounted lounge access, and a VIP booking concierge. Because the journey home should feel like you've already arrived.
@@ -243,7 +247,10 @@ export default function Home() {
         <section className="py-32 relative">
           <div className="absolute inset-0 bg-primary/5 pattern-dots" />
           <div className="container mx-auto px-6 relative z-10 text-center">
-            <h2 className="font-serif text-5xl md:text-6xl mb-6">Ready to claim your spot?</h2>
+            <h2 className="font-serif text-5xl md:text-6xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
+              Ready to claim<br/>
+              <span className="italic text-primary">your spot?</span>
+            </h2>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-light">
               Join the waitlist today. We're rolling out access to the diaspora community city by city.
             </p>

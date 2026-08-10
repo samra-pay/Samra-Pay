@@ -23,8 +23,9 @@ export default function ChargeCardPage() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-white/70 text-xs font-semibold tracking-widest uppercase mb-6">
                 Foundation Tier
               </div>
-              <h1 className="font-serif text-5xl md:text-7xl mb-6 leading-[1.05]">
-                Samra Pay <br/><i className="text-white/80">Charge Card.</i>
+              <h1 className="font-serif text-5xl md:text-7xl mb-6 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
+                Samra Pay <br/>
+                <span className="italic text-primary">Charge Card.</span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-lg font-light leading-relaxed mb-8">
                 Build your US credit history month-by-month without the indignity of a security deposit. A true charge card for the diaspora.

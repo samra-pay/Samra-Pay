@@ -49,8 +49,9 @@ export default function AskSamra() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6 backdrop-blur-md">
                   Nonprofit Initiative
                 </div>
-                <h1 className="font-serif text-5xl md:text-7xl mb-8 leading-[1.05]">
-                  Financial literacy <br/><i className="text-primary/90">for the community.</i>
+                <h1 className="font-serif text-5xl md:text-7xl mb-8 leading-[1.05] font-normal tracking-tight text-[#F9F7F1]">
+                  Financial literacy <br/>
+                  <span className="italic text-primary">for the community.</span>
                 </h1>
                 <p className="text-xl text-white/80 max-w-2xl font-light leading-relaxed mb-10">
                   Ask Samra is our dedicated 501(c)(3) arm. We believe access to capital starts with access to knowledge. Our mission is to demystify the US financial system for first-generation immigrants and their families.
@@ -72,7 +73,7 @@ export default function AskSamra() {
         <section className="py-24 bg-card/30 border-b border-white/5 relative">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-20">
-              <h2 className="font-serif text-4xl mb-4">Our Core Pillars</h2>
+              <h2 className="font-serif text-4xl mb-4 font-normal tracking-tight text-[#F9F7F1]">Our Core <span className="italic text-primary">Pillars</span></h2>
               <p className="text-muted-foreground font-light text-lg">Curriculums designed culturally and linguistically for our community.</p>
             </div>
 
@@ -128,7 +129,7 @@ export default function AskSamra() {
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
               <div>
-                <h2 className="text-4xl font-serif mb-4">Upcoming Workshops</h2>
+                <h2 className="text-4xl font-serif mb-4 font-normal tracking-tight text-[#F9F7F1]">Upcoming <span className="italic text-primary">Workshops</span></h2>
                 <p className="text-muted-foreground font-light text-lg">Free to attend. Registration required.</p>
               </div>
             </div>

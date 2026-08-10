@@ -6,57 +6,26 @@ interface SamraLogoProps {
   showWordmark?: boolean;
 }
 
-export function SamraLogo({ className, size = "md", showWordmark = false }: SamraLogoProps) {
+export function SamraLogo({ className, size = "md", showWordmark = true }: SamraLogoProps) {
   const sizeClasses = {
-    sm: "w-6 h-6",
-    md: "w-8 h-8",
-    lg: "w-12 h-12",
-    xl: "w-16 h-16",
-  };
-
-  const wordmarkClasses = {
-    sm: "text-lg",
-    md: "text-xl",
-    lg: "text-3xl",
-    xl: "text-4xl",
+    sm: "text-xl",
+    md: "text-2xl",
+    lg: "text-4xl",
+    xl: "text-5xl",
   };
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <div className={cn("relative flex items-center justify-center text-primary shrink-0", sizeClasses[size])}>
-        <svg 
-          viewBox="0 0 100 100" 
-          fill="none" 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="w-full h-full drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]"
-        >
-          {/* Axumite stelae / geometric lattice S concept */}
-          <path 
-            d="M50 5 L50 20 M50 80 L50 95" 
-            stroke="currentColor" 
-            strokeWidth="8" 
-            strokeLinecap="square"
-          />
-          <path 
-            d="M25 20 H75 L75 45 H50 L25 45 V20 Z" 
-            stroke="currentColor" 
-            strokeWidth="8" 
-            strokeLinejoin="miter"
-          />
-          <path 
-            d="M75 80 H25 L25 55 H50 L75 55 V80 Z" 
-            stroke="currentColor" 
-            strokeWidth="8" 
-            strokeLinejoin="miter"
-          />
-          {/* Inner decorative cuts for complexity */}
-          <path d="M40 30 H60 M40 70 H60" stroke="currentColor" strokeWidth="4" />
-        </svg>
-      </div>
-      {showWordmark && (
-        <span className={cn("font-serif tracking-wide font-medium whitespace-nowrap", wordmarkClasses[size])}>
-          SAMRA PAY
-        </span>
+    <div className={cn("flex items-center", className)}>
+      {showWordmark ? (
+        <div className={cn("flex items-baseline leading-none py-1", sizeClasses[size])}>
+          <span className="font-sans font-[800] tracking-tighter lowercase text-[#F9F7F1]">samra</span>
+          <span className="font-serif italic font-medium lowercase text-primary ml-[0.15em] tracking-tight">pay</span>
+        </div>
+      ) : (
+        <div className={cn("flex items-baseline leading-none py-1", sizeClasses[size])}>
+          <span className="font-sans font-[800] tracking-tighter lowercase text-[#F9F7F1]">s</span>
+          <span className="font-serif italic font-medium lowercase text-primary ml-[0.05em]">p</span>
+        </div>
       )}
     </div>
   );

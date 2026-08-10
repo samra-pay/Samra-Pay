@@ -23,8 +23,9 @@ export default function CoBrandCardPage() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
                 Premium Tier
               </div>
-              <h1 className="font-serif text-5xl md:text-7xl mb-6 leading-[1.05]">
-                Ethiopian Airlines <br/><i className="text-primary/90">Co-brand.</i>
+              <h1 className="font-serif text-5xl md:text-7xl mb-6 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
+                Ethiopian Airlines <br/>
+                <span className="italic text-primary">Co-brand.</span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-lg font-light leading-relaxed mb-8">
                 Elevate your travel. Earn ShebaMiles faster, enjoy priority boarding, and access exclusive lounges. Because the journey home should feel like you've already arrived.

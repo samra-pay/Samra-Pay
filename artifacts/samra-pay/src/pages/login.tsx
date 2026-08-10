@@ -37,7 +37,7 @@ export default function Login() {
                 <SamraLogo size="lg" showWordmark={false} />
               </div>
             </Link>
-            <h1 className="font-serif text-3xl mb-2">Welcome Back</h1>
+            <h1 className="font-serif text-3xl mb-2 font-normal tracking-tight text-[#F9F7F1]">Welcome <span className="italic text-primary">Back</span></h1>
             <p className="text-muted-foreground">Sign in to your Samra Pay account</p>
           </div>
 
