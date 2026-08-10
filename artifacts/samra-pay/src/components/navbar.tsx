@@ -38,7 +38,7 @@ export function Navbar() {
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40 group-hover:bg-primary/30 transition-colors">
               <span className="font-serif text-primary text-xl leading-none">S</span>
             </div>
-            <span className="font-serif text-xl tracking-wide font-medium">SAMRA</span>
+            <span className="font-serif text-xl tracking-wide font-medium">SAMRA PAY</span>
           </div>
         </Link>
 

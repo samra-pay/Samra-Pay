@@ -4,25 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate network delay
+    // Simulate network delay then route to dashboard
     setTimeout(() => {
       setIsLoading(false);
-      toast({
-        title: "Private Beta",
-        description: "Samra Pay is currently invite-only. We've added you to the waitlist.",
-        variant: "default",
-      });
-    }, 1500);
+      setLocation("/dashboard");
+    }, 800);
   };
 
   return (
@@ -40,7 +37,7 @@ export default function Login() {
               </div>
             </Link>
             <h1 className="font-serif text-3xl mb-2">Welcome Back</h1>
-            <p className="text-muted-foreground">Sign in to your Samra account</p>
+            <p className="text-muted-foreground">Sign in to your Samra Pay account</p>
           </div>
 
           <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
@@ -50,7 +47,6 @@ export default function Login() {
                 <Input 
                   type="email" 
                   placeholder="name@example.com" 
-                  required 
                   className="bg-background/50 border-white/10 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
@@ -62,7 +58,6 @@ export default function Login() {
                 <Input 
                   type="password" 
                   placeholder="••••••••" 
-                  required 
                   className="bg-background/50 border-white/10 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>

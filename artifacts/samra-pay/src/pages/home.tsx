@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import heroBg from "@assets/generated_images/hero-bg.jpg";
-import chargeCard from "@assets/generated_images/charge-card.jpg";
+import { CreditCard } from "@/components/credit-card";
 import { motion } from "framer-motion";
 
 export default function Home() {
@@ -61,12 +61,8 @@ export default function Home() {
               transition={{ delay: 0.4, duration: 1 }}
               className="relative lg:h-[600px] flex items-center justify-center perspective-[1000px]"
             >
-              <div className="relative w-full max-w-md aspect-[63/40] transform rotate-y-[-15deg] rotate-x-[5deg] shadow-2xl shadow-primary/20 hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700">
-                <img 
-                  src={chargeCard} 
-                  alt="Samra Charge Card" 
-                  className="w-full h-full object-cover rounded-2xl border border-white/10"
-                />
+              <div className="relative w-full max-w-md transform rotate-y-[-15deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700">
+                <CreditCard variant="charge" />
                 {/* Glow effect */}
                 <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full -z-10 opacity-50" />
               </div>
@@ -91,7 +87,7 @@ export default function Home() {
                 },
                 {
                   icon: <Coffee className="w-6 h-6 text-primary" />,
-                  title: "The Social House",
+                  title: "Samra Pay Social House",
                   desc: "More than a bank. Join our members-only cultural hub for coffee, connection, and financial literacy."
                 }
               ].map((feature, idx) => (
@@ -134,15 +130,8 @@ export default function Home() {
                 </Button>
               </div>
               <div className="flex-1 flex justify-center perspective-[1000px]">
-                <div className="w-full max-w-sm aspect-[63/40] rounded-xl bg-gradient-to-br from-green-900 via-[#1A251E] to-black border border-primary/30 p-6 flex flex-col justify-between shadow-[0_0_50px_rgba(42,59,44,0.5)] transform rotate-y-[-10deg]">
-                   <div className="flex justify-between items-start">
-                     <span className="font-serif text-primary text-xl">SAMRA</span>
-                     <Plane className="w-6 h-6 text-primary/80" />
-                   </div>
-                   <div>
-                     <div className="text-xs text-white/50 tracking-widest uppercase mb-1">Ethiopian Airlines Partner</div>
-                     <div className="text-lg tracking-[0.2em] font-mono text-primary/90">•••• •••• •••• 1991</div>
-                   </div>
+                <div className="w-full max-w-sm transform rotate-y-[-10deg]">
+                   <CreditCard variant="airlines" last4="1991" />
                 </div>
               </div>
             </div>

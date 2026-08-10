@@ -28,7 +28,7 @@ export function Footer() {
             <h4 className="font-medium mb-6 text-sm tracking-wider uppercase text-foreground/80">Products</h4>
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li>
-                <Link href="/cards"><span className="hover:text-primary transition-colors cursor-pointer">Samra Charge Card</span></Link>
+                <Link href="/cards"><span className="hover:text-primary transition-colors cursor-pointer">Samra Pay Charge Card</span></Link>
               </li>
               <li>
                 <Link href="/cards"><span className="hover:text-primary transition-colors cursor-pointer">Airlines Co-brand</span></Link>
@@ -64,7 +64,7 @@ export function Footer() {
         </div>
         
         <div className="mt-8 text-[10px] text-muted-foreground/50 leading-relaxed text-center max-w-4xl mx-auto">
-          Samra Pay is a financial technology company, not a bank. Banking services provided by partner banks, Members FDIC. The Samra Charge Card is issued pursuant to a license from Visa U.S.A. Inc.
+          Samra Pay is a financial technology company, not a bank. Banking services provided by partner banks, Members FDIC. The Samra Pay Charge Card is issued pursuant to a license from Visa U.S.A. Inc.
         </div>
       </div>
     </footer>

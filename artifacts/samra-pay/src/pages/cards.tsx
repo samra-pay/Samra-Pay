@@ -2,8 +2,7 @@ import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
-import chargeCard from "@assets/generated_images/charge-card.jpg";
-import airlineCard from "@assets/generated_images/airline-card.jpg";
+import { CreditCard } from "@/components/credit-card";
 import { Link } from "wouter";
 
 export default function Cards() {
@@ -23,14 +22,10 @@ export default function Cards() {
             <Card className="bg-secondary/20 border-white/10 overflow-hidden flex flex-col relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full" />
               <div className="p-8 pb-0">
-                <img 
-                  src={chargeCard} 
-                  alt="Samra Charge Card" 
-                  className="w-full aspect-[63/40] object-cover rounded-xl shadow-2xl mb-8 border border-white/5" 
-                />
+                <CreditCard variant="charge" />
               </div>
               <CardHeader>
-                <CardTitle className="text-2xl font-serif">Samra Charge Card</CardTitle>
+                <CardTitle className="text-2xl font-serif">Samra Pay Charge Card</CardTitle>
                 <CardDescription className="text-base">The foundation of your American financial identity.</CardDescription>
               </CardHeader>
               <CardContent className="flex-1">
@@ -44,7 +39,7 @@ export default function Cards() {
                     "Pay in full every month—no interest traps",
                     "1x points on all everyday purchases",
                     "No foreign transaction fees",
-                    "Access to Samra Social House events"
+                    "Access to Samra Pay Social House events"
                   ].map((benefit, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
                       <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
@@ -64,11 +59,7 @@ export default function Cards() {
             <Card className="bg-gradient-to-b from-accent/20 to-background border-primary/30 overflow-hidden flex flex-col relative shadow-[0_0_30px_rgba(212,175,55,0.05)]">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-[#B8942E]" />
               <div className="p-8 pb-0 relative z-10">
-                <img 
-                  src={airlineCard} 
-                  alt="Ethiopian Airlines Card" 
-                  className="w-full aspect-[63/40] object-cover rounded-xl shadow-2xl mb-8 border border-primary/20" 
-                />
+                <CreditCard variant="airlines" />
               </div>
               <CardHeader className="relative z-10">
                 <div className="inline-block px-3 py-1 bg-primary/20 text-primary text-xs font-semibold uppercase tracking-wider rounded-full w-fit mb-3 border border-primary/20">

@@ -31,7 +31,9 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 ## Product
 
 - `artifacts/samra-pay` — client-side React + Vite site (wouter routing), no backend
-- Pages: `/` home, `/cards` (Samra Charge Card + Ethiopian Airlines co-brand comparison), `/remittance` (live USD→ETB calculator, promo rate 180:1), `/social-house` (coffee community + financial literacy cultural hub), `/login` (front-end only, invite-only waitlist toast)
+- Pages: `/` home, `/cards` (Samra Charge Card + Ethiopian Airlines co-brand comparison), `/remittance` (live USD→ETB calculator, promo rate 180:1), `/social-house` (coffee community + financial literacy cultural hub), `/login` (dummy — sign in with empty fields routes to /dashboard)
+- `/dashboard` + sub-pages (cards, credit, analytics, remittance, settings): mock neo-bank dashboard for demo user "Selam T." — debit/charge/co-brand cards, ShebaMiles, credit tracking, per-card transactions, spending analytics
+- Ethiopian Airlines logo asset: `artifacts/samra-pay/src/assets/ethiopian-airlines-logo.svg` (used on the co-branded card composition)
 - Design: "Midnight Gold" — dark charcoal + gold, Cormorant Garamond/Outfit, subtle Axumite/Ethiopian motifs, AI-generated card and culture imagery
 
 ## User preferences

@@ -21,8 +21,30 @@ import Cards from '@/pages/cards';
 import Remittance from '@/pages/remittance';
 import SocialHouse from '@/pages/social-house';
 import Login from '@/pages/login';
+import Dashboard from '@/pages/dashboard';
+import { DashboardCards } from '@/pages/dashboard/cards';
+import { DashboardCredit } from '@/pages/dashboard/credit';
+import { DashboardAnalytics } from '@/pages/dashboard/analytics';
+import { DashboardRemittance } from '@/pages/dashboard/remittance';
+import { DashboardSettings } from '@/pages/dashboard/settings';
+import { DashboardLayout } from '@/components/dashboard-layout';
+import { useParams } from 'wouter';
 
 const queryClient = new QueryClient();
+
+function DashboardRouter() {
+  const params = useParams();
+  const page = params.page;
+  
+  switch(page) {
+    case 'cards': return <DashboardCards />;
+    case 'credit': return <DashboardCredit />;
+    case 'analytics': return <DashboardAnalytics />;
+    case 'remittance': return <DashboardRemittance />;
+    case 'settings': return <DashboardSettings />;
+    default: return <Dashboard />;
+  }
+}
 
 function Router() {
   return (
@@ -30,6 +52,20 @@ function Router() {
       <Switch>
         {/* No navbar/footer on login */}
         <Route path="/login" component={Login} />
+        
+        {/* Dashboard Routes - simplified for demo */}
+        <Route path="/dashboard">
+          <DashboardLayout>
+            <DashboardRouter />
+          </DashboardLayout>
+        </Route>
+        <Route path="/dashboard/:page">
+          <DashboardLayout>
+            <DashboardRouter />
+          </DashboardLayout>
+        </Route>
+
+        {/* Public Shell */}
         <Route>
           <Navbar />
           <main className="flex-1">

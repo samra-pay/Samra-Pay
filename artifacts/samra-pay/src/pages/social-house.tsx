@@ -21,7 +21,7 @@ export default function SocialHouse() {
           
           <div className="container mx-auto px-6 relative z-10">
             <div className="max-w-3xl">
-              <div className="font-serif text-primary text-xl italic mb-4">The Samra Social House</div>
+              <div className="font-serif text-primary text-xl italic mb-4">The Samra Pay Social House</div>
               <h1 className="font-serif text-5xl md:text-7xl mb-6 leading-[1.1]">Where culture<br/>meets capital.</h1>
               <p className="text-xl text-white/80 max-w-xl">
                 An exclusive hub for members. Experience the warmth of a traditional coffee ceremony wrapped in the atmosphere of a modern listening bar.
@@ -37,7 +37,7 @@ export default function SocialHouse() {
               <div>
                 <h2 className="text-3xl font-serif mb-6">More than an account. A community.</h2>
                 <p className="text-muted-foreground mb-6 leading-relaxed">
-                  The Samra Social House is our physical footprint—a place where the diaspora gathers to share ideas, build networks, and grow wealth. By day, it’s a co-working space infused with the aroma of freshly roasted Ethiopian beans.
+                  The Samra Pay Social House is our physical footprint—a place where the diaspora gathers to share ideas, build networks, and grow wealth. By day, it’s a co-working space infused with the aroma of freshly roasted Ethiopian beans.
                 </p>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
                   By night, the lights dim. Vinyl spins. We host intimate financial literacy workshops, angel investing syndicates, and cultural celebrations celebrating the breadth of Habesha excellence.
@@ -65,7 +65,7 @@ export default function SocialHouse() {
                 />
                 <div className="absolute -bottom-8 -left-8 bg-card border border-white/10 p-6 rounded-xl shadow-xl max-w-[240px]">
                   <div className="font-serif text-xl text-primary mb-2">Access Granted</div>
-                  <p className="text-sm text-muted-foreground">Samra Charge Card members receive priority booking and complimentary coffee service.</p>
+                  <p className="text-sm text-muted-foreground">Samra Pay Charge Card members receive priority booking and complimentary coffee service.</p>
                 </div>
               </div>
             </div>
