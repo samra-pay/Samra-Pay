@@ -21,6 +21,9 @@ import {
 import { PageTransition } from "@/components/page-transition";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
+import { PayBillDialog } from "@/components/pay-bill-dialog";
+import { useDemoState, formatUSD, CHECKING_BASE_BALANCE, BILL_INFO } from "@/lib/demo-state";
+import { CheckCircle2 } from "lucide-react";
 
 type Transaction = {
   id: number;
@@ -65,6 +68,8 @@ export function DashboardCards() {
   const [showAccountInfo, setShowAccountInfo] = useState(false);
   const [copiedRouting, setCopiedRouting] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const demo = useDemoState();
 
   useEffect(() => {
     setShowAccountInfo(false);
@@ -76,9 +81,10 @@ export function DashboardCards() {
     switch(activeCard) {
       case "debit": return { 
         name: "Checking Account", 
-        balance: "$4,250.00", 
+        balance: formatUSD(CHECKING_BASE_BALANCE - demo.checkingDeducted), 
         limit: "N/A",
         hasBill: false,
+        billPaid: false,
         hasAccountInfo: true,
         earnRules: [
           { label: "FDIC Insured", value: "Up to $250k" },
@@ -88,9 +94,10 @@ export function DashboardCards() {
       };
       case "airlines": return { 
         name: "Airlines Premium", 
-        balance: "$3,450.00", 
+        balance: demo.bills.airlines.paid ? "$0.00" : formatUSD(BILL_INFO.airlines.amount), 
         limit: "$15,000.00",
         hasBill: true,
+        billPaid: demo.bills.airlines.paid,
         billDue: "Jul 8",
         minDue: "$89.00",
         autopay: false,
@@ -104,9 +111,10 @@ export function DashboardCards() {
       };
       case "charge": default: return { 
         name: "Samra Pay Charge Card", 
-        balance: "$1,240.00", 
+        balance: demo.bills.charge.paid ? "$0.00" : formatUSD(BILL_INFO.charge.amount), 
         limit: "No Preset Limit",
         hasBill: true,
+        billPaid: demo.bills.charge.paid,
         billDue: "Jul 2",
         minDue: "$35.00",
         autopay: true,
@@ -142,7 +150,13 @@ export function DashboardCards() {
   };
 
   const details = getCardDetails();
-  const currentLedger = ledgers[activeCard];
+  const currentLedger =
+    activeCard !== "debit" && demo.bills[activeCard].paid
+      ? [
+          { id: 999, merchant: "Payment Received — Thank You", date: "Today", amount: BILL_INFO[activeCard].amount, category: "Payment", type: "credit" } as Transaction,
+          ...ledgers[activeCard],
+        ]
+      : ledgers[activeCard];
 
   return (
     <PageTransition>
@@ -220,29 +234,41 @@ export function DashboardCards() {
 
                 {details.hasBill && (
                   <div className="pt-6 border-t border-white/5 space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="text-sm font-medium text-white/90">Payment Due {details.billDue}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">Min Due: {details.minDue}</div>
+                    {details.billPaid ? (
+                      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                        <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                        <div>
+                          <div className="text-sm font-medium text-green-400">Statement Paid</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">Paid today from Checking &bull;&bull;&bull;&bull; 8834</div>
+                        </div>
                       </div>
-                      <div className="bg-white/10 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-widest text-white/80">
-                        In {details.daysUntil} Days
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-xs">
-                      {details.autopay ? (
-                        <span className="flex items-center gap-1.5 text-green-400 font-medium bg-green-400/10 px-2 py-1 rounded">
-                          <AlertCircle className="w-3 h-3" /> Autopay ON
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 text-red-400 font-medium bg-red-400/10 px-2 py-1 rounded">
-                          <AlertCircle className="w-3 h-3" /> Autopay OFF
-                        </span>
-                      )}
-                    </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm font-medium text-white/90">Payment Due {details.billDue}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">Min Due: {details.minDue}</div>
+                          </div>
+                          <div className="bg-white/10 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-widest text-white/80">
+                            In {details.daysUntil} Days
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-xs">
+                          {details.autopay ? (
+                            <span className="flex items-center gap-1.5 text-green-400 font-medium bg-green-400/10 px-2 py-1 rounded">
+                              <AlertCircle className="w-3 h-3" /> Autopay ON
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-red-400 font-medium bg-red-400/10 px-2 py-1 rounded">
+                              <AlertCircle className="w-3 h-3" /> Autopay OFF
+                            </span>
+                          )}
+                        </div>
 
-                    <Button variant="gold" className="w-full font-medium">Pay Statement Balance</Button>
+                        <Button variant="gold" className="w-full font-medium" onClick={() => setPayDialogOpen(true)}>Pay Statement Balance</Button>
+                      </>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -379,6 +405,9 @@ export function DashboardCards() {
           </div>
         </div>
       </div>
+      {activeCard !== "debit" && (
+        <PayBillDialog bill={activeCard} open={payDialogOpen} onOpenChange={setPayDialogOpen} />
+      )}
     </PageTransition>
   );
 }
