@@ -4,9 +4,10 @@ interface SamraLogoProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   showWordmark?: boolean;
+  theme?: "dark" | "light";
 }
 
-export function SamraLogo({ className, size = "md", showWordmark = true }: SamraLogoProps) {
+export function SamraLogo({ className, size = "md", showWordmark = true, theme = "dark" }: SamraLogoProps) {
   const sizeClasses = {
     sm: "text-xl",
     md: "text-2xl",
@@ -14,17 +15,20 @@ export function SamraLogo({ className, size = "md", showWordmark = true }: Samra
     xl: "text-5xl",
   };
 
+  const textSamra = theme === "light" ? "text-[#1A1A1A]" : "text-[#F9F7F1]";
+  const textPay = theme === "light" ? "text-[#0A0A0A]" : "text-primary";
+
   return (
     <div className={cn("flex items-center", className)}>
       {showWordmark ? (
         <div className={cn("flex items-baseline leading-none py-1", sizeClasses[size])}>
-          <span className="font-sans font-[800] tracking-tighter lowercase text-[#F9F7F1]">samra</span>
-          <span className="font-serif italic font-medium lowercase text-primary ml-[0.15em] tracking-tight">pay</span>
+          <span className={cn("font-sans font-[800] tracking-tighter lowercase", textSamra)}>samra</span>
+          <span className={cn("font-serif italic font-medium lowercase ml-[0.15em] tracking-tight", textPay)}>pay</span>
         </div>
       ) : (
         <div className={cn("flex items-baseline leading-none py-1", sizeClasses[size])}>
-          <span className="font-sans font-[800] tracking-tighter lowercase text-[#F9F7F1]">s</span>
-          <span className="font-serif italic font-medium lowercase text-primary ml-[0.05em]">p</span>
+          <span className={cn("font-sans font-[800] tracking-tighter lowercase", textSamra)}>s</span>
+          <span className={cn("font-serif italic font-medium lowercase ml-[0.05em]", textPay)}>p</span>
         </div>
       )}
     </div>

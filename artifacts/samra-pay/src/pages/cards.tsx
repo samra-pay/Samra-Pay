@@ -100,8 +100,8 @@ export default function Cards() {
                 </Card3DWrapper>
               </div>
 
-              <Card className="bg-gradient-to-b from-[#12281C]/20 to-background border-primary/20 flex-1 flex flex-col relative shadow-[0_0_50px_rgba(212,175,55,0.03)] hover:border-primary/40 transition-colors">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-[#1B3B2B]" />
+              <Card className="bg-gradient-to-b from-primary/10 to-background border-primary/20 flex-1 flex flex-col relative shadow-[0_0_50px_rgba(212,175,55,0.03)] hover:border-primary/40 transition-colors">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-[#b38b22]" />
                 <CardHeader>
                   <div className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-semibold uppercase tracking-widest rounded-full w-fit mb-4 border border-primary/20">
                     Premium Tier
