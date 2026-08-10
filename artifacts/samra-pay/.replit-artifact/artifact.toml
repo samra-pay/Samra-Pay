@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Samra Pay"
+description = "A NEO bank marketing website for Samra Pay, targeting the Ethiopian diaspora in the US. Features the Samra charge card that earns Ethiopian Airlines points while building credit, an Ethiopian Airlines co-branded upgrade card, the Samra Social House cultural hub page, a login page, and a USD-to-ETB remittance calculator with a 180:1 promo rate."
+version = "1.0.0"
+id = "artifacts/samra-pay"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23471
+
+[services.development]
+run = "pnpm --filter @workspace/samra-pay run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/samra-pay", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/samra-pay/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23471"
+BASE_PATH = "/"

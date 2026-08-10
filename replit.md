@@ -1,6 +1,6 @@
-# [Project name]
+# Samra Pay
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Marketing website for Samra Pay, a NEO bank for the Ethiopian diaspora in the US — charge card with Ethiopian Airlines points, co-branded upgrade card, remittance calculator, and the Samra Social House cultural hub.
 
 ## Run & Operate
 
@@ -30,7 +30,9 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- `artifacts/samra-pay` — client-side React + Vite site (wouter routing), no backend
+- Pages: `/` home, `/cards` (Samra Charge Card + Ethiopian Airlines co-brand comparison), `/remittance` (live USD→ETB calculator, promo rate 180:1), `/social-house` (coffee community + financial literacy cultural hub), `/login` (front-end only, invite-only waitlist toast)
+- Design: "Midnight Gold" — dark charcoal + gold, Cormorant Garamond/Outfit, subtle Axumite/Ethiopian motifs, AI-generated card and culture imagery
 
 ## User preferences
 
