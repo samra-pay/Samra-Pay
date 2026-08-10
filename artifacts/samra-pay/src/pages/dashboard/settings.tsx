@@ -83,7 +83,7 @@ export function DashboardSettings() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium">Marketing & Offers</div>
-                  <div className="text-sm text-muted-foreground">Updates on Social House events and promos</div>
+                  <div className="text-sm text-muted-foreground">Updates on Tomoca Social House events and promos</div>
                 </div>
                 <Switch />
               </div>

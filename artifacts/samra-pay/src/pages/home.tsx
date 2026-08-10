@@ -171,7 +171,7 @@ export default function Home() {
                 },
                 {
                   icon: <Users className="w-8 h-8 text-primary" />,
-                  title: "The Social House",
+                  title: "Tomoca Social House",
                   desc: "Banking shouldn't be isolating. Join our physical hubs for traditional coffee ceremonies, pitch nights, and community wealth building."
                 }
               ].map((feature, idx) => (

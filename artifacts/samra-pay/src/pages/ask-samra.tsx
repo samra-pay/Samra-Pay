@@ -11,7 +11,7 @@ export default function AskSamra() {
       title: "Credit Building 101",
       date: "Nov 12",
       format: "In-Person",
-      location: "Social House DC",
+      location: "Tomoca Social House DC",
       spots: 12
     },
     {
@@ -25,7 +25,7 @@ export default function AskSamra() {
       title: "Navigating Small Business Loans",
       date: "Dec 05",
       format: "In-Person",
-      location: "Social House LA",
+      location: "Tomoca Social House LA",
       spots: 20
     }
   ];

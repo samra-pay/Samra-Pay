@@ -21,7 +21,7 @@ export function Navbar() {
   const navLinks = [
     { href: "/cards", label: "Cards" },
     { href: "/remittance", label: "Remittance" },
-    { href: "/social-house", label: "Social House" },
+    { href: "/social-house", label: "Tomoca Social House" },
     { href: "/ask-samra", label: "Ask Samra" },
   ];
 

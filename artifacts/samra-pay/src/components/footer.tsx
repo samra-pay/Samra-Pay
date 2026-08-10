@@ -44,7 +44,7 @@ export function Footer() {
             <h4 className="font-medium mb-6 text-sm tracking-wider uppercase text-foreground/80">Company</h4>
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li>
-                <Link href="/social-house"><span className="hover:text-primary transition-colors cursor-pointer">Social House</span></Link>
+                <Link href="/social-house"><span className="hover:text-primary transition-colors cursor-pointer">Tomoca Social House</span></Link>
               </li>
               <li>
                 <Link href="/ask-samra"><span className="hover:text-primary transition-colors cursor-pointer">Ask Samra</span></Link>

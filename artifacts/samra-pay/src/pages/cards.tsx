@@ -72,7 +72,7 @@ export default function Cards() {
                       "Pay in full every month—no interest traps",
                       "1x points on all everyday purchases",
                       "No foreign transaction fees",
-                      "Access to Samra Pay Social House events"
+                      "Access to Tomoca Social House events"
                     ].map((benefit, i) => (
                       <li key={i} className="flex items-start gap-3 text-foreground/80">
                         <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
