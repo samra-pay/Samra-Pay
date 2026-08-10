@@ -52,7 +52,7 @@ export default function Cards() {
             <div className="flex flex-col">
               <div className="mb-10 px-4">
                 <Card3DWrapper>
-                  <CreditCard variant="charge" />
+                  <CreditCard variant="charge" showFlipHint />
                 </Card3DWrapper>
               </div>
               
@@ -96,7 +96,7 @@ export default function Cards() {
             <div className="flex flex-col">
               <div className="mb-10 px-4">
                 <Card3DWrapper>
-                  <CreditCard variant="airlines" />
+                  <CreditCard variant="airlines" showFlipHint />
                 </Card3DWrapper>
               </div>
 

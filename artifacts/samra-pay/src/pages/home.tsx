@@ -114,7 +114,7 @@ export default function Home() {
                 </motion.div>
 
                 <Card3DWrapper>
-                  <CreditCard variant="charge" />
+                  <CreditCard variant="charge" showFlipHint />
                 </Card3DWrapper>
                 
                 {/* Ambient glow behind card */}

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import ethiopianLogo from "@/assets/ethiopian-airlines-logo.svg";
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { MouseEvent, ReactNode, useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";
 
@@ -70,6 +70,7 @@ interface CreditCardProps {
   last4?: string;
   expiry?: string;
   className?: string;
+  showFlipHint?: boolean;
 }
 
 // Axumite-inspired geometric pattern
@@ -216,8 +217,14 @@ function CardBack({ variant, last4 }: { variant: CreditCardProps["variant"]; las
   );
 }
 
-export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242", expiry = "08/29", className }: CreditCardProps) {
+export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242", expiry = "08/29", className, showFlipHint = false }: CreditCardProps) {
   const [flipped, setFlipped] = useState(false);
+  const [hasFlipped, setHasFlipped] = useState(false);
+
+  const toggleFlip = () => {
+    setFlipped((f) => !f);
+    setHasFlipped(true);
+  };
 
   const CardBase = ({ children, bgClass, shadowClass }: { children: ReactNode, bgClass: string, shadowClass: string }) => (
     <div className={cn(
@@ -358,11 +365,11 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
   return (
     <div
       className={cn("relative w-full aspect-[1.586/1] perspective-[1500px] cursor-pointer select-none", className)}
-      onClick={() => setFlipped((f) => !f)}
+      onClick={toggleFlip}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          setFlipped((f) => !f);
+          toggleFlip();
         }
       }}
       role="button"
@@ -383,6 +390,36 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
           <CardBack variant={variant} last4={last4} />
         </div>
       </motion.div>
+
+      {/* Subtle "tap to flip" hint — shown until the first flip */}
+      {showFlipHint && (
+        <AnimatePresence>
+          {!hasFlipped && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4, transition: { delay: 0, duration: 0.3 } }}
+              transition={{ delay: 1.2, duration: 0.6 }}
+              className="absolute -bottom-9 left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+              aria-hidden="true"
+            >
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-sm text-[11px] tracking-[0.18em] uppercase text-white/50 whitespace-nowrap">
+                <motion.svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="w-3.5 h-3.5 text-primary/70"
+                  animate={{ rotateY: [0, 180, 180, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, repeatDelay: 1.5, ease: "easeInOut" }}
+                >
+                  <rect x="3" y="6" width="18" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M3 10h18" stroke="currentColor" strokeWidth="1.5" />
+                </motion.svg>
+                Tap to flip
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
