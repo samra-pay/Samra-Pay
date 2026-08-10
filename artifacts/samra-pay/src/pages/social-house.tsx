@@ -1,6 +1,6 @@
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
-import socialHouseImg from "@assets/generated_images/social-house.jpg";
+import socialHouseImg from "@assets/ceremony-lounge.jpg";
 import tomocaCoffeeImg from "@assets/generated_images/tomoca-pour-luxe.jpg";
 import bankingCoffeeImg from "@assets/generated_images/banking-over-coffee.jpg";
 import { Link } from "wouter";
@@ -77,7 +77,7 @@ export default function SocialHouse() {
               </h1>
               <div className="w-24 h-[1px] bg-primary/40 mb-8" />
               <p className="text-xl md:text-3xl text-white/70 max-w-2xl font-light leading-[1.4]">
-                An exclusive hub for members. Experience the warmth of a traditional coffee ceremony wrapped in the atmosphere of a modern listening bar.
+                An exclusive hub for members. Where buna is poured over fresh-cut grass, live krar sessions set the rhythm, and deals are sketched at the long table.
               </p>
             </motion.div>
           </div>

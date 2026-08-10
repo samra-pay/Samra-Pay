@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck, Globe, Star, Users } from "lucide-react";
 import { Link } from "wouter";
 import heroBg from "@assets/generated_images/hero-bg.jpg";
+import remittanceStoryWide from "@assets/home-ceremony.jpg";
+import remittanceStoryTall from "@assets/jebena-pour-banner.jpg";
 import { CreditCard, Card3DWrapper } from "@/components/credit-card";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
 
 const fadeUp = {
@@ -14,6 +16,15 @@ const fadeUp = {
 
 export default function Home() {
   const containerRef = useRef(null);
+  const prefersReducedMotion = useReducedMotion();
+  const storyReveal = (hidden: { opacity: number; x?: number; y?: number }) =>
+    prefersReducedMotion
+      ? {}
+      : {
+          initial: hidden,
+          whileInView: { opacity: 1, x: 0, y: 0 },
+          viewport: { once: true, margin: "-100px" },
+        };
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end start"]
@@ -192,6 +203,79 @@ export default function Home() {
                   </p>
                 </motion.div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* REMITTANCE STORY SECTION */}
+        <section className="py-24 md:py-40 bg-[#050505] border-y border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(212,175,55,0.08),_transparent_60%)] pointer-events-none" />
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+              
+              {/* Text Content */}
+              <motion.div 
+                {...storyReveal({ opacity: 0, x: -40 })}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                className="lg:col-span-5"
+              >
+                <div className="w-12 h-[1px] bg-primary mb-8" />
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif mb-8 leading-[1.1] tracking-tight font-normal text-[#F9F7F1]">
+                  Every transfer <br/>
+                  <span className="italic text-primary">ends like this.</span>
+                </h2>
+                
+                <div className="space-y-6 text-lg md:text-xl text-white/60 font-light leading-[1.6] mb-12">
+                  <p>
+                    Sending money home isn't a transaction. It's participation in a shared life. It's the scent of popcorn roasting, the familiar bubble of the jebena, and the quiet assurance that family is taken care of.
+                  </p>
+                  <p className="font-medium text-white/80">
+                    Money here. Money home. More to build.
+                  </p>
+                </div>
+                
+                <Button asChild variant="gold" className="rounded-none px-8 py-6 text-sm tracking-widest uppercase">
+                  <Link href="/remittance">Send Money Home</Link>
+                </Button>
+              </motion.div>
+
+              {/* Image Collage */}
+              <div className="lg:col-span-7 relative h-[600px] sm:h-[700px]">
+                {/* Tall Banner Image */}
+                <motion.div 
+                  {...storyReveal({ opacity: 0, y: 40 })}
+                  transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute right-0 top-0 w-2/3 sm:w-[55%] h-[80%] z-10 group"
+                >
+                  <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
+                  <img 
+                    src={remittanceStoryTall}
+                    alt="Jebena pouring fresh coffee"
+                    className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
+                  />
+                  <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.2em] text-white/40 uppercase drop-shadow-md">
+                    Fig. 01 — The Pour
+                  </div>
+                </motion.div>
+
+                {/* Wide Gathering Image */}
+                <motion.div 
+                  {...storyReveal({ opacity: 0, x: 40 })}
+                  transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute left-0 bottom-0 w-3/4 sm:w-[65%] h-[60%] z-20 group"
+                >
+                  <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
+                  <img 
+                    src={remittanceStoryWide}
+                    alt="Intimate coffee ceremony gathering"
+                    className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
+                  />
+                  <div className="absolute bottom-4 left-4 text-[10px] tracking-[0.2em] text-white/50 uppercase drop-shadow-md">
+                    Fig. 02 — Family & Friends
+                  </div>
+                </motion.div>
+              </div>
+              
             </div>
           </div>
         </section>
