@@ -30,6 +30,7 @@ import { DashboardCredit } from '@/pages/dashboard/credit';
 import { DashboardAnalytics } from '@/pages/dashboard/analytics';
 import { DashboardRemittance } from '@/pages/dashboard/remittance';
 import { DashboardSettings } from '@/pages/dashboard/settings';
+import { DashboardRewards } from '@/pages/dashboard/rewards';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { useParams } from 'wouter';
 
@@ -44,6 +45,7 @@ function DashboardRouter() {
     case 'credit': return <DashboardCredit />;
     case 'analytics': return <DashboardAnalytics />;
     case 'remittance': return <DashboardRemittance />;
+    case 'rewards': return <DashboardRewards />;
     case 'settings': return <DashboardSettings />;
     default: return <Dashboard />;
   }

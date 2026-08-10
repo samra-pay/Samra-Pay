@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, CreditCard, BarChart3, LineChart, Send, Settings, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, CreditCard, BarChart3, LineChart, Send, Settings, LogOut, Menu, X, Plane } from "lucide-react";
 import { useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";
 
@@ -15,6 +15,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     { icon: LineChart, label: "Credit Health", href: "/dashboard/credit" },
     { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
     { icon: Send, label: "Remittance", href: "/dashboard/remittance" },
+    { icon: Plane, label: "Rewards", href: "/dashboard/rewards" },
   ];
 
   return (

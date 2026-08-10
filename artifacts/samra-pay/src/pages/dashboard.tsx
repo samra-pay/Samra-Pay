@@ -80,7 +80,8 @@ export default function Dashboard() {
         {/* Top Hero Section: ShebaMiles & Mini Rate/Insight Widgets */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* ShebaMiles Spotlight (Takes up 2 columns) */}
-          <Card className="lg:col-span-2 bg-gradient-to-br from-[#12281C] to-black border-primary/20 shadow-[0_0_50px_rgba(212,175,55,0.05)] relative overflow-hidden group cursor-pointer">
+          <Link href="/dashboard/rewards" className="lg:col-span-2 block" data-testid="link-shebamiles-rewards">
+          <Card className="h-full bg-gradient-to-br from-[#12281C] to-black border-primary/20 shadow-[0_0_50px_rgba(212,175,55,0.05)] relative overflow-hidden group cursor-pointer">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-[#1B3B2B]" />
             <div className="absolute -right-12 -top-12 text-primary/5 pointer-events-none transition-transform duration-700 group-hover:scale-110 group-hover:-translate-x-2 group-hover:translate-y-2">
               <Plane className="w-64 h-64 transform rotate-45" />
@@ -118,8 +119,13 @@ export default function Dashboard() {
                   <span>50,000 miles</span>
                 </div>
               </div>
+              <div className="flex items-center gap-1.5 text-sm text-primary font-medium mt-4 group-hover:gap-2.5 transition-all">
+                Redeem miles in the Rewards hub
+                <ArrowUpRight className="w-4 h-4" />
+              </div>
             </CardContent>
           </Card>
+          </Link>
 
           {/* Mini Widgets Column */}
           <div className="space-y-6 flex flex-col">
