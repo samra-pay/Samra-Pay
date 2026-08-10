@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Outfit:wght@300;400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -46,17 +46,6 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  --color-sidebar: hsl(var(--sidebar));
-  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-primary: hsl(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
-  --color-sidebar-primary-border: var(--sidebar-primary-border);
-  --color-sidebar-accent: hsl(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-  --color-sidebar-accent-border: var(--sidebar-accent-border);
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
-
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
@@ -65,6 +54,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  --animate-float-slow: float 8s ease-in-out infinite;
+  --animate-float-slow-reverse: float-reverse 9s ease-in-out infinite;
 }
 
 /* Base variables for both modes, defaulting to dark theme because Samra Pay is dark/luxury */
@@ -81,13 +73,13 @@
   --background: 0 0% 4%; 
   --foreground: 0 0% 96%;
 
-  --border: 0 0% 15%;
+  --border: 0 0% 12%;
   --input: 0 0% 15%;
   --ring: 46 65% 52%;
 
-  --card: 0 0% 7%;
+  --card: 0 0% 6%;
   --card-foreground: 0 0% 96%;
-  --card-border: 0 0% 12%;
+  --card-border: 0 0% 10%;
 
   --popover: 0 0% 7%;
   --popover-foreground: 0 0% 96%;
@@ -97,11 +89,11 @@
   --primary: 46 65% 52%;
   --primary-foreground: 0 0% 9%;
 
-  --secondary: 0 0% 12%;
+  --secondary: 0 0% 10%;
   --secondary-foreground: 0 0% 96%;
 
   --muted: 0 0% 12%;
-  --muted-foreground: 0 0% 65%;
+  --muted-foreground: 0 0% 60%;
 
   --accent: 46 65% 15%;
   --accent-foreground: 46 65% 85%;
@@ -119,16 +111,7 @@
   --app-font-serif: 'Cormorant Garamond', serif;
   --app-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   
-  --radius: 0.5rem;
-
-  --shadow-2xs: 0px 2px 0px 0px rgba(0,0,0, 0.4);
-  --shadow-xs: 0px 2px 0px 0px rgba(0,0,0, 0.4);
-  --shadow-sm: 0px 2px 0px 0px rgba(0,0,0, 0.4), 0px 1px 2px -1px rgba(0,0,0, 0.2);
-  --shadow: 0px 2px 0px 0px rgba(0,0,0, 0.4), 0px 1px 2px -1px rgba(0,0,0, 0.2);
-  --shadow-md: 0px 2px 0px 0px rgba(0,0,0, 0.4), 0px 2px 4px -1px rgba(0,0,0, 0.2);
-  --shadow-lg: 0px 2px 0px 0px rgba(0,0,0, 0.4), 0px 4px 6px -1px rgba(0,0,0, 0.2);
-  --shadow-xl: 0px 2px 0px 0px rgba(0,0,0, 0.4), 0px 8px 10px -1px rgba(0,0,0, 0.2);
-  --shadow-2xl: 0px 2px 0px 0px rgba(0,0,0, 0.4);
+  --radius: 0.75rem;
 }
 
 .dark {
@@ -141,7 +124,7 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary;
   }
 }
 
@@ -149,6 +132,23 @@
 .bg-axum-pattern {
   background-image: radial-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+.pattern-dots {
+  background-image: radial-gradient(hsl(var(--primary) / 0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes float-reverse {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(12px); }
+  100% { transform: translateY(0px); }
 }
 
 @layer utilities {
