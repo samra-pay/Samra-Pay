@@ -18,8 +18,11 @@ import { Footer } from '@/components/footer';
 // Pages
 import Home from '@/pages/home';
 import Cards from '@/pages/cards';
+import ChargeCardPage from '@/pages/cards/charge';
+import CoBrandCardPage from '@/pages/cards/co-brand';
 import Remittance from '@/pages/remittance';
 import SocialHouse from '@/pages/social-house';
+import AskSamra from '@/pages/ask-samra';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
 import { DashboardCards } from '@/pages/dashboard/cards';
@@ -72,9 +75,12 @@ function Router() {
             <RoutedErrorBoundary>
               <Switch>
                 <Route path="/" component={Home} />
+                <Route path="/cards/charge" component={ChargeCardPage} />
+                <Route path="/cards/co-brand" component={CoBrandCardPage} />
                 <Route path="/cards" component={Cards} />
                 <Route path="/remittance" component={Remittance} />
                 <Route path="/social-house" component={SocialHouse} />
+                <Route path="/ask-samra" component={AskSamra} />
                 <Route component={NotFound} />
               </Switch>
             </RoutedErrorBoundary>

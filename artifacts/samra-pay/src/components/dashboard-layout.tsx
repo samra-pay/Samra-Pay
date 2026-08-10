@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, CreditCard, BarChart3, LineChart, Send, Settings, LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { SamraLogo } from "@/components/samra-logo";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -22,11 +23,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex flex-col w-64 border-r border-white/5 bg-card/30">
         <div className="p-6 border-b border-white/5">
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40 group-hover:bg-primary/30 transition-colors">
-                <span className="font-serif text-primary text-xl leading-none">S</span>
-              </div>
-              <span className="font-serif text-xl tracking-wide font-medium">SAMRA PAY</span>
+            <div className="cursor-pointer group">
+              <SamraLogo size="sm" showWordmark={true} />
             </div>
           </Link>
         </div>
@@ -69,8 +67,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/90 backdrop-blur-xl z-50 flex items-center justify-between px-6">
         <Link href="/">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40">
-            <span className="font-serif text-primary text-xl leading-none">S</span>
+          <div className="cursor-pointer">
+            <SamraLogo size="sm" showWordmark={false} />
           </div>
         </Link>
         <button onClick={() => setIsMobileOpen(!isMobileOpen)} className="text-foreground">

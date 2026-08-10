@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { SamraLogo } from "@/components/samra-logo";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -21,6 +22,7 @@ export function Navbar() {
     { href: "/cards", label: "Cards" },
     { href: "/remittance", label: "Remittance" },
     { href: "/social-house", label: "Social House" },
+    { href: "/ask-samra", label: "Ask Samra" },
   ];
 
   return (
@@ -34,11 +36,8 @@ export function Navbar() {
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer group">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40 group-hover:bg-primary/30 transition-colors">
-              <span className="font-serif text-primary text-xl leading-none">S</span>
-            </div>
-            <span className="font-serif text-xl tracking-wide font-medium">SAMRA PAY</span>
+          <div className="cursor-pointer group">
+            <SamraLogo size="md" showWordmark={true} />
           </div>
         </Link>
 

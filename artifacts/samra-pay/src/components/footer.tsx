@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { SamraLogo } from "@/components/samra-logo";
 
 export function Footer() {
   return (
@@ -7,11 +8,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1 md:col-span-2">
             <Link href="/">
-              <div className="flex items-center gap-2 cursor-pointer mb-6">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40">
-                  <span className="font-serif text-primary text-xl leading-none">S</span>
-                </div>
-                <span className="font-serif text-xl tracking-wide font-medium">SAMRA PAY</span>
+              <div className="cursor-pointer mb-6 inline-block">
+                <SamraLogo size="md" showWordmark={true} />
               </div>
             </Link>
             <p className="text-muted-foreground max-w-sm text-sm leading-relaxed mb-6">
@@ -28,10 +26,13 @@ export function Footer() {
             <h4 className="font-medium mb-6 text-sm tracking-wider uppercase text-foreground/80">Products</h4>
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li>
-                <Link href="/cards"><span className="hover:text-primary transition-colors cursor-pointer">Samra Pay Charge Card</span></Link>
+                <Link href="/cards/charge"><span className="hover:text-primary transition-colors cursor-pointer">Samra Pay Charge Card</span></Link>
               </li>
               <li>
-                <Link href="/cards"><span className="hover:text-primary transition-colors cursor-pointer">Airlines Co-brand</span></Link>
+                <Link href="/cards/co-brand"><span className="hover:text-primary transition-colors cursor-pointer">Airlines Co-brand</span></Link>
+              </li>
+              <li>
+                <Link href="/cards"><span className="hover:text-primary transition-colors cursor-pointer">Compare Cards</span></Link>
               </li>
               <li>
                 <Link href="/remittance"><span className="hover:text-primary transition-colors cursor-pointer">Remittance</span></Link>
@@ -44,6 +45,9 @@ export function Footer() {
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li>
                 <Link href="/social-house"><span className="hover:text-primary transition-colors cursor-pointer">Social House</span></Link>
+              </li>
+              <li>
+                <Link href="/ask-samra"><span className="hover:text-primary transition-colors cursor-pointer">Ask Samra</span></Link>
               </li>
               <li>
                 <Link href="/"><span className="hover:text-primary transition-colors cursor-pointer">About Us</span></Link>
@@ -64,7 +68,7 @@ export function Footer() {
         </div>
         
         <div className="mt-8 text-[10px] text-muted-foreground/50 leading-relaxed text-center max-w-4xl mx-auto">
-          Samra Pay is a financial technology company, not a bank. Banking services provided by partner banks, Members FDIC. The Samra Pay Charge Card is issued pursuant to a license from Visa U.S.A. Inc.
+          Samra Pay is a financial technology company, not a bank. Banking services provided by partner banks, Members FDIC. The Samra Pay Charge Card and Co-branded Card are issued on the Mastercard network pursuant to a license from Mastercard International and are accepted in 210+ countries.
         </div>
       </div>
     </footer>

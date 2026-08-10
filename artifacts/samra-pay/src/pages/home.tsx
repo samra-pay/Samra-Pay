@@ -230,8 +230,8 @@ export default function Home() {
                   Elevate your travel with the Ethiopian Airlines Co-branded Card. 3x points on EA flights, discounted lounge access, and a VIP booking concierge. Because the journey home should feel like you've already arrived.
                 </p>
                 <Button asChild variant="link" className="p-0 h-auto text-primary text-lg group font-medium">
-                  <Link href="/cards">
-                    Compare Card Tiers <ChevronRight className="ml-1 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <Link href="/cards/co-brand">
+                    Explore Co-brand Card <ChevronRight className="ml-1 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </Button>
               </motion.div>

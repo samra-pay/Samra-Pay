@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { SamraLogo } from "@/components/samra-logo";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +33,8 @@ export default function Login() {
         <div className="w-full max-w-md relative z-10">
           <div className="text-center mb-10">
             <Link href="/">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 border border-primary/40 mb-6 cursor-pointer hover:bg-primary/30 transition-colors">
-                <span className="font-serif text-primary text-2xl leading-none">S</span>
+              <div className="cursor-pointer mb-6 inline-block">
+                <SamraLogo size="lg" showWordmark={false} />
               </div>
             </Link>
             <h1 className="font-serif text-3xl mb-2">Welcome Back</h1>

@@ -78,9 +78,12 @@ export default function Cards() {
                     ))}
                   </ul>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="gap-3">
                   <Button asChild className="w-full h-14 rounded-xl text-base" variant="outline">
                     <Link href="/login">Apply Now</Link>
+                  </Button>
+                  <Button asChild className="w-full h-14 rounded-xl text-base bg-white/5 border-white/10 hover:bg-white/10" variant="outline">
+                    <Link href="/cards/charge">Explore Details</Link>
                   </Button>
                 </CardFooter>
               </Card>
@@ -123,9 +126,12 @@ export default function Cards() {
                     ))}
                   </ul>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="gap-3">
                   <Button asChild className="w-full h-14 rounded-xl text-base shadow-[0_0_20px_rgba(212,175,55,0.2)]" variant="gold">
-                    <Link href="/login">Apply for Premium</Link>
+                    <Link href="/login">Apply Now</Link>
+                  </Button>
+                  <Button asChild className="w-full h-14 rounded-xl text-base border-primary/30 text-primary hover:bg-primary/10" variant="outline">
+                    <Link href="/cards/co-brand">Explore Details</Link>
                   </Button>
                 </CardFooter>
               </Card>
