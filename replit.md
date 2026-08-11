@@ -35,6 +35,7 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 - `/dashboard` + sub-pages (cards, credit, analytics, remittance, settings): mock neo-bank dashboard for demo user "Selam T." — debit/charge/co-brand cards, ShebaMiles, credit tracking, per-card transactions, spending analytics
 - Ethiopian Airlines logo asset: `artifacts/samra-pay/src/assets/ethiopian-airlines-logo.svg` (used on the co-branded card composition)
 - Design: "Midnight Gold" — dark charcoal + gold, Cormorant Garamond/Outfit, subtle Axumite/Ethiopian motifs, AI-generated card and culture imagery
+- Brand mark: `attached_assets/Screenshot_2026-08-11_at_2.47.22_PM_1786474044093.png` is the canonical “SP” mark; use it for web favicons and the square exports in `artifacts/samra-pay/public/icons/` for future app builds.
 
 ## User preferences
 

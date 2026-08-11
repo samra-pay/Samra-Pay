@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, Building2, Smartphone, Banknote, ShieldCheck } from "lucide-react";
+import { ArrowDown, Building2, Smartphone, CreditCard, Landmark, ShieldCheck, Check } from "lucide-react";
 import { Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
 
 const PROMO_RATE = 180; // 1 USD = 180 ETB
+const CARD_FEE_RATE = 0.03;
+
+type DeliveryMethod = "wallet" | "bank";
+type FundingMethod = "card" | "bank";
 
 export default function Remittance() {
   const [usdAmount, setUsdAmount] = useState<string>("1000");
   const [etbAmount, setEtbAmount] = useState<string>("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"bank"|"telebirr"|"cash">("bank");
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("bank");
+  const [fundingMethod, setFundingMethod] = useState<FundingMethod>("bank");
 
   useEffect(() => {
     const num = parseFloat(usdAmount);
@@ -27,8 +31,14 @@ export default function Remittance() {
   };
 
   const stdRate = 115; // Example standard rate for comparison
-  const stdEtb = (parseFloat(usdAmount || "0") * stdRate).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  const difference = ((parseFloat(usdAmount || "0") * PROMO_RATE) - (parseFloat(usdAmount || "0") * stdRate)).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  const parsedUsdAmount = Math.max(parseFloat(usdAmount || "0") || 0, 0);
+  const serviceFee = fundingMethod === "card" ? parsedUsdAmount * CARD_FEE_RATE : 0;
+  const totalCharged = parsedUsdAmount + serviceFee;
+  const difference = ((parsedUsdAmount * PROMO_RATE) - (parsedUsdAmount * stdRate)).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  const formatUsd = (amount: number) => amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   return (
     <PageTransition>
@@ -47,7 +57,7 @@ export default function Remittance() {
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed font-light max-w-lg">
-              We know the value of the money you send home. Enjoy fee-free transfers and an industry-leading exchange rate, powered exclusively by Samra Pay.
+              Send directly to a mobile money wallet or bank account at an industry-leading exchange rate. Bank-funded transfers are free; card-funded transfers include a simple 3% service fee.
             </p>
             
             {/* Live Ticker Style */}
@@ -59,7 +69,9 @@ export default function Remittance() {
               <div className="w-px h-12 bg-white/10" />
               <div className="flex flex-col">
                 <div className="text-sm text-muted-foreground uppercase tracking-widest mb-1">Transfer Fees</div>
-                <span className="text-4xl font-serif text-white/90 font-medium">$0</span>
+                 <span className="text-4xl font-serif text-white/90 font-medium">
+                   {fundingMethod === "card" ? "3%" : "$0"}
+                 </span>
               </div>
             </div>
 
@@ -112,14 +124,13 @@ export default function Remittance() {
                     <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded uppercase tracking-wider font-semibold">Promo Applied</span>
                   </div>
                   
-                  <div className="flex items-center relative z-10">
-                    <input 
-                      type="text"
-                      value={etbAmount}
-                      readOnly
-                      className="bg-transparent text-5xl font-serif outline-none w-full text-primary placeholder:text-primary/50"
-                      placeholder="0.00"
-                    />
+                  <div className="flex min-w-0 items-center relative z-10">
+                    <span
+                      aria-live="polite"
+                      className="min-w-0 flex-1 truncate bg-transparent text-4xl font-serif text-primary md:text-5xl"
+                    >
+                      {etbAmount || "0.00"}
+                    </span>
                     <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl border border-primary/20">
                       <span className="font-semibold tracking-wider text-primary">ETB</span>
                     </div>
@@ -139,33 +150,129 @@ export default function Remittance() {
                 </div>
 
                 {/* Delivery Method */}
-                <div>
-                  <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">Delivery Method</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { id: "bank", icon: Banknote, label: "Bank" },
-                      { id: "telebirr", icon: Smartphone, label: "Telebirr" },
-                      { id: "cash", icon: Building2, label: "Cash" },
-                    ].map(method => (
-                      <button
-                        key={method.id}
-                        onClick={() => setDeliveryMethod(method.id as any)}
-                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                          deliveryMethod === method.id 
-                            ? "bg-primary/10 border-primary text-primary" 
-                            : "bg-background/50 border-white/5 text-muted-foreground hover:bg-white/[0.02]"
-                        }`}
-                      >
-                        <method.icon className="w-5 h-5" />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider">{method.label}</span>
-                      </button>
-                    ))}
+                <div className="space-y-6">
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
+                      Send to
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        {
+                          id: "wallet" as const,
+                          icon: Smartphone,
+                          label: "Mobile money wallet",
+                          detail: "Telebirr and more",
+                        },
+                        {
+                          id: "bank" as const,
+                          icon: Landmark,
+                          label: "Bank account",
+                          detail: "Direct to their bank",
+                        },
+                      ].map((method) => {
+                        const selected = deliveryMethod === method.id;
+                        return (
+                          <button
+                            key={method.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => setDeliveryMethod(method.id)}
+                            className={`relative flex min-h-[112px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all ${
+                              selected
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-white/5 bg-background/50 text-muted-foreground hover:border-white/15 hover:bg-white/[0.03]"
+                            }`}
+                          >
+                            {selected && (
+                              <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                <Check className="h-3 w-3" />
+                              </span>
+                            )}
+                            <method.icon className="h-5 w-5" />
+                            <span className="text-sm font-medium leading-tight">{method.label}</span>
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {method.detail}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
+                      Pay with
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        {
+                          id: "card" as const,
+                          icon: CreditCard,
+                          label: "Card",
+                          detail: "3% service fee",
+                        },
+                        {
+                          id: "bank" as const,
+                          icon: Building2,
+                          label: "Bank transfer",
+                          detail: "No service fee",
+                        },
+                      ].map((method) => {
+                        const selected = fundingMethod === method.id;
+                        return (
+                          <button
+                            key={method.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => setFundingMethod(method.id)}
+                            className={`relative flex min-h-[100px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all ${
+                              selected
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-white/5 bg-background/50 text-muted-foreground hover:border-white/15 hover:bg-white/[0.03]"
+                            }`}
+                          >
+                            {selected && (
+                              <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                <Check className="h-3 w-3" />
+                              </span>
+                            )}
+                            <method.icon className="h-5 w-5" />
+                            <span className="text-sm font-medium leading-tight">{method.label}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${
+                              method.id === "card" ? "text-primary/80" : "text-green-400/80"
+                            }`}>
+                              {method.detail}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sender quote */}
+                <div className="space-y-3 border-t border-white/10 pt-5 text-sm">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Amount to send</span>
+                    <span className="text-foreground">${formatUsd(parsedUsdAmount)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Service fee {fundingMethod === "card" ? "(3% card fee)" : "(bank-funded)"}</span>
+                    <span className={serviceFee > 0 ? "text-primary" : "text-green-400"}>
+                      {serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-white/5 pt-3 text-base font-medium">
+                    <span>Total charged</span>
+                    <span className="text-primary">${formatUsd(totalCharged)}</span>
                   </div>
                 </div>
               </div>
 
               <Button asChild variant="gold" size="lg" className="w-full rounded-2xl text-lg h-16 mt-8 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
-                <Link href="/login">Send Money Now</Link>
+                <Link href="/login">Continue to send ${formatUsd(totalCharged)}</Link>
               </Button>
             </div>
           </div>
