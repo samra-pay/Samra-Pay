@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck, Globe, Star, Users } from "lucide-react";
 import { Link } from "wouter";
 import heroBg from "@assets/generated_images/hero-bg.jpg";
+import heroBg640 from "@assets/generated_images/hero-bg-640.jpg";
 import remittanceStoryWide from "@assets/home-ceremony.jpg";
+import remittanceStoryWide800 from "@assets/home-ceremony-800.jpg";
 import remittanceStoryTall from "@assets/jebena-pour-banner.jpg";
+import remittanceStoryTall480 from "@assets/jebena-pour-banner-480.jpg";
 import { CreditCard, Card3DWrapper } from "@/components/credit-card";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
@@ -29,33 +32,35 @@ export default function Home() {
     target: containerRef,
     offset: ["start start", "end start"]
   });
-  
+
   const yBg = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const opacityBg = useTransform(scrollYProgress, [0, 0.5], [0.4, 0]);
 
   return (
     <PageTransition>
       <div className="w-full" ref={containerRef}>
-        
+
         {/* HERO SECTION */}
         <section className="relative min-h-[100dvh] flex items-center overflow-hidden pt-20">
           <div className="absolute inset-0 z-0 bg-background">
-            <motion.div 
+            <motion.div
               style={{ y: yBg, opacity: opacityBg }}
               className="absolute inset-0 mix-blend-screen"
             >
-              <img 
-                src={heroBg} 
-                alt="Background pattern" 
+              <img
+                src={heroBg}
+                srcSet={`${heroBg640} 640w, ${heroBg} 1024w`}
+                sizes="100vw"
+                alt="Background pattern"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/80" />
             </motion.div>
           </div>
-          
+
           <div className="container relative z-20 px-6 mx-auto grid lg:grid-cols-2 gap-16 lg:gap-8 items-center h-full py-12 lg:py-0">
-            <motion.div 
+            <motion.div
               initial="hidden"
               animate="visible"
               transition={{ staggerChildren: 0.1, delayChildren: 0.2 }}
@@ -65,17 +70,17 @@ export default function Home() {
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
                 Designed in Addis. Polished in NY.
               </motion.div>
-              
+
               <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-8 text-[#F9F7F1]">
                 Your financial home.<br/>
                 Built for life here<br/>
                 <span className="italic text-primary">and home.</span>
               </motion.h1>
-              
+
               <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed max-w-lg font-light">
                 The premier financial platform for the Ethiopian diaspora. One card builds your life here. The other flies you home.
               </motion.p>
-              
+
               <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-5">
                 <Button asChild variant="gold" size="lg" className="rounded-full w-full sm:w-auto h-14 px-8 text-base">
                   <Link href="/cards">
@@ -89,8 +94,8 @@ export default function Home() {
                 </Button>
               </motion.div>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, x: 20 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
               transition={{ delay: 0.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
@@ -98,7 +103,7 @@ export default function Home() {
             >
               <div className="relative w-full max-w-[440px]">
                 {/* Floating stat chips */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}
                   className="absolute -left-12 top-10 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-float-slow hidden md:flex"
                 >
@@ -111,7 +116,7 @@ export default function Home() {
                   </div>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4 }}
                   className="absolute -right-8 bottom-12 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-float-slow-reverse hidden md:flex"
                 >
@@ -127,7 +132,7 @@ export default function Home() {
                 <Card3DWrapper>
                   <CreditCard variant="charge" showFlipHint />
                 </Card3DWrapper>
-                
+
                 {/* Ambient glow behind card */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/10 blur-[100px] rounded-full -z-10" />
               </div>
@@ -186,7 +191,7 @@ export default function Home() {
                   desc: "Banking shouldn't be isolating. Join our physical hubs for traditional coffee ceremonies, pitch nights, and community wealth building."
                 }
               ].map((feature, idx) => (
-                <motion.div 
+                <motion.div
                   key={idx}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -212,9 +217,9 @@ export default function Home() {
           <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(212,175,55,0.08),_transparent_60%)] pointer-events-none" />
           <div className="container mx-auto px-6 relative z-10">
             <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-              
+
               {/* Text Content */}
-              <motion.div 
+              <motion.div
                 {...storyReveal({ opacity: 0, x: -40 })}
                 transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
                 className="lg:col-span-5"
@@ -224,7 +229,7 @@ export default function Home() {
                   Every transfer <br/>
                   <span className="italic text-primary">ends like this.</span>
                 </h2>
-                
+
                 <div className="space-y-6 text-lg md:text-xl text-white/60 font-light leading-[1.6] mb-12">
                   <p>
                     Sending money home isn't a transaction. It's participation in a shared life. It's the scent of popcorn roasting, the familiar bubble of the jebena, and the quiet assurance that family is taken care of.
@@ -233,7 +238,7 @@ export default function Home() {
                     Money here. Money home. More to build.
                   </p>
                 </div>
-                
+
                 <Button asChild variant="gold" className="rounded-none px-8 py-6 text-sm tracking-widest uppercase">
                   <Link href="/remittance">Send Money Home</Link>
                 </Button>
@@ -242,14 +247,18 @@ export default function Home() {
               {/* Image Collage */}
               <div className="lg:col-span-7 relative h-[600px] sm:h-[700px]">
                 {/* Tall Banner Image */}
-                <motion.div 
+                <motion.div
                   {...storyReveal({ opacity: 0, y: 40 })}
                   transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute right-0 top-0 w-2/3 sm:w-[55%] h-[80%] z-10 group"
                 >
                   <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <img 
+                  <img
                     src={remittanceStoryTall}
+                    srcSet={`${remittanceStoryTall480} 480w, ${remittanceStoryTall} 731w`}
+                    sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
+                    loading="lazy"
+                    decoding="async"
                     alt="Jebena pouring fresh coffee"
                     className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
                   />
@@ -259,14 +268,18 @@ export default function Home() {
                 </motion.div>
 
                 {/* Wide Gathering Image */}
-                <motion.div 
+                <motion.div
                   {...storyReveal({ opacity: 0, x: 40 })}
                   transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute left-0 bottom-0 w-3/4 sm:w-[65%] h-[60%] z-20 group"
                 >
                   <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <img 
+                  <img
                     src={remittanceStoryWide}
+                    srcSet={`${remittanceStoryWide800} 800w, ${remittanceStoryWide} 1600w`}
+                    sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
+                    loading="lazy"
+                    decoding="async"
                     alt="Intimate coffee ceremony gathering"
                     className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
                   />
@@ -275,7 +288,7 @@ export default function Home() {
                   </div>
                 </motion.div>
               </div>
-              
+
             </div>
           </div>
         </section>
@@ -284,10 +297,10 @@ export default function Home() {
         <section className="py-24 relative overflow-hidden bg-[#0A0D0B] border-y border-white/5">
           {/* Green/Gold atmospheric lighting */}
           <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_50%,_rgba(212,175,55,0.05),_rgba(27,59,43,0.2)_40%,_transparent_70%)] pointer-events-none" />
-          
+
           <div className="container mx-auto px-6 relative z-10">
             <div className="grid lg:grid-cols-2 items-center gap-16 lg:gap-24">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -300,8 +313,8 @@ export default function Home() {
                   </Card3DWrapper>
                 </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}

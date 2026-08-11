@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Users, GraduationCap, Home, HandCoins, ArrowRight, MapPin, Calendar, ShieldCheck } from "lucide-react";
-import socialHouseImg from "@assets/generated_images/social-house.jpg";
 
 export default function AskSamra() {
   const workshops = [
@@ -38,10 +37,10 @@ export default function AskSamra() {
           <div className="absolute inset-0 bg-[#0c0a00]" />
           {/* Warm background gradient */}
           <div className="absolute top-0 right-0 w-3/4 h-3/4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent opacity-80" />
-          
+
           <div className="container mx-auto px-6 relative z-10">
             <div className="max-w-4xl">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
@@ -84,7 +83,7 @@ export default function AskSamra() {
                 { icon: HandCoins, title: "Business Capital", desc: "For diaspora entrepreneurs: securing SBA loans, building business credit, and scaling operations." },
                 { icon: GraduationCap, title: "Youth Literacy", desc: "Equipping the next generation with the tools to budget, save, and invest early." }
               ].map((pillar, idx) => (
-                <motion.div 
+                <motion.div
                   key={idx}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -136,7 +135,7 @@ export default function AskSamra() {
 
             <div className="grid lg:grid-cols-3 gap-6">
               {workshops.map((ws, idx) => (
-                <motion.div 
+                <motion.div
                   key={idx}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
