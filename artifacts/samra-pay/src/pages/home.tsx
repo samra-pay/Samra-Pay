@@ -118,7 +118,7 @@ export default function Home() {
                 {/* Floating stat chips */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}
-                  className="absolute -left-16 top-8 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
+                  className="absolute -left-16 -top-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
                 >
                   <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
                     <Star className="w-4 h-4 text-green-400" />
@@ -131,7 +131,7 @@ export default function Home() {
 
                 <motion.div
                   initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4 }}
-                  className="absolute -right-8 bottom-12 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-float-slow-reverse hidden md:flex"
+                  className="absolute -right-8 -bottom-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-float-slow-reverse hidden md:flex"
                 >
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <Globe className="w-5 h-5 text-primary" />

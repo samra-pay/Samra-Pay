@@ -79,21 +79,31 @@ const axumPattern = `url("data:image/svg+xml,%3Csvg width='40' height='40' viewB
 // Metallic noise for texture
 const noisePattern = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08' mix-blend-mode='overlay'/%3E%3C/svg%3E")`;
 
-const EMVChip = () => (
-  <div className="w-[clamp(2.5rem,10cqw,3rem)] h-[clamp(1.75rem,7cqw,2.125rem)] rounded-[4px] bg-gradient-to-br from-[#E6C27A] via-[#FFE29F] to-[#D4AF37] relative overflow-hidden shadow-[inset_0_0_2px_rgba(0,0,0,0.5)] border border-[#b38b22]/50 flex shrink-0">
-    {/* EMV Contact lines */}
-    <div className="absolute inset-0 border-[0.5px] border-black/10 rounded-[3px] m-[2px]" />
-    <div className="absolute left-1/2 top-0 bottom-0 w-[0.5px] bg-black/10 -translate-x-1/2" />
-    <div className="absolute top-1/3 left-0 right-0 h-[0.5px] bg-black/10" />
-    <div className="absolute top-2/3 left-0 right-0 h-[0.5px] bg-black/10" />
-    <div className="absolute left-1/4 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-white/40 to-transparent" />
-  </div>
-);
-
 const MastercardLogo = ({ isLight = false }: { isLight?: boolean }) => (
   <div className="flex items-center">
     <div className={cn("w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] rounded-full bg-[#EB001B] opacity-90 -mr-[clamp(0.5rem,3cqw,0.75rem)]", !isLight && "mix-blend-screen")} />
     <div className={cn("w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] rounded-full bg-[#F79E1B] opacity-90", !isLight && "mix-blend-screen")} />
+  </div>
+);
+
+const ContactlessLogo = ({ isLight = false }: { isLight?: boolean }) => (
+  <div
+    className={cn(
+      "flex h-[clamp(1.5rem,8cqw,2rem)] w-[clamp(1.5rem,8cqw,2rem)] items-center justify-center",
+      isLight ? "text-black/60" : "text-white/60",
+    )}
+    role="img"
+    aria-label="Contactless payments accepted"
+  >
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
+      <path
+        d="M4 12a8 8 0 018-8m0 0a8 8 0 018 8m-8-8v16m-8-8a8 8 0 008 8m0 0a8 8 0 008-8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   </div>
 );
 
@@ -261,13 +271,8 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
         </div>
         
         <div className="relative z-10 space-y-[clamp(0.5rem,3cqw,1rem)] mt-auto">
-          <div className="flex justify-between items-end">
-            <EMVChip />
-            <div className="w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] opacity-60 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-black">
-                <path d="M4 12a8 8 0 018-8m0 0a8 8 0 018 8m-8-8v16m-8-8a8 8 0 008 8m0 0a8 8 0 008-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+          <div className="flex justify-end items-end">
+            <ContactlessLogo isLight />
           </div>
           <div className={cn("font-mono text-black/90 whitespace-nowrap text-[clamp(0.85rem,5cqw,1.5rem)]", embossedTextGold)} style={{ letterSpacing: 'clamp(0.1em, 0.5cqw, 0.25em)' }}>
             •••• •••• •••• {last4}
@@ -300,13 +305,8 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
         </div>
         
         <div className="relative z-10 space-y-[clamp(0.5rem,3cqw,1rem)] mt-auto">
-          <div className="flex justify-between items-end">
-            <EMVChip />
-            <div className="w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] opacity-80 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white/50">
-                <path d="M4 12a8 8 0 018-8m0 0a8 8 0 018 8m-8-8v16m-8-8a8 8 0 008 8m0 0a8 8 0 008-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+          <div className="flex justify-end items-end">
+            <ContactlessLogo />
           </div>
           <div className={cn("font-mono text-white/90 whitespace-nowrap text-[clamp(0.85rem,5cqw,1.5rem)]", embossedText)} style={{ letterSpacing: 'clamp(0.1em, 0.5cqw, 0.25em)' }}>
             •••• •••• •••• {last4}
@@ -336,13 +336,8 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
         </div>
         
         <div className="relative z-10 space-y-[clamp(0.5rem,3cqw,1rem)] mt-auto">
-          <div className="flex justify-between items-end">
-            <EMVChip />
-            <div className="w-[clamp(1.5rem,8cqw,2rem)] h-[clamp(1.5rem,8cqw,2rem)] opacity-80 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white/50">
-                <path d="M4 12a8 8 0 018-8m0 0a8 8 0 018 8m-8-8v16m-8-8a8 8 0 008 8m0 0a8 8 0 008-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+          <div className="flex justify-end items-end">
+            <ContactlessLogo />
           </div>
           <div className={cn("font-mono text-white/90 whitespace-nowrap text-[clamp(0.85rem,5cqw,1.5rem)]", embossedText)} style={{ letterSpacing: 'clamp(0.1em, 0.5cqw, 0.25em)' }}>
             •••• •••• •••• {last4}
