@@ -47,10 +47,13 @@ export default function Home() {
       <div className="w-full" ref={containerRef}>
 
         {/* HERO SECTION */}
-        <section className="relative min-h-[100dvh] flex items-center overflow-hidden pt-20">
+        <section className="relative min-h-[auto] lg:min-h-[min(100dvh,960px)] flex items-center overflow-hidden pt-24 pb-16 lg:py-20">
           <div className="absolute inset-0 z-0 bg-background">
             <motion.div
-              style={{ y: yBg, opacity: opacityBg }}
+              style={{
+                y: prefersReducedMotion ? 0 : yBg,
+                opacity: prefersReducedMotion ? 0.4 : opacityBg,
+              }}
               className="absolute inset-0 mix-blend-screen"
             >
               <picture>
@@ -63,7 +66,9 @@ export default function Home() {
                   src={heroBg}
                   srcSet={`${heroBg640} 640w, ${heroBg} 1024w`}
                   sizes="100vw"
-                  alt="Background pattern"
+                  alt=""
+                  loading="eager"
+                  fetchPriority="high"
                   className="w-full h-full object-cover"
                 />
               </picture>
@@ -72,45 +77,52 @@ export default function Home() {
             </motion.div>
           </div>
 
-          <div className="container relative z-20 px-6 mx-auto grid lg:grid-cols-2 gap-16 lg:gap-8 items-center h-full py-12 lg:py-0">
+          <div className="container relative z-20 px-6 mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center h-full py-4 lg:py-0">
             <motion.div
-              initial="hidden"
-              animate="visible"
+              initial={prefersReducedMotion ? false : "hidden"}
+              animate={prefersReducedMotion ? undefined : "visible"}
               transition={{ staggerChildren: 0.1, delayChildren: 0.2 }}
               className="max-w-2xl"
             >
-              <motion.div variants={fadeUp} className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium tracking-[0.2em] uppercase mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(212,175,55,0.15)]">
+              <motion.div variants={fadeUp} className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium tracking-[0.2em] uppercase mb-6 md:mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(212,175,55,0.15)]">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
                 Designed in Addis. Polished in NY.
               </motion.div>
 
-              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-8 text-[#F9F7F1]">
+              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-6 md:mb-8 text-[#F9F7F1]">
                 Your financial home.<br/>
                 Built for life here<br/>
                 <span className="italic text-primary">and home.</span>
               </motion.h1>
 
-              <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed max-w-lg font-light">
-                The premier financial platform for the Ethiopian diaspora. One card builds your life here. The other flies you home.
+              <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-8 md:mb-10 leading-relaxed max-w-lg font-light">
+                A modern financial platform for the Ethiopian diaspora. One card builds your life here. The other brings you home.
               </motion.p>
 
-              <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-5">
-                <Button asChild variant="gold" size="lg" className="rounded-full w-full sm:w-auto h-14 px-8 text-base">
+              <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 sm:gap-5">
+                <Button asChild variant="gold" size="lg" className="rounded-full w-full sm:w-auto h-12 sm:h-14 px-8 text-base">
                   <Link href="/cards">
                     Explore Cards <ArrowRight className="ml-2 w-5 h-5" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="rounded-full w-full sm:w-auto h-14 px-8 text-base border-white/20 hover:bg-white/5 hover:border-white/40 transition-all">
+                <Button asChild variant="outline" size="lg" className="rounded-full w-full sm:w-auto h-12 sm:h-14 px-8 text-base border-white/20 hover:bg-white/5 hover:border-white/40 transition-all">
                   <Link href="/remittance">
                     View Remittance Rates
                   </Link>
                 </Button>
+                <Link
+                  href="/remittance"
+                  className="mt-1 inline-flex items-center justify-center gap-2 text-xs tracking-[0.12em] uppercase text-primary/80 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:hidden"
+                >
+                  <Globe className="size-3.5" aria-hidden="true" />
+                  180 ETB / $1 illustrative demo rate
+                </Link>
               </motion.div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, x: 20 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9, x: 20 }}
+              animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, x: 0 }}
               transition={{ delay: 0.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               className="relative lg:h-[700px] flex items-center justify-center lg:justify-end"
             >
@@ -118,7 +130,9 @@ export default function Home() {
                 {/* Floating stat chips */}
                 <div className="relative w-full max-w-[440px] ml-auto">
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}
+                    initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+                    animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2 }}
                     className="absolute -left-16 -top-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
                   >
                     <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
@@ -138,20 +152,27 @@ export default function Home() {
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/10 blur-[100px] rounded-full -z-10" />
                 </div>
 
-                <motion.div
-                  initial={false}
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-[#111713]/95 backdrop-blur-xl border border-primary/30 rounded-2xl p-4 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(212,175,55,0.12)] flex items-center gap-4 animate-float-slow-reverse hidden md:flex"
+                <Link
+                  href="/remittance"
+                  aria-label="View remittance rates, illustrative demo rate of 180 Ethiopian birr per US dollar"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden rounded-2xl md:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
                 >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-primary/80 uppercase tracking-[0.18em]">Remittance promo</div>
-                    <div className="text-xl font-mono text-primary tracking-tight">180 ETB <span className="text-xs text-muted-foreground font-sans tracking-normal">/ $1</span></div>
-                  </div>
-                </motion.div>
+                  <motion.div
+                    initial={false}
+                    animate={prefersReducedMotion ? undefined : { x: [0, 5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+                    className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-[#111713]/95 p-4 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(212,175,55,0.12)] transition-colors hover:border-primary/60"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-primary" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-primary/80 uppercase tracking-[0.18em]">Remittance promo</div>
+                      <div className="text-xl font-mono text-primary tracking-tight">180 ETB <span className="text-xs text-muted-foreground font-sans tracking-normal">/ $1</span></div>
+                      <div className="text-[9px] text-muted-foreground/80">Illustrative demo rate</div>
+                    </div>
+                  </motion.div>
+                </Link>
               </div>
             </motion.div>
           </div>
@@ -159,7 +180,9 @@ export default function Home() {
 
         {/* SOCIAL PROOF BAND */}
         <section className="border-y border-white/5 bg-background/50 relative z-20">
-          <div className="container mx-auto px-6 py-10 flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
+          <div className="container mx-auto px-6 py-10">
+            <p className="mb-7 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground/70">Illustrative demo snapshot</p>
+            <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
             <div>
               <div className="text-3xl font-serif text-white/90 mb-1">$40M+</div>
               <div className="text-sm text-muted-foreground uppercase tracking-widest">Remitted Home</div>
@@ -167,12 +190,13 @@ export default function Home() {
             <div className="w-px h-10 bg-white/10 hidden md:block" />
             <div>
               <div className="text-3xl font-serif text-primary mb-1">180 ETB</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Current Promo Rate</div>
+              <div className="text-sm text-muted-foreground uppercase tracking-widest">Illustrative promo rate</div>
             </div>
             <div className="w-px h-10 bg-white/10 hidden md:block" />
             <div>
               <div className="text-3xl font-serif text-white/90 mb-1">12,000+</div>
               <div className="text-sm text-muted-foreground uppercase tracking-widest">Community Members</div>
+            </div>
             </div>
           </div>
         </section>
@@ -181,6 +205,7 @@ export default function Home() {
         <section className="py-32 relative">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-24">
+              <p className="mb-5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">Built around your whole life</p>
               <h2 className="font-serif text-4xl md:text-5xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
                 Financial tools<br/>
                 <span className="italic text-primary">with soul.</span>
@@ -210,10 +235,10 @@ export default function Home() {
               ].map((feature, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+                  whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-100px" }}
-                  transition={{ delay: idx * 0.15, duration: 0.7 }}
+                  transition={prefersReducedMotion ? undefined : { delay: idx * 0.15, duration: 0.7 }}
                   className="p-10 rounded-[2rem] border border-white/5 bg-gradient-to-b from-card to-background hover:border-primary/20 transition-colors group"
                 >
                   <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-8 group-hover:bg-primary/10 transition-colors">
@@ -262,7 +287,7 @@ export default function Home() {
               </motion.div>
 
               {/* Image Collage */}
-              <div className="lg:col-span-7 relative h-[600px] sm:h-[700px]">
+              <div className="lg:col-span-7 relative h-[470px] sm:h-[600px] lg:h-[700px]">
                 {/* Tall Banner Image */}
                 <motion.div
                   {...storyReveal({ opacity: 0, y: 40 })}
@@ -332,24 +357,24 @@ export default function Home() {
           <div className="container mx-auto px-6 relative z-10">
             <div className="grid lg:grid-cols-2 items-center gap-16 lg:gap-24">
               <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, x: -30 }}
+                whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
+                transition={prefersReducedMotion ? undefined : { duration: 0.8 }}
                 className="order-2 lg:order-1"
               >
                 <div className="relative w-full max-w-[500px] mx-auto perspective-[1200px]">
                   <Card3DWrapper>
-                    <CreditCard variant="airlines" last4="1991" />
+                    <CreditCard variant="airlines" last4="1991" showFlipHint />
                   </Card3DWrapper>
                 </div>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, x: 30 }}
+                whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
+                transition={prefersReducedMotion ? undefined : { duration: 0.8 }}
                 className="order-1 lg:order-2"
               >
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6">
@@ -359,7 +384,7 @@ export default function Home() {
                   The ultimate <br/><span className="italic text-primary">upgrade.</span>
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 font-light leading-relaxed">
-                  Elevate your travel with the Ethiopian Airlines Co-branded Card. 3x points on EA flights, discounted lounge access, and a VIP booking concierge. Because the journey home should feel like you've already arrived.
+                  Elevate your travel with the Ethiopian Airlines Co-branded Card. Earn 3x points on eligible Ethiopian Airlines purchases and move toward the journey home with benefits designed for the distance between two places.
                 </p>
                 <Button asChild variant="link" className="p-0 h-auto text-primary text-lg group font-medium">
                   <Link href="/cards/co-brand">
@@ -376,15 +401,15 @@ export default function Home() {
           <div className="absolute inset-0 bg-primary/5 pattern-dots" />
           <div className="container mx-auto px-6 relative z-10 text-center">
             <h2 className="font-serif text-5xl md:text-6xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
-              Ready to claim<br/>
-              <span className="italic text-primary">your spot?</span>
+              Your next chapter<br/>
+              <span className="italic text-primary">starts here.</span>
             </h2>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-light">
-              Join the waitlist today. We're rolling out access to the diaspora community city by city.
+              Explore the Samra Pay demo and see how your financial life here and home could work together.
             </p>
             <Button asChild variant="gold" size="lg" className="rounded-full h-16 px-10 text-lg shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:scale-105 transition-transform duration-300">
               <Link href="/login">
-                Apply for Samra Pay
+                Enter the demo
               </Link>
             </Button>
           </div>

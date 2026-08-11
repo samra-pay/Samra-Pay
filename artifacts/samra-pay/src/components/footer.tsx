@@ -7,18 +7,20 @@ export function Footer() {
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1 md:col-span-2">
-            <Link href="/">
-              <div className="cursor-pointer mb-6 inline-block">
-                <SamraLogo size="md" showWordmark={true} />
-              </div>
+            <Link
+              href="/"
+              aria-label="Samra Pay home"
+              className="mb-6 inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            >
+              <SamraLogo size="md" showWordmark={true} />
             </Link>
             <p className="text-muted-foreground max-w-sm text-sm leading-relaxed mb-6">
               A modern financial platform for the Ethiopian diaspora. Built to honor our heritage while securing our future.
             </p>
             <div className="flex gap-4 text-sm font-serif text-primary/60 italic">
-              <span>ሳምራ</span>
-              <span className="w-1 h-1 rounded-full bg-primary/40 self-center" />
-              <span>ቡና</span>
+              <span lang="am">ሳምራ</span>
+              <span className="w-1 h-1 rounded-full bg-primary/40 self-center" aria-hidden="true" />
+              <span lang="am">ቡና</span>
             </div>
           </div>
           
@@ -62,13 +64,23 @@ export function Footer() {
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} Samra Pay, Inc. All rights reserved.</p>
           <div className="flex gap-6">
-            <span className="hover:text-foreground transition-colors cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-foreground transition-colors cursor-pointer">Terms of Service</span>
+            <Link
+              href="/privacy"
+              className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/terms"
+              className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Terms of Service
+            </Link>
           </div>
         </div>
         
-        <div className="mt-8 text-[10px] text-muted-foreground/50 leading-relaxed text-center max-w-4xl mx-auto">
-          Samra Pay is a financial technology company, not a bank. Banking services provided by partner banks, Members FDIC. The Samra Pay Charge Card and Co-branded Card are issued on the Mastercard network pursuant to a license from Mastercard International and are accepted in 210+ countries.
+        <div id="legal-disclosures" className="mt-8 text-xs text-muted-foreground/70 leading-relaxed text-center max-w-4xl mx-auto">
+          Samra Pay is a financial technology company, not a bank. Banking services are provided by partner banks, each a Member FDIC. Card programs are issued on the Mastercard network pursuant to a license from Mastercard International; acceptance varies by merchant and country.
         </div>
       </div>
     </footer>

@@ -93,7 +93,7 @@
   --secondary-foreground: 0 0% 96%;
 
   --muted: 0 0% 12%;
-  --muted-foreground: 0 0% 60%;
+  --muted-foreground: 0 0% 68%;
 
   --accent: 46 65% 15%;
   --accent-foreground: 46 65% 85%;
@@ -121,6 +121,11 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 4px;
   }
 
   body {
@@ -159,5 +164,20 @@
     content: attr(data-placeholder);
     color: hsl(var(--muted-foreground));
     pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

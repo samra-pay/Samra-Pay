@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils";
 import ethiopianLogo from "@/assets/ethiopian-airlines-logo.svg";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useReducedMotion } from "framer-motion";
 import { MouseEvent, ReactNode, useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";
 
 export function Card3DWrapper({ children, className }: { children: ReactNode; className?: string }) {
+  const prefersReducedMotion = useReducedMotion();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -42,8 +43,8 @@ export function Card3DWrapper({ children, className }: { children: ReactNode; cl
     >
       <motion.div
         style={{
-          rotateX,
-          rotateY,
+          rotateX: prefersReducedMotion ? 0 : rotateX,
+          rotateY: prefersReducedMotion ? 0 : rotateY,
           transformStyle: "preserve-3d",
         }}
         className="w-full h-full relative"
@@ -51,7 +52,10 @@ export function Card3DWrapper({ children, className }: { children: ReactNode; cl
         {children}
         {/* Dynamic Glare Overlay */}
         <motion.div
-          className="absolute inset-0 z-50 pointer-events-none rounded-2xl mix-blend-overlay opacity-50"
+          className={cn(
+            "absolute inset-0 z-50 pointer-events-none rounded-2xl mix-blend-overlay",
+            prefersReducedMotion ? "opacity-0" : "opacity-50",
+          )}
           style={{
             background: `radial-gradient(circle at calc(var(--glare-x, 50%)) calc(var(--glare-y, 50%)), rgba(255, 255, 255, 0.8) 0%, transparent 60%)`,
             // @ts-ignore
@@ -228,6 +232,7 @@ function CardBack({ variant, last4 }: { variant: CreditCardProps["variant"]; las
 }
 
 export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242", expiry = "08/29", className, showFlipHint = false }: CreditCardProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [flipped, setFlipped] = useState(false);
   const [hasFlipped, setHasFlipped] = useState(false);
 
@@ -359,7 +364,6 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
 
   return (
     <div
-      className={cn("relative w-full aspect-[1.586/1] perspective-[1500px] cursor-pointer select-none", className)}
       onClick={toggleFlip}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -370,13 +374,17 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
       role="button"
       tabIndex={0}
       aria-pressed={flipped}
-      aria-label={flipped ? "Show card front" : "Show card back"}
+      aria-label={flipped ? "Show card front. Press Enter or Space to flip." : "Show card back. Press Enter or Space to flip."}
+      className={cn(
+        "relative w-full aspect-[1.586/1] perspective-[1500px] cursor-pointer select-none rounded-[clamp(1rem,4cqw,1.25rem)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+        className,
+      )}
     >
       <motion.div
         className="relative w-full h-full"
         style={{ transformStyle: "preserve-3d" }}
         animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.7, ease: [0.32, 0.72, 0.25, 1] }}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.7, ease: [0.32, 0.72, 0.25, 1] }}
       >
         <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
           {front}
@@ -394,7 +402,7 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4, transition: { delay: 0, duration: 0.3 } }}
-              transition={{ delay: 1.2, duration: 0.6 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 1.2, duration: prefersReducedMotion ? 0 : 0.6 }}
               className="absolute -bottom-9 left-1/2 -translate-x-1/2 z-30 pointer-events-none"
               aria-hidden="true"
             >
@@ -403,8 +411,8 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
                   viewBox="0 0 24 24"
                   fill="none"
                   className="w-3.5 h-3.5 text-primary/70"
-                  animate={{ rotateY: [0, 180, 180, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, repeatDelay: 1.5, ease: "easeInOut" }}
+                  animate={prefersReducedMotion ? undefined : { rotateY: [0, 180, 180, 0] }}
+                  transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity, repeatDelay: 1.5, ease: "easeInOut" }}
                 >
                   <rect x="3" y="6" width="18" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
                   <path d="M3 10h18" stroke="currentColor" strokeWidth="1.5" />
@@ -415,6 +423,9 @@ export function CreditCard({ variant, cardholderName = "SELAM T.", last4 = "4242
           )}
         </AnimatePresence>
       )}
+      <span className="sr-only" aria-live="polite">
+        Card is showing its {flipped ? "back" : "front"}.
+      </span>
     </div>
   );
 }

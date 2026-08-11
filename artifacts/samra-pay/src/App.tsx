@@ -23,6 +23,7 @@ import CoBrandCardPage from '@/pages/cards/co-brand';
 import Remittance from '@/pages/remittance';
 import SocialHouse from '@/pages/social-house';
 import AskSamra from '@/pages/ask-samra';
+import LegalPage from '@/pages/legal';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
 import { DashboardCards } from '@/pages/dashboard/cards';
@@ -83,6 +84,12 @@ function Router() {
                 <Route path="/remittance" component={Remittance} />
                 <Route path="/social-house" component={SocialHouse} />
                 <Route path="/ask-samra" component={AskSamra} />
+                <Route path="/privacy">
+                  <LegalPage kind="privacy" />
+                </Route>
+                <Route path="/terms">
+                  <LegalPage kind="terms" />
+                </Route>
                 <Route component={NotFound} />
               </Switch>
             </RoutedErrorBoundary>
