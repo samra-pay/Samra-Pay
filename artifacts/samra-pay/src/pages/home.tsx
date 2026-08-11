@@ -114,40 +114,44 @@ export default function Home() {
               transition={{ delay: 0.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               className="relative lg:h-[700px] flex items-center justify-center lg:justify-end"
             >
-              <div className="relative w-full max-w-[440px]">
+              <div className="relative w-full max-w-[640px]">
                 {/* Floating stat chips */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}
-                  className="absolute -left-16 -top-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
-                >
-                  <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <Star className="w-4 h-4 text-green-400" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Credit Score</div>
-                    <div className="text-lg font-serif text-white/90">745 <span className="text-green-400 text-xs font-sans font-medium ml-1">+12</span></div>
-                  </div>
-                </motion.div>
+                <div className="relative w-full max-w-[440px] ml-auto">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}
+                    className="absolute -left-16 -top-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
+                      <Star className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Credit Score</div>
+                      <div className="text-lg font-serif text-white/90">745 <span className="text-green-400 text-xs font-sans font-medium ml-1">+12</span></div>
+                    </div>
+                  </motion.div>
+
+                  <Card3DWrapper>
+                    <CreditCard variant="charge" showFlipHint />
+                  </Card3DWrapper>
+
+                  {/* Ambient glow behind card */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/10 blur-[100px] rounded-full -z-10" />
+                </div>
 
                 <motion.div
-                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4 }}
-                  className="absolute -right-8 -bottom-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-float-slow-reverse hidden md:flex"
+                  initial={false}
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-[#111713]/95 backdrop-blur-xl border border-primary/30 rounded-2xl p-4 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(212,175,55,0.12)] flex items-center gap-4 animate-float-slow-reverse hidden md:flex"
                 >
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <Globe className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Promo Rate</div>
-                    <div className="text-xl font-mono text-primary/90 tracking-tight">180 ETB</div>
+                    <div className="text-[10px] text-primary/80 uppercase tracking-[0.18em]">Remittance promo</div>
+                    <div className="text-xl font-mono text-primary tracking-tight">180 ETB <span className="text-xs text-muted-foreground font-sans tracking-normal">/ $1</span></div>
                   </div>
                 </motion.div>
-
-                <Card3DWrapper>
-                  <CreditCard variant="charge" showFlipHint />
-                </Card3DWrapper>
-
-                {/* Ambient glow behind card */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/10 blur-[100px] rounded-full -z-10" />
               </div>
             </motion.div>
           </div>
