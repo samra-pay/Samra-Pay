@@ -3,10 +3,17 @@ import { Button } from "@/components/ui/button";
 import socialHouseImg from "@assets/ceremony-lounge.jpg";
 import socialHouseImg768 from "@assets/ceremony-lounge-768.jpg";
 import socialHouseImg1280 from "@assets/ceremony-lounge-1280.jpg";
+import socialHouseImgWebp from "@assets/ceremony-lounge.webp";
+import socialHouseImg768Webp from "@assets/ceremony-lounge-768.webp";
+import socialHouseImg1280Webp from "@assets/ceremony-lounge-1280.webp";
 import tomocaCoffeeImg from "@assets/generated_images/tomoca-pour-luxe.jpg";
 import tomocaCoffeeImg640 from "@assets/generated_images/tomoca-pour-luxe-640.jpg";
+import tomocaCoffeeImgWebp from "@assets/generated_images/tomoca-pour-luxe.webp";
+import tomocaCoffeeImg640Webp from "@assets/generated_images/tomoca-pour-luxe-640.webp";
 import bankingCoffeeImg from "@assets/generated_images/banking-over-coffee.jpg";
 import bankingCoffeeImg640 from "@assets/generated_images/banking-over-coffee-640.jpg";
+import bankingCoffeeImgWebp from "@assets/generated_images/banking-over-coffee.webp";
+import bankingCoffeeImg640Webp from "@assets/generated_images/banking-over-coffee-640.webp";
 import { Link } from "wouter";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { MapPin, Music, Coffee, ArrowRight } from "lucide-react";
@@ -52,14 +59,21 @@ export default function SocialHouse() {
         {/* HERO */}
         <section ref={heroRef} className="relative min-h-[100dvh] flex items-end pb-24 md:pb-32 pt-32 overflow-hidden border-b border-primary/20">
           <motion.div style={{ y, opacity }} className="absolute inset-0 z-0">
-            <img
-              src={socialHouseImg}
-              srcSet={`${socialHouseImg768} 768w, ${socialHouseImg1280} 1280w, ${socialHouseImg} 1920w`}
-              sizes="100vw"
-              fetchPriority="high"
-              alt="Tomoca Social House"
-              className="w-full h-full object-cover scale-[1.05]"
-            />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet={`${socialHouseImg768Webp} 768w, ${socialHouseImg1280Webp} 1280w, ${socialHouseImgWebp} 1920w`}
+                sizes="100vw"
+              />
+              <img
+                src={socialHouseImg}
+                srcSet={`${socialHouseImg768} 768w, ${socialHouseImg1280} 1280w, ${socialHouseImg} 1920w`}
+                sizes="100vw"
+                fetchPriority="high"
+                alt="Tomoca Social House"
+                className="w-full h-full object-cover scale-[1.05]"
+              />
+            </picture>
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent" />
             <div className="absolute inset-0 bg-black/30" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_#050505_120%)]" />
@@ -138,15 +152,22 @@ export default function SocialHouse() {
               >
                 <div className="relative group">
                   <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <img
-                    src={tomocaCoffeeImg}
-                    srcSet={`${tomocaCoffeeImg640} 640w, ${tomocaCoffeeImg} 1024w`}
-                    sizes="(max-width: 1024px) 100vw, 45vw"
-                    loading="lazy"
-                    decoding="async"
-                    alt="Tomoca Coffee Pour"
-                    className="w-full aspect-[4/5] object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                  />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      srcSet={`${tomocaCoffeeImg640Webp} 640w, ${tomocaCoffeeImgWebp} 1024w`}
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                    />
+                    <img
+                      src={tomocaCoffeeImg}
+                      srcSet={`${tomocaCoffeeImg640} 640w, ${tomocaCoffeeImg} 1024w`}
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Tomoca Coffee Pour"
+                      className="w-full aspect-[4/5] object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
+                    />
+                  </picture>
                   <div className="mt-4 flex items-center justify-between border-b border-primary/20 pb-4">
                     <span className="font-serif italic text-primary/80 text-lg">Tomoca Macchiato</span>
                     <span className="text-xs tracking-[0.2em] text-white/40 uppercase">Fig. 01</span>
@@ -188,15 +209,22 @@ export default function SocialHouse() {
               >
                 <div className="relative group">
                   <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <img
-                    src={bankingCoffeeImg}
-                    srcSet={`${bankingCoffeeImg640} 640w, ${bankingCoffeeImg} 1024w`}
-                    sizes="(max-width: 1024px) 100vw, 45vw"
-                    loading="lazy"
-                    decoding="async"
-                    alt="Banking over coffee at the espresso counter"
-                    className="w-full aspect-square object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                  />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      srcSet={`${bankingCoffeeImg640Webp} 640w, ${bankingCoffeeImgWebp} 1024w`}
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                    />
+                    <img
+                      src={bankingCoffeeImg}
+                      srcSet={`${bankingCoffeeImg640} 640w, ${bankingCoffeeImg} 1024w`}
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Banking over coffee at the espresso counter"
+                      className="w-full aspect-square object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
+                    />
+                  </picture>
                   <div className="mt-4 flex items-center justify-between border-b border-primary/20 pb-4">
                     <span className="font-serif italic text-primary/80 text-lg">Financial Advisory Session</span>
                     <span className="text-xs tracking-[0.2em] text-white/40 uppercase">Fig. 02</span>

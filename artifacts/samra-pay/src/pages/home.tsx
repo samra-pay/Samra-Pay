@@ -4,10 +4,16 @@ import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck, Globe, Star, User
 import { Link } from "wouter";
 import heroBg from "@assets/generated_images/hero-bg.jpg";
 import heroBg640 from "@assets/generated_images/hero-bg-640.jpg";
+import heroBgWebp from "@assets/generated_images/hero-bg.webp";
+import heroBg640Webp from "@assets/generated_images/hero-bg-640.webp";
 import remittanceStoryWide from "@assets/home-ceremony.jpg";
 import remittanceStoryWide800 from "@assets/home-ceremony-800.jpg";
+import remittanceStoryWideWebp from "@assets/home-ceremony.webp";
+import remittanceStoryWide800Webp from "@assets/home-ceremony-800.webp";
 import remittanceStoryTall from "@assets/jebena-pour-banner.jpg";
 import remittanceStoryTall480 from "@assets/jebena-pour-banner-480.jpg";
+import remittanceStoryTallWebp from "@assets/jebena-pour-banner.webp";
+import remittanceStoryTall480Webp from "@assets/jebena-pour-banner-480.webp";
 import { CreditCard, Card3DWrapper } from "@/components/credit-card";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
@@ -47,13 +53,20 @@ export default function Home() {
               style={{ y: yBg, opacity: opacityBg }}
               className="absolute inset-0 mix-blend-screen"
             >
-              <img
-                src={heroBg}
-                srcSet={`${heroBg640} 640w, ${heroBg} 1024w`}
-                sizes="100vw"
-                alt="Background pattern"
-                className="w-full h-full object-cover"
-              />
+              <picture>
+                <source
+                  type="image/webp"
+                  srcSet={`${heroBg640Webp} 640w, ${heroBgWebp} 1024w`}
+                  sizes="100vw"
+                />
+                <img
+                  src={heroBg}
+                  srcSet={`${heroBg640} 640w, ${heroBg} 1024w`}
+                  sizes="100vw"
+                  alt="Background pattern"
+                  className="w-full h-full object-cover"
+                />
+              </picture>
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/80" />
             </motion.div>
@@ -253,15 +266,22 @@ export default function Home() {
                   className="absolute right-0 top-0 w-2/3 sm:w-[55%] h-[80%] z-10 group"
                 >
                   <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <img
-                    src={remittanceStoryTall}
-                    srcSet={`${remittanceStoryTall480} 480w, ${remittanceStoryTall} 731w`}
-                    sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
-                    loading="lazy"
-                    decoding="async"
-                    alt="Jebena pouring fresh coffee"
-                    className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                  />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      srcSet={`${remittanceStoryTall480Webp} 480w, ${remittanceStoryTallWebp} 731w`}
+                      sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
+                    />
+                    <img
+                      src={remittanceStoryTall}
+                      srcSet={`${remittanceStoryTall480} 480w, ${remittanceStoryTall} 731w`}
+                      sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Jebena pouring fresh coffee"
+                      className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
+                    />
+                  </picture>
                   <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.2em] text-white/40 uppercase drop-shadow-md">
                     Fig. 01 — The Pour
                   </div>
@@ -274,15 +294,22 @@ export default function Home() {
                   className="absolute left-0 bottom-0 w-3/4 sm:w-[65%] h-[60%] z-20 group"
                 >
                   <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <img
-                    src={remittanceStoryWide}
-                    srcSet={`${remittanceStoryWide800} 800w, ${remittanceStoryWide} 1600w`}
-                    sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
-                    loading="lazy"
-                    decoding="async"
-                    alt="Intimate coffee ceremony gathering"
-                    className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                  />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      srcSet={`${remittanceStoryWide800Webp} 800w, ${remittanceStoryWideWebp} 1600w`}
+                      sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
+                    />
+                    <img
+                      src={remittanceStoryWide}
+                      srcSet={`${remittanceStoryWide800} 800w, ${remittanceStoryWide} 1600w`}
+                      sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Intimate coffee ceremony gathering"
+                      className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
+                    />
+                  </picture>
                   <div className="absolute bottom-4 left-4 text-[10px] tracking-[0.2em] text-white/50 uppercase drop-shadow-md">
                     Fig. 02 — Family & Friends
                   </div>
