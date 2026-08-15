@@ -1,0 +1,19 @@
+kind = "design-system"
+previewPath = "/samra-pay-ds/"
+title = "Samra Pay Design System"
+description = "The Midnight Gold design system for Samra Pay — a NEO-bank serving the Ethiopian diaspora. Defines the core color palette (deep black backgrounds, premium 22-karat gold primary, warm ivory accents), Outfit + EB Garamond typography, and the full component library used across the web and mobile apps."
+version = "1.0.0"
+id = "artifacts/samra-pay-ds"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/samra-pay-ds/" ]
+localPort = 18682
+
+[services.development]
+run = "pnpm --filter @workspace/samra-pay-ds run dev"
+
+[services.env]
+PORT = "18682"
+BASE_PATH = "/samra-pay-ds/"
