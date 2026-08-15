@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowDown, ArrowLeft, History, MapPin, Wallet, CreditCard,
   Landmark, Smartphone, Check, Plane, Link2, CircleCheck,
+  Pencil, Trash2, RotateCcw, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -148,6 +149,19 @@ type Step = "quote" | "recipient" | "confirm" | "success";
 // Re-export the shared type so the rest of the file can use a short alias
 type Transfer = PersistedTransfer;
 
+/** Address-book entry — separate from Transfer so edits/deletes never touch history. */
+interface AddressBookEntry {
+  id: number;
+  name: string;
+  location: string;
+  // Delivery details for pre-fill (mirrors the last transfer to this recipient)
+  deliveryMethod?: DeliveryMethod;
+  bankId?: string;
+  accountNumber?: string;
+  walletId?: string;
+  phoneNumber?: string;
+}
+
 function todayLabel(): string {
   return new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -203,8 +217,34 @@ export function DashboardRemittance() {
   // Shared recipient
   const [recipientName, setRecipientName]         = useState<string>("");
   const [recipientLocation, setRecipientLocation] = useState<string>("");
-  // null = "new recipient" mode; a number = id of the selected saved transfer
+  // null = "new recipient" mode; a number = id of the selected address-book entry
   const [savedRecipientId, setSavedRecipientId]   = useState<number | null>(null);
+
+  // ── Address book (separate from immutable transfer history) ─────────────────
+  const [addressBook, setAddressBook] = useState<AddressBookEntry[]>(() =>
+    loadTransfers(INITIAL_TRANSFERS).reduce<AddressBookEntry[]>((acc, t) => {
+      if (!acc.some(e => e.name === t.recipient))
+        acc.push({
+          id: t.id,
+          name: t.recipient,
+          location: t.location,
+          deliveryMethod: t.deliveryMethod,
+          bankId: t.bankId,
+          accountNumber: t.accountNumber,
+          walletId: t.walletId,
+          phoneNumber: t.phoneNumber,
+        });
+      return acc;
+    }, []),
+  );
+
+  // ── Address book: inline edit state (tracked by ID, not name) ──────────────
+  const [editingId, setEditingId]         = useState<number | null>(null);
+  const [editDraftName, setEditDraftName] = useState<string>("");
+  const [editDraftLoc, setEditDraftLoc]   = useState<string>("");
+
+  // ── Address book: delete-with-undo buffer ──────────────────────────────────
+  const [undoBuffer, setUndoBuffer] = useState<{ entry: AddressBookEntry } | null>(null);
 
   // Demo balance (deducted on confirm when paying from balance)
   const [demoBalance, setDemoBalance] = useState<number>(DEMO_BALANCE_INITIAL);
@@ -256,6 +296,22 @@ export function DashboardRemittance() {
         : { walletId, phoneNumber }),
     };
     setTransfers(prev => [newTransfer, ...prev]);
+    // Add to address book only if this name isn't already saved
+    const trimmedName = recipientName.trim();
+    setAddressBook(prev =>
+      prev.some(e => e.name === trimmedName)
+        ? prev
+        : [{
+            id: newTransfer.id,
+            name: trimmedName,
+            location: newTransfer.location,
+            deliveryMethod: newTransfer.deliveryMethod,
+            bankId: newTransfer.bankId,
+            accountNumber: newTransfer.accountNumber,
+            walletId: newTransfer.walletId,
+            phoneNumber: newTransfer.phoneNumber,
+          }, ...prev],
+    );
     if (paymentMethod === "balance") {
       setDemoBalance(b => Math.round((b - totalCharged) * 100) / 100);
     }
@@ -277,11 +333,53 @@ export function DashboardRemittance() {
     setSavedRecipientId(null);
   }
 
-  // ── Deduplicated saved recipients (most-recent first, unique by name) ────────
-  const savedRecipients = transfers.reduce<Transfer[]>((acc, t) => {
-    if (!acc.some(r => r.recipient === t.recipient)) acc.push(t);
-    return acc;
-  }, []);
+  // ── Address book helpers ────────────────────────────────────────────────────
+  function startEdit(entry: AddressBookEntry) {
+    setEditingId(entry.id);
+    setEditDraftName(entry.name);
+    setEditDraftLoc(entry.location);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  function saveEdit() {
+    if (editingId === null) return;
+    const newName = editDraftName.trim();
+    const newLoc  = editDraftLoc.trim();
+    // Update only the address book — transfer history is immutable
+    setAddressBook(prev => prev.map(e =>
+      e.id === editingId ? { ...e, name: newName, location: newLoc } : e,
+    ));
+    // Keep the form fields in sync if this entry was selected
+    if (savedRecipientId === editingId) {
+      setRecipientName(newName);
+      setRecipientLocation(newLoc);
+    }
+    setEditingId(null);
+  }
+
+  function deleteRecipient(entry: AddressBookEntry) {
+    setAddressBook(prev => prev.filter(e => e.id !== entry.id));
+    // Deselect if the deleted entry was chosen
+    if (savedRecipientId === entry.id) {
+      setSavedRecipientId(null);
+      setRecipientName("");
+      setRecipientLocation("");
+    }
+    setUndoBuffer({ entry });
+    // Auto-dismiss undo after 5 s
+    setTimeout(() => setUndoBuffer(b => (b?.entry.id === entry.id ? null : b)), 5000);
+  }
+
+  function undoDelete() {
+    if (!undoBuffer) return;
+    setAddressBook(prev => [undoBuffer.entry, ...prev]);
+    setUndoBuffer(null);
+  }
+
+  // addressBook is the source of truth for the picker; transfers are immutable history
 
   // ── Payment method fee label ────────────────────────────────────────────────
   const feeLabel = paymentMethod === "card"
@@ -532,58 +630,165 @@ export function DashboardRemittance() {
                   <div className="space-y-5">
 
                     {/* ── Saved recipients picker ──────────────────────────── */}
-                    {savedRecipients.length > 0 && (
+
+                    {/* Undo-delete toast — outside the address-book guard so it
+                        shows even after the last entry is removed */}
+                    {undoBuffer && (
+                      <div className="flex items-center justify-between rounded-xl border border-white/10 bg-background/80 px-4 py-2.5 text-sm">
+                        <span className="text-muted-foreground">
+                          <span className="text-foreground font-medium">{undoBuffer.entry.name}</span> removed
+                        </span>
+                        <button
+                          type="button"
+                          onClick={undoDelete}
+                          className="flex items-center gap-1.5 text-primary hover:text-primary/80 font-medium transition-colors ml-4 shrink-0"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" /> Undo
+                        </button>
+                      </div>
+                    )}
+
+                    {addressBook.length > 0 && (
                       <div>
                         <span className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">Past recipients</span>
                         <div className="space-y-2">
-                          {savedRecipients.map(r => {
-                            const sel = savedRecipientId === r.id;
-                            return (
-                              <button
-                                key={r.id}
-                                type="button"
-                                aria-pressed={sel}
-                                onClick={() => {
-                                  if (sel) {
-                                    // deselect → new recipient mode
-                                    setSavedRecipientId(null);
-                                    setRecipientName("");
-                                    setRecipientLocation("");
-                                  } else {
-                                    setSavedRecipientId(r.id);
-                                    setRecipientName(r.recipient);
-                                    setRecipientLocation(r.location);
-                                    // restore delivery details so the form is valid without re-entry
-                                    if (r.deliveryMethod) setDeliveryMethod(r.deliveryMethod);
-                                    if (r.bankId)         setBankId(r.bankId);
-                                    if (r.accountNumber)  setAccountNumber(r.accountNumber);
-                                    if (r.walletId)       setWalletId(r.walletId);
-                                    if (r.phoneNumber)    setPhone(r.phoneNumber);
-                                  }
-                                }}
-                                className={cn(
-                                  "w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all",
-                                  sel
-                                    ? "border-primary/40 bg-primary/10 ring-1 ring-primary/20"
-                                    : "border-white/10 bg-background/50 hover:border-white/20 hover:bg-white/[0.03]",
-                                )}
-                              >
-                                <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center font-semibold text-sm shrink-0">
-                                  {r.recipient.charAt(0)}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium text-foreground truncate">{r.recipient}</div>
-                                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                    <MapPin className="w-3 h-3 shrink-0" />
-                                    <span className="truncate">{r.location}</span>
+                          {addressBook.map(r => {
+                            const sel       = savedRecipientId === r.id;
+                            const isEditing = editingId === r.id;
+
+                            if (isEditing) {
+                              /* ── Inline edit mode ── */
+                              return (
+                                <div
+                                  key={r.id}
+                                  className="rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 space-y-3"
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs text-primary font-medium uppercase tracking-wider">Edit recipient</span>
+                                    <button
+                                      type="button"
+                                      onClick={cancelEdit}
+                                      className="text-muted-foreground hover:text-foreground transition-colors"
+                                      aria-label="Cancel edit"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-muted-foreground block mb-1">Full name</label>
+                                    <input
+                                      type="text"
+                                      value={editDraftName}
+                                      onChange={e => setEditDraftName(e.target.value)}
+                                      className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-muted-foreground block mb-1">City / location</label>
+                                    <input
+                                      type="text"
+                                      value={editDraftLoc}
+                                      onChange={e => setEditDraftLoc(e.target.value)}
+                                      className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 pt-1">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="gold"
+                                      className="flex-1 rounded-lg h-8 text-xs"
+                                      disabled={editDraftName.trim().length < 2 || editDraftLoc.trim().length === 0}
+                                      onClick={saveEdit}
+                                    >
+                                      Save changes
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="rounded-lg h-8 text-xs border-white/10"
+                                      onClick={cancelEdit}
+                                    >
+                                      Cancel
+                                    </Button>
                                   </div>
                                 </div>
-                                {sel && (
-                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-                                    <Check className="h-3 w-3" />
-                                  </span>
+                              );
+                            }
+
+                            /* ── Normal card ── */
+                            return (
+                              <div
+                                key={r.id}
+                                className={cn(
+                                  "w-full flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
+                                  sel
+                                    ? "border-primary/40 bg-primary/10 ring-1 ring-primary/20"
+                                    : "border-white/10 bg-background/50",
                                 )}
-                              </button>
+                              >
+                                {/* Clickable selection area */}
+                                <button
+                                  type="button"
+                                  aria-pressed={sel}
+                                  onClick={() => {
+                                    if (sel) {
+                                      setSavedRecipientId(null);
+                                      setRecipientName("");
+                                      setRecipientLocation("");
+                                    } else {
+                                      setSavedRecipientId(r.id);
+                                      setRecipientName(r.name);
+                                      setRecipientLocation(r.location);
+                                      // restore delivery details so the form is valid without re-entry
+                                      if (r.deliveryMethod) setDeliveryMethod(r.deliveryMethod);
+                                      if (r.bankId)         setBankId(r.bankId);
+                                      if (r.accountNumber)  setAccountNumber(r.accountNumber);
+                                      if (r.walletId)       setWalletId(r.walletId);
+                                      if (r.phoneNumber)    setPhone(r.phoneNumber);
+                                    }
+                                  }}
+                                  className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                                >
+                                  <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center font-semibold text-sm shrink-0">
+                                    {r.name.charAt(0)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-foreground truncate">{r.name}</div>
+                                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                      <MapPin className="w-3 h-3 shrink-0" />
+                                      <span className="truncate">{r.location}</span>
+                                    </div>
+                                  </div>
+                                  {sel && (
+                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                      <Check className="h-3 w-3" />
+                                    </span>
+                                  )}
+                                </button>
+
+                                {/* Edit / Delete actions */}
+                                <div className="flex items-center gap-1 shrink-0 ml-1">
+                                  <button
+                                    type="button"
+                                    aria-label={`Edit ${r.name}`}
+                                    onClick={() => startEdit(r)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove ${r.name}`}
+                                    onClick={() => deleteRecipient(r)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
                             );
                           })}
 
