@@ -82,6 +82,9 @@ packageExtensions:
   expo-router@*:
     peerDependencies:
       "@types/react": ">=18"
+  expo-image@*:
+    peerDependencies:
+      "@types/react": ">=18"
 
 autoInstallPeers: false
 
