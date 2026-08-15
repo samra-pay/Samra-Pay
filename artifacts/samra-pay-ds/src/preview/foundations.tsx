@@ -519,7 +519,12 @@ export function PatternsPage() {
 
       {/* Applied examples */}
       <div className="rounded-xl border bg-card p-6 text-card-foreground space-y-4">
-        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Applied</h2>
+        <div>
+          <h2 className="font-semibold">Applied</h2>
+          <p className="text-sm text-muted-foreground">
+            The patterns in context — as a thin divider strip and as a quiet card wash behind content.
+          </p>
+        </div>
         <div className="space-y-4">
           {/* Divider strip */}
           <div>

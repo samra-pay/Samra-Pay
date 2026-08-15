@@ -59,6 +59,35 @@ primitives rather than recreating those primitives locally.
 The packaged `Toaster` and toast hook share one in-memory store. Do not call a
 local toast hook while rendering the packaged `Toaster`.
 
+## Signature patterns
+
+Four higher-order Samra Pay compositions ship as pattern components. They are
+built from package primitives and tokens; import them from the patterns path:
+
+```tsx
+import { BankCard, Card3DWrapper } from "@workspace/samra-pay-ds/components/patterns/bank-card";
+import { QuotePanel } from "@workspace/samra-pay-ds/components/patterns/quote-panel";
+import { RewardCard } from "@workspace/samra-pay-ds/components/patterns/reward-card";
+import {
+  SelectableTile,
+  SelectableTileGroup,
+} from "@workspace/samra-pay-ds/components/patterns/selectable-tile";
+```
+
+- **`bank-card`** — `BankCard` (variants `charge` / `co-brand` / `debit`, front +
+  back flip, accessible toggle) and `Card3DWrapper` (pointer tilt + glare). Card
+  faces are intentionally fixed art and mode-independent; keep surrounding UI
+  token-driven. Use `coBrandSlot` for a partner mark on the co-brand variant.
+- **`quote-panel`** — `QuotePanel` remittance calculator (You send USD → They
+  receive ETB, fee row, illustrative-rate row, total, gold CTA). Controlled via
+  `amount` + `onAmountChange` or uncontrolled via `defaultAmount`. All demo
+  figures are labelled illustrative.
+- **`reward-card`** — `RewardCard` gold-stripe loyalty spotlight (balance, tier,
+  optional goal progress + action). Carries an "Illustrative demo reward" line.
+- **`selectable-tile`** — `SelectableTile` and `SelectableTileGroup` for
+  radio-semantics choice tiles; selected state is `border-primary` + `bg-accent`
+  + a gold check, with roving keyboard focus and a disabled state.
+
 ## Verify
 
 After wiring the workspace dependency, import and render

@@ -181,6 +181,45 @@ const TooltipDemo = lazyPage(() =>
   import('./demos/tooltip').then(({ TooltipDemo }) => TooltipDemo),
 );
 
+const PatternBankCardDemo = lazyPage(() =>
+  import('./demos/pattern-bank-card').then(
+    ({ PatternBankCardDemo }) => PatternBankCardDemo,
+  ),
+);
+const PatternQuotePanelDemo = lazyPage(() =>
+  import('./demos/pattern-quote-panel').then(
+    ({ PatternQuotePanelDemo }) => PatternQuotePanelDemo,
+  ),
+);
+const PatternRewardCardDemo = lazyPage(() =>
+  import('./demos/pattern-reward-card').then(
+    ({ PatternRewardCardDemo }) => PatternRewardCardDemo,
+  ),
+);
+const PatternSelectableTileDemo = lazyPage(() =>
+  import('./demos/pattern-selectable-tile').then(
+    ({ PatternSelectableTileDemo }) => PatternSelectableTileDemo,
+  ),
+);
+const VoiceTonePage = lazyPage(() =>
+  import('./pages/voice-tone').then(({ VoiceTonePage }) => VoiceTonePage),
+);
+const AppliedDashboardPage = lazyPage(() =>
+  import('./pages/applied-dashboard').then(
+    ({ AppliedDashboardPage }) => AppliedDashboardPage,
+  ),
+);
+const AppliedRemittancePage = lazyPage(() =>
+  import('./pages/applied-remittance').then(
+    ({ AppliedRemittancePage }) => AppliedRemittancePage,
+  ),
+);
+const AppliedMobilePage = lazyPage(() =>
+  import('./pages/applied-mobile').then(
+    ({ AppliedMobilePage }) => AppliedMobilePage,
+  ),
+);
+
 export type PreviewEntry = {
   // Globally unique across every group — it is the deep-link slug (`#page=<id>`)
   // and the active-page key. Group-qualify names that repeat across groups
@@ -224,6 +263,64 @@ export const NAV_GROUPS: NavGroup[] = [
         name: 'Patterns',
         description: 'Ethiopian-inspired geometric patterns at three densities.',
         Page: PatternsPage,
+      },
+      {
+        id: 'voice-tone',
+        name: 'Voice & tone',
+        description: 'Brand register, bilingual copy, and trust language rules.',
+        Page: VoiceTonePage,
+      },
+    ],
+  },
+  {
+    name: 'Signature patterns',
+    entries: [
+      {
+        id: 'pattern-bank-card',
+        name: 'Bank card',
+        description: 'The 3D tilt-and-flip card in charge, co-brand, and debit.',
+        Page: PatternBankCardDemo,
+      },
+      {
+        id: 'pattern-quote-panel',
+        name: 'Quote panel',
+        description: 'The USD-to-ETB quote calculator composition.',
+        Page: PatternQuotePanelDemo,
+      },
+      {
+        id: 'pattern-reward-card',
+        name: 'Reward card',
+        description: 'The gold-stripe rewards composition.',
+        Page: PatternRewardCardDemo,
+      },
+      {
+        id: 'pattern-selectable-tile',
+        name: 'Selectable tile',
+        description: 'The selected-tile treatment for exclusive choices.',
+        Page: PatternSelectableTileDemo,
+      },
+    ],
+  },
+  {
+    name: 'Applied examples',
+    entries: [
+      {
+        id: 'applied-dashboard',
+        name: 'Dashboard',
+        description: 'A product dashboard built entirely from system parts.',
+        Page: AppliedDashboardPage,
+      },
+      {
+        id: 'applied-remittance',
+        name: 'Remittance flow',
+        description: 'A send-money screen composed from system patterns.',
+        Page: AppliedRemittancePage,
+      },
+      {
+        id: 'applied-mobile',
+        name: 'Mobile frame',
+        description: 'A phone-sized home screen from system components.',
+        Page: AppliedMobilePage,
       },
     ],
   },
