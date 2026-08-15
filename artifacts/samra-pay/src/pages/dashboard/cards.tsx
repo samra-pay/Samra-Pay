@@ -16,7 +16,9 @@ import {
   Building2,
   Calendar,
   AlertCircle,
-  Car
+  Car,
+  CreditCard as CreditCardIcon,
+  Check,
 } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
 import { useState, useEffect } from "react";
@@ -66,15 +68,23 @@ const ledgers: Record<string, Transaction[]> = {
 export function DashboardCards() {
   const [activeCard, setActiveCard] = useState<"debit" | "charge" | "airlines">("charge");
   const [showAccountInfo, setShowAccountInfo] = useState(false);
+  const [showVirtualCard, setShowVirtualCard] = useState(false);
   const [copiedRouting, setCopiedRouting] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [copiedCardNumber, setCopiedCardNumber] = useState(false);
+  const [copiedExpiry, setCopiedExpiry] = useState(false);
+  const [copiedCvc, setCopiedCvc] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const demo = useDemoState();
 
   useEffect(() => {
     setShowAccountInfo(false);
+    setShowVirtualCard(false);
     setCopiedRouting(false);
     setCopiedAccount(false);
+    setCopiedCardNumber(false);
+    setCopiedExpiry(false);
+    setCopiedCvc(false);
   }, [activeCard]);
   
   const getCardDetails = () => {
@@ -87,6 +97,7 @@ export function DashboardCards() {
         billPaid: false,
         minPaid: false,
         hasAccountInfo: true,
+        virtualCard: { number: "4485204856714242", last4: "4242", expiry: "08/29", cvc: "924" },
         earnRules: [
           { label: "FDIC Insured", value: "Up to $250k" },
           { label: "Direct Deposit", value: "Available up to 2 days early" },
@@ -105,6 +116,7 @@ export function DashboardCards() {
         autopay: false,
         daysUntil: 10,
         hasAccountInfo: false,
+        virtualCard: { number: "4622119038541991", last4: "1991", expiry: "03/28", cvc: "749" },
         earnRules: [
           { label: "EA Flights", value: "3x Miles" },
           { label: "Dining & Groceries", value: "2x Miles" },
@@ -123,6 +135,7 @@ export function DashboardCards() {
         autopay: true,
         daysUntil: 4,
         hasAccountInfo: true,
+        virtualCard: { number: "5273041198324242", last4: "4242", expiry: "11/27", cvc: "314" },
         earnRules: [
           { label: "Travel", value: "2x Points" },
           { label: "Dining", value: "1x Points" },
@@ -132,23 +145,21 @@ export function DashboardCards() {
     }
   }
 
-  const handleCopy = async (type: 'routing' | 'account', text: string) => {
+  const handleCopy = async (type: 'routing' | 'account' | 'cardNumber' | 'expiry' | 'cvc', text: string) => {
     try {
-      if (!navigator?.clipboard?.writeText) {
-        throw new Error("Clipboard API not available");
-      }
+      if (!navigator?.clipboard?.writeText) throw new Error("Clipboard API not available");
       await navigator.clipboard.writeText(text);
-      if (type === 'routing') {
-        setCopiedRouting(true);
-        setTimeout(() => setCopiedRouting(false), 2000);
-      } else {
-        setCopiedAccount(true);
-        setTimeout(() => setCopiedAccount(false), 2000);
-      }
+      const setters: Record<typeof type, (v: boolean) => void> = {
+        routing: setCopiedRouting,
+        account: setCopiedAccount,
+        cardNumber: setCopiedCardNumber,
+        expiry: setCopiedExpiry,
+        cvc: setCopiedCvc,
+      };
+      setters[type](true);
+      setTimeout(() => setters[type](false), 2000);
     } catch (err) {
       console.error("Failed to copy", err);
-      // Fallback or visual feedback for failure could go here, 
-      // but preventing the false 'copied' state is the key fix.
     }
   };
 
@@ -314,6 +325,85 @@ export function DashboardCards() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Virtual Card Details */}
+            <Card className="bg-card/30 border-white/5 shadow-xl">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <CreditCardIcon className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Virtual Card</CardTitle>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setShowVirtualCard(!showVirtualCard)}
+                    aria-label={showVirtualCard ? "Hide card details" : "Reveal card details"}
+                  >
+                    {showVirtualCard ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Card Number */}
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Card Number</div>
+                  <div className="flex justify-between items-center bg-background/50 p-2.5 rounded-lg border border-white/5">
+                    <code className="text-sm font-mono tracking-widest">
+                      {showVirtualCard
+                        ? `${details.virtualCard.number.slice(0,4)} ${details.virtualCard.number.slice(4,8)} ${details.virtualCard.number.slice(8,12)} ${details.virtualCard.number.slice(12)}`
+                        : `•••• •••• •••• ${details.virtualCard.last4}`}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs shrink-0 ml-2"
+                      onClick={() => handleCopy('cardNumber', `${details.virtualCard.number.slice(0,4)} ${details.virtualCard.number.slice(4,8)} ${details.virtualCard.number.slice(8,12)} ${details.virtualCard.number.slice(12)}`)}
+                    >
+                      {copiedCardNumber ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Expiry + CVC side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Expiry</div>
+                    <div className="flex justify-between items-center bg-background/50 p-2.5 rounded-lg border border-white/5">
+                      <code className="text-sm font-mono">{showVirtualCard ? details.virtualCard.expiry : "••/••"}</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-xs shrink-0"
+                        onClick={() => handleCopy('expiry', details.virtualCard.expiry)}
+                      >
+                        {copiedExpiry ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">CVC</div>
+                    <div className="flex justify-between items-center bg-background/50 p-2.5 rounded-lg border border-white/5">
+                      <code className="text-sm font-mono">{showVirtualCard ? details.virtualCard.cvc : "•••"}</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-xs shrink-0"
+                        onClick={() => handleCopy('cvc', details.virtualCard.cvc)}
+                      >
+                        {copiedCvc ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-muted-foreground flex gap-2 items-start mt-2 bg-primary/5 p-2 rounded border border-primary/10">
+                  <CreditCardIcon className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+                  Use for online purchases. Illustrated demo — not a real card number.
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Earn Rules / Perks */}
             <Card className="bg-card/30 border-white/5 shadow-xl">
