@@ -203,7 +203,10 @@ export function DashboardRemittance() {
   const [phoneNumber, setPhone]   = useState<string>("");
 
   // Shared recipient
-  const [recipientName, setRecipientName] = useState<string>("");
+  const [recipientName, setRecipientName]         = useState<string>("");
+  const [recipientLocation, setRecipientLocation] = useState<string>("");
+  // null = "new recipient" mode; a number = id of the selected saved transfer
+  const [savedRecipientId, setSavedRecipientId]   = useState<number | null>(null);
 
   // Demo balance (deducted on confirm when paying from balance)
   const [demoBalance, setDemoBalance] = useState<number>(DEMO_BALANCE_INITIAL);
@@ -221,10 +224,11 @@ export function DashboardRemittance() {
   const canContinue = parsedUsdAmount > 0 && !exceedsBalance;
 
   // ── Recipient step validation ───────────────────────────────────────────────
-  const recipientValid = recipientName.trim().length > 1;
-  const bankValid      = deliveryMethod === "bank"   && !!bankId && accountNumber.length >= 8;
-  const walletValid    = deliveryMethod === "wallet" && !!walletId && phoneNumber.replace(/\D/g, "").length >= 9;
-  const canConfirm     = recipientValid && (deliveryMethod === "bank" ? bankValid : walletValid);
+  const recipientValid   = recipientName.trim().length > 1;
+  const locationValid    = recipientLocation.trim().length > 0;
+  const bankValid        = deliveryMethod === "bank"   && !!bankId && accountNumber.length >= 8;
+  const walletValid      = deliveryMethod === "wallet" && !!walletId && phoneNumber.replace(/\D/g, "").length >= 9;
+  const canConfirm       = recipientValid && locationValid && (deliveryMethod === "bank" ? bankValid : walletValid);
 
   // ── Derived display labels ──────────────────────────────────────────────────
   const selectedBank   = ETHIOPIAN_BANKS.find(b => b.id === bankId);
@@ -236,7 +240,7 @@ export function DashboardRemittance() {
     const newTransfer: Transfer = {
       id: Date.now(),
       recipient: recipientName.trim(),
-      location: "Ethiopia",
+      location: recipientLocation.trim() || "Ethiopia",
       date: today,
       usd: parsedUsdAmount,
       etb: recipientEtb,
@@ -260,7 +264,15 @@ export function DashboardRemittance() {
     setWalletId("");
     setPhone("");
     setRecipientName("");
+    setRecipientLocation("");
+    setSavedRecipientId(null);
   }
+
+  // ── Deduplicated saved recipients (most-recent first, unique by name) ────────
+  const savedRecipients = transfers.reduce<Transfer[]>((acc, t) => {
+    if (!acc.some(r => r.recipient === t.recipient)) acc.push(t);
+    return acc;
+  }, []);
 
   // ── Payment method fee label ────────────────────────────────────────────────
   const feeLabel = paymentMethod === "card"
@@ -509,6 +521,88 @@ export function DashboardRemittance() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-5">
+
+                    {/* ── Saved recipients picker ──────────────────────────── */}
+                    {savedRecipients.length > 0 && (
+                      <div>
+                        <span className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">Past recipients</span>
+                        <div className="space-y-2">
+                          {savedRecipients.map(r => {
+                            const sel = savedRecipientId === r.id;
+                            return (
+                              <button
+                                key={r.id}
+                                type="button"
+                                aria-pressed={sel}
+                                onClick={() => {
+                                  if (sel) {
+                                    // deselect → new recipient mode
+                                    setSavedRecipientId(null);
+                                    setRecipientName("");
+                                    setRecipientLocation("");
+                                  } else {
+                                    setSavedRecipientId(r.id);
+                                    setRecipientName(r.recipient);
+                                    setRecipientLocation(r.location);
+                                  }
+                                }}
+                                className={cn(
+                                  "w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all",
+                                  sel
+                                    ? "border-primary/40 bg-primary/10 ring-1 ring-primary/20"
+                                    : "border-white/10 bg-background/50 hover:border-white/20 hover:bg-white/[0.03]",
+                                )}
+                              >
+                                <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center font-semibold text-sm shrink-0">
+                                  {r.recipient.charAt(0)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium text-foreground truncate">{r.recipient}</div>
+                                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                    <MapPin className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{r.location}</span>
+                                  </div>
+                                </div>
+                                {sel && (
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                    <Check className="h-3 w-3" />
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+
+                          {/* New recipient option */}
+                          <button
+                            type="button"
+                            aria-pressed={savedRecipientId === null}
+                            onClick={() => {
+                              setSavedRecipientId(null);
+                              setRecipientName("");
+                              setRecipientLocation("");
+                            }}
+                            className={cn(
+                              "w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all",
+                              savedRecipientId === null
+                                ? "border-primary/40 bg-primary/10 ring-1 ring-primary/20"
+                                : "border-white/10 bg-background/50 hover:border-white/20 hover:bg-white/[0.03]",
+                            )}
+                          >
+                            <div className="w-9 h-9 rounded-full border border-dashed border-white/20 bg-white/5 flex items-center justify-center text-muted-foreground text-lg shrink-0">+</div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium text-foreground">New recipient</div>
+                              <div className="text-xs text-muted-foreground">Enter name and location</div>
+                            </div>
+                            {savedRecipientId === null && (
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                <Check className="h-3 w-3" />
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Recipient name */}
                     <div>
                       <label htmlFor="recipient-name" className="text-xs text-muted-foreground uppercase tracking-widest block mb-2">Recipient full name</label>
@@ -516,8 +610,21 @@ export function DashboardRemittance() {
                         id="recipient-name"
                         type="text"
                         value={recipientName}
-                        onChange={e => setRecipientName(e.target.value)}
+                        onChange={e => { setRecipientName(e.target.value); setSavedRecipientId(null); }}
                         placeholder="e.g. Abebe Bekele"
+                        className="w-full bg-background/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50 transition-colors"
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <label htmlFor="recipient-location" className="text-xs text-muted-foreground uppercase tracking-widest block mb-2">City / location</label>
+                      <input
+                        id="recipient-location"
+                        type="text"
+                        value={recipientLocation}
+                        onChange={e => setRecipientLocation(e.target.value)}
+                        placeholder="e.g. Addis Ababa, ET"
                         className="w-full bg-background/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50 transition-colors"
                       />
                     </div>
@@ -661,6 +768,10 @@ export function DashboardRemittance() {
                         <span className="text-muted-foreground">Recipient</span>
                         <span className="text-foreground font-medium">{recipientName}</span>
                       </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Location</span>
+                        <span className="text-foreground">{recipientLocation}</span>
+                      </div>
                       {deliveryMethod === "bank" && selectedBank && (
                         <>
                           <div className="flex justify-between items-center">
@@ -720,7 +831,11 @@ export function DashboardRemittance() {
                   <div>
                     <h2 className="text-2xl font-serif mb-2">Transfer sent!</h2>
                     <p className="text-muted-foreground text-sm">
-                      <span className="text-primary font-semibold">{formatEtb(recipientEtb)} ETB</span> is on its way to <span className="text-foreground font-medium">{recipientName}</span>.
+                      <span className="text-primary font-semibold">{formatEtb(recipientEtb)} ETB</span> is on its way to{" "}
+                      <span className="text-foreground font-medium">{recipientName}</span>
+                      {recipientLocation && (
+                        <span className="text-muted-foreground"> in {recipientLocation}</span>
+                      )}.
                     </p>
                   </div>
 
@@ -733,6 +848,12 @@ export function DashboardRemittance() {
                       <span>They receive</span>
                       <span className="text-primary font-mono">{formatEtb(recipientEtb)} ETB</span>
                     </div>
+                    {recipientLocation && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Location</span>
+                        <span className="text-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{recipientLocation}</span>
+                      </div>
+                    )}
                     {deliveryMethod === "bank" && selectedBank && (
                       <div className="flex justify-between text-muted-foreground">
                         <span>Via</span>
