@@ -1,8 +1,8 @@
 import { PageTransition } from "@/components/page-transition";
 import { CreditCard, Card3DWrapper } from "@/components/credit-card";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/samra-pay-ds/components/ui/card";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { Link } from "wouter";
 import { 
   ArrowUpRight, 

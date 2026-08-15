@@ -1,8 +1,8 @@
 import { PageTransition } from "@/components/page-transition";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/samra-pay-ds/components/ui/card";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
+import { Input } from "@workspace/samra-pay-ds/components/ui/input";
+import { Switch } from "@workspace/samra-pay-ds/components/ui/switch";
 import { User, Bell, Shield, Smartphone } from "lucide-react";
 
 export function DashboardSettings() {

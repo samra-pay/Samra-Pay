@@ -5,11 +5,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@workspace/samra-pay-ds/components/ui/dialog";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import {
   BILL_INFO,
   CHECKING_BASE_BALANCE,

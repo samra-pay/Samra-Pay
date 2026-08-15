@@ -1,5 +1,5 @@
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck, Globe, Star, Users } from "lucide-react";
 import { Link } from "wouter";
 import heroBg from "@assets/generated_images/hero-bg.jpg";

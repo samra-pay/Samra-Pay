@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { ArrowDown, Wallet, Smartphone, CreditCard, Landmark, ShieldCheck, Check, Plane, Link2 } from "lucide-react";
 import { useLocation } from "wouter";
 import {

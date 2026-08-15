@@ -1,5 +1,5 @@
 import { PageTransition } from "@/components/page-transition";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/samra-pay-ds/components/ui/card";
 import { TrendingUp, CheckCircle2, Flame, Award, ArrowRight, ShieldCheck, Target } from "lucide-react";
 import { 
   LineChart, 
@@ -11,7 +11,7 @@ import {
   CartesianGrid
 } from "recharts";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 
 const creditScoreData = [
   { month: 'Jan', score: 710 },

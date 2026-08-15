@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/samra-pay-ds/components/ui/card";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
+import { Dialog, DialogContent } from "@workspace/samra-pay-ds/components/ui/dialog";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import {
   Plane,
   ArrowUpCircle,

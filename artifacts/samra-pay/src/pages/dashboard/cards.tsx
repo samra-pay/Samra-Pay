@@ -1,7 +1,7 @@
 import { CreditCard } from "@/components/credit-card";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/samra-pay-ds/components/ui/card";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { 
   Plane, 
   Coffee,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
 import { useState, useEffect } from "react";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "@workspace/samra-pay-ds/components/ui/switch";
 import { PayBillDialog } from "@/components/pay-bill-dialog";
 import { useDemoState, formatUSD, CHECKING_BASE_BALANCE, BILL_INFO, billRemaining } from "@/lib/demo-state";
 import { CheckCircle2 } from "lucide-react";

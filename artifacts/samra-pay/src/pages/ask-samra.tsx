@@ -1,5 +1,5 @@
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Users, GraduationCap, Home, HandCoins, ArrowRight, MapPin, Calendar, ShieldCheck } from "lucide-react";

@@ -1,8 +1,8 @@
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/samra-pay-ds/components/ui/card";
 import { CheckCircle2, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { CreditCard, Card3DWrapper } from "@/components/credit-card";
 import { Link } from "wouter";
 import { useState } from "react";

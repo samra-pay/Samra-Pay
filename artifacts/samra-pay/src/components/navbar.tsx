@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { Button } from "./ui/button";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { SamraLogo } from "@/components/samra-logo";
 
 export function Navbar() {

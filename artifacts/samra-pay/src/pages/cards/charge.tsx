@@ -1,5 +1,5 @@
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { Card3DWrapper, CreditCard } from "@/components/credit-card";
 import { CheckCircle2, ChevronRight, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
+import { Input } from "@workspace/samra-pay-ds/components/ui/input";
+import { useToast } from "@workspace/samra-pay-ds/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { SamraLogo } from "@/components/samra-logo";

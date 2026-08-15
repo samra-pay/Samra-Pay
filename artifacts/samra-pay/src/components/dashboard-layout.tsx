@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { LayoutDashboard, CreditCard, BarChart3, LineChart, Send, Settings, LogOut, Menu, X, Plane } from "lucide-react";
 import { useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";

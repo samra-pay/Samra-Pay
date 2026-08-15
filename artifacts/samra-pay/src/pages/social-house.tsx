@@ -1,5 +1,5 @@
 import { PageTransition } from "@/components/page-transition";
-import { Button } from "@/components/ui/button";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import socialHouseImg from "@assets/ceremony-lounge.jpg";
 import socialHouseImg768 from "@assets/ceremony-lounge-768.jpg";
 import socialHouseImg1280 from "@assets/ceremony-lounge-1280.jpg";

@@ -6,14 +6,14 @@ import imgHellocash from "@/assets/wallets/hellocash.jpg";
 import imgMbirr     from "@/assets/wallets/mbirr.png";
 import imgKacha     from "@/assets/wallets/kacha.png";
 import imgAwashBirr from "@/assets/wallets/awashbirr.png";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/samra-pay-ds/components/ui/card";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import {
   ArrowDown, ArrowLeft, History, MapPin, Wallet, CreditCard,
   Landmark, Smartphone, Check, Plane, Link2, CircleCheck,
   Pencil, Trash2, RotateCcw, X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import {
   PROMO_RATE,
   SHEBA_MILES_THRESHOLD,
