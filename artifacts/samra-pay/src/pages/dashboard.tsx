@@ -178,58 +178,117 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Compact Accounts Row */}
+        {/* Accounts Row — premium tier */}
         <div>
           <div className="flex justify-between items-end mb-4">
-            <h3 className="text-lg font-serif">Accounts</h3>
-            <Link href="/dashboard/cards" className="text-sm text-primary hover:underline font-medium">Manage Cards</Link>
+            <div className="flex items-baseline gap-3">
+              <h3 className="text-lg font-serif">Accounts</h3>
+              <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em] hidden sm:inline">3 active</span>
+            </div>
+            <Link href="/dashboard/cards" className="text-sm text-primary font-medium inline-flex items-center gap-1 group/manage">
+              Manage Cards
+              <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover/manage:translate-x-0.5 group-hover/manage:-translate-y-0.5" />
+            </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Compact Debit */}
-            <Link href="/dashboard/cards">
-              <Card className="bg-card/30 border-white/5 hover:border-white/20 transition-colors cursor-pointer p-4 flex items-center gap-4">
-                <div className="w-16 sm:w-20 shrink-0 perspective-[1000px]">
-                  <div className="transform rotate-y-[-10deg] rotate-x-[5deg]">
-                    <CreditCard variant="debit" />
+            {[
+              {
+                key: "debit" as const,
+                variant: "debit" as const,
+                last4: "4242",
+                label: "Checking",
+                labelClass: "text-muted-foreground",
+                balance: formatUSD(CHECKING_BASE_BALANCE - demo.checkingDeducted),
+                balanceNote: "Available",
+                status: demo.checkingDeducted > 0
+                  ? { text: `${formatUSD(demo.checkingDeducted)} paid out today`, tone: "text-green-400" }
+                  : { text: "FDIC insured · $0 ATM fees", tone: "text-muted-foreground/70" },
+                accent: "from-[#2D2D3F]/40",
+                glow: "group-hover:shadow-[0_16px_40px_-16px_rgba(45,45,63,0.9)]",
+                ring: "hover:border-white/20",
+              },
+              {
+                key: "charge" as const,
+                variant: "charge" as const,
+                last4: "4242",
+                label: "Charge",
+                labelClass: "text-muted-foreground",
+                balance: formatUSD(chargeRemaining),
+                balanceNote: chargeFullyPaid ? "Paid off" : "Balance",
+                status: chargeFullyPaid
+                  ? { text: "Paid in full today", tone: "text-green-400" }
+                  : chargeMinPaid
+                    ? { text: "Min paid · autopay on", tone: "text-primary" }
+                    : { text: "Due Jul 2 · Autopay on", tone: "text-muted-foreground/70" },
+                accent: "from-[#1B3B2B]/50",
+                glow: "group-hover:shadow-[0_16px_40px_-16px_rgba(27,59,43,0.9)]",
+                ring: "hover:border-green-500/25",
+              },
+              {
+                key: "airlines" as const,
+                variant: "airlines" as const,
+                last4: "1991",
+                label: "Premium",
+                labelClass: "text-primary/80",
+                balance: formatUSD(airlinesRemaining),
+                balanceNote: airlinesFullyPaid ? "Paid off" : "Balance",
+                status: airlinesFullyPaid
+                  ? { text: "Paid in full today", tone: "text-green-400" }
+                  : airlinesMinPaid
+                    ? { text: "Min paid · " + formatUSD(airlinesRemaining) + " left", tone: "text-primary" }
+                    : { text: "Due Jul 8 · Earns 3x miles", tone: "text-primary/70" },
+                accent: "from-primary/25",
+                glow: "group-hover:shadow-[0_16px_40px_-16px_rgba(212,175,55,0.55)]",
+                ring: "hover:border-primary/40",
+              },
+            ].map((acct) => (
+              <Link key={acct.key} href="/dashboard/cards" data-testid={`card-account-${acct.key}`}>
+                <Card
+                  className={cn(
+                    "group relative overflow-hidden bg-card/30 border-white/5 transition-all duration-300 cursor-pointer p-5",
+                    "hover:-translate-y-0.5",
+                    acct.ring,
+                    acct.glow,
+                  )}
+                >
+                  {/* Accent wash bleeding from the card art */}
+                  <div className={cn(
+                    "absolute -left-10 -top-10 w-44 h-44 rounded-full blur-3xl pointer-events-none bg-gradient-to-br to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-100",
+                    acct.accent,
+                  )} />
+                  {/* Hairline top edge */}
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+
+                  <div className="relative z-10 flex items-center gap-5">
+                    {/* Card art — lifts and straightens on hover */}
+                    <div className="w-20 sm:w-24 shrink-0 perspective-[1000px]">
+                      <div className="transform rotate-y-[-14deg] rotate-x-[6deg] transition-transform duration-500 ease-out group-hover:rotate-y-[-4deg] group-hover:rotate-x-[2deg] group-hover:scale-[1.04] drop-shadow-[0_10px_18px_rgba(0,0,0,0.55)]">
+                        <CreditCard variant={acct.variant} last4={acct.last4} />
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className={cn("text-[10px] font-semibold uppercase tracking-[0.18em]", acct.labelClass)}>
+                          {acct.label}
+                        </div>
+                        <span className="font-mono text-[10px] text-white/25 tracking-widest">•••• {acct.last4}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[22px] leading-none font-serif text-white/95 tabular-nums">{acct.balance}</span>
+                        <span className="text-[10px] uppercase tracking-widest text-white/30">{acct.balanceNote}</span>
+                      </div>
+                      <div className={cn("mt-2 text-[11px] font-medium truncate", acct.status.tone)}>
+                        {acct.status.text}
+                      </div>
+                    </div>
+
+                    {/* Chevron appears on hover */}
+                    <ArrowUpRight className="w-4 h-4 text-white/0 transition-all duration-300 group-hover:text-white/40 -translate-x-1 group-hover:translate-x-0 shrink-0" />
                   </div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">Checking</div>
-                  <div className="text-lg font-serif text-white/90">{formatUSD(CHECKING_BASE_BALANCE - demo.checkingDeducted)}</div>
-                </div>
-              </Card>
-            </Link>
-            
-            {/* Compact Charge */}
-            <Link href="/dashboard/cards">
-              <Card className="bg-card/30 border-white/5 hover:border-white/20 transition-colors cursor-pointer p-4 flex items-center gap-4">
-                <div className="w-16 sm:w-20 shrink-0 perspective-[1000px]">
-                  <div className="transform rotate-y-[-10deg] rotate-x-[5deg]">
-                    <CreditCard variant="charge" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">Charge</div>
-                  <div className="text-lg font-serif text-white/90">{formatUSD(chargeRemaining)}</div>
-                </div>
-              </Card>
-            </Link>
-            
-            {/* Compact Co-Brand */}
-            <Link href="/dashboard/cards" className="hidden lg:block">
-              <Card className="bg-card/30 border-white/5 hover:border-primary/40 transition-colors cursor-pointer p-4 flex items-center gap-4 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-xl pointer-events-none" />
-                <div className="w-16 sm:w-20 shrink-0 perspective-[1000px]">
-                  <div className="transform rotate-y-[-10deg] rotate-x-[5deg]">
-                    <CreditCard variant="airlines" last4="1991" />
-                  </div>
-                </div>
-                <div className="relative z-10">
-                  <div className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest mb-0.5">Premium</div>
-                  <div className="text-lg font-serif text-white/90">{formatUSD(airlinesRemaining)}</div>
-                </div>
-              </Card>
-            </Link>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
 
