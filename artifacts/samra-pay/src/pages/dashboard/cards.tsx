@@ -246,6 +246,67 @@ export function DashboardCards() {
                   <div className="text-sm text-muted-foreground mt-1">Limit: {details.limit}</div>
                 </div>
 
+                {/* Virtual Card — always visible */}
+                <div className="pt-4 border-t border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <CreditCardIcon className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Virtual Card</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => setShowVirtualCard(!showVirtualCard)}
+                      aria-label={showVirtualCard ? "Hide card details" : "Reveal card details"}
+                    >
+                      {showVirtualCard ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+
+                  {/* Card Number */}
+                  <div>
+                    <div className="text-[10px] text-muted-foreground mb-1">Card Number</div>
+                    <div className="flex justify-between items-center bg-background/50 px-3 py-2 rounded-lg border border-white/5">
+                      <code className="text-sm font-mono tracking-widest">
+                        {showVirtualCard
+                          ? `${details.virtualCard.number.slice(0,4)} ${details.virtualCard.number.slice(4,8)} ${details.virtualCard.number.slice(8,12)} ${details.virtualCard.number.slice(12)}`
+                          : `•••• •••• •••• ${details.virtualCard.last4}`}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 shrink-0 ml-2"
+                        onClick={() => handleCopy('cardNumber', `${details.virtualCard.number.slice(0,4)} ${details.virtualCard.number.slice(4,8)} ${details.virtualCard.number.slice(8,12)} ${details.virtualCard.number.slice(12)}`)}
+                      >
+                        {copiedCardNumber ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Expiry + CVC */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-1">Expiry</div>
+                      <div className="flex justify-between items-center bg-background/50 px-3 py-2 rounded-lg border border-white/5">
+                        <code className="text-sm font-mono">{showVirtualCard ? details.virtualCard.expiry : "••/••"}</code>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => handleCopy('expiry', details.virtualCard.expiry)}>
+                          {copiedExpiry ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-1">CVC</div>
+                      <div className="flex justify-between items-center bg-background/50 px-3 py-2 rounded-lg border border-white/5">
+                        <code className="text-sm font-mono">{showVirtualCard ? details.virtualCard.cvc : "•••"}</code>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => handleCopy('cvc', details.virtualCard.cvc)}>
+                          {copiedCvc ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {details.hasBill && (
                   <div className="pt-6 border-t border-white/5 space-y-4">
                     {details.billPaid ? (
