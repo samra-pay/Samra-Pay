@@ -279,7 +279,7 @@ export function DashboardCards() {
                         className="h-6 w-6 p-0 shrink-0 ml-2"
                         onClick={() => handleCopy('cardNumber', `${details.virtualCard.number.slice(0,4)} ${details.virtualCard.number.slice(4,8)} ${details.virtualCard.number.slice(8,12)} ${details.virtualCard.number.slice(12)}`)}
                       >
-                        {copiedCardNumber ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedCardNumber ? <Check className="w-3 h-3 text-eucalyptus" /> : <Copy className="w-3 h-3" />}
                       </Button>
                     </div>
                   </div>
@@ -291,7 +291,7 @@ export function DashboardCards() {
                       <div className="flex justify-between items-center bg-background/50 px-3 py-2 rounded-lg border border-white/5">
                         <code className="text-sm font-mono">{showVirtualCard ? details.virtualCard.expiry : "••/••"}</code>
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => handleCopy('expiry', details.virtualCard.expiry)}>
-                          {copiedExpiry ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                          {copiedExpiry ? <Check className="w-3 h-3 text-eucalyptus" /> : <Copy className="w-3 h-3" />}
                         </Button>
                       </div>
                     </div>
@@ -300,7 +300,7 @@ export function DashboardCards() {
                       <div className="flex justify-between items-center bg-background/50 px-3 py-2 rounded-lg border border-white/5">
                         <code className="text-sm font-mono">{showVirtualCard ? details.virtualCard.cvc : "•••"}</code>
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => handleCopy('cvc', details.virtualCard.cvc)}>
-                          {copiedCvc ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                          {copiedCvc ? <Check className="w-3 h-3 text-eucalyptus" /> : <Copy className="w-3 h-3" />}
                         </Button>
                       </div>
                     </div>
@@ -310,10 +310,10 @@ export function DashboardCards() {
                 {details.hasBill && (
                   <div className="pt-6 border-t border-white/5 space-y-4">
                     {details.billPaid ? (
-                      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-                        <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                      <div className="flex items-center gap-3 bg-eucalyptus/10 border border-eucalyptus/20 rounded-xl p-4">
+                        <CheckCircle2 className="w-5 h-5 text-eucalyptus shrink-0" />
                         <div>
-                          <div className="text-sm font-medium text-green-400">{details.minPaid ? "Minimum Paid" : "Statement Paid"}</div>
+                          <div className="text-sm font-medium text-eucalyptus">{details.minPaid ? "Minimum Paid" : "Statement Paid"}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">Paid today from Checking &bull;&bull;&bull;&bull; 8834</div>
                         </div>
                       </div>
@@ -331,11 +331,11 @@ export function DashboardCards() {
                         
                         <div className="flex items-center gap-2 text-xs">
                           {details.autopay ? (
-                            <span className="flex items-center gap-1.5 text-green-400 font-medium bg-green-400/10 px-2 py-1 rounded">
+                            <span className="flex items-center gap-1.5 text-eucalyptus font-medium bg-eucalyptus/10 px-2 py-1 rounded">
                               <AlertCircle className="w-3 h-3" /> Autopay ON
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1.5 text-red-400 font-medium bg-red-400/10 px-2 py-1 rounded">
+                            <span className="flex items-center gap-1.5 text-destructive font-medium bg-destructive/10 px-2 py-1 rounded">
                               <AlertCircle className="w-3 h-3" /> Autopay OFF
                             </span>
                           )}
@@ -422,7 +422,7 @@ export function DashboardCards() {
                       className="h-6 px-2 text-xs shrink-0 ml-2"
                       onClick={() => handleCopy('cardNumber', `${details.virtualCard.number.slice(0,4)} ${details.virtualCard.number.slice(4,8)} ${details.virtualCard.number.slice(8,12)} ${details.virtualCard.number.slice(12)}`)}
                     >
-                      {copiedCardNumber ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedCardNumber ? <Check className="w-3 h-3 text-eucalyptus" /> : <Copy className="w-3 h-3" />}
                     </Button>
                   </div>
                 </div>
@@ -439,7 +439,7 @@ export function DashboardCards() {
                         className="h-6 px-1.5 text-xs shrink-0"
                         onClick={() => handleCopy('expiry', details.virtualCard.expiry)}
                       >
-                        {copiedExpiry ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedExpiry ? <Check className="w-3 h-3 text-eucalyptus" /> : <Copy className="w-3 h-3" />}
                       </Button>
                     </div>
                   </div>
@@ -453,7 +453,7 @@ export function DashboardCards() {
                         className="h-6 px-1.5 text-xs shrink-0"
                         onClick={() => handleCopy('cvc', details.virtualCard.cvc)}
                       >
-                        {copiedCvc ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedCvc ? <Check className="w-3 h-3 text-eucalyptus" /> : <Copy className="w-3 h-3" />}
                       </Button>
                     </div>
                   </div>
@@ -525,9 +525,9 @@ export function DashboardCards() {
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                           {tx.category === "Travel" ? <Plane className="w-5 h-5 text-primary" /> :
-                           tx.category === "Dining" ? <Coffee className="w-5 h-5 text-green-400" /> :
-                           tx.category === "Transport" ? <Car className="w-5 h-5 text-orange-400" /> :
-                           tx.type === "credit" ? <Wallet className="w-5 h-5 text-green-400" /> :
+                           tx.category === "Dining" ? <Coffee className="w-5 h-5 text-eucalyptus" /> :
+                           tx.category === "Transport" ? <Car className="w-5 h-5 text-coffee" /> :
+                           tx.type === "credit" ? <Wallet className="w-5 h-5 text-eucalyptus" /> :
                            <ShoppingBag className="w-5 h-5 text-white/50" />}
                         </div>
                         <div>
@@ -547,7 +547,7 @@ export function DashboardCards() {
                       </div>
                       <div className={cn(
                         "font-mono font-medium text-base sm:text-lg whitespace-nowrap ml-4",
-                        tx.type === "credit" ? "text-green-400" : "text-white/90"
+                        tx.type === "credit" ? "text-eucalyptus" : "text-white/90"
                       )}>
                         {tx.type === "credit" ? "+" : ""}{tx.amount.toFixed(2)}
                       </div>

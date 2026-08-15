@@ -37,9 +37,9 @@ const creditScoreData = [
 
 const spendingData = [
   { category: 'Travel', amount: 820, icon: Plane, color: "text-primary" },
-  { category: 'Dining', amount: 450, icon: Coffee, color: "text-green-400" },
-  { category: 'Shopping', amount: 320, icon: ShoppingBag, color: "text-blue-400" },
-  { category: 'Transport', amount: 150, icon: Car, color: "text-orange-400" },
+  { category: 'Dining', amount: 450, icon: Coffee, color: "text-eucalyptus" },
+  { category: 'Shopping', amount: 320, icon: ShoppingBag, color: "text-muted-foreground" },
+  { category: 'Transport', amount: 150, icon: Car, color: "text-coffee" },
 ];
 
 const recentTransactions = [
@@ -70,7 +70,7 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
             <Button variant="outline" className="flex-1 md:flex-none gap-2 bg-card/50 border-white/10 hover:border-white/20 transition-colors h-12 rounded-xl shrink-0 px-6">
-              <ArrowDownLeft className="w-4 h-4 text-green-400" />
+              <ArrowDownLeft className="w-4 h-4 text-eucalyptus" />
               Receive
             </Button>
             <Button variant="outline" className="flex-1 md:flex-none gap-2 bg-card/50 border-white/10 hover:border-white/20 transition-colors h-12 rounded-xl shrink-0 px-6">
@@ -106,7 +106,7 @@ export default function Dashboard() {
                     <span className="text-6xl md:text-7xl font-serif text-primary drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">42,500</span>
                     <span className="text-lg text-primary/80 ml-3 font-medium">miles</span>
                   </div>
-                  <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm font-medium text-green-400 flex items-center gap-2">
+                  <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm font-medium text-eucalyptus flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
                     +1,240 earned this month
                   </div>
@@ -140,15 +140,15 @@ export default function Dashboard() {
           <div className="space-y-6 flex flex-col">
             {/* Promo Rate Widget */}
             <Card className="bg-card/30 border-white/5 flex-1 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl group-hover:bg-green-500/10 transition-colors" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-eucalyptus/5 rounded-full blur-2xl group-hover:bg-eucalyptus/10 transition-colors" />
               <CardContent className="p-6 relative z-10 h-full flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-4">
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">USD to ETB Rate</div>
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" />
+                  <div className="w-2 h-2 rounded-full bg-eucalyptus animate-pulse shadow-[0_0_8px_hsl(var(--eucalyptus))]" />
                 </div>
                 <div>
                   <div className="text-4xl font-serif text-white/90 mb-1">180.00</div>
-                  <div className="text-xs text-green-400 font-medium flex items-center gap-1">
+                  <div className="text-xs text-eucalyptus font-medium flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> Great time to send
                   </div>
                 </div>
@@ -201,7 +201,7 @@ export default function Dashboard() {
                 balance: formatUSD(CHECKING_BASE_BALANCE - demo.checkingDeducted),
                 balanceNote: "Available",
                 status: demo.checkingDeducted > 0
-                  ? { text: `${formatUSD(demo.checkingDeducted)} paid out today`, tone: "text-green-400" }
+                  ? { text: `${formatUSD(demo.checkingDeducted)} paid out today`, tone: "text-eucalyptus" }
                   : { text: "FDIC insured · $0 ATM fees", tone: "text-muted-foreground/70" },
                 accent: "from-[#2D2D3F]/40",
                 glow: "group-hover:shadow-[0_16px_40px_-16px_rgba(45,45,63,0.9)]",
@@ -216,13 +216,13 @@ export default function Dashboard() {
                 balance: formatUSD(chargeRemaining),
                 balanceNote: chargeFullyPaid ? "Paid off" : "Balance",
                 status: chargeFullyPaid
-                  ? { text: "Paid in full today", tone: "text-green-400" }
+                  ? { text: "Paid in full today", tone: "text-eucalyptus" }
                   : chargeMinPaid
                     ? { text: "Min paid · autopay on", tone: "text-primary" }
                     : { text: "Due Jul 2 · Autopay on", tone: "text-muted-foreground/70" },
                 accent: "from-[#1B3B2B]/50",
                 glow: "group-hover:shadow-[0_16px_40px_-16px_rgba(27,59,43,0.9)]",
-                ring: "hover:border-green-500/25",
+                ring: "hover:border-eucalyptus/25",
               },
               {
                 key: "airlines" as const,
@@ -233,7 +233,7 @@ export default function Dashboard() {
                 balance: formatUSD(airlinesRemaining),
                 balanceNote: airlinesFullyPaid ? "Paid off" : "Balance",
                 status: airlinesFullyPaid
-                  ? { text: "Paid in full today", tone: "text-green-400" }
+                  ? { text: "Paid in full today", tone: "text-eucalyptus" }
                   : airlinesMinPaid
                     ? { text: "Min paid · " + formatUSD(airlinesRemaining) + " left", tone: "text-primary" }
                     : { text: "Due Jul 8 · Earns 3x miles", tone: "text-primary/70" },
@@ -302,7 +302,7 @@ export default function Dashboard() {
               <CardContent className="p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                    <RefreshCw className="w-4 h-4 text-green-400" />
+                    <RefreshCw className="w-4 h-4 text-eucalyptus" />
                   </div>
                   <span className="text-[10px] font-semibold bg-white/10 px-2 py-1 rounded text-white/80 uppercase tracking-widest">In 3 days</span>
                 </div>
@@ -316,14 +316,14 @@ export default function Dashboard() {
             </Card>
 
             {/* Obligation 2 */}
-            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start", chargeFullyPaid ? "border-green-500/20" : chargeMinPaid ? "border-primary/20" : "border-white/5")}>
+            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start", chargeFullyPaid ? "border-eucalyptus/20" : chargeMinPaid ? "border-primary/20" : "border-white/5")}>
               <CardContent className="p-5">
                 <div className="flex justify-between items-start mb-4">
-                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", chargeFullyPaid ? "bg-green-500/10 border-green-500/20" : chargeMinPaid ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/10")}>
-                    {chargeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : chargeMinPaid ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-white/80" />}
+                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", chargeFullyPaid ? "bg-eucalyptus/10 border-eucalyptus/20" : chargeMinPaid ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/10")}>
+                    {chargeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-eucalyptus" /> : chargeMinPaid ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-white/80" />}
                   </div>
                   {chargeFullyPaid ? (
-                    <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 px-2 py-1 rounded uppercase tracking-widest">Paid</span>
+                    <span className="text-[10px] font-semibold bg-eucalyptus/15 text-eucalyptus px-2 py-1 rounded uppercase tracking-widest">Paid</span>
                   ) : chargeMinPaid ? (
                     <span className="text-[10px] font-semibold bg-primary/20 text-primary px-2 py-1 rounded uppercase tracking-widest" data-testid="pill-charge-min-paid">Min paid</span>
                   ) : (
@@ -331,7 +331,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="text-sm font-medium text-white/90 mb-1">Charge Card Bill</div>
-                <div className={cn("text-xs mb-3", chargeFullyPaid ? "text-green-400 font-medium" : chargeMinPaid ? "text-primary font-medium" : "text-muted-foreground")}>
+                <div className={cn("text-xs mb-3", chargeFullyPaid ? "text-eucalyptus font-medium" : chargeMinPaid ? "text-primary font-medium" : "text-muted-foreground")}>
                   {chargeFullyPaid ? "Paid today from Checking" : chargeMinPaid ? `Minimum paid — ${formatUSD(chargeRemaining)} remaining` : "Autopay ON"}
                 </div>
                 <div className="flex justify-between items-end">
@@ -349,15 +349,15 @@ export default function Dashboard() {
             </Card>
 
             {/* Obligation 3 */}
-            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start relative overflow-hidden", airlinesFullyPaid ? "border-green-500/20" : "border-primary/20")}>
-              {!demo.bills.airlines.paid && <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-full blur-xl pointer-events-none" />}
+            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start relative overflow-hidden", airlinesFullyPaid ? "border-eucalyptus/20" : "border-primary/20")}>
+              {!demo.bills.airlines.paid && <div className="absolute top-0 right-0 w-16 h-16 bg-destructive/10 rounded-full blur-xl pointer-events-none" />}
               <CardContent className="p-5 relative z-10">
                 <div className="flex justify-between items-start mb-4">
-                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", airlinesFullyPaid ? "bg-green-500/10 border-green-500/20" : "bg-primary/10 border-primary/20")}>
-                    {airlinesFullyPaid ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : airlinesMinPaid ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-primary" />}
+                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", airlinesFullyPaid ? "bg-eucalyptus/10 border-eucalyptus/20" : "bg-primary/10 border-primary/20")}>
+                    {airlinesFullyPaid ? <CheckCircle2 className="w-4 h-4 text-eucalyptus" /> : airlinesMinPaid ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-primary" />}
                   </div>
                   {airlinesFullyPaid ? (
-                    <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 px-2 py-1 rounded uppercase tracking-widest">Paid</span>
+                    <span className="text-[10px] font-semibold bg-eucalyptus/15 text-eucalyptus px-2 py-1 rounded uppercase tracking-widest">Paid</span>
                   ) : airlinesMinPaid ? (
                     <span className="text-[10px] font-semibold bg-primary/20 text-primary px-2 py-1 rounded uppercase tracking-widest" data-testid="pill-airlines-min-paid">Min paid</span>
                   ) : (
@@ -365,7 +365,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="text-sm font-medium text-white/90 mb-1">Co-Brand Bill</div>
-                <div className={cn("text-xs mb-3 font-medium", airlinesFullyPaid ? "text-green-400" : airlinesMinPaid ? "text-primary" : "text-red-400")}>
+                <div className={cn("text-xs mb-3 font-medium", airlinesFullyPaid ? "text-eucalyptus" : airlinesMinPaid ? "text-primary" : "text-destructive")}>
                   {airlinesFullyPaid ? "Paid today from Checking" : airlinesMinPaid ? `Minimum paid — ${formatUSD(airlinesRemaining)} remaining` : "Autopay OFF"}
                 </div>
                 <div className="flex justify-between items-end">
@@ -393,7 +393,7 @@ export default function Dashboard() {
               <CardHeader className="pb-4">
                 <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest flex items-center justify-between">
                   Credit Health
-                  <TrendingUp className="w-4 h-4 text-green-400 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <TrendingUp className="w-4 h-4 text-eucalyptus opacity-50 group-hover:opacity-100 transition-opacity" />
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-6">
@@ -408,7 +408,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div>
-                  <div className="inline-block px-2 py-0.5 bg-green-500/10 text-green-400 text-[10px] font-bold tracking-widest uppercase rounded mb-2">
+                  <div className="inline-block px-2 py-0.5 bg-eucalyptus/10 text-eucalyptus text-[10px] font-bold tracking-widest uppercase rounded mb-2">
                     Excellent
                   </div>
                   <p className="text-sm text-muted-foreground font-light leading-relaxed">
@@ -460,8 +460,8 @@ export default function Dashboard() {
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                       {tx.category === "Travel" ? <Plane className="w-5 h-5 text-primary" /> :
-                       tx.category === "Dining" ? <Coffee className="w-5 h-5 text-green-400" /> :
-                       tx.amount > 0 ? <Wallet className="w-5 h-5 text-green-400" /> :
+                       tx.category === "Dining" ? <Coffee className="w-5 h-5 text-eucalyptus" /> :
+                       tx.amount > 0 ? <Wallet className="w-5 h-5 text-eucalyptus" /> :
                        <ShoppingBag className="w-5 h-5 text-white/50" />}
                     </div>
                     <div>
@@ -481,7 +481,7 @@ export default function Dashboard() {
                   </div>
                   <div className={cn(
                     "font-mono font-medium text-base md:text-lg whitespace-nowrap ml-4",
-                    tx.amount > 0 ? "text-green-400" : "text-white/90"
+                    tx.amount > 0 ? "text-eucalyptus" : "text-white/90"
                   )}>
                     {tx.amount > 0 ? "+" : ""}{tx.amount.toFixed(2)}
                   </div>

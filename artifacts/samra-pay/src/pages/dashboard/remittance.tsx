@@ -64,81 +64,81 @@ const ETHIOPIAN_WALLETS = [
     id: "telebirr",
     name: "Telebirr",
     owner: "Ethio Telecom",
-    color: "from-sky-700/20 to-sky-900/10",
-    border: "border-sky-500/30",
+    color: "from-muted/40 to-muted/10",
+    border: "border-muted-foreground/30",
     img: null,
     fallback: "TE",
-    fallbackColor: "bg-sky-600",
+    fallbackColor: "bg-muted-foreground",
   },
   {
     id: "cbebirr",
     name: "CBE Birr",
     owner: "Commercial Bank of Ethiopia",
-    color: "from-yellow-700/20 to-yellow-900/10",
-    border: "border-yellow-500/30",
+    color: "from-primary/20 to-primary/5",
+    border: "border-primary/30",
     img: imgCbeBirr,
     fallback: "CB",
-    fallbackColor: "bg-yellow-700",
+    fallbackColor: "bg-primary",
   },
   {
     id: "amole",
     name: "Amole",
     owner: "Dashen Bank",
-    color: "from-blue-700/20 to-blue-900/10",
-    border: "border-blue-500/30",
+    color: "from-muted/40 to-muted/10",
+    border: "border-muted-foreground/30",
     img: imgAmole,
     fallback: "AM",
-    fallbackColor: "bg-blue-700",
+    fallbackColor: "bg-muted-foreground",
   },
   {
     id: "hellocash",
     name: "HelloCash",
     owner: "HelloCash Ethiopia",
-    color: "from-orange-700/20 to-orange-900/10",
-    border: "border-orange-500/30",
+    color: "from-coffee/20 to-coffee/5",
+    border: "border-coffee/30",
     img: imgHellocash,
     fallback: "HC",
-    fallbackColor: "bg-orange-600",
+    fallbackColor: "bg-coffee",
   },
   {
     id: "mbirr",
     name: "M-Birr",
     owner: "Mobile Commerce Ethiopia",
-    color: "from-green-700/20 to-green-900/10",
-    border: "border-green-500/30",
+    color: "from-eucalyptus/20 to-eucalyptus/5",
+    border: "border-eucalyptus/30",
     img: imgMbirr,
     fallback: "MB",
-    fallbackColor: "bg-green-700",
+    fallbackColor: "bg-eucalyptus",
   },
   {
     id: "kacha",
     name: "Kacha",
     owner: "Kacha Digital Financial Services",
-    color: "from-amber-700/20 to-amber-900/10",
-    border: "border-amber-500/30",
+    color: "from-primary/20 to-primary/5",
+    border: "border-primary/30",
     img: imgKacha,
     fallback: "KA",
-    fallbackColor: "bg-amber-600",
+    fallbackColor: "bg-primary",
   },
   {
     id: "awashbirr",
     name: "Awash Birr",
     owner: "Awash Bank",
-    color: "from-orange-600/20 to-blue-900/10",
-    border: "border-orange-400/30",
+    color: "from-coffee/20 to-coffee/5",
+    border: "border-coffee/30",
     img: imgAwashBirr,
     fallback: "AB",
-    fallbackColor: "bg-orange-600",
+    fallbackColor: "bg-coffee",
   },
   {
     id: "payway",
     name: "PayWay",
     owner: "PayWay Ethiopia",
-    color: "from-teal-700/20 to-teal-900/10",
-    border: "border-teal-500/30",
+    color: "from-eucalyptus/20 to-eucalyptus/5",
+    border: "border-eucalyptus/30",
     img: null,
     fallback: "PW",
-    fallbackColor: "bg-teal-700",
+    fallbackColor: "bg-eucalyptus",
   },
 ];
 
@@ -436,8 +436,8 @@ export function DashboardRemittance() {
               <>
                 <CardHeader>
                   <CardTitle>Send Money</CardTitle>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10 text-green-400 text-xs font-medium tracking-widest uppercase w-fit mt-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-eucalyptus/30 bg-eucalyptus/10 text-eucalyptus text-xs font-medium tracking-widest uppercase w-fit mt-2">
+                    <span className="w-2 h-2 rounded-full bg-eucalyptus animate-pulse" />
                     180 ETB Promo Rate Active
                   </div>
                 </CardHeader>
@@ -520,9 +520,9 @@ export function DashboardRemittance() {
                       <span id="dash-payment-label" className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">Payment method</span>
                       <div className="grid grid-cols-2 gap-3" role="group" aria-labelledby="dash-payment-label">
                         {([
-                          { id: "balance" as const, icon: Wallet,     label: "Samra balance",   detail: "No service fee",   feeColor: "text-green-400/80" },
+                          { id: "balance" as const, icon: Wallet,     label: "Samra balance",   detail: "No service fee",   feeColor: "text-eucalyptus/80" },
                           { id: "card"    as const, icon: CreditCard,  label: "Card",             detail: "3% service fee",   feeColor: "text-primary/80" },
-                          { id: "plaid"   as const, icon: Landmark,    label: "ACH via Plaid",   detail: plaidLinked ? "Free when linked" : "1% ACH · Free with Plaid", feeColor: "text-green-400/80" },
+                          { id: "plaid"   as const, icon: Landmark,    label: "ACH via Plaid",   detail: plaidLinked ? "Free when linked" : "1% ACH · Free with Plaid", feeColor: "text-eucalyptus/80" },
                         ] as const).map((m) => {
                           const sel = paymentMethod === m.id;
                           return (
@@ -545,7 +545,7 @@ export function DashboardRemittance() {
                       {paymentMethod === "plaid" && (
                         <button type="button" onClick={() => setPlaidLinked(true)} disabled={plaidLinked}
                           className={cn("mt-3 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors",
-                            plaidLinked ? "border-green-500/20 bg-green-500/5 text-green-400" : "border-primary/20 bg-primary/5 text-primary hover:border-primary/40",
+                            plaidLinked ? "border-eucalyptus/20 bg-eucalyptus/5 text-eucalyptus" : "border-primary/20 bg-primary/5 text-primary hover:border-primary/40",
                           )}
                         >
                           <span className="flex items-center gap-2 text-sm font-medium">
@@ -565,7 +565,7 @@ export function DashboardRemittance() {
                       </div>
                       <div className="flex items-center justify-between text-muted-foreground">
                         <span>Service fee {feeLabel}</span>
-                        <span className={serviceFee > 0 ? "text-foreground" : "text-green-400"}>
+                        <span className={serviceFee > 0 ? "text-foreground" : "text-eucalyptus"}>
                           {serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free"}
                         </span>
                       </div>
@@ -595,7 +595,7 @@ export function DashboardRemittance() {
                     </div>
 
                     {exceedsBalance && (
-                      <p role="alert" className="text-sm text-red-400">
+                      <p role="alert" className="text-sm text-destructive">
                         This amount exceeds your ${formatUsd(demoBalance)} Samra balance. Lower the amount or choose another payment method.
                       </p>
                     )}
@@ -783,7 +783,7 @@ export function DashboardRemittance() {
                                     type="button"
                                     aria-label={`Remove ${r.name}`}
                                     onClick={() => deleteRecipient(r)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -977,7 +977,7 @@ export function DashboardRemittance() {
                     ].map(row => (
                       <div key={row.label} className={cn("flex justify-between items-center py-3 border-b border-white/5", row.bold && "font-semibold text-base")}>
                         <span className="text-muted-foreground">{row.label}</span>
-                        <span className={cn(row.gold ? "text-primary font-mono" : row.green ? "text-green-400" : "text-foreground")}>
+                        <span className={cn(row.gold ? "text-primary font-mono" : row.green ? "text-eucalyptus" : "text-foreground")}>
                           {row.value}
                         </span>
                       </div>
@@ -1045,8 +1045,8 @@ export function DashboardRemittance() {
             {step === "success" && (
               <CardContent className="pt-10 pb-10">
                 <div className="flex flex-col items-center text-center space-y-6">
-                  <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-                    <CircleCheck className="w-10 h-10 text-green-400" />
+                  <div className="w-20 h-20 rounded-full bg-eucalyptus/10 border border-eucalyptus/30 flex items-center justify-center">
+                    <CircleCheck className="w-10 h-10 text-eucalyptus" />
                   </div>
                   <div>
                     <h2 className="text-2xl font-serif mb-2">Transfer sent!</h2>
@@ -1142,7 +1142,7 @@ export function DashboardRemittance() {
                     </div>
                     <div className="flex justify-between items-center pt-3 border-t border-white/5 text-xs text-muted-foreground">
                       <span>{t.date}</span>
-                      <span className="text-green-400 font-medium">{t.status}</span>
+                      <span className="text-eucalyptus font-medium">{t.status}</span>
                     </div>
                   </div>
                 ))}

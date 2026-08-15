@@ -49,8 +49,8 @@ export default function Remittance() {
         <div className="container mx-auto px-6 grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           
           <div className="order-2 lg:order-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10 text-green-400 text-xs font-semibold tracking-widest uppercase mb-8">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-eucalyptus/30 bg-eucalyptus/10 text-eucalyptus text-xs font-semibold tracking-widest uppercase mb-8">
+              <span className="w-2 h-2 rounded-full bg-eucalyptus animate-pulse" />
               Limited Time Promo Rate
             </div>
             
@@ -79,7 +79,7 @@ export default function Remittance() {
             </div>
 
             <div className="flex items-center gap-3 text-sm text-muted-foreground font-light">
-              <ShieldCheck className="w-5 h-5 text-green-400" />
+              <ShieldCheck className="w-5 h-5 text-eucalyptus" />
               Fully regulated and secure transfers via partner banks.
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function Remittance() {
             <div className="bg-card border border-white/10 p-8 md:p-10 rounded-[2.5rem] relative shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
               <div className="flex justify-between items-center mb-8">
                 <h3 className="text-2xl font-serif">Calculate Transfer</h3>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]" />
+                <div className="w-2 h-2 bg-eucalyptus rounded-full animate-pulse shadow-[0_0_8px_hsl(var(--eucalyptus))]" />
               </div>
               
               <div className="space-y-6">
@@ -146,7 +146,7 @@ export default function Remittance() {
                 <div className="pt-4 pb-2">
                   <div className="text-xs text-muted-foreground mb-2 flex justify-between">
                     <span>vs. Traditional Wire (est. {stdRate})</span>
-                    <span className="text-green-400 font-medium">+{difference} ETB more</span>
+                    <span className="text-eucalyptus font-medium">+{difference} ETB more</span>
                   </div>
                   <div className="h-2 bg-white/5 rounded-full overflow-hidden flex">
                     <div className="bg-white/20 h-full w-[65%]" />
@@ -252,7 +252,7 @@ export default function Remittance() {
                             <method.icon className="h-5 w-5" />
                             <span className="text-sm font-medium leading-tight">{method.label}</span>
                             <span className={`text-[10px] uppercase tracking-wider ${
-                              method.id === "card" ? "text-primary/80" : "text-green-400/80"
+                              method.id === "card" ? "text-primary/80" : "text-eucalyptus/80"
                             }`}>
                               {method.detail}
                             </span>
@@ -267,7 +267,7 @@ export default function Remittance() {
                          disabled={plaidLinked}
                          className={`mt-3 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
                            plaidLinked
-                             ? "border-green-500/20 bg-green-500/5 text-green-400"
+                             ? "border-eucalyptus/20 bg-eucalyptus/5 text-eucalyptus"
                              : "border-primary/20 bg-primary/5 text-primary hover:border-primary/40"
                          }`}
                        >
@@ -300,7 +300,7 @@ export default function Remittance() {
                              : "(1% ACH fee)"
                            : "(Samra balance)"}
                      </span>
-                    <span className={serviceFee > 0 ? "text-primary" : "text-green-400"}>
+                    <span className={serviceFee > 0 ? "text-primary" : "text-eucalyptus"}>
                       {serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free"}
                     </span>
                   </div>

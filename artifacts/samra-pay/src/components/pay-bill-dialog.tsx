@@ -110,7 +110,7 @@ export function PayBillDialog({
 
                 <div className="flex items-center gap-3 bg-background/50 border border-white/10 rounded-xl p-3">
                   <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                    <Wallet className="w-5 h-5 text-green-400" />
+                    <Wallet className="w-5 h-5 text-eucalyptus" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-white/90">Checking &bull;&bull;&bull;&bull; 8834</div>
@@ -142,9 +142,9 @@ export function PayBillDialog({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.05 }}
-                className="mx-auto w-16 h-16 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-5"
+                className="mx-auto w-16 h-16 rounded-full bg-eucalyptus/15 border border-eucalyptus/30 flex items-center justify-center mb-5"
               >
-                <Check className="w-8 h-8 text-green-400" />
+                <Check className="w-8 h-8 text-eucalyptus" />
               </motion.div>
               <DialogTitle className="font-serif text-xl mb-1">Payment Sent</DialogTitle>
               <DialogDescription>

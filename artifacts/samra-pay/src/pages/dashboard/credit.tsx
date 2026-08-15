@@ -24,8 +24,8 @@ const creditScoreData = [
 
 const tiers = [
   { name: "Building", min: 300, max: 649, color: "text-muted-foreground", bg: "bg-muted-foreground" },
-  { name: "Solid", min: 650, max: 719, color: "text-blue-400", bg: "bg-blue-400" },
-  { name: "Excellent", min: 720, max: 779, color: "text-green-400", bg: "bg-green-400" },
+  { name: "Solid", min: 650, max: 719, color: "text-muted-foreground", bg: "bg-muted-foreground" },
+  { name: "Excellent", min: 720, max: 779, color: "text-eucalyptus", bg: "bg-eucalyptus" },
   { name: "Elite", min: 780, max: 850, color: "text-primary", bg: "bg-primary" },
 ];
 
@@ -46,7 +46,7 @@ export function DashboardCredit() {
           {/* Main Gamified Ring & Ladder */}
           <Card className="bg-card/30 border-white/5 shadow-2xl relative overflow-hidden lg:col-span-2">
             {/* Subtle glow behind ring */}
-            <div className="absolute top-1/2 left-1/4 -translate-y-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-green-500/10 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/4 -translate-y-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-eucalyptus/10 rounded-full blur-[100px] pointer-events-none" />
             
             <CardHeader className="relative z-10">
               <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-widest">
@@ -69,7 +69,7 @@ export function DashboardCredit() {
                     animate={{ strokeDashoffset: 212 - (212 * 0.8) }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
                     cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" 
-                    className="text-green-400" 
+                    className="text-eucalyptus" 
                     strokeDasharray="212 283" 
                     strokeLinecap="round" 
                   />
@@ -87,7 +87,7 @@ export function DashboardCredit() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8 }}
-                    className="text-green-400 font-medium text-sm flex items-center gap-1 mt-1 bg-green-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider"
+                    className="text-eucalyptus font-medium text-sm flex items-center gap-1 mt-1 bg-eucalyptus/10 px-2 py-0.5 rounded-full uppercase tracking-wider"
                   >
                     <TrendingUp className="w-3 h-3" /> +12 Pts
                   </motion.span>
@@ -151,14 +151,14 @@ export function DashboardCredit() {
               transition={{ delay: 0.3 }}
             >
               <Card className="bg-card/30 border-white/5 shadow-xl relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -right-4 -top-4 w-32 h-32 bg-coffee/10 rounded-full blur-2xl pointer-events-none" />
                 <CardContent className="p-6 relative z-10 flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center shrink-0 border border-orange-500/20">
-                    <Flame className="w-7 h-7 text-orange-400" />
+                  <div className="w-14 h-14 rounded-2xl bg-coffee/10 flex items-center justify-center shrink-0 border border-coffee/20">
+                    <Flame className="w-7 h-7 text-coffee" />
                   </div>
                   <div>
                     <div className="text-3xl font-serif text-white/90 mb-1">14 Months</div>
-                    <div className="text-sm font-medium text-orange-400">Perfect payment streak</div>
+                    <div className="text-sm font-medium text-coffee">Perfect payment streak</div>
                   </div>
                 </CardContent>
               </Card>
@@ -176,9 +176,9 @@ export function DashboardCredit() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
-                    { title: "6-Month Climb", desc: "+35 pts since Jan", icon: TrendingUp, color: "text-green-400", bg: "bg-green-500/10" },
+                    { title: "6-Month Climb", desc: "+35 pts since Jan", icon: TrendingUp, color: "text-eucalyptus", bg: "bg-eucalyptus/10" },
                     { title: "Low Utilization", desc: "Under 20% total usage", icon: Award, color: "text-primary", bg: "bg-primary/10" },
-                    { title: "Perfect History", desc: "No missed payments", icon: CheckCircle2, color: "text-blue-400", bg: "bg-blue-500/10" },
+                    { title: "Perfect History", desc: "No missed payments", icon: CheckCircle2, color: "text-muted-foreground", bg: "bg-muted/40" },
                   ].map((badge, idx) => (
                     <div key={idx} className="flex items-center gap-4">
                       <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0", badge.bg)}>
@@ -205,27 +205,27 @@ export function DashboardCredit() {
           <Card className="bg-card/30 border-white/5 shadow-2xl">
             <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
               <CardTitle className="text-lg font-serif">Score History</CardTitle>
-              <span className="text-sm text-green-400 font-medium bg-green-500/10 px-3 py-1 rounded-full uppercase tracking-wider">+35 Pts in 6 Months</span>
+              <span className="text-sm text-eucalyptus font-medium bg-eucalyptus/10 px-3 py-1 rounded-full uppercase tracking-wider">+35 Pts in 6 Months</span>
             </CardHeader>
             <CardContent className="pt-8">
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={creditScoreData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <LineChart data={creditScoreData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 10', 'dataMax + 10']} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '12px', backdropFilter: 'blur(10px)' }}
-                      itemStyle={{ color: 'hsl(var(--green-400))', fontWeight: 500 }}
+                      itemStyle={{ color: 'hsl(var(--eucalyptus))', fontWeight: 500 }}
                       labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
                     />
                     <Line 
                       type="monotone" 
                       dataKey="score" 
-                      stroke="#4ade80" 
+                      stroke="hsl(var(--eucalyptus))" 
                       strokeWidth={3} 
-                      dot={{ fill: '#4ade80', strokeWidth: 2, r: 4 }} 
-                      activeDot={{ r: 6, fill: '#4ade80', strokeWidth: 0 }} 
+                      dot={{ fill: 'hsl(var(--eucalyptus))', strokeWidth: 2, r: 4 }} 
+                      activeDot={{ r: 6, fill: 'hsl(var(--eucalyptus))', strokeWidth: 0 }} 
                       animationDuration={1500}
                     />
                   </LineChart>

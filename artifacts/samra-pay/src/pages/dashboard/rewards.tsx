@@ -113,7 +113,7 @@ export function DashboardRewards() {
                 </span>
                 <span className="text-lg text-primary/80 ml-3 font-medium">miles</span>
               </div>
-              <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm font-medium text-green-400 flex items-center gap-2">
+              <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm font-medium text-eucalyptus flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 +1,240 earned this month
               </div>

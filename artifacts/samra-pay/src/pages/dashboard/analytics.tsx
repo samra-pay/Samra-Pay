@@ -61,10 +61,10 @@ export function DashboardAnalytics() {
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Card className="bg-card/30 border-white/5 shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl transition-colors group-hover:bg-green-500/20 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-eucalyptus/10 rounded-full blur-2xl transition-colors group-hover:bg-eucalyptus/20 pointer-events-none" />
               <CardContent className="p-6 relative z-10 flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center shrink-0 border border-green-500/20">
-                  <SendToBack className="w-7 h-7 text-green-400" />
+                <div className="w-14 h-14 rounded-2xl bg-eucalyptus/10 flex items-center justify-center shrink-0 border border-eucalyptus/20">
+                  <SendToBack className="w-7 h-7 text-eucalyptus" />
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Fees Saved</div>
@@ -85,7 +85,7 @@ export function DashboardAnalytics() {
               <CardContent className="pt-4">
                 <div className="h-[350px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={spendingOverTime} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                    <BarChart data={spendingOverTime} margin={{ top: 20, right: 0, left: -8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                       <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
