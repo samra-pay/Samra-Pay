@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, Building2, Smartphone, CreditCard, Landmark, ShieldCheck, Check } from "lucide-react";
+import { ArrowDown, Building2, Smartphone, CreditCard, Landmark, ShieldCheck, Check, Plane } from "lucide-react";
 import { Link } from "wouter";
 
 const PROMO_RATE = 180; // 1 USD = 180 ETB
 const CARD_FEE_RATE = 0.03;
+const SHEBA_MILES_THRESHOLD = 500;
+const SHEBA_MILES_BONUS = 100;
 
 type DeliveryMethod = "wallet" | "bank";
 type FundingMethod = "card" | "bank";
@@ -34,6 +36,7 @@ export default function Remittance() {
   const parsedUsdAmount = Math.max(parseFloat(usdAmount || "0") || 0, 0);
   const serviceFee = fundingMethod === "card" ? parsedUsdAmount * CARD_FEE_RATE : 0;
   const totalCharged = parsedUsdAmount + serviceFee;
+  const shebaMilesEarned = parsedUsdAmount > SHEBA_MILES_THRESHOLD ? SHEBA_MILES_BONUS : 0;
   const difference = ((parsedUsdAmount * PROMO_RATE) - (parsedUsdAmount * stdRate)).toLocaleString("en-US", { maximumFractionDigits: 0 });
   const formatUsd = (amount: number) => amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -267,6 +270,34 @@ export default function Remittance() {
                   <div className="flex items-center justify-between border-t border-white/5 pt-3 text-base font-medium">
                     <span>Total charged</span>
                     <span className="text-primary">${formatUsd(totalCharged)}</span>
+                  </div>
+                </div>
+
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${
+                    shebaMilesEarned > 0
+                      ? "border-primary/30 bg-primary/10"
+                      : "border-white/10 bg-background/40"
+                  }`}
+                >
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                    shebaMilesEarned > 0
+                      ? "bg-primary/20 text-primary"
+                      : "bg-white/5 text-muted-foreground"
+                  }`}>
+                    <Plane className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className={`font-medium ${shebaMilesEarned > 0 ? "text-primary" : "text-foreground"}`}>
+                      {shebaMilesEarned > 0
+                        ? `+${SHEBA_MILES_BONUS} Sheba Miles`
+                        : `Send over $${SHEBA_MILES_THRESHOLD} to earn ${SHEBA_MILES_BONUS} Sheba Miles`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Illustrative demo reward
+                    </div>
                   </div>
                 </div>
               </div>
