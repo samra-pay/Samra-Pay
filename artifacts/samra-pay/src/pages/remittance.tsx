@@ -1,53 +1,40 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, Wallet, Smartphone, CreditCard, Landmark, ShieldCheck, Check, Plane, Link2 } from "lucide-react";
 import { Link } from "wouter";
-
-const PROMO_RATE = 180; // 1 USD = 180 ETB
-const CARD_FEE_RATE = 0.03;
-const ACH_FEE_RATE = 0.01;
-const SHEBA_MILES_THRESHOLD = 500;
-const SHEBA_MILES_BONUS = 100;
-
-type DeliveryMethod = "wallet" | "bank";
-type PaymentMethod = "balance" | "card" | "plaid";
+import {
+  PROMO_RATE,
+  SHEBA_MILES_THRESHOLD,
+  SHEBA_MILES_BONUS,
+  type DeliveryMethod,
+  type PaymentMethod,
+  sanitizeUsdInput,
+  parseUsd,
+  computeQuote,
+  formatUsd,
+  formatEtb,
+} from "@/lib/remittance";
 
 export default function Remittance() {
   const [usdAmount, setUsdAmount] = useState<string>("1000");
-  const [etbAmount, setEtbAmount] = useState<string>("");
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("bank");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("plaid");
   const [plaidLinked, setPlaidLinked] = useState(false);
 
-  useEffect(() => {
-    const num = parseFloat(usdAmount);
-    if (!isNaN(num)) {
-      setEtbAmount((num * PROMO_RATE).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    } else {
-      setEtbAmount("0.00");
-    }
-  }, [usdAmount]);
-
   const handleUsdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^\d.]/g, "");
-    setUsdAmount(val);
+    setUsdAmount(sanitizeUsdInput(e.target.value));
   };
 
   const stdRate = 115; // Example standard rate for comparison
-  const parsedUsdAmount = Math.max(parseFloat(usdAmount || "0") || 0, 0);
-  const serviceFee = paymentMethod === "card"
-    ? parsedUsdAmount * CARD_FEE_RATE
-    : paymentMethod === "plaid" && !plaidLinked
-      ? parsedUsdAmount * ACH_FEE_RATE
-      : 0;
-  const totalCharged = parsedUsdAmount + serviceFee;
-  const shebaMilesEarned = parsedUsdAmount > SHEBA_MILES_THRESHOLD ? SHEBA_MILES_BONUS : 0;
+  const parsedUsdAmount = parseUsd(usdAmount);
+  const { serviceFee, totalCharged, recipientEtb, shebaMilesEarned } = computeQuote(
+    parsedUsdAmount,
+    paymentMethod,
+    plaidLinked,
+  );
+  const etbAmount = formatEtb(recipientEtb);
   const difference = ((parsedUsdAmount * PROMO_RATE) - (parsedUsdAmount * stdRate)).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  const formatUsd = (amount: number) => amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
   return (
     <PageTransition>
@@ -102,11 +89,13 @@ export default function Remittance() {
               <div className="space-y-6">
                 {/* Send */}
                 <div className="bg-background/50 border border-white/5 rounded-2xl p-5 flex flex-col focus-within:border-primary/50 transition-colors">
-                  <label className="text-xs text-muted-foreground uppercase tracking-widest mb-3">You send</label>
+                  <label htmlFor="usd-amount" className="text-xs text-muted-foreground uppercase tracking-widest mb-3">You send</label>
                   <div className="flex items-center">
-                    <span className="text-3xl text-muted-foreground mr-2 font-light">$</span>
+                    <span className="text-3xl text-muted-foreground mr-2 font-light" aria-hidden="true">$</span>
                     <input 
+                      id="usd-amount"
                       type="text"
+                      inputMode="decimal"
                       value={usdAmount}
                       onChange={handleUsdChange}
                       className="bg-transparent text-5xl font-serif outline-none w-full text-foreground placeholder:text-muted"
@@ -138,7 +127,7 @@ export default function Remittance() {
                       aria-live="polite"
                       className="min-w-0 flex-1 truncate bg-transparent text-4xl font-serif text-primary md:text-5xl"
                     >
-                      {etbAmount || "0.00"}
+                      {etbAmount}
                     </span>
                     <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl border border-primary/20">
                       <span className="font-semibold tracking-wider text-primary">ETB</span>
@@ -161,10 +150,10 @@ export default function Remittance() {
                 {/* Delivery Method */}
                 <div className="space-y-6">
                   <div>
-                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
+                    <span id="send-to-label" className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
                       Send to
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    </span>
+                    <div className="grid grid-cols-2 gap-3" role="group" aria-labelledby="send-to-label">
                       {[
                         {
                           id: "wallet" as const,
@@ -184,8 +173,7 @@ export default function Remittance() {
                           <button
                             key={method.id}
                             type="button"
-                            role="radio"
-                            aria-checked={selected}
+                            aria-pressed={selected}
                             onClick={() => setDeliveryMethod(method.id)}
                             className={`relative flex min-h-[112px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all ${
                               selected
@@ -210,10 +198,10 @@ export default function Remittance() {
                   </div>
 
                   <div>
-                    <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
+                    <span id="payment-label" className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
                        Payment method
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    </span>
+                    <div className="grid grid-cols-2 gap-3" role="group" aria-labelledby="payment-label">
                       {[
                         {
                            id: "balance" as const,
@@ -239,8 +227,7 @@ export default function Remittance() {
                           <button
                             key={method.id}
                             type="button"
-                            role="radio"
-                            aria-checked={selected}
+                            aria-pressed={selected}
                              onClick={() => setPaymentMethod(method.id)}
                              className={`relative flex min-h-[100px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all ${
                                method.id === "plaid" ? "col-span-2 sm:col-span-1" : ""
