@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Wallet } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   BILL_INFO,
   CHECKING_BASE_BALANCE,
@@ -16,6 +17,7 @@ import {
   payBill,
   useDemoState,
   type BillId,
+  type PaymentOption,
 } from "@/lib/demo-state";
 
 export function PayBillDialog({
@@ -29,16 +31,22 @@ export function PayBillDialog({
 }) {
   const { checkingDeducted } = useDemoState();
   const [step, setStep] = useState<"confirm" | "success">("confirm");
+  const [option, setOption] = useState<PaymentOption>("full");
 
   useEffect(() => {
-    if (open) setStep("confirm");
+    if (open) {
+      setStep("confirm");
+      setOption("full");
+    }
   }, [open]);
 
   const info = BILL_INFO[bill];
   const checkingAvailable = CHECKING_BASE_BALANCE - checkingDeducted;
+  const payAmount = option === "min" ? info.minDue : info.amount;
+  const remainingAfter = info.amount - payAmount;
 
   const handleConfirm = () => {
-    payBill(bill);
+    payBill(bill, option);
     setStep("success");
   };
 
@@ -54,15 +62,51 @@ export function PayBillDialog({
               exit={{ opacity: 0 }}
             >
               <DialogHeader>
-                <DialogTitle className="font-serif text-xl">Pay Statement Balance</DialogTitle>
+                <DialogTitle className="font-serif text-xl">Pay Your Bill</DialogTitle>
                 <DialogDescription>{info.name} &middot; Due {info.due}</DialogDescription>
               </DialogHeader>
 
               <div className="my-6 space-y-4">
-                <div className="text-center py-2">
-                  <div className="text-4xl font-serif text-white/90">{formatUSD(info.amount)}</div>
-                  <div className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Statement balance</div>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Payment amount">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={option === "full"}
+                    data-testid="option-statement-balance"
+                    onClick={() => setOption("full")}
+                    className={cn(
+                      "rounded-xl border p-4 text-left transition-colors",
+                      option === "full"
+                        ? "border-primary/60 bg-primary/10"
+                        : "border-white/10 bg-background/50 hover:border-white/20"
+                    )}
+                  >
+                    <div className="text-2xl font-serif text-white/90">{formatUSD(info.amount)}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Statement balance</div>
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={option === "min"}
+                    data-testid="option-minimum-due"
+                    onClick={() => setOption("min")}
+                    className={cn(
+                      "rounded-xl border p-4 text-left transition-colors",
+                      option === "min"
+                        ? "border-primary/60 bg-primary/10"
+                        : "border-white/10 bg-background/50 hover:border-white/20"
+                    )}
+                  >
+                    <div className="text-2xl font-serif text-white/90">{formatUSD(info.minDue)}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Minimum due</div>
+                  </button>
                 </div>
+
+                {option === "min" && (
+                  <div className="text-xs text-muted-foreground text-center">
+                    {formatUSD(remainingAfter)} will remain on your balance.
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3 bg-background/50 border border-white/10 rounded-xl p-3">
                   <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
@@ -79,8 +123,8 @@ export function PayBillDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Button variant="gold" className="w-full h-11 font-medium" onClick={handleConfirm}>
-                  Confirm Payment
+                <Button variant="gold" className="w-full h-11 font-medium" onClick={handleConfirm} data-testid="button-confirm-payment">
+                  Pay {formatUSD(payAmount)}
                 </Button>
                 <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
                   Cancel
@@ -104,10 +148,12 @@ export function PayBillDialog({
               </motion.div>
               <DialogTitle className="font-serif text-xl mb-1">Payment Sent</DialogTitle>
               <DialogDescription>
-                {formatUSD(info.amount)} paid from Checking &bull;&bull;&bull;&bull; 8834
+                {formatUSD(payAmount)} paid from Checking &bull;&bull;&bull;&bull; 8834
               </DialogDescription>
               <div className="text-xs text-muted-foreground mt-3">
-                Your {info.name} balance is now $0.00.
+                {option === "min"
+                  ? `Your ${info.name} balance is now ${formatUSD(remainingAfter)}.`
+                  : `Your ${info.name} balance is now $0.00.`}
               </div>
               <Button variant="gold" className="w-full h-11 font-medium mt-6" onClick={() => onOpenChange(false)}>
                 Done

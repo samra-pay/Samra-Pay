@@ -22,7 +22,7 @@ import { PageTransition } from "@/components/page-transition";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { PayBillDialog } from "@/components/pay-bill-dialog";
-import { useDemoState, formatUSD, CHECKING_BASE_BALANCE, BILL_INFO } from "@/lib/demo-state";
+import { useDemoState, formatUSD, CHECKING_BASE_BALANCE, BILL_INFO, billRemaining } from "@/lib/demo-state";
 import { CheckCircle2 } from "lucide-react";
 
 type Transaction = {
@@ -85,6 +85,7 @@ export function DashboardCards() {
         limit: "N/A",
         hasBill: false,
         billPaid: false,
+        minPaid: false,
         hasAccountInfo: true,
         earnRules: [
           { label: "FDIC Insured", value: "Up to $250k" },
@@ -94,10 +95,11 @@ export function DashboardCards() {
       };
       case "airlines": return { 
         name: "Airlines Premium", 
-        balance: demo.bills.airlines.paid ? "$0.00" : formatUSD(BILL_INFO.airlines.amount), 
+        balance: formatUSD(billRemaining("airlines", demo.bills.airlines)), 
         limit: "$15,000.00",
         hasBill: true,
         billPaid: demo.bills.airlines.paid,
+        minPaid: demo.bills.airlines.paidOption === "min",
         billDue: "Jul 8",
         minDue: "$89.00",
         autopay: false,
@@ -111,10 +113,11 @@ export function DashboardCards() {
       };
       case "charge": default: return { 
         name: "Samra Pay Charge Card", 
-        balance: demo.bills.charge.paid ? "$0.00" : formatUSD(BILL_INFO.charge.amount), 
+        balance: formatUSD(billRemaining("charge", demo.bills.charge)), 
         limit: "No Preset Limit",
         hasBill: true,
         billPaid: demo.bills.charge.paid,
+        minPaid: demo.bills.charge.paidOption === "min",
         billDue: "Jul 2",
         minDue: "$35.00",
         autopay: true,
@@ -153,7 +156,7 @@ export function DashboardCards() {
   const currentLedger =
     activeCard !== "debit" && demo.bills[activeCard].paid
       ? [
-          { id: 999, merchant: "Payment Received — Thank You", date: "Today", amount: BILL_INFO[activeCard].amount, category: "Payment", type: "credit" } as Transaction,
+          { id: 999, merchant: "Payment Received — Thank You", date: "Today", amount: demo.bills[activeCard].paidAmount ?? BILL_INFO[activeCard].amount, category: "Payment", type: "credit" } as Transaction,
           ...ledgers[activeCard],
         ]
       : ledgers[activeCard];
@@ -238,7 +241,7 @@ export function DashboardCards() {
                       <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl p-4">
                         <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
                         <div>
-                          <div className="text-sm font-medium text-green-400">Statement Paid</div>
+                          <div className="text-sm font-medium text-green-400">{details.minPaid ? "Minimum Paid" : "Statement Paid"}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">Paid today from Checking &bull;&bull;&bull;&bull; 8834</div>
                         </div>
                       </div>

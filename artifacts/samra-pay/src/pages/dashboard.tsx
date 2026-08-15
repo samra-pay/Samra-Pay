@@ -23,7 +23,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { MOCK_DATA } from "@/lib/mock-data";
-import { useDemoState, formatUSD, CHECKING_BASE_BALANCE, BILL_INFO } from "@/lib/demo-state";
+import { useDemoState, formatUSD, CHECKING_BASE_BALANCE, BILL_INFO, billRemaining } from "@/lib/demo-state";
 import { CheckCircle2 } from "lucide-react";
 
 const creditScoreData = [
@@ -52,6 +52,12 @@ const recentTransactions = [
 
 export default function Dashboard() {
   const demo = useDemoState();
+  const chargeMinPaid = demo.bills.charge.paid && demo.bills.charge.paidOption === "min";
+  const airlinesMinPaid = demo.bills.airlines.paid && demo.bills.airlines.paidOption === "min";
+  const chargeFullyPaid = demo.bills.charge.paid && !chargeMinPaid;
+  const airlinesFullyPaid = demo.bills.airlines.paid && !airlinesMinPaid;
+  const chargeRemaining = billRemaining("charge", demo.bills.charge);
+  const airlinesRemaining = billRemaining("airlines", demo.bills.airlines);
   return (
     <PageTransition>
       <div className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -204,7 +210,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">Charge</div>
-                  <div className="text-lg font-serif text-white/90">{demo.bills.charge.paid ? "$0.00" : formatUSD(BILL_INFO.charge.amount)}</div>
+                  <div className="text-lg font-serif text-white/90">{formatUSD(chargeRemaining)}</div>
                 </div>
               </Card>
             </Link>
@@ -220,7 +226,7 @@ export default function Dashboard() {
                 </div>
                 <div className="relative z-10">
                   <div className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest mb-0.5">Premium</div>
-                  <div className="text-lg font-serif text-white/90">{demo.bills.airlines.paid ? "$0.00" : formatUSD(BILL_INFO.airlines.amount)}</div>
+                  <div className="text-lg font-serif text-white/90">{formatUSD(airlinesRemaining)}</div>
                 </div>
               </Card>
             </Link>
@@ -251,25 +257,27 @@ export default function Dashboard() {
             </Card>
 
             {/* Obligation 2 */}
-            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start", demo.bills.charge.paid ? "border-green-500/20" : "border-white/5")}>
+            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start", chargeFullyPaid ? "border-green-500/20" : chargeMinPaid ? "border-primary/20" : "border-white/5")}>
               <CardContent className="p-5">
                 <div className="flex justify-between items-start mb-4">
-                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", demo.bills.charge.paid ? "bg-green-500/10 border-green-500/20" : "bg-white/5 border-white/10")}>
-                    {demo.bills.charge.paid ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Calendar className="w-4 h-4 text-white/80" />}
+                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", chargeFullyPaid ? "bg-green-500/10 border-green-500/20" : chargeMinPaid ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/10")}>
+                    {chargeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : chargeMinPaid ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-white/80" />}
                   </div>
-                  {demo.bills.charge.paid ? (
+                  {chargeFullyPaid ? (
                     <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 px-2 py-1 rounded uppercase tracking-widest">Paid</span>
+                  ) : chargeMinPaid ? (
+                    <span className="text-[10px] font-semibold bg-primary/20 text-primary px-2 py-1 rounded uppercase tracking-widest" data-testid="pill-charge-min-paid">Min paid</span>
                   ) : (
                     <span className="text-[10px] font-semibold bg-white/10 px-2 py-1 rounded text-white/80 uppercase tracking-widest">In 4 days</span>
                   )}
                 </div>
                 <div className="text-sm font-medium text-white/90 mb-1">Charge Card Bill</div>
-                <div className={cn("text-xs mb-3", demo.bills.charge.paid ? "text-green-400 font-medium" : "text-muted-foreground")}>
-                  {demo.bills.charge.paid ? "Paid today from Checking" : "Autopay ON"}
+                <div className={cn("text-xs mb-3", chargeFullyPaid ? "text-green-400 font-medium" : chargeMinPaid ? "text-primary font-medium" : "text-muted-foreground")}>
+                  {chargeFullyPaid ? "Paid today from Checking" : chargeMinPaid ? `Minimum paid — ${formatUSD(chargeRemaining)} remaining` : "Autopay ON"}
                 </div>
                 <div className="flex justify-between items-end">
                   <div className="flex items-baseline gap-2">
-                    <span className={cn("text-2xl font-serif", demo.bills.charge.paid ? "text-white/50 line-through" : "text-white/90")}>$1,240</span>
+                    <span className={cn("text-2xl font-serif", chargeFullyPaid ? "text-white/50 line-through" : "text-white/90")}>{chargeMinPaid ? formatUSD(chargeRemaining) : "$1,240"}</span>
                     <span className="text-xs text-muted-foreground">Jul 2</span>
                   </div>
                   {!demo.bills.charge.paid && (
@@ -282,26 +290,28 @@ export default function Dashboard() {
             </Card>
 
             {/* Obligation 3 */}
-            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start relative overflow-hidden", demo.bills.airlines.paid ? "border-green-500/20" : "border-primary/20")}>
+            <Card className={cn("min-w-[280px] bg-card/30 shrink-0 snap-start relative overflow-hidden", airlinesFullyPaid ? "border-green-500/20" : "border-primary/20")}>
               {!demo.bills.airlines.paid && <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-full blur-xl pointer-events-none" />}
               <CardContent className="p-5 relative z-10">
                 <div className="flex justify-between items-start mb-4">
-                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", demo.bills.airlines.paid ? "bg-green-500/10 border-green-500/20" : "bg-primary/10 border-primary/20")}>
-                    {demo.bills.airlines.paid ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Calendar className="w-4 h-4 text-primary" />}
+                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center border", airlinesFullyPaid ? "bg-green-500/10 border-green-500/20" : "bg-primary/10 border-primary/20")}>
+                    {airlinesFullyPaid ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : airlinesMinPaid ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-primary" />}
                   </div>
-                  {demo.bills.airlines.paid ? (
+                  {airlinesFullyPaid ? (
                     <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 px-2 py-1 rounded uppercase tracking-widest">Paid</span>
+                  ) : airlinesMinPaid ? (
+                    <span className="text-[10px] font-semibold bg-primary/20 text-primary px-2 py-1 rounded uppercase tracking-widest" data-testid="pill-airlines-min-paid">Min paid</span>
                   ) : (
                     <span className="text-[10px] font-semibold bg-primary/20 text-primary px-2 py-1 rounded uppercase tracking-widest">In 10 days</span>
                   )}
                 </div>
                 <div className="text-sm font-medium text-white/90 mb-1">Co-Brand Bill</div>
-                <div className={cn("text-xs mb-3 font-medium", demo.bills.airlines.paid ? "text-green-400" : "text-red-400")}>
-                  {demo.bills.airlines.paid ? "Paid today from Checking" : "Autopay OFF"}
+                <div className={cn("text-xs mb-3 font-medium", airlinesFullyPaid ? "text-green-400" : airlinesMinPaid ? "text-primary" : "text-red-400")}>
+                  {airlinesFullyPaid ? "Paid today from Checking" : airlinesMinPaid ? `Minimum paid — ${formatUSD(airlinesRemaining)} remaining` : "Autopay OFF"}
                 </div>
                 <div className="flex justify-between items-end">
                   <div className="flex items-baseline gap-2">
-                    <span className={cn("text-2xl font-serif", demo.bills.airlines.paid ? "text-white/50 line-through" : "text-white/90")}>$3,450</span>
+                    <span className={cn("text-2xl font-serif", airlinesFullyPaid ? "text-white/50 line-through" : "text-white/90")}>{airlinesMinPaid ? formatUSD(airlinesRemaining) : "$3,450"}</span>
                     <span className="text-xs text-muted-foreground">Jul 8</span>
                   </div>
                   {!demo.bills.airlines.paid && (

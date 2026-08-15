@@ -5,9 +5,15 @@ import { useSyncExternalStore } from "react";
 
 export type BillId = "charge" | "airlines";
 
+export type PaymentOption = "full" | "min";
+
 export type BillState = {
   paid: boolean;
   paidAt?: string;
+  /** Which option was used when paid */
+  paidOption?: PaymentOption;
+  /** Amount actually paid, in dollars */
+  paidAmount?: number;
 };
 
 export type DemoState = {
@@ -18,10 +24,10 @@ export type DemoState = {
 
 export const BILL_INFO: Record<
   BillId,
-  { name: string; amount: number; due: string }
+  { name: string; amount: number; minDue: number; due: string }
 > = {
-  charge: { name: "Samra Pay Charge Card", amount: 1240, due: "Jul 2" },
-  airlines: { name: "Airlines Premium", amount: 3450, due: "Jul 8" },
+  charge: { name: "Samra Pay Charge Card", amount: 1240, minDue: 35, due: "Jul 2" },
+  airlines: { name: "Airlines Premium", amount: 3450, minDue: 89, due: "Jul 8" },
 };
 
 export const CHECKING_BASE_BALANCE = 4250;
@@ -41,10 +47,20 @@ function loadState(): DemoState {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
+    const parseBill = (id: BillId): BillState => {
+      const b = parsed?.bills?.[id];
+      const paidOption: PaymentOption | undefined =
+        b?.paidOption === "min" ? "min" : b?.paidOption === "full" ? "full" : undefined;
+      return {
+        paid: !!b?.paid,
+        paidOption,
+        paidAmount: Number(b?.paidAmount) || undefined,
+      };
+    };
     return {
       bills: {
-        charge: { paid: !!parsed?.bills?.charge?.paid },
-        airlines: { paid: !!parsed?.bills?.airlines?.paid },
+        charge: parseBill("charge"),
+        airlines: parseBill("airlines"),
       },
       checkingDeducted: Number(parsed?.checkingDeducted) || 0,
     };
@@ -74,17 +90,24 @@ function getSnapshot(): DemoState {
   return state;
 }
 
-export function payBill(bill: BillId) {
+export function payBill(bill: BillId, option: PaymentOption = "full") {
   if (state.bills[bill].paid) return;
+  const amount = option === "min" ? BILL_INFO[bill].minDue : BILL_INFO[bill].amount;
   state = {
     ...state,
     bills: {
       ...state.bills,
-      [bill]: { paid: true, paidAt: "Today" },
+      [bill]: { paid: true, paidAt: "Today", paidOption: option, paidAmount: amount },
     },
-    checkingDeducted: state.checkingDeducted + BILL_INFO[bill].amount,
+    checkingDeducted: state.checkingDeducted + amount,
   };
   emit();
+}
+
+/** Remaining balance on a card after any demo payment */
+export function billRemaining(bill: BillId, billState: BillState): number {
+  if (!billState.paid) return BILL_INFO[bill].amount;
+  return BILL_INFO[bill].amount - (billState.paidAmount ?? BILL_INFO[bill].amount);
 }
 
 export function useDemoState(): DemoState {
