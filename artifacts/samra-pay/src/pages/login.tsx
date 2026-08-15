@@ -19,7 +19,10 @@ export default function Login() {
     // Simulate network delay then route to dashboard
     setTimeout(() => {
       setIsLoading(false);
-      setLocation("/dashboard");
+      // If a remittance quote was started on the public page, land on remittance Step 2
+      const redirect = sessionStorage.getItem("samra_post_login_redirect") || "/dashboard";
+      sessionStorage.removeItem("samra_post_login_redirect");
+      setLocation(redirect);
     }, 800);
   };
 

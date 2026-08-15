@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageTransition } from "@/components/page-transition";
 import imgCbeBirr   from "@/assets/wallets/cbebirr.png";
 import imgAmole     from "@/assets/wallets/amole.png";
@@ -173,10 +173,32 @@ export function DashboardRemittance() {
   const [step, setStep] = useState<Step>("quote");
 
   // Quote state
-  const [usdAmount, setUsdAmount]       = useState<string>("500");
+  const [usdAmount, setUsdAmount]           = useState<string>("500");
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("bank");
   const [paymentMethod, setPaymentMethod]   = useState<PaymentMethod>("balance");
   const [plaidLinked, setPlaidLinked]       = useState(false);
+
+  // On mount: restore a quote started on the public remittance page and jump to Step 2
+  useEffect(() => {
+    const raw = sessionStorage.getItem("samra_remittance_quote");
+    if (!raw) return;
+    sessionStorage.removeItem("samra_remittance_quote");
+    try {
+      const q = JSON.parse(raw) as {
+        usdAmount: string;
+        deliveryMethod: DeliveryMethod;
+        paymentMethod: PaymentMethod;
+        plaidLinked: boolean;
+      };
+      if (q.usdAmount)      setUsdAmount(q.usdAmount);
+      if (q.deliveryMethod) setDeliveryMethod(q.deliveryMethod);
+      if (q.paymentMethod)  setPaymentMethod(q.paymentMethod);
+      if (q.plaidLinked)    setPlaidLinked(q.plaidLinked);
+      setStep("recipient");
+    } catch {
+      // malformed — ignore, stay on quote step
+    }
+  }, []);
 
   // Recipient state (bank)
   const [bankId, setBankId]               = useState<string>("");

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, Wallet, Smartphone, CreditCard, Landmark, ShieldCheck, Check, Plane, Link2 } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import {
   PROMO_RATE,
   SHEBA_MILES_THRESHOLD,
@@ -17,10 +17,22 @@ import {
 } from "@/lib/remittance";
 
 export default function Remittance() {
+  const [, setLocation] = useLocation();
   const [usdAmount, setUsdAmount] = useState<string>("1000");
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("bank");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("plaid");
   const [plaidLinked, setPlaidLinked] = useState(false);
+
+  function handleContinue() {
+    sessionStorage.setItem("samra_remittance_quote", JSON.stringify({
+      usdAmount,
+      deliveryMethod,
+      paymentMethod,
+      plaidLinked,
+    }));
+    sessionStorage.setItem("samra_post_login_redirect", "/dashboard/remittance");
+    setLocation("/login");
+  }
 
   const handleUsdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUsdAmount(sanitizeUsdInput(e.target.value));
@@ -332,8 +344,10 @@ export default function Remittance() {
                 </div>
               </div>
 
-              <Button asChild variant="gold" size="lg" className="w-full rounded-2xl text-lg h-16 mt-8 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
-                <Link href="/login">Continue to send ${formatUsd(totalCharged)}</Link>
+              <Button variant="gold" size="lg" className="w-full rounded-2xl text-lg h-16 mt-8 shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                onClick={handleContinue}
+              >
+                Continue to send ${formatUsd(totalCharged)}
               </Button>
             </div>
           </div>
