@@ -408,13 +408,17 @@ export function DashboardRemittance() {
                       </div>
                       <div className="flex items-center justify-between text-muted-foreground">
                         <span>Service fee {feeLabel}</span>
-                        <span className={serviceFee > 0 ? "text-primary" : "text-green-400"}>
+                        <span className={serviceFee > 0 ? "text-foreground" : "text-green-400"}>
                           {serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free"}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between border-t border-white/5 pt-3 text-base font-medium">
+                      <div className="flex items-center justify-between border-t border-white/5 pt-3 text-base font-semibold">
                         <span>Total charged</span>
-                        <span className="text-primary">${formatUsd(totalCharged)}</span>
+                        <span className="text-foreground">${formatUsd(totalCharged)}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-xl bg-primary/10 border border-primary/25 px-4 py-3 text-base font-semibold">
+                        <span className="text-primary">Funds received</span>
+                        <span className="text-primary font-mono">{etbDisplay} ETB</span>
                       </div>
                     </div>
 
