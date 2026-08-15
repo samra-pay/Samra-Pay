@@ -9,7 +9,135 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { parsePackageExtensions, hasClassComponentDts, resolveInstalledPackageDir } from "./audit-expo-types.js";
+import {
+  parsePackageExtensions,
+  hasClassComponentDts,
+  resolveInstalledPackageDir,
+  getMobileExpoPackages,
+  getMobileReactNativePackages,
+  getMobileTargetPackages,
+} from "./audit-expo-types.js";
+
+// ---------------------------------------------------------------------------
+// getMobileExpoPackages / getMobileReactNativePackages / getMobileTargetPackages
+// ---------------------------------------------------------------------------
+
+describe("getMobileExpoPackages", () => {
+  let tmpDir: string;
+  let pkgJson: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pkg-test-"));
+    pkgJson = path.join(tmpDir, "package.json");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns only expo-* packages", () => {
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({
+        dependencies: { "expo-blur": "~15.0.0", "react-native-screens": "~4.0.0" },
+        devDependencies: { "expo-router": "~6.0.0", "some-other-pkg": "^1.0.0" },
+      })
+    );
+    expect(getMobileExpoPackages(pkgJson).sort()).toEqual(["expo-blur", "expo-router"]);
+  });
+
+  it("returns an empty array when there are no expo-* packages", () => {
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({ dependencies: { "react-native": "0.81.0" } })
+    );
+    expect(getMobileExpoPackages(pkgJson)).toEqual([]);
+  });
+});
+
+describe("getMobileReactNativePackages", () => {
+  let tmpDir: string;
+  let pkgJson: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pkg-test-"));
+    pkgJson = path.join(tmpDir, "package.json");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns only react-native-* packages (not bare react-native)", () => {
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({
+        dependencies: {
+          "react-native": "0.81.0",
+          "react-native-screens": "~4.0.0",
+          "expo-blur": "~15.0.0",
+        },
+        devDependencies: { "react-native-gesture-handler": "~2.0.0" },
+      })
+    );
+    expect(getMobileReactNativePackages(pkgJson).sort()).toEqual([
+      "react-native-gesture-handler",
+      "react-native-screens",
+    ]);
+  });
+
+  it("returns an empty array when there are no react-native-* packages", () => {
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({ dependencies: { "expo-blur": "~15.0.0" } })
+    );
+    expect(getMobileReactNativePackages(pkgJson)).toEqual([]);
+  });
+});
+
+describe("getMobileTargetPackages", () => {
+  let tmpDir: string;
+  let pkgJson: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pkg-test-"));
+    pkgJson = path.join(tmpDir, "package.json");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("combines expo-* and react-native-* packages", () => {
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({
+        dependencies: {
+          "react-native": "0.81.0",
+          "react-native-screens": "~4.0.0",
+          "expo-blur": "~15.0.0",
+          "some-other-pkg": "^1.0.0",
+        },
+        devDependencies: { "react-native-gesture-handler": "~2.0.0", "expo-router": "~6.0.0" },
+      })
+    );
+    expect(getMobileTargetPackages(pkgJson).sort()).toEqual([
+      "expo-blur",
+      "expo-router",
+      "react-native-gesture-handler",
+      "react-native-screens",
+    ]);
+  });
+
+  it("excludes the bare react-native package (no trailing dash)", () => {
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({ dependencies: { "react-native": "0.81.0" } })
+    );
+    // react-native does not start with "expo-" or "react-native-"
+    expect(getMobileTargetPackages(pkgJson)).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // parsePackageExtensions — YAML structural parser

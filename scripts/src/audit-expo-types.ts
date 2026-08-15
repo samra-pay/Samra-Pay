@@ -2,14 +2,16 @@
 /**
  * audit-expo-types.ts
  *
- * Scans every expo-* package listed in the samra-pay-mobile package.json and
- * checks whether its .d.ts files contain class-component declarations
- * (React.Component / React.PureComponent). If so, the package must be listed
- * in the `packageExtensions` section of pnpm-workspace.yaml with an explicit
- * `@types/react` peer dependency so that pnpm injects it — otherwise TypeScript
- * cannot resolve the class-based types and the typecheck breaks.
+ * Scans every expo-* and react-native-* package listed in the
+ * samra-pay-mobile package.json and checks whether its .d.ts files contain
+ * class-component declarations (React.Component / React.PureComponent). If so,
+ * the package must be listed in the `packageExtensions` section of
+ * pnpm-workspace.yaml with an explicit `@types/react` peer dependency so that
+ * pnpm injects it — otherwise TypeScript cannot resolve the class-based types
+ * and the typecheck breaks.
  *
- * Exit 0  → all class-component Expo packages are covered in packageExtensions.
+ * Exit 0  → all class-component expo-* and react-native-* packages are covered
+ *            in packageExtensions.
  * Exit 1  → one or more packages are missing or a declared dep is unresolvable.
  */
 
@@ -29,22 +31,44 @@ const MOBILE_PKG_JSON = path.join(
 const WORKSPACE_YAML = path.join(WORKSPACE_ROOT, "pnpm-workspace.yaml");
 
 // ---------------------------------------------------------------------------
-// 1. Collect all expo-* package names from the mobile app
+// 1. Collect target package names from the mobile app
+//
+//    getMobileExpoPackages  — expo-* packages only (kept for backward compat)
+//    getMobileReactNativePackages — react-native-* packages only
+//    getMobileTargetPackages — both prefixes combined (used by main)
 // ---------------------------------------------------------------------------
-export function getMobileExpoPackages(
-  pkgJsonPath: string = MOBILE_PKG_JSON
-): string[] {
+function readAllDeps(
+  pkgJsonPath: string
+): Record<string, string> {
   const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
+  return { ...pkg.dependencies, ...pkg.devDependencies };
+}
 
-  const allDeps = {
-    ...pkg.dependencies,
-    ...pkg.devDependencies,
-  };
+export function getMobileExpoPackages(
+  pkgJsonPath: string = MOBILE_PKG_JSON
+): string[] {
+  return Object.keys(readAllDeps(pkgJsonPath)).filter((name) =>
+    name.startsWith("expo-")
+  );
+}
 
-  return Object.keys(allDeps).filter((name) => name.startsWith("expo-"));
+export function getMobileReactNativePackages(
+  pkgJsonPath: string = MOBILE_PKG_JSON
+): string[] {
+  return Object.keys(readAllDeps(pkgJsonPath)).filter((name) =>
+    name.startsWith("react-native-")
+  );
+}
+
+export function getMobileTargetPackages(
+  pkgJsonPath: string = MOBILE_PKG_JSON
+): string[] {
+  return Object.keys(readAllDeps(pkgJsonPath)).filter(
+    (name) => name.startsWith("expo-") || name.startsWith("react-native-")
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -191,13 +215,13 @@ export function hasClassComponentDts(pkgDir: string): boolean {
 // Main
 // ---------------------------------------------------------------------------
 function main() {
-  const expoPackages = getMobileExpoPackages();
+  const targetPackages = getMobileTargetPackages();
   const extensions = parsePackageExtensions(
     fs.readFileSync(WORKSPACE_YAML, "utf8")
   );
 
   console.log(
-    `Auditing ${expoPackages.length} expo-* package(s) from samra-pay-mobile…\n`
+    `Auditing ${targetPackages.length} expo-* and react-native-* package(s) from samra-pay-mobile…\n`
   );
 
   const needsFix: string[] = [];
@@ -205,7 +229,7 @@ function main() {
   const unresolvable: string[] = [];
   const noClassComponents: string[] = [];
 
-  for (const pkgName of expoPackages.sort()) {
+  for (const pkgName of targetPackages.sort()) {
     const pkgDir = resolveInstalledPackageDir(pkgName);
 
     if (!pkgDir) {
@@ -249,7 +273,7 @@ function main() {
   }
 
   console.log("\n── Summary ─────────────────────────────────────────────────");
-  console.log(`  Packages scanned:          ${expoPackages.length}`);
+  console.log(`  Packages scanned:          ${targetPackages.length}`);
   console.log(`  No class components:       ${noClassComponents.length}`);
   console.log(`  Covered in extensions:     ${alreadyCovered.length}`);
   console.log(`  Unresolvable (FAIL):       ${unresolvable.length}`);
@@ -277,7 +301,7 @@ function main() {
   }
 
   console.log(
-    "\n✅ All class-component Expo packages are covered in packageExtensions."
+    "\n✅ All class-component expo-* and react-native-* packages are covered in packageExtensions."
   );
   process.exit(0);
 }

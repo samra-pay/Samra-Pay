@@ -67,12 +67,16 @@ catalog:
   zod: ^3.25.76
 
 packageExtensions:
-  # These Expo packages declare only `react` (runtime) as a peer, not `@types/react`.
-  # Without @types/react in their isolated pnpm store path, TypeScript cannot resolve
-  # React.Component / PropsWithChildren from their .d.ts files, causing JSX class-
-  # component type errors (BlurView, LinearGradient) and missing-children errors
-  # (NativeTabs). Adding @types/react as a peer forces pnpm to include it in their
-  # node_modules so TypeScript finds the correct types.
+  # These expo-* and react-native-* packages declare only `react` (runtime) as a
+  # peer, not `@types/react`. Without @types/react in their isolated pnpm store
+  # path, TypeScript cannot resolve React.Component / PropsWithChildren from their
+  # .d.ts files, causing JSX class-component type errors. Adding @types/react as a
+  # peer forces pnpm to include it in their node_modules so TypeScript finds the
+  # correct types.
+  #
+  # The audit-expo-types script (scripts/src/audit-expo-types.ts) enforces that
+  # every expo-* and react-native-* package with class-based .d.ts files appears
+  # here. Run `pnpm --filter @workspace/scripts run audit-expo-types` to verify.
   expo-blur@*:
     peerDependencies:
       "@types/react": ">=18"
@@ -83,6 +87,27 @@ packageExtensions:
     peerDependencies:
       "@types/react": ">=18"
   expo-image@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native-gesture-handler@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native-keyboard-controller@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native-reanimated@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native-safe-area-context@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native-screens@*:
+    peerDependencies:
+      "@types/react": ">=18"
+  react-native-svg@*:
     peerDependencies:
       "@types/react": ">=18"
 
