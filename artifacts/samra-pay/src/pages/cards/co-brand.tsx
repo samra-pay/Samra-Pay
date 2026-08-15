@@ -53,7 +53,7 @@ export default function CoBrandCardPage() {
               className="relative perspective-[1200px] w-full max-w-[500px] mx-auto"
             >
               <Card3DWrapper>
-                <CreditCard variant="airlines" last4="1991" />
+                <CreditCard variant="airlines" last4="1991" showFlipHint />
               </Card3DWrapper>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#1B3B2B]/30 blur-[100px] rounded-full -z-10" />
             </motion.div>

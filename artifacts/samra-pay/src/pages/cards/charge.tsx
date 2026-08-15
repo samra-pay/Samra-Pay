@@ -53,7 +53,7 @@ export default function ChargeCardPage() {
               className="relative perspective-[1200px] w-full max-w-[500px] mx-auto"
             >
               <Card3DWrapper>
-                <CreditCard variant="charge" />
+                <CreditCard variant="charge" showFlipHint />
               </Card3DWrapper>
             </motion.div>
           </div>
