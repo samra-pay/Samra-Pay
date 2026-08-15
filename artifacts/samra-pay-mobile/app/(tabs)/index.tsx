@@ -17,7 +17,8 @@ import { useRouter } from 'expo-router';
 import { SamraLogo } from '@/components/SamraLogo';
 import { useAuth } from '@/context/AuthContext';
 import { useTransfers } from '@/context/TransferContext';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import {
   CHECKING_BALANCE,
   DEMO_DISCLAIMER,
@@ -40,7 +41,7 @@ type QuickActionId = (typeof QUICK_ACTIONS)[number]['id'];
 
 // ─── Demo sheet content ───────────────────────────────────────────────────────
 
-function PayBillSheet({ onClose, colors }: { onClose: () => void; colors: ReturnType<typeof import('@/hooks/useColors').useColors> }) {
+function PayBillSheet({ onClose, colors }: { onClose: () => void; colors: ReturnType<typeof import('@workspace/samra-pay-ds/hooks/use-colors').useColors> }) {
   const bills = [
     { name: 'Ethiopian Electric Utility', amount: 420, due: 'Jul 5', icon: 'zap' as const },
     { name: 'Ethio Telecom', amount: 185, due: 'Jul 8', icon: 'phone' as const },
@@ -49,7 +50,7 @@ function PayBillSheet({ onClose, colors }: { onClose: () => void; colors: Return
   return (
     <View style={[sheetStyles.container, { backgroundColor: colors.card }]}>
       <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
-      <Text style={[sheetStyles.title, { color: colors.cream }]}>Pay a bill</Text>
+      <Text style={[sheetStyles.title, { color: colors.foreground }]}>Pay a bill</Text>
       {bills.map((b) => (
         <Pressable
           key={b.name}
@@ -66,7 +67,7 @@ function PayBillSheet({ onClose, colors }: { onClose: () => void; colors: Return
             <Text style={[sheetStyles.billName, { color: colors.foreground }]}>{b.name}</Text>
             <Text style={[sheetStyles.billDue, { color: colors.mutedForeground }]}>Due {b.due}</Text>
           </View>
-          <Text style={[sheetStyles.billAmount, { color: colors.cream }]}>{formatUsd(b.amount, {})}</Text>
+          <Text style={[sheetStyles.billAmount, { color: colors.foreground }]}>{formatUsd(b.amount, {})}</Text>
         </Pressable>
       ))}
       <Text style={[sheetStyles.demoNote, { color: colors.mutedForeground }]}>
@@ -85,7 +86,7 @@ function PayBillSheet({ onClose, colors }: { onClose: () => void; colors: Return
   );
 }
 
-function MoreSheet({ onClose, colors }: { onClose: () => void; colors: ReturnType<typeof import('@/hooks/useColors').useColors> }) {
+function MoreSheet({ onClose, colors }: { onClose: () => void; colors: ReturnType<typeof import('@workspace/samra-pay-ds/hooks/use-colors').useColors> }) {
   const router = useRouter();
   const items = [
     { label: 'Statements & documents', icon: 'file' as const },
@@ -97,7 +98,7 @@ function MoreSheet({ onClose, colors }: { onClose: () => void; colors: ReturnTyp
   return (
     <View style={[sheetStyles.container, { backgroundColor: colors.card }]}>
       <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
-      <Text style={[sheetStyles.title, { color: colors.cream }]}>More</Text>
+      <Text style={[sheetStyles.title, { color: colors.foreground }]}>More</Text>
       {items.map((item) => (
         <Pressable
           key={item.label}
@@ -136,7 +137,7 @@ function MoreSheet({ onClose, colors }: { onClose: () => void; colors: ReturnTyp
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
-  const colors = useColors();
+  const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { sessionTransfers } = useTransfers();
@@ -240,11 +241,11 @@ export default function DashboardScreen() {
             </View>
 
             {balanceHidden ? (
-              <Text style={[styles.balanceHidden, { color: colors.cream }]} allowFontScaling={false}>
+              <Text style={[styles.balanceHidden, { color: colors.foreground }]} allowFontScaling={false}>
                 ••••••
               </Text>
             ) : (
-              <Text style={[styles.balanceValue, { color: colors.cream }]} allowFontScaling={false}>
+              <Text style={[styles.balanceValue, { color: colors.foreground }]} allowFontScaling={false}>
                 {formatUsd(CHECKING_BALANCE)}
               </Text>
             )}
@@ -269,7 +270,7 @@ export default function DashboardScreen() {
 
           {/* ── Recent transactions (now directly below balance) ── */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.cream }]}>Recent transactions</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent transactions</Text>
             {allTransactions.length > MAX_VISIBLE_TX && (
               <Pressable
                 onPress={() => {
@@ -300,7 +301,7 @@ export default function DashboardScreen() {
                   <Feather
                     name={tx.amount > 0 ? 'arrow-down-left' : 'arrow-up-right'}
                     size={15}
-                    color={tx.amount > 0 ? colors.green : colors.mutedForeground}
+                    color={tx.amount > 0 ? colors.eucalyptus : colors.mutedForeground}
                   />
                 </View>
                 <View style={styles.txInfo}>
@@ -313,7 +314,7 @@ export default function DashboardScreen() {
                   <Text
                     style={[
                       styles.txAmount,
-                      { color: tx.amount > 0 ? colors.green : colors.foreground },
+                      { color: tx.amount > 0 ? colors.eucalyptus : colors.foreground },
                     ]}
                   >
                     {formatUsd(tx.amount, { sign: true })}
@@ -327,12 +328,12 @@ export default function DashboardScreen() {
           </View>
 
           {/* ── Spending this month ── */}
-          <Text style={[styles.sectionTitle, { color: colors.cream, paddingHorizontal: 20, marginBottom: 12, marginTop: 0 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, paddingHorizontal: 20, marginBottom: 12, marginTop: 0 }]}>
             Spending this month
           </Text>
           <View style={[styles.spendCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.spendHeader}>
-              <Text style={[styles.spendTotal, { color: colors.cream }]}>{formatUsd(totalSpending)}</Text>
+              <Text style={[styles.spendTotal, { color: colors.foreground }]}>{formatUsd(totalSpending)}</Text>
               <Text style={[styles.spendSub, { color: colors.mutedForeground }]}>
                 across {SPENDING_DATA.length} categories
               </Text>
@@ -397,6 +398,8 @@ export default function DashboardScreen() {
 
 // ─── Stylesheet ───────────────────────────────────────────────────────────────
 
+const font = nativeTheme.fontFamily;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
@@ -407,7 +410,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   greeting: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
     marginTop: 2,
   },
@@ -433,17 +436,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   balanceLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 10,
     letterSpacing: 2,
   },
   balanceValue: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 44,
     marginBottom: 20,
   },
   balanceHidden: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 34,
     marginBottom: 20,
     letterSpacing: 6,
@@ -464,7 +467,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 11,
   },
   sectionHeader: {
@@ -475,11 +478,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 21,
   },
   viewAll: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
   },
   txCard: {
@@ -504,21 +507,21 @@ const styles = StyleSheet.create({
   },
   txInfo: { flex: 1 },
   txMerchant: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 14,
   },
   txMeta: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginTop: 2,
   },
   txRight: { alignItems: 'flex-end' },
   txAmount: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 14,
   },
   txPoints: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 10,
     marginTop: 2,
   },
@@ -537,11 +540,11 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   spendTotal: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 22,
   },
   spendSub: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
   },
   spendRow: {
@@ -557,7 +560,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   spendCategory: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
     width: 74,
   },
@@ -573,13 +576,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   spendAmount: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 12,
     width: 46,
     textAlign: 'right',
   },
   disclaimer: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 20,
@@ -607,7 +610,7 @@ const sheetStyles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 22,
     marginBottom: 20,
   },
@@ -626,20 +629,20 @@ const sheetStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   billName: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 14,
   },
   billDue: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginTop: 2,
   },
   billAmount: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 15,
   },
   demoNote: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginTop: 16,
     marginBottom: 4,
@@ -652,7 +655,7 @@ const sheetStyles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   moreName: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 15,
     flex: 1,
   },
@@ -663,7 +666,7 @@ const sheetStyles = StyleSheet.create({
     alignItems: 'center',
   },
   closeBtnText: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 15,
   },
 });

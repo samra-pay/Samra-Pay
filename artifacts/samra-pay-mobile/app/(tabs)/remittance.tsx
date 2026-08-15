@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import { useTransfers } from '@/context/TransferContext';
 import {
   CARD_FEE_RATE,
@@ -34,7 +35,7 @@ function getTodayLabel() {
 }
 
 export default function RemittanceScreen() {
-  const colors = useColors();
+  const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { addTransfer } = useTransfers();
 
@@ -97,7 +98,7 @@ export default function RemittanceScreen() {
         <View style={[styles.successCircle, { backgroundColor: colors.accent }]}>
           <Feather name="check" size={38} color={colors.primary} />
         </View>
-        <Text style={[styles.successTitle, { color: colors.cream }]}>Transfer sent!</Text>
+        <Text style={[styles.successTitle, { color: colors.foreground }]}>Transfer sent!</Text>
         <Text style={[styles.successSub, { color: colors.mutedForeground }]}>
           {formatUsd(total)} sent to {recipientName}
         </Text>
@@ -142,7 +143,7 @@ export default function RemittanceScreen() {
           { backgroundColor: colors.background, paddingTop: topInset + 12, paddingBottom: bottomInset + 100 },
         ]}
       >
-        <Text style={[styles.reviewTitle, { color: colors.cream }]}>Review transfer</Text>
+        <Text style={[styles.reviewTitle, { color: colors.foreground }]}>Review transfer</Text>
         <Text style={[styles.reviewSub, { color: colors.mutedForeground }]}>
           Please confirm the details below.
         </Text>
@@ -198,7 +199,7 @@ export default function RemittanceScreen() {
       bottomOffset={40}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: colors.cream }]}>Send money home</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>Send money home</Text>
       <View style={[styles.rateBadge, { backgroundColor: colors.accent }]}>
         <Feather name="trending-up" size={13} color={colors.primary} />
         <Text style={[styles.rateBadgeText, { color: colors.accentForeground }]}>
@@ -213,7 +214,7 @@ export default function RemittanceScreen() {
           <Feather name="user" size={15} color={colors.mutedForeground} style={{ marginRight: 8 }} />
           <TextInput
             testID="recipient-name"
-            style={[styles.recipientInput, { color: colors.cream }]}
+            style={[styles.recipientInput, { color: colors.foreground }]}
             value={recipientName}
             onChangeText={setRecipientName}
             placeholder="Full name"
@@ -228,7 +229,7 @@ export default function RemittanceScreen() {
           <Text style={[styles.dollar, { color: colors.primary }]}>$</Text>
           <TextInput
             testID="remit-amount"
-            style={[styles.amountInput, { color: colors.cream }]}
+            style={[styles.amountInput, { color: colors.foreground }]}
             keyboardType="decimal-pad"
             value={amountText}
             onChangeText={setAmountText}
@@ -249,7 +250,7 @@ export default function RemittanceScreen() {
         </View>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.cream }]}>Delivery method</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Delivery method</Text>
       <View style={styles.optionRow}>
         {DELIVERY_OPTIONS.map((opt) => {
           const active = delivery === opt.id;
@@ -284,7 +285,7 @@ export default function RemittanceScreen() {
         })}
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.cream }]}>Pay with</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Pay with</Text>
       <View style={styles.optionRow}>
         {FUNDING_OPTIONS.map((opt) => {
           const active = funding === opt.id;
@@ -332,7 +333,7 @@ export default function RemittanceScreen() {
         </View>
         <View style={[styles.summaryTotal, { borderTopColor: colors.border }]}>
           <Text style={[styles.summaryLabel, { color: colors.foreground }]}>Total</Text>
-          <Text style={[styles.totalValue, { color: colors.cream }]}>{formatUsd(total)}</Text>
+          <Text style={[styles.totalValue, { color: colors.foreground }]}>{formatUsd(total)}</Text>
         </View>
       </View>
 
@@ -395,7 +396,7 @@ function Row({
 }: {
   label: string;
   value: string;
-  colors: ReturnType<typeof import('@/hooks/useColors').useColors>;
+  colors: ReturnType<typeof import('@workspace/samra-pay-ds/hooks/use-colors').useColors>;
   bold?: boolean;
   highlight?: boolean;
 }) {
@@ -415,6 +416,8 @@ function Row({
   );
 }
 
+const font = nativeTheme.fontFamily;
+
 const rowStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -422,15 +425,15 @@ const rowStyles = StyleSheet.create({
     paddingVertical: 10,
   },
   label: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
   },
   value: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
   },
   bold: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 14,
   },
 });
@@ -446,7 +449,7 @@ const styles = StyleSheet.create({
 
   // Form
   title: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 26,
     paddingHorizontal: 20,
     marginBottom: 10,
@@ -463,7 +466,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   rateBadgeText: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 11,
   },
   calcCard: {
@@ -474,7 +477,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 1.5,
     marginBottom: 8,
@@ -487,7 +490,7 @@ const styles = StyleSheet.create({
   },
   recipientInput: {
     flex: 1,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 17,
     padding: 0,
   },
@@ -499,28 +502,28 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   dollar: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 28,
     marginRight: 6,
   },
   amountInput: {
     flex: 1,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 34,
     padding: 0,
   },
   receiveRow: {},
   receiveValue: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 36,
     marginBottom: 4,
   },
   compare: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
   },
   sectionTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 19,
     paddingHorizontal: 20,
     marginBottom: 10,
@@ -539,11 +542,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   optionLabel: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 13,
   },
   optionDetail: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
   },
   summaryCard: {
@@ -559,11 +562,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryLabel: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
   },
   summaryValue: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
   },
   summaryTotal: {
@@ -573,7 +576,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   totalValue: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 16,
   },
   statsCard: {
@@ -590,11 +593,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statValue: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 15,
   },
   statLabel: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 10,
     textAlign: 'center',
   },
@@ -608,7 +611,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   primaryBtnText: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 16,
   },
   ghostBtn: {
@@ -617,19 +620,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   ghostBtnText: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 14,
   },
 
   // Review
   reviewTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 28,
     marginBottom: 6,
     marginTop: 12,
   },
   reviewSub: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 14,
     marginBottom: 24,
   },
@@ -640,7 +643,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   demoNote: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginBottom: 20,
     marginHorizontal: 20,
@@ -659,19 +662,19 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   successTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 32,
     textAlign: 'center',
     marginBottom: 8,
   },
   successSub: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 4,
   },
   successDetail: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 32,

@@ -13,7 +13,8 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Feather } from '@expo/vector-icons';
 import { BankCard } from '@/components/BankCard';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import { CARDS, CARD_TRANSACTIONS, DEMO_DISCLAIMER, formatUsd } from '@/lib/mock-data';
 
 type CopiedField = 'number' | 'expiry' | 'cvc' | null;
@@ -23,7 +24,7 @@ function formatCardNumber(n: string) {
 }
 
 export default function CardsScreen() {
-  const colors = useColors();
+  const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [selectedIndex, setSelectedIndex] = useState<number>(1);
@@ -54,7 +55,7 @@ export default function CardsScreen() {
       contentContainerStyle={{ paddingTop: topInset + 12, paddingBottom: bottomInset + 100 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: colors.cream }]}>Your cards</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>Your cards</Text>
 
       <ScrollView
         horizontal
@@ -99,13 +100,13 @@ export default function CardsScreen() {
       </View>
 
       <View style={[styles.detailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.cardName, { color: colors.cream }]}>{card.name}</Text>
+        <Text style={[styles.cardName, { color: colors.foreground }]}>{card.name}</Text>
         <View style={styles.balanceRow}>
           <View>
             <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>
               {card.balanceLabel.toUpperCase()}
             </Text>
-            <Text style={[styles.balanceValue, { color: colors.cream }]}>
+            <Text style={[styles.balanceValue, { color: colors.foreground }]}>
               {formatUsd(card.balance)}
             </Text>
           </View>
@@ -131,7 +132,7 @@ export default function CardsScreen() {
               <Feather
                 name={card.autopay ? 'check-circle' : 'circle'}
                 size={14}
-                color={card.autopay ? colors.green : colors.mutedForeground}
+                color={card.autopay ? colors.eucalyptus : colors.mutedForeground}
               />
               <Text style={[styles.dueText, { color: colors.foreground }]}>
                 Autopay {card.autopay ? 'on' : 'off'}
@@ -179,7 +180,7 @@ export default function CardsScreen() {
                 <Feather
                   name={copied === 'number' ? 'check' : 'copy'}
                   size={14}
-                  color={copied === 'number' ? colors.green : colors.mutedForeground}
+                  color={copied === 'number' ? colors.eucalyptus : colors.mutedForeground}
                 />
               </Pressable>
             </View>
@@ -201,7 +202,7 @@ export default function CardsScreen() {
                   <Feather
                     name={copied === 'expiry' ? 'check' : 'copy'}
                     size={14}
-                    color={copied === 'expiry' ? colors.green : colors.mutedForeground}
+                    color={copied === 'expiry' ? colors.eucalyptus : colors.mutedForeground}
                   />
                 </Pressable>
               </View>
@@ -220,7 +221,7 @@ export default function CardsScreen() {
                   <Feather
                     name={copied === 'cvc' ? 'check' : 'copy'}
                     size={14}
-                    color={copied === 'cvc' ? colors.green : colors.mutedForeground}
+                    color={copied === 'cvc' ? colors.eucalyptus : colors.mutedForeground}
                   />
                 </Pressable>
               </View>
@@ -236,7 +237,7 @@ export default function CardsScreen() {
       </View>
 
       {/* ── Per-card ledger ── */}
-      <Text style={[styles.ledgerTitle, { color: colors.cream }]}>Ledger</Text>
+      <Text style={[styles.ledgerTitle, { color: colors.foreground }]}>Ledger</Text>
       <Text style={[styles.ledgerSub, { color: colors.mutedForeground }]}>
         Transactions for {card.name}
       </Text>
@@ -256,7 +257,7 @@ export default function CardsScreen() {
               <Feather
                 name={tx.amount > 0 ? 'arrow-down-left' : 'arrow-up-right'}
                 size={15}
-                color={tx.amount > 0 ? colors.green : colors.mutedForeground}
+                color={tx.amount > 0 ? colors.eucalyptus : colors.mutedForeground}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -269,7 +270,7 @@ export default function CardsScreen() {
               <Text
                 style={[
                   styles.txAmount,
-                  { color: tx.amount > 0 ? colors.green : colors.foreground },
+                  { color: tx.amount > 0 ? colors.eucalyptus : colors.foreground },
                 ]}
               >
                 {formatUsd(tx.amount, { sign: true })}
@@ -287,10 +288,12 @@ export default function CardsScreen() {
   );
 }
 
+const font = nativeTheme.fontFamily;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   title: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 26,
     paddingHorizontal: 20,
     marginBottom: 18,
@@ -317,7 +320,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   cardName: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 17,
     marginBottom: 16,
   },
@@ -328,17 +331,17 @@ const styles = StyleSheet.create({
   },
   balanceRight: { alignItems: 'flex-end' },
   detailLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   balanceValue: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 32,
   },
   detailValue: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 14,
     marginTop: 8,
   },
@@ -356,11 +359,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dueText: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 12,
   },
   rewardsTitle: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 1.5,
     marginBottom: 10,
@@ -371,34 +374,34 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   rewardLabel: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 14,
   },
   rewardValue: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 14,
   },
   issuer: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 10,
     marginTop: 12,
     lineHeight: 15,
   },
   disclaimer: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 20,
     marginTop: 24,
   },
   ledgerTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 21,
     paddingHorizontal: 20,
     marginTop: 26,
   },
   ledgerSub: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
     paddingHorizontal: 20,
     marginBottom: 12,
@@ -424,21 +427,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   txMerchant: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 14,
   },
   txMeta: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginTop: 2,
   },
   txRight: { alignItems: 'flex-end' },
   txAmount: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 14,
   },
   txPoints: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 10,
     marginTop: 2,
   },
@@ -460,7 +463,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   virtualLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 1.5,
   },
@@ -475,7 +478,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   fieldLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 1,
   },
@@ -489,7 +492,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   fieldValue: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
     letterSpacing: 1,
     flex: 1,
@@ -502,7 +505,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   virtualNote: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 10,
     lineHeight: 14,
     marginTop: 2,

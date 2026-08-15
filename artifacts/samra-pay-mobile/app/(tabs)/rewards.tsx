@@ -11,7 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import {
   DEMO_DISCLAIMER,
   MILES_HISTORY,
@@ -22,7 +23,7 @@ import {
 } from '@/lib/mock-data';
 
 export default function RewardsScreen() {
-  const colors = useColors();
+  const colors = useColors('dark');
   const insets = useSafeAreaInsets();
 
   const [balance, setBalance] = useState<number>(SHEBA_MILES.balance);
@@ -49,20 +50,20 @@ export default function RewardsScreen() {
         contentContainerStyle={{ paddingTop: topInset + 12, paddingBottom: bottomInset + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: colors.cream }]}>ShebaMiles Rewards</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>ShebaMiles Rewards</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           Earn on every swipe. Redeem for the journeys that matter.
         </Text>
 
         {/* ── Balance hero ── */}
-        <View style={[styles.heroCard, { borderColor: colors.border }]}>
+        <View style={[styles.heroCard, { borderColor: colors.border, backgroundColor: colors.eucalyptusForeground }]}>
           <View style={[styles.heroBadge, { backgroundColor: colors.accent }]}>
             <Feather name="award" size={12} color={colors.primary} />
             <Text style={[styles.heroBadgeText, { color: colors.accentForeground }]}>
               AVAILABLE BALANCE
             </Text>
           </View>
-          <Text style={[styles.heroBalance, { color: colors.cream }]} allowFontScaling={false}>
+          <Text style={[styles.heroBalance, { color: colors.foreground }]} allowFontScaling={false}>
             {formatMiles(balance)}
           </Text>
           <Text style={[styles.heroUnit, { color: colors.mutedForeground }]}>miles</Text>
@@ -104,7 +105,7 @@ export default function RewardsScreen() {
         </View>
 
         {/* ── Redemption catalog ── */}
-        <Text style={[styles.sectionTitle, { color: colors.cream }]}>Redeem miles</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Redeem miles</Text>
         {REWARDS_CATALOG.map((item) => {
           const affordable = balance >= item.cost;
           return (
@@ -125,7 +126,7 @@ export default function RewardsScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.rewardTitleRow}>
-                    <Text style={[styles.rewardTitle, { color: colors.cream }]}>{item.title}</Text>
+                    <Text style={[styles.rewardTitle, { color: colors.foreground }]}>{item.title}</Text>
                   </View>
                   {item.tag ? (
                     <View style={[styles.rewardTag, { backgroundColor: colors.accent }]}>
@@ -172,7 +173,7 @@ export default function RewardsScreen() {
         })}
 
         {/* ── Earning history ── */}
-        <Text style={[styles.sectionTitle, { color: colors.cream }]}>Earning history</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earning history</Text>
         <View style={[styles.historyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {MILES_HISTORY.map((entry, i) => (
             <View
@@ -215,7 +216,7 @@ export default function RewardsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.cream }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
               Redeem {pendingRedeem ? formatMiles(pendingRedeem.cost) : ''} miles?
             </Text>
             <Text style={[styles.modalBody, { color: colors.mutedForeground }]}>
@@ -260,7 +261,7 @@ export default function RewardsScreen() {
             <View style={[styles.successCircle, { backgroundColor: colors.accent }]}>
               <Feather name="check" size={26} color={colors.primary} />
             </View>
-            <Text style={[styles.modalTitle, { color: colors.cream, textAlign: 'center' }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground, textAlign: 'center' }]}>
               Redeemed!
             </Text>
             <Text style={[styles.modalBody, { color: colors.mutedForeground, textAlign: 'center' }]}>
@@ -282,16 +283,18 @@ export default function RewardsScreen() {
   );
 }
 
+const font = nativeTheme.fontFamily;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   title: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 26,
     paddingHorizontal: 20,
     marginBottom: 4,
   },
   subtitle: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
     paddingHorizontal: 20,
     marginBottom: 18,
@@ -302,7 +305,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 22,
     marginBottom: 28,
-    backgroundColor: '#12281C',
   },
   heroBadge: {
     flexDirection: 'row',
@@ -315,22 +317,22 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   heroBadgeText: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 1.5,
   },
   heroBalance: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 52,
     lineHeight: 56,
   },
   heroUnit: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 14,
     marginBottom: 8,
   },
   heroEarned: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
     marginBottom: 20,
   },
@@ -341,11 +343,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   goalLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 12,
   },
   goalPct: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 12,
   },
   goalTrack: {
@@ -364,7 +366,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   goalScaleText: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 10,
   },
   memberRow: {
@@ -375,11 +377,11 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   memberText: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
   },
   sectionTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 21,
     paddingHorizontal: 20,
     marginBottom: 12,
@@ -409,7 +411,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   rewardTitle: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 15,
     flexShrink: 1,
   },
@@ -421,12 +423,12 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   rewardTagText: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 9,
     letterSpacing: 0.5,
   },
   rewardDesc: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 14,
@@ -437,7 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rewardCost: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 14,
   },
   redeemBtn: {
@@ -446,7 +448,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   redeemBtnText: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 12,
   },
   historyCard: {
@@ -470,20 +472,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   historyLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
   },
   historyDate: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginTop: 1,
   },
   historyMiles: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 13,
   },
   disclaimer: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 20,
@@ -500,12 +502,12 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 22,
     marginBottom: 8,
   },
   modalBody: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
@@ -521,7 +523,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalBtnText: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 14,
   },
   successCircle: {

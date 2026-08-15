@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SamraLogo } from '@/components/SamraLogo';
+import { tokens } from '@workspace/samra-pay-ds/tokens';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import type { CardInfo } from '@/lib/mock-data';
 
 // expo-linear-gradient is built against React 18 class-component types, which are
@@ -11,10 +13,15 @@ import type { CardInfo } from '@/lib/mock-data';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GradView = LinearGradient as any;
 
+// Bank-card gradient ramps are domain art (like the web DS bank-card), kept
+// local to the app. Where a stop maps 1:1 to a design token we reference the
+// token (the airlines mid-stop is the primary gold). The remaining ramp
+// endpoints (gold light/dark, and the debit/charge metal tones) have no exact
+// token equivalent and stay literal as card art.
 const GRADIENTS: Record<string, readonly [string, string, string]> = {
   debit: ['#1A1A24', '#2D2D3F', '#1A1A24'],
   charge: ['#14301F', '#1B3B2B', '#0C1D13'],
-  airlines: ['#E6C27A', '#D4AF37', '#B38B22'],
+  airlines: ['#E6C27A', tokens.color.dark.primary, '#B38B22'],
 };
 
 interface BankCardProps {
@@ -25,6 +32,8 @@ interface BankCardProps {
 export function BankCard({ card, width }: BankCardProps) {
   const height = width * 0.62;
   const onGold = card.id === 'airlines';
+  // Card-art ink tones: dark ink on the gold card, off-white on dark cards.
+  // These are domain art values with no 1:1 token equivalent (kept literal).
   const textColor = onGold ? '#1A130A' : '#F9F7F1';
   const subColor = onGold ? 'rgba(26,19,10,0.65)' : 'rgba(249,247,241,0.6)';
 
@@ -69,6 +78,7 @@ export function BankCard({ card, width }: BankCardProps) {
           <Text style={[styles.value, { color: textColor }]}>{card.expiry}</Text>
         </View>
         <View style={styles.mastercard}>
+          {/* Mastercard brand marks — third-party brand colors, kept literal. */}
           <View style={[styles.mcCircle, { backgroundColor: '#EB001B' }]} />
           <View style={[styles.mcCircle, styles.mcCircleRight, { backgroundColor: '#F79E1B' }]} />
         </View>
@@ -76,6 +86,8 @@ export function BankCard({ card, width }: BankCardProps) {
     </GradView>
   );
 }
+
+const font = nativeTheme.fontFamily;
 
 const styles = StyleSheet.create({
   card: {
@@ -90,7 +102,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   cobrand: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 10,
     letterSpacing: 1.5,
     textAlign: 'right',
@@ -104,7 +116,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   chargeBadgeText: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 9,
     letterSpacing: 2,
     color: 'rgba(249,247,241,0.8)',
@@ -125,7 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(26,19,10,0.35)',
   },
   number: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 17,
     letterSpacing: 2,
   },
@@ -135,13 +147,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   label: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 8,
     letterSpacing: 1.5,
     marginBottom: 3,
   },
   value: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 13,
     letterSpacing: 0.5,
   },

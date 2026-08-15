@@ -13,7 +13,8 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import {
   DEMO_DISCLAIMER,
   NOTIFICATION_PREFS,
@@ -22,7 +23,7 @@ import {
 } from '@/lib/mock-data';
 
 export default function SettingsScreen() {
-  const colors = useColors();
+  const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { signOut } = useAuth();
@@ -56,7 +57,7 @@ export default function SettingsScreen() {
           <Feather name="arrow-left" size={18} color={colors.foreground} />
         </Pressable>
         <View>
-          <Text style={[styles.title, { color: colors.cream }]}>Settings</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Manage your profile and preferences.
           </Text>
@@ -64,7 +65,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* ── Profile ── */}
-      <Text style={[styles.sectionTitle, { color: colors.cream }]}>Profile Information</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Profile Information</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.profileRow}>
           <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
@@ -73,7 +74,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.profileName, { color: colors.cream }]}>
+            <Text style={[styles.profileName, { color: colors.foreground }]}>
               {SETTINGS_PROFILE.firstName} {SETTINGS_PROFILE.lastName}
             </Text>
             <Text style={[styles.profileMeta, { color: colors.mutedForeground }]}>
@@ -97,7 +98,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* ── Notifications ── */}
-      <Text style={[styles.sectionTitle, { color: colors.cream }]}>Notifications</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Notifications</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {NOTIFICATION_PREFS.map((pref, i) => (
           <View
@@ -120,14 +121,14 @@ export default function SettingsScreen() {
                 setPrefs((p) => ({ ...p, [pref.id]: v }));
               }}
               trackColor={{ false: colors.secondary, true: colors.primary }}
-              thumbColor={colors.cream}
+              thumbColor={colors.foreground}
             />
           </View>
         ))}
       </View>
 
       {/* ── Security ── */}
-      <Text style={[styles.sectionTitle, { color: colors.cream }]}>Security</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Security</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {SECURITY_ITEMS.map((item, i) => (
           <Pressable
@@ -174,6 +175,8 @@ export default function SettingsScreen() {
   );
 }
 
+const font = nativeTheme.fontFamily;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
@@ -192,16 +195,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 26,
   },
   subtitle: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
     marginTop: 1,
   },
   sectionTitle: {
-    fontFamily: 'EBGaramond_600SemiBold',
+    fontFamily: font.serif.semibold,
     fontSize: 19,
     paddingHorizontal: 20,
     marginBottom: 10,
@@ -227,15 +230,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: font.sans.bold,
     fontSize: 18,
   },
   profileName: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 16,
   },
   profileMeta: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -247,11 +250,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   fieldLabel: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
   },
   fieldValue: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 13,
   },
   toggleRow: {
@@ -260,11 +263,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   toggleLabel: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: font.sans.medium,
     fontSize: 14,
   },
   toggleDetail: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     marginTop: 2,
     lineHeight: 15,
@@ -283,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   securityAction: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 13,
   },
   signOutBtn: {
@@ -298,11 +301,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   signOutText: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 14,
   },
   disclaimer: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 20,

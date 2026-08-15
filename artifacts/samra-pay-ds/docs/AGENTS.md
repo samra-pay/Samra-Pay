@@ -31,6 +31,14 @@ on it and import its theme and components directly.
   `./components/*`. Generated systems keep and theme it; Figma imports prune and
   restyle it; code imports replace it with the source component library.
 - `src/lib/` (`cn`) and `src/hooks/` — exported as `./lib/*` and `./hooks/*`.
+  Native (Expo) consumers additionally use `src/lib/native-theme.tsx`
+  (`nativeTheme`: flat light/dark hex palettes, numeric `radius` scale, a
+  `spacing()` helper, and the registered Expo `fontFamily` names derived from
+  the generated tokens), `src/hooks/use-colors.tsx` (`useColors(scheme?)`, with
+  an override for forced-scheme brands), and `src/hooks/use-fonts.tsx`
+  (`useDesignSystemFonts()` loading Outfit, EB Garamond, and Noto Serif
+  Ethiopic weights). The RN/font packages are optional peer dependencies so
+  web consumers are unaffected.
 - `src/App.tsx` — the entry point for the living style guide.
 - `src/preview/DesignSystemBrowser.tsx` — the persistent grouped navigation,
   branded header, search, deep links, and active page shell.

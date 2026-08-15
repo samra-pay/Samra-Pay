@@ -14,10 +14,11 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { SamraLogo } from '@/components/SamraLogo';
 import { useAuth } from '@/context/AuthContext';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 
 export default function LoginScreen() {
-  const colors = useColors();
+  const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
   const [email, setEmail] = useState<string>('');
@@ -121,6 +122,8 @@ export default function LoginScreen() {
   );
 }
 
+const font = nativeTheme.fontFamily;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tagline: {
-    fontFamily: 'EBGaramond_500Medium_Italic',
+    fontFamily: font.serif.mediumItalic,
     fontSize: 17,
     marginTop: 10,
     marginBottom: 48,
@@ -149,11 +152,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 15,
   },
   error: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 13,
   },
   button: {
@@ -164,7 +167,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   buttonText: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: font.sans.semibold,
     fontSize: 16,
   },
   demoNote: {
@@ -178,7 +181,7 @@ const styles = StyleSheet.create({
   },
   demoNoteText: {
     flex: 1,
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: font.sans.regular,
     fontSize: 12,
     lineHeight: 17,
   },

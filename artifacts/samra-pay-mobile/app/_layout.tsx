@@ -6,19 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { TransferProvider } from '@/context/TransferContext';
-import {
-  EBGaramond_500Medium,
-  EBGaramond_500Medium_Italic,
-  EBGaramond_600SemiBold,
-} from '@expo-google-fonts/eb-garamond';
-import {
-  Outfit_400Regular,
-  Outfit_500Medium,
-  Outfit_600SemiBold,
-  Outfit_700Bold,
-  Outfit_800ExtraBold,
-  useFonts,
-} from '@expo-google-fonts/outfit';
+import { tokens } from '@workspace/samra-pay-ds/tokens';
+import { useDesignSystemFonts } from '@workspace/samra-pay-ds/hooks/use-fonts';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -37,7 +26,7 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerBackTitle: 'Back',
-        contentStyle: { backgroundColor: '#0A0A0A' },
+        contentStyle: { backgroundColor: tokens.color.dark.background },
       }}
     >
       <Stack.Protected guard={!isSignedIn}>
@@ -52,16 +41,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    Outfit_400Regular,
-    Outfit_500Medium,
-    Outfit_600SemiBold,
-    Outfit_700Bold,
-    Outfit_800ExtraBold,
-    EBGaramond_500Medium,
-    EBGaramond_500Medium_Italic,
-    EBGaramond_600SemiBold,
-  });
+  const { fontsLoaded, fontError } = useDesignSystemFonts();
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

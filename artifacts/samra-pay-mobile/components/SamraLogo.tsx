@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useColors } from '@/hooks/useColors';
+import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
+import { tokens } from '@workspace/samra-pay-ds/tokens';
 
 interface SamraLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -12,10 +14,12 @@ interface SamraLogoProps {
 const FONT_SIZES = { sm: 20, md: 24, lg: 34, xl: 44 } as const;
 
 export function SamraLogo({ size = 'md', showWordmark = true, tone = 'default' }: SamraLogoProps) {
-  const colors = useColors();
+  const colors = useColors('dark');
   const fontSize = FONT_SIZES[size];
-  const samraColor = tone === 'onGold' ? '#1A1A1A' : colors.cream;
-  const payColor = tone === 'onGold' ? '#0A0A0A' : colors.primary;
+  // On gold card art the wordmark sits on the primary gold, so it uses the
+  // primary-foreground / background ink tones from the dark palette.
+  const samraColor = tone === 'onGold' ? tokens.color.dark.primaryForeground : colors.foreground;
+  const payColor = tone === 'onGold' ? tokens.color.dark.background : colors.primary;
 
   return (
     <View style={styles.row}>
@@ -35,18 +39,20 @@ export function SamraLogo({ size = 'md', showWordmark = true, tone = 'default' }
   );
 }
 
+const font = nativeTheme.fontFamily;
+
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   samra: {
-    fontFamily: 'Outfit_800ExtraBold',
+    fontFamily: font.sans.extrabold,
     letterSpacing: -1,
     textTransform: 'lowercase',
   },
   pay: {
-    fontFamily: 'EBGaramond_500Medium_Italic',
+    fontFamily: font.serif.mediumItalic,
     marginLeft: 2,
     letterSpacing: -0.5,
     textTransform: 'lowercase',
