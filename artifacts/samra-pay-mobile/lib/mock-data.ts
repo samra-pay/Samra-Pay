@@ -49,8 +49,11 @@ export interface CardInfo {
   id: CardVariant;
   name: string;
   shortName: string;
+  /** Full 16-digit illustrative card number (no spaces) */
+  number: string;
   last4: string;
   expiry: string;
+  cvc: string;
   balanceLabel: string;
   balance: number;
   limit: string;
@@ -66,8 +69,10 @@ export const CARDS: CardInfo[] = [
     id: 'debit',
     name: 'Samra Pay Checking',
     shortName: 'Debit',
+    number: '4485204856714242',
     last4: '4242',
     expiry: '08/29',
+    cvc: '924',
     balanceLabel: 'Available balance',
     balance: CHECKING_BALANCE,
     limit: '—',
@@ -78,8 +83,10 @@ export const CARDS: CardInfo[] = [
     id: 'charge',
     name: 'Samra Pay Charge Card',
     shortName: 'Charge',
+    number: '5273041198324242',
     last4: '4242',
-    expiry: '08/29',
+    expiry: '11/27',
+    cvc: '314',
     balanceLabel: 'Current balance',
     balance: 1240,
     limit: 'No preset limit',
@@ -97,8 +104,10 @@ export const CARDS: CardInfo[] = [
     id: 'airlines',
     name: 'Airlines Premium',
     shortName: 'Airlines',
+    number: '4622119038541991',
     last4: '1991',
-    expiry: '08/29',
+    expiry: '03/28',
+    cvc: '749',
     balanceLabel: 'Current balance',
     balance: 3450,
     limit: '$15,000 limit',

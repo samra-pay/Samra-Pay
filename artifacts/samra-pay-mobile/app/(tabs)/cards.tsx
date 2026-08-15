@@ -10,21 +10,43 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { Feather } from '@expo/vector-icons';
 import { BankCard } from '@/components/BankCard';
 import { useColors } from '@/hooks/useColors';
 import { CARDS, CARD_TRANSACTIONS, DEMO_DISCLAIMER, formatUsd } from '@/lib/mock-data';
+
+type CopiedField = 'number' | 'expiry' | 'cvc' | null;
+
+function formatCardNumber(n: string) {
+  return `${n.slice(0,4)} ${n.slice(4,8)} ${n.slice(8,12)} ${n.slice(12)}`;
+}
 
 export default function CardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [selectedIndex, setSelectedIndex] = useState<number>(1);
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState<CopiedField>(null);
+
+  const handleCopy = async (field: CopiedField, text: string) => {
+    await Clipboard.setStringAsync(text);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setCopied(field);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
   const cardWidth = Math.min(width - 72, 340);
   const card = CARDS[selectedIndex];
+
+  // Reset virtual-card state whenever the selected card changes
+  React.useEffect(() => {
+    setRevealed(false);
+    setCopied(null);
+  }, [selectedIndex]);
 
   return (
     <ScrollView
@@ -125,6 +147,90 @@ export default function CardsScreen() {
             <Text style={[styles.rewardValue, { color: colors.primary }]}>{r.value}</Text>
           </View>
         ))}
+
+        {/* ── Virtual Card ── */}
+        <View style={[styles.virtualSection, { borderTopColor: colors.border }]}>
+          <View style={styles.virtualHeader}>
+            <View style={styles.virtualHeaderLeft}>
+              <Feather name="credit-card" size={13} color={colors.primary} />
+              <Text style={[styles.virtualLabel, { color: colors.mutedForeground }]}>VIRTUAL CARD</Text>
+            </View>
+            <Pressable
+              onPress={() => { setRevealed(!revealed); Haptics.selectionAsync(); }}
+              style={({ pressed }) => [styles.eyeBtn, { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}
+              accessibilityLabel={revealed ? 'Hide card details' : 'Reveal card details'}
+            >
+              <Feather name={revealed ? 'eye-off' : 'eye'} size={14} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
+
+          {/* Card Number */}
+          <View style={styles.fieldBlock}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Card Number</Text>
+            <View style={[styles.fieldRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.fieldValue, { color: colors.foreground }]}>
+                {revealed ? formatCardNumber(card.number) : `•••• •••• •••• ${card.last4}`}
+              </Text>
+              <Pressable
+                onPress={() => handleCopy('number', formatCardNumber(card.number))}
+                style={({ pressed }) => [styles.copyBtn, { opacity: pressed ? 0.6 : 1 }]}
+                accessibilityLabel="Copy card number"
+              >
+                <Feather
+                  name={copied === 'number' ? 'check' : 'copy'}
+                  size={14}
+                  color={copied === 'number' ? colors.green : colors.mutedForeground}
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Expiry + CVC */}
+          <View style={styles.twoCol}>
+            <View style={[styles.fieldBlock, { flex: 1 }]}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Expiry</Text>
+              <View style={[styles.fieldRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.fieldValue, { color: colors.foreground }]}>
+                  {revealed ? card.expiry : '••/••'}
+                </Text>
+                <Pressable
+                  onPress={() => handleCopy('expiry', card.expiry)}
+                  style={({ pressed }) => [styles.copyBtn, { opacity: pressed ? 0.6 : 1 }]}
+                  accessibilityLabel="Copy expiry date"
+                >
+                  <Feather
+                    name={copied === 'expiry' ? 'check' : 'copy'}
+                    size={14}
+                    color={copied === 'expiry' ? colors.green : colors.mutedForeground}
+                  />
+                </Pressable>
+              </View>
+            </View>
+            <View style={[styles.fieldBlock, { flex: 1 }]}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CVC</Text>
+              <View style={[styles.fieldRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[styles.fieldValue, { color: colors.foreground }]}>
+                  {revealed ? card.cvc : '•••'}
+                </Text>
+                <Pressable
+                  onPress={() => handleCopy('cvc', card.cvc)}
+                  style={({ pressed }) => [styles.copyBtn, { opacity: pressed ? 0.6 : 1 }]}
+                  accessibilityLabel="Copy CVC"
+                >
+                  <Feather
+                    name={copied === 'cvc' ? 'check' : 'copy'}
+                    size={14}
+                    color={copied === 'cvc' ? colors.green : colors.mutedForeground}
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          <Text style={[styles.virtualNote, { color: colors.mutedForeground }]}>
+            Illustrated demo — not a real card number.
+          </Text>
+        </View>
 
         <Text style={[styles.issuer, { color: colors.mutedForeground }]}>{card.issuer}</Text>
       </View>
@@ -334,6 +440,71 @@ const styles = StyleSheet.create({
   txPoints: {
     fontFamily: 'Outfit_500Medium',
     fontSize: 10,
+    marginTop: 2,
+  },
+  virtualSection: {
+    borderTopWidth: 1,
+    marginTop: 18,
+    paddingTop: 16,
+    gap: 12,
+  },
+  virtualHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  virtualHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  virtualLabel: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  eyeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldBlock: {
+    gap: 6,
+  },
+  fieldLabel: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  fieldValue: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 13,
+    letterSpacing: 1,
+    flex: 1,
+  },
+  copyBtn: {
+    padding: 4,
+  },
+  twoCol: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  virtualNote: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 10,
+    lineHeight: 14,
     marginTop: 2,
   },
 });
