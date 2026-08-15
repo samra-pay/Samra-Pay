@@ -135,6 +135,155 @@ export const REMITTANCE_STATS = {
   location: 'Addis Ababa',
 };
 
+// ─── ShebaMiles rewards — mirrored from web /dashboard/rewards ────────────────
+
+export const SHEBA_MILES = {
+  balance: 42500,
+  earnedThisMonth: 1240,
+  nextGoal: {
+    label: 'Round trip to Addis',
+    target: 50000,
+  },
+  memberSince: '2024',
+};
+
+export interface MilesActivity {
+  id: number;
+  label: string;
+  date: string;
+  miles: number;
+}
+
+export const MILES_HISTORY: MilesActivity[] = [
+  { id: 1, label: 'Ethiopian Airlines — DC to Addis', date: 'Today', miles: 2460 },
+  { id: 2, label: 'Charge Card spend bonus', date: 'Jun 14', miles: 180 },
+  { id: 3, label: 'Remittance reward — Almaz', date: 'Jun 10', miles: 500 },
+  { id: 4, label: 'Buna Cafe — 2x dining', date: 'Jun 8', miles: 28 },
+  { id: 5, label: 'Monthly member bonus', date: 'Jun 1', miles: 1000 },
+];
+
+export interface RewardItem {
+  id: string;
+  title: string;
+  description: string;
+  cost: number;
+  tag?: string;
+  icon: string; // Feather icon name
+}
+
+export const REWARDS_CATALOG: RewardItem[] = [
+  {
+    id: 'addis-roundtrip',
+    title: 'Round Trip to Addis Ababa',
+    description: 'Economy round trip on Ethiopian Airlines, from any US gateway',
+    cost: 50000,
+    tag: 'Most Popular',
+    icon: 'send',
+  },
+  {
+    id: 'cloud-nine',
+    title: 'Cloud Nine Seat Upgrade',
+    description: 'Upgrade booked flight to Cloud Nine business class',
+    cost: 25000,
+    icon: 'star',
+  },
+  {
+    id: 'lounge-pass',
+    title: 'Sheba Lounge Pass',
+    description: 'One-day access in Addis, DC, Newark',
+    cost: 8000,
+    icon: 'coffee',
+  },
+  {
+    id: 'transfer-miles',
+    title: 'Transfer Miles to Family',
+    description: "Send to a family member's ShebaMiles account — from DC to Addis in seconds",
+    cost: 10000,
+    tag: 'Diaspora Favorite',
+    icon: 'users',
+  },
+];
+
+// ─── Per-card transaction ledgers — mirrored from web /dashboard/cards ───────
+
+export interface CardTransaction {
+  id: number;
+  merchant: string;
+  date: string;
+  amount: number;
+  category: string;
+  points?: string;
+}
+
+export const CARD_TRANSACTIONS: Record<CardVariant, CardTransaction[]> = {
+  debit: [
+    { id: 1, merchant: 'TechCorp Inc (Payroll)', date: 'Jun 15', amount: 3200, category: 'Income' },
+    { id: 2, merchant: 'Equity Apartments', date: 'Jun 1', amount: -1850, category: 'Housing' },
+    { id: 3, merchant: 'Zelle: Almaz T.', date: 'May 28', amount: -150, category: 'Transfer' },
+    { id: 4, merchant: 'Whole Foods', date: 'May 25', amount: -85.2, category: 'Groceries' },
+    { id: 5, merchant: 'ATM Withdrawal', date: 'May 20', amount: -100, category: 'Cash' },
+    { id: 6, merchant: 'Verizon Wireless', date: 'May 18', amount: -95, category: 'Utilities' },
+  ],
+  charge: [
+    { id: 1, merchant: 'Buna Cafe', date: 'Yesterday', amount: -14.5, category: 'Dining', points: '+14 pts' },
+    { id: 2, merchant: 'Uber', date: 'Jun 14', amount: -24, category: 'Transport', points: '+48 pts (2x)' },
+    { id: 3, merchant: 'Whole Foods', date: 'Jun 12', amount: -142.2, category: 'Groceries', points: '+142 pts' },
+    { id: 4, merchant: 'Tomoca Social House', date: 'Jun 10', amount: -35, category: 'Dining', points: '+35 pts' },
+    { id: 5, merchant: 'Hyatt', date: 'Jun 5', amount: -450, category: 'Travel', points: '+900 pts (2x)' },
+    { id: 6, merchant: 'Payment Received', date: 'Jun 1', amount: 1150, category: 'Payment' },
+  ],
+  airlines: [
+    { id: 1, merchant: 'Ethiopian Airlines', date: 'Today', amount: -820, category: 'Travel', points: '+2,460 miles (3x)' },
+    { id: 2, merchant: 'Le Diplomat', date: 'Jun 16', amount: -185, category: 'Dining', points: '+370 miles (2x)' },
+    { id: 3, merchant: 'Whole Foods', date: 'Jun 12', amount: -95.5, category: 'Groceries', points: '+191 miles (2x)' },
+    { id: 4, merchant: 'Duty Free ADD', date: 'May 28', amount: -120, category: 'Shopping', points: '+120 miles' },
+    { id: 5, merchant: 'Uber', date: 'May 28', amount: -45, category: 'Transport', points: '+45 miles' },
+    { id: 6, merchant: 'Payment Received', date: 'May 25', amount: 1500, category: 'Payment' },
+  ],
+};
+
+// ─── Settings / profile — mirrored from web /dashboard/settings ──────────────
+
+export const SETTINGS_PROFILE = {
+  firstName: 'Selam',
+  lastName: 'Tadesse',
+  email: 'selam.t@example.com',
+  phone: '+1 (555) 123-4567',
+  initials: 'ST',
+  memberSince: '2024',
+};
+
+export const NOTIFICATION_PREFS = [
+  {
+    id: 'large-tx',
+    label: 'Large Transactions',
+    detail: 'Get alerted for purchases over $500',
+    enabled: true,
+  },
+  {
+    id: 'intl',
+    label: 'International Spending',
+    detail: 'Alerts for non-US transactions',
+    enabled: true,
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing & Offers',
+    detail: 'Updates on Tomoca Social House events and promos',
+    enabled: false,
+  },
+] as const;
+
+export const SECURITY_ITEMS = [
+  { id: 'password', label: 'Password', detail: 'Last changed 3 months ago', action: 'Update', icon: 'lock' },
+  { id: '2fa', label: 'Two-Factor Authentication', detail: 'Secure your account with SMS or Authenticator', action: 'Configure', icon: 'shield' },
+  { id: 'devices', label: 'Trusted Devices', detail: 'Manage devices that can access your account', action: 'Manage', icon: 'smartphone' },
+] as const;
+
+export function formatMiles(n: number): string {
+  return n.toLocaleString('en-US');
+}
+
 export const DEMO_DISCLAIMER =
   'Balances, rates, rewards, and activity shown are illustrative. The Samra Pay experience is a product demo — it does not open accounts, extend credit, or move money.';
 

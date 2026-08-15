@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Animated,
   Platform,
   Pressable,
   StyleSheet,
@@ -12,6 +13,7 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
+import { useTransfers } from '@/context/TransferContext';
 import {
   CARD_FEE_RATE,
   DELIVERY_OPTIONS,
@@ -25,13 +27,22 @@ import {
 
 type DeliveryId = (typeof DELIVERY_OPTIONS)[number]['id'];
 type FundingId = (typeof FUNDING_OPTIONS)[number]['id'];
+type Step = 'form' | 'review' | 'success';
+
+function getTodayLabel() {
+  return 'Today';
+}
 
 export default function RemittanceScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { addTransfer } = useTransfers();
+
+  const [step, setStep] = useState<Step>('form');
   const [amountText, setAmountText] = useState<string>('1000');
   const [delivery, setDelivery] = useState<DeliveryId>('bank');
   const [funding, setFunding] = useState<FundingId>('bank');
+  const [recipientName, setRecipientName] = useState<string>('Almaz Tesfaye');
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -43,6 +54,142 @@ export default function RemittanceScreen() {
   const fee = funding === 'card' ? amount * CARD_FEE_RATE : 0;
   const total = amount + fee;
 
+  const deliveryLabel = DELIVERY_OPTIONS.find((d) => d.id === delivery)?.label ?? delivery;
+  const fundingLabel = FUNDING_OPTIONS.find((f) => f.id === funding)?.label ?? funding;
+
+  const recipientValid = recipientName.trim().length > 0;
+  const canContinue = amount > 0 && recipientValid;
+
+  function handleContinue() {
+    if (!canContinue) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setStep('review');
+  }
+
+  function handleConfirm() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    addTransfer({
+      id: 0, // overwritten by TransferContext
+      merchant: `Transfer to ${recipientName}`,
+      date: getTodayLabel(),
+      amount: -total,
+      category: 'Transfer',
+      card: 'Checking',
+    });
+    setStep('success');
+  }
+
+  function handleSendAnother() {
+    Haptics.selectionAsync();
+    setStep('form');
+    setAmountText('1000');
+  }
+
+  // ── Success state ──────────────────────────────────────────────────────────
+  if (step === 'success') {
+    return (
+      <View
+        style={[
+          styles.centeredPage,
+          { backgroundColor: colors.background, paddingTop: topInset, paddingBottom: bottomInset },
+        ]}
+      >
+        <View style={[styles.successCircle, { backgroundColor: colors.accent }]}>
+          <Feather name="check" size={38} color={colors.primary} />
+        </View>
+        <Text style={[styles.successTitle, { color: colors.cream }]}>Transfer sent!</Text>
+        <Text style={[styles.successSub, { color: colors.mutedForeground }]}>
+          {formatUsd(total)} sent to {recipientName}
+        </Text>
+        <Text style={[styles.successDetail, { color: colors.mutedForeground }]}>
+          {formatEtb(receiveEtb)} via {deliveryLabel.toLowerCase()}
+        </Text>
+
+        <View
+          style={[styles.successCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <Row label="Amount sent" value={formatUsd(amount)} colors={colors} />
+          <Row label="Service fee" value={fee > 0 ? formatUsd(fee) : 'Free'} colors={colors} />
+          <Row label="Total charged" value={formatUsd(total)} colors={colors} bold />
+          <Row label="They receive" value={formatEtb(receiveEtb)} colors={colors} highlight />
+        </View>
+
+        <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
+          Illustrative demo — no real money was moved.
+        </Text>
+
+        <Pressable
+          onPress={handleSendAnother}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Text style={[styles.primaryBtnText, { color: colors.primaryForeground }]}>
+            Send another
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // ── Review step ────────────────────────────────────────────────────────────
+  if (step === 'review') {
+    return (
+      <View
+        style={[
+          styles.centeredPage,
+          { backgroundColor: colors.background, paddingTop: topInset + 12, paddingBottom: bottomInset + 100 },
+        ]}
+      >
+        <Text style={[styles.reviewTitle, { color: colors.cream }]}>Review transfer</Text>
+        <Text style={[styles.reviewSub, { color: colors.mutedForeground }]}>
+          Please confirm the details below.
+        </Text>
+
+        <View
+          style={[styles.reviewCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <Row label="Recipient" value={recipientName} colors={colors} />
+          <Row label="Amount" value={formatUsd(amount)} colors={colors} />
+          <Row label="Service fee" value={fee > 0 ? formatUsd(fee) : 'Free'} colors={colors} />
+          <Row label="Total charged" value={formatUsd(total)} colors={colors} bold />
+          <Row label="They receive" value={formatEtb(receiveEtb)} colors={colors} highlight />
+          <Row label="Delivery" value={deliveryLabel} colors={colors} />
+          <Row label="Funded via" value={fundingLabel} colors={colors} />
+          <Row label="Exchange rate" value={`${PROMO_RATE} ETB / $1`} colors={colors} />
+        </View>
+
+        <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
+          Illustrative demo — no real money is moved.
+        </Text>
+
+        <Pressable
+          onPress={handleConfirm}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Text style={[styles.primaryBtnText, { color: colors.primaryForeground }]}>
+            Confirm &amp; send
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
+            setStep('form');
+          }}
+          style={({ pressed }) => [styles.ghostBtn, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Text style={[styles.ghostBtnText, { color: colors.mutedForeground }]}>Edit</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // ── Form step ─────────────────────────────────────────────────────────────
   return (
     <KeyboardAwareScrollViewCompat
       style={[styles.root, { backgroundColor: colors.background }]}
@@ -57,6 +204,22 @@ export default function RemittanceScreen() {
         <Text style={[styles.rateBadgeText, { color: colors.accentForeground }]}>
           {PROMO_RATE} ETB / $1 · illustrative demo rate
         </Text>
+      </View>
+
+      {/* Recipient */}
+      <View style={[styles.calcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>RECIPIENT NAME</Text>
+        <View style={[styles.recipientWrap, { borderColor: colors.input }]}>
+          <Feather name="user" size={15} color={colors.mutedForeground} style={{ marginRight: 8 }} />
+          <TextInput
+            testID="recipient-name"
+            style={[styles.recipientInput, { color: colors.cream }]}
+            value={recipientName}
+            onChangeText={setRecipientName}
+            placeholder="Full name"
+            placeholderTextColor={colors.mutedForeground}
+          />
+        </View>
       </View>
 
       <View style={[styles.calcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -195,12 +358,93 @@ export default function RemittanceScreen() {
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Destination</Text>
         </View>
       </View>
+
+      <Pressable
+        onPress={handleContinue}
+        disabled={!canContinue}
+        style={({ pressed }) => [
+          styles.primaryBtn,
+          styles.primaryBtnMargin,
+          {
+            backgroundColor: canContinue ? colors.primary : colors.secondary,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.primaryBtnText,
+            { color: canContinue ? colors.primaryForeground : colors.mutedForeground },
+          ]}
+        >
+          Continue →
+        </Text>
+      </Pressable>
     </KeyboardAwareScrollViewCompat>
   );
 }
 
+// ── Small helper component ────────────────────────────────────────────────────
+
+function Row({
+  label,
+  value,
+  colors,
+  bold,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  colors: ReturnType<typeof import('@/hooks/useColors').useColors>;
+  bold?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <View style={rowStyles.row}>
+      <Text style={[rowStyles.label, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text
+        style={[
+          rowStyles.value,
+          bold && rowStyles.bold,
+          { color: highlight ? colors.primary : colors.foreground },
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+const rowStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  label: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+  },
+  value: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 13,
+  },
+  bold: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 14,
+  },
+});
+
+// ── Stylesheet ────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  centeredPage: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+
+  // Form
   title: {
     fontFamily: 'EBGaramond_600SemiBold',
     fontSize: 26,
@@ -227,13 +471,25 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     padding: 20,
-    marginBottom: 26,
+    marginBottom: 20,
   },
   label: {
     fontFamily: 'Outfit_500Medium',
     fontSize: 9,
     letterSpacing: 1.5,
     marginBottom: 8,
+  },
+  recipientWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    paddingBottom: 8,
+  },
+  recipientInput: {
+    flex: 1,
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 17,
+    padding: 0,
   },
   amountWrap: {
     flexDirection: 'row',
@@ -326,6 +582,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     padding: 18,
+    marginBottom: 24,
   },
   statItem: {
     flex: 1,
@@ -340,5 +597,89 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
     fontSize: 10,
     textAlign: 'center',
+  },
+  primaryBtn: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  primaryBtnMargin: {
+    marginBottom: 8,
+  },
+  primaryBtnText: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 16,
+  },
+  ghostBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginHorizontal: 20,
+  },
+  ghostBtnText: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 14,
+  },
+
+  // Review
+  reviewTitle: {
+    fontFamily: 'EBGaramond_600SemiBold',
+    fontSize: 28,
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  reviewSub: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 14,
+    marginBottom: 24,
+  },
+  reviewCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    marginBottom: 12,
+  },
+  demoNote: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 11,
+    marginBottom: 20,
+    marginHorizontal: 20,
+    lineHeight: 16,
+  },
+
+  // Success
+  successCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 48,
+    marginBottom: 24,
+  },
+  successTitle: {
+    fontFamily: 'EBGaramond_600SemiBold',
+    fontSize: 32,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  successSub: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  successDetail: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  successCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    marginBottom: 16,
   },
 });

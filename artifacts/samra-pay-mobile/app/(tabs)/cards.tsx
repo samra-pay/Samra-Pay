@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { BankCard } from '@/components/BankCard';
 import { useColors } from '@/hooks/useColors';
-import { CARDS, DEMO_DISCLAIMER, formatUsd } from '@/lib/mock-data';
+import { CARDS, CARD_TRANSACTIONS, DEMO_DISCLAIMER, formatUsd } from '@/lib/mock-data';
 
 export default function CardsScreen() {
   const colors = useColors();
@@ -129,6 +129,53 @@ export default function CardsScreen() {
         <Text style={[styles.issuer, { color: colors.mutedForeground }]}>{card.issuer}</Text>
       </View>
 
+      {/* ── Per-card ledger ── */}
+      <Text style={[styles.ledgerTitle, { color: colors.cream }]}>Ledger</Text>
+      <Text style={[styles.ledgerSub, { color: colors.mutedForeground }]}>
+        Transactions for {card.name}
+      </Text>
+      <View style={[styles.ledgerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {CARD_TRANSACTIONS[card.id].map((tx, i) => (
+          <View
+            key={tx.id}
+            style={[
+              styles.txRow,
+              i < CARD_TRANSACTIONS[card.id].length - 1 && {
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <View style={[styles.txIcon, { backgroundColor: colors.secondary }]}>
+              <Feather
+                name={tx.amount > 0 ? 'arrow-down-left' : 'arrow-up-right'}
+                size={15}
+                color={tx.amount > 0 ? colors.green : colors.mutedForeground}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.txMerchant, { color: colors.foreground }]}>{tx.merchant}</Text>
+              <Text style={[styles.txMeta, { color: colors.mutedForeground }]}>
+                {tx.date} · {tx.category}
+              </Text>
+            </View>
+            <View style={styles.txRight}>
+              <Text
+                style={[
+                  styles.txAmount,
+                  { color: tx.amount > 0 ? colors.green : colors.foreground },
+                ]}
+              >
+                {formatUsd(tx.amount, { sign: true })}
+              </Text>
+              {tx.points ? (
+                <Text style={[styles.txPoints, { color: colors.primary }]}>{tx.points}</Text>
+              ) : null}
+            </View>
+          </View>
+        ))}
+      </View>
+
       <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>{DEMO_DISCLAIMER}</Text>
     </ScrollView>
   );
@@ -237,5 +284,56 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     paddingHorizontal: 20,
     marginTop: 24,
+  },
+  ledgerTitle: {
+    fontFamily: 'EBGaramond_600SemiBold',
+    fontSize: 21,
+    paddingHorizontal: 20,
+    marginTop: 26,
+  },
+  ledgerSub: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 12,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    marginTop: 2,
+  },
+  ledgerCard: {
+    marginHorizontal: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+  },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    gap: 12,
+  },
+  txIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txMerchant: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 14,
+  },
+  txMeta: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  txRight: { alignItems: 'flex-end' },
+  txAmount: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+  },
+  txPoints: {
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 10,
+    marginTop: 2,
   },
 });

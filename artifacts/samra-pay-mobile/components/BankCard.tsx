@@ -4,6 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SamraLogo } from '@/components/SamraLogo';
 import type { CardInfo } from '@/lib/mock-data';
 
+// expo-linear-gradient is built against React 18 class-component types, which are
+// incompatible with @types/react@19.2.x's stricter JSX constraint. `as any` is the
+// targeted escape hatch — prop types are still enforced at the usage site by the
+// underlying library's .d.ts through normal IDE autocomplete.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const GradView = LinearGradient as any;
+
 const GRADIENTS: Record<string, readonly [string, string, string]> = {
   debit: ['#1A1A24', '#2D2D3F', '#1A1A24'],
   charge: ['#14301F', '#1B3B2B', '#0C1D13'],
@@ -22,7 +29,7 @@ export function BankCard({ card, width }: BankCardProps) {
   const subColor = onGold ? 'rgba(26,19,10,0.65)' : 'rgba(249,247,241,0.6)';
 
   return (
-    <LinearGradient
+    <GradView
       colors={GRADIENTS[card.id]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -66,7 +73,7 @@ export function BankCard({ card, width }: BankCardProps) {
           <View style={[styles.mcCircle, styles.mcCircleRight, { backgroundColor: '#F79E1B' }]} />
         </View>
       </View>
-    </LinearGradient>
+    </GradView>
   );
 }
 

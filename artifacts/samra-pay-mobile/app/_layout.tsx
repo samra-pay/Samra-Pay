@@ -5,6 +5,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { TransferProvider } from '@/context/TransferContext';
 import {
   EBGaramond_500Medium,
   EBGaramond_500Medium_Italic,
@@ -44,6 +45,7 @@ function RootLayoutNav() {
       </Stack.Protected>
       <Stack.Protected guard={isSignedIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
       </Stack.Protected>
     </Stack>
   );
@@ -76,8 +78,10 @@ export default function RootLayout() {
           <GestureHandlerRootView>
             <KeyboardProvider>
               <AuthProvider>
-                <StatusBar style="light" />
-                <RootLayoutNav />
+                <TransferProvider>
+                  <StatusBar style="light" />
+                  <RootLayoutNav />
+                </TransferProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
