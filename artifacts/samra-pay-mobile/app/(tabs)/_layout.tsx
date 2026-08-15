@@ -7,6 +7,8 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
+import { useLanguage } from '@/context/LanguageContext';
+import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 
 // expo-blur is built against React 18 class-component types, incompatible with
 // @types/react@19.2.x's stricter JSX constraint.
@@ -20,23 +22,24 @@ const SafeNativeTabs = NativeTabs as any;
 
 // iOS 26 uses NativeTabs (liquid glass, system appearance — no custom tokens).
 function NativeTabLayout() {
+  const { t } = useLanguage();
   return (
     <SafeNativeTabs>
       <SafeNativeTabs.Trigger name="index">
         <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Home</Label>
+        <Label>{t('tabs.home')}</Label>
       </SafeNativeTabs.Trigger>
       <SafeNativeTabs.Trigger name="cards">
         <Icon sf={{ default: 'creditcard', selected: 'creditcard.fill' }} />
-        <Label>Cards</Label>
+        <Label>{t('tabs.cards')}</Label>
       </SafeNativeTabs.Trigger>
       <SafeNativeTabs.Trigger name="remittance">
         <Icon sf={{ default: 'paperplane', selected: 'paperplane.fill' }} />
-        <Label>Send</Label>
+        <Label>{t('tabs.send')}</Label>
       </SafeNativeTabs.Trigger>
       <SafeNativeTabs.Trigger name="rewards">
         <Icon sf={{ default: 'star', selected: 'star.fill' }} />
-        <Label>Rewards</Label>
+        <Label>{t('tabs.rewards')}</Label>
       </SafeNativeTabs.Trigger>
     </SafeNativeTabs>
   );
@@ -44,6 +47,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors('dark');
+  const { t, isAmharic } = useLanguage();
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
 
@@ -53,6 +57,9 @@ function ClassicTabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
+        tabBarLabelStyle: isAmharic
+          ? { fontFamily: nativeTheme.fontFamily.ethiopic.regular }
+          : undefined,
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: isIOS ? 'transparent' : colors.background,
@@ -74,7 +81,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="house" tintColor={color} size={24} />
@@ -86,7 +93,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="cards"
         options={{
-          title: 'Cards',
+          title: t('tabs.cards'),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="creditcard" tintColor={color} size={24} />
@@ -98,7 +105,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="remittance"
         options={{
-          title: 'Send',
+          title: t('tabs.send'),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="paperplane" tintColor={color} size={24} />
@@ -110,7 +117,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="rewards"
         options={{
-          title: 'Rewards',
+          title: t('tabs.rewards'),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="star" tintColor={color} size={24} />

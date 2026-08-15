@@ -4,18 +4,21 @@ import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { LayoutDashboard, CreditCard, BarChart3, LineChart, Send, Settings, LogOut, Menu, X, Plane } from "lucide-react";
 import { useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { t, langClass, langAttr } = useLanguage();
 
   const navLinks = [
-    { icon: LayoutDashboard, label: "Overview", href: "/dashboard" },
-    { icon: CreditCard, label: "Cards & Accounts", href: "/dashboard/cards" },
-    { icon: LineChart, label: "Credit Health", href: "/dashboard/credit" },
-    { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
-    { icon: Send, label: "Remittance", href: "/dashboard/remittance" },
-    { icon: Plane, label: "Rewards", href: "/dashboard/rewards" },
+    { icon: LayoutDashboard, label: t("dash.overview"), href: "/dashboard" },
+    { icon: CreditCard, label: t("dash.cardsAccounts"), href: "/dashboard/cards" },
+    { icon: LineChart, label: t("dash.creditHealth"), href: "/dashboard/credit" },
+    { icon: BarChart3, label: t("dash.analytics"), href: "/dashboard/analytics" },
+    { icon: Send, label: t("dash.remittance"), href: "/dashboard/remittance" },
+    { icon: Plane, label: t("dash.rewards"), href: "/dashboard/rewards" },
   ];
 
   return (
@@ -35,8 +38,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             const isActive = location === link.href;
             return (
               <Link key={link.href} href={link.href}>
-                <div className={cn(
+                <div lang={langAttr} className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium",
+                  langClass,
                   isActive 
                     ? "bg-primary/10 text-primary border border-primary/20" 
                     : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -51,15 +55,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
         <div className="p-4 border-t border-white/5 space-y-1">
           <Link href="/dashboard/settings">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground">
+            <div lang={langAttr} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground", langClass)}>
               <Settings className="w-5 h-5 text-muted-foreground" />
-              Settings
+              {t("dash.settings")}
             </div>
           </Link>
           <Link href="/">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive">
+            <div lang={langAttr} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive", langClass)}>
               <LogOut className="w-5 h-5" />
-              Sign Out
+              {t("dash.signOut")}
             </div>
           </Link>
         </div>
@@ -85,8 +89,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <Link key={link.href} href={link.href}>
                 <div 
                   onClick={() => setIsMobileOpen(false)}
+                  lang={langAttr}
                   className={cn(
                     "flex items-center gap-3 px-4 py-4 rounded-xl cursor-pointer transition-colors text-base font-medium",
+                    langClass,
                     location === link.href 
                       ? "bg-primary/10 text-primary border border-primary/20" 
                       : "text-muted-foreground"
@@ -97,6 +103,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 </div>
               </Link>
             ))}
+            <div className="px-4 pt-4">
+              <LanguageToggle />
+            </div>
           </div>
         </div>
       )}
@@ -104,10 +113,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pt-0 pt-16 h-screen overflow-y-auto">
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-30">
-          <h2 className="text-xl font-medium tracking-wide">
-            {navLinks.find(l => l.href === location)?.label || (location === "/dashboard/settings" ? "Settings" : "Dashboard")}
+          <h2 lang={langAttr} className={cn("text-xl font-medium tracking-wide", langClass)}>
+            {navLinks.find(l => l.href === location)?.label || (location === "/dashboard/settings" ? t("dash.settings") : t("dash.dashboard"))}
           </h2>
           <div className="flex items-center gap-4">
+            <LanguageToggle className="hidden sm:inline-flex" />
             <div className="text-right hidden sm:block">
               <div className="text-sm font-medium">Selam T.</div>
               <div className="text-xs text-muted-foreground">Member since 2024</div>

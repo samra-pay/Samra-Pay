@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage, type Language } from '@/context/LanguageContext';
 import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import {
@@ -27,10 +28,31 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { signOut } = useAuth();
+  const { t, language, setLanguage, isAmharic } = useLanguage();
 
   const [prefs, setPrefs] = useState<Record<string, boolean>>(
     Object.fromEntries(NOTIFICATION_PREFS.map((p) => [p.id, p.enabled])),
   );
+
+  // Per the DS voice-tone guide: Amharic uses the Ethiopic serif, one size
+  // down from its English sibling, with relaxed leading.
+  const amTitle = isAmharic
+    ? { fontFamily: font.ethiopic.semibold, fontSize: 24, lineHeight: 34 }
+    : null;
+  const amSection = isAmharic
+    ? { fontFamily: font.ethiopic.semibold, fontSize: 17, lineHeight: 26 }
+    : null;
+  const amBody = isAmharic
+    ? { fontFamily: font.ethiopic.regular, fontSize: 12, lineHeight: 18 }
+    : null;
+  const amLabel = isAmharic
+    ? { fontFamily: font.ethiopic.semibold, fontSize: 13, lineHeight: 20 }
+    : null;
+
+  const LANGUAGE_OPTIONS: { value: Language; label: string; native: boolean }[] = [
+    { value: 'en', label: 'English', native: false },
+    { value: 'am', label: 'አማርኛ', native: true },
+  ];
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -57,15 +79,19 @@ export default function SettingsScreen() {
           <Feather name="arrow-left" size={18} color={colors.foreground} />
         </Pressable>
         <View>
-          <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Manage your profile and preferences.
+          <Text style={[styles.title, { color: colors.foreground }, amTitle]}>
+            {t('settings.title')}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }, amBody]}>
+            {t('settings.subtitle')}
           </Text>
         </View>
       </View>
 
       {/* ── Profile ── */}
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Profile Information</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }, amSection]}>
+        {t('settings.profile')}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.profileRow}>
           <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
@@ -77,28 +103,82 @@ export default function SettingsScreen() {
             <Text style={[styles.profileName, { color: colors.foreground }]}>
               {SETTINGS_PROFILE.firstName} {SETTINGS_PROFILE.lastName}
             </Text>
-            <Text style={[styles.profileMeta, { color: colors.mutedForeground }]}>
-              Member since {SETTINGS_PROFILE.memberSince}
+            <Text style={[styles.profileMeta, { color: colors.mutedForeground }, amBody]}>
+              {t('settings.memberSince')} {SETTINGS_PROFILE.memberSince}
             </Text>
           </View>
         </View>
 
         <View style={[styles.fieldRow, { borderTopColor: colors.border }]}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Email</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }, amBody]}>
+            {t('settings.email')}
+          </Text>
           <Text style={[styles.fieldValue, { color: colors.foreground }]}>
             {SETTINGS_PROFILE.email}
           </Text>
         </View>
         <View style={[styles.fieldRow, { borderTopColor: colors.border }]}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Phone</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }, amBody]}>
+            {t('settings.phone')}
+          </Text>
           <Text style={[styles.fieldValue, { color: colors.foreground }]}>
             {SETTINGS_PROFILE.phone}
           </Text>
         </View>
       </View>
 
+      {/* ── Language ── */}
+      <Text style={[styles.sectionTitle, { color: colors.foreground }, amSection]}>
+        {t('settings.language')}
+      </Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={[styles.toggleLabel, { color: colors.foreground }, amLabel]}>
+              {t('settings.language')}
+            </Text>
+            <Text style={[styles.toggleDetail, { color: colors.mutedForeground }, amBody]}>
+              {t('settings.languageDetail')}
+            </Text>
+          </View>
+          <View style={[styles.langGroup, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
+            {LANGUAGE_OPTIONS.map((opt) => {
+              const selected = language === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  testID={`settings-language-${opt.value}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setLanguage(opt.value);
+                  }}
+                  style={[
+                    styles.langOption,
+                    selected && { backgroundColor: colors.accent },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.langOptionText,
+                      { color: selected ? colors.primary : colors.mutedForeground },
+                      opt.native && { fontFamily: font.ethiopic.semibold, lineHeight: 20 },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
       {/* ── Notifications ── */}
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Notifications</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }, amSection]}>
+        {t('settings.notifications')}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {NOTIFICATION_PREFS.map((pref, i) => (
           <View
@@ -128,7 +208,9 @@ export default function SettingsScreen() {
       </View>
 
       {/* ── Security ── */}
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Security</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }, amSection]}>
+        {t('settings.security')}
+      </Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {SECURITY_ITEMS.map((item, i) => (
           <Pressable
@@ -167,7 +249,9 @@ export default function SettingsScreen() {
         ]}
       >
         <Feather name="log-out" size={16} color={colors.destructiveForeground} />
-        <Text style={[styles.signOutText, { color: colors.foreground }]}>Sign out</Text>
+        <Text style={[styles.signOutText, { color: colors.foreground }, amLabel]}>
+          {t('settings.signOut')}
+        </Text>
       </Pressable>
 
       <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>{DEMO_DISCLAIMER}</Text>
@@ -303,6 +387,21 @@ const styles = StyleSheet.create({
   signOutText: {
     fontFamily: font.sans.semibold,
     fontSize: 14,
+  },
+  langGroup: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 999,
+    padding: 2,
+  },
+  langOption: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  langOptionText: {
+    fontFamily: font.sans.semibold,
+    fontSize: 13,
   },
   disclaimer: {
     fontFamily: font.sans.regular,

@@ -4,9 +4,12 @@ import { Menu, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@workspace/samra-pay-ds/lib/utils";
 import { SamraLogo } from "@/components/samra-logo";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 
 export function Navbar() {
   const [location] = useLocation();
+  const { t, langClass, langAttr } = useLanguage();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -62,10 +65,10 @@ export function Navbar() {
   }, [isMobileMenuOpen]);
 
   const navLinks = [
-    { href: "/cards", label: "Cards" },
-    { href: "/remittance", label: "Remittance" },
-    { href: "/social-house", label: "Tomoca Social House" },
-    { href: "/ask-samra", label: "Ask Samra" },
+    { href: "/cards", label: t("nav.cards") },
+    { href: "/remittance", label: t("nav.remittance") },
+    { href: "/social-house", label: t("nav.socialHouse") },
+    { href: "/ask-samra", label: t("nav.askSamra") },
   ];
 
   return (
@@ -91,8 +94,10 @@ export function Navbar() {
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href} aria-current={location === link.href ? "page" : undefined}>
               <span
+                lang={langAttr}
                 className={cn(
                   "rounded-sm text-sm tracking-wide transition-colors cursor-pointer hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+                  langClass,
                   location === link.href ? "text-primary font-medium" : "text-foreground/80"
                 )}
               >
@@ -103,14 +108,21 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
+          <LanguageToggle />
           <Link href="/login">
-            <span className="text-sm font-medium hover:text-primary transition-colors cursor-pointer text-foreground/80">
-              Sign In
+            <span
+              lang={langAttr}
+              className={cn(
+                "text-sm font-medium hover:text-primary transition-colors cursor-pointer text-foreground/80",
+                langClass
+              )}
+            >
+              {t("nav.signIn")}
             </span>
           </Link>
-          <Button asChild variant="gold" className="rounded-full px-6 font-medium">
-            <Link href="/login">
-              Apply Now
+          <Button asChild variant="gold" className={cn("rounded-full px-6 font-medium", langClass)}>
+            <Link href="/login" lang={langAttr}>
+              {t("nav.applyNow")}
             </Link>
           </Button>
         </div>
@@ -141,24 +153,33 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              lang={langAttr}
               aria-current={location === link.href ? "page" : undefined}
-              className="block rounded-sm text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+              className={cn(
+                "block rounded-sm text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+                langClass
+              )}
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.label}
             </Link>
           ))}
           <div className="flex flex-col gap-4 pt-4 border-t border-white/10">
+            <LanguageToggle className="self-start" />
             <Link
               href="/login"
-              className="block rounded-sm text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+              lang={langAttr}
+              className={cn(
+                "block rounded-sm text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+                langClass
+              )}
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Sign In
+              {t("nav.signIn")}
             </Link>
-            <Button asChild variant="gold" className="w-full rounded-full" onClick={() => setIsMobileMenuOpen(false)}>
-              <Link href="/login">
-                Apply Now
+            <Button asChild variant="gold" className={cn("w-full rounded-full", langClass)} onClick={() => setIsMobileMenuOpen(false)}>
+              <Link href="/login" lang={langAttr}>
+                {t("nav.applyNow")}
               </Link>
             </Button>
           </div>

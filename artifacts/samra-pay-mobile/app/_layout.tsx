@@ -5,6 +5,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { TransferProvider } from '@/context/TransferContext';
 import { tokens } from '@workspace/samra-pay-ds/tokens';
 import { useDesignSystemFonts } from '@workspace/samra-pay-ds/hooks/use-fonts';
@@ -58,10 +59,12 @@ export default function RootLayout() {
           <GestureHandlerRootView>
             <KeyboardProvider>
               <AuthProvider>
-                <TransferProvider>
-                  <StatusBar style="light" />
-                  <RootLayoutNav />
-                </TransferProvider>
+                <LanguageProvider>
+                  <TransferProvider>
+                    <StatusBar style="light" />
+                    <RootLayoutNav />
+                  </TransferProvider>
+                </LanguageProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

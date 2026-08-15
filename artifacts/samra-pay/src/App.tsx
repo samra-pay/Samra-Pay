@@ -33,6 +33,7 @@ import { DashboardRemittance } from '@/pages/dashboard/remittance';
 import { DashboardSettings } from '@/pages/dashboard/settings';
 import { DashboardRewards } from '@/pages/dashboard/rewards';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import { LanguageProvider } from '@/lib/i18n';
 import { useParams } from 'wouter';
 
 const queryClient = new QueryClient();
@@ -110,10 +111,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
+        <LanguageProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
