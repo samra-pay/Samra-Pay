@@ -202,6 +202,9 @@ export default function DashboardScreen() {
               <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
                 Welcome back, {PROFILE.firstName}
               </Text>
+              <Text style={[styles.greetingAm, { color: colors.mutedForeground }]} accessibilityLanguage="am">
+                እንኳን ደህና መጡ
+              </Text>
             </View>
             <Pressable
               testID="open-settings"
@@ -223,6 +226,9 @@ export default function DashboardScreen() {
             <View style={styles.balanceLabelRow}>
               <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>
                 CHECKING BALANCE
+              </Text>
+              <Text style={[styles.balanceLabelAm, { color: colors.mutedForeground }]} accessibilityLanguage="am">
+                የሂሳብ ቀሪ
               </Text>
               <Pressable
                 onPress={() => {
@@ -270,7 +276,12 @@ export default function DashboardScreen() {
 
           {/* ── Recent transactions (now directly below balance) ── */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent transactions</Text>
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent transactions</Text>
+              <Text style={[styles.sectionTitleAm, { color: colors.mutedForeground }]} accessibilityLanguage="am">
+                የቅርብ ጊዜ ግብይቶች
+              </Text>
+            </View>
             {allTransactions.length > MAX_VISIBLE_TX && (
               <Pressable
                 onPress={() => {
@@ -328,9 +339,14 @@ export default function DashboardScreen() {
           </View>
 
           {/* ── Spending this month ── */}
-          <Text style={[styles.sectionTitle, { color: colors.foreground, paddingHorizontal: 20, marginBottom: 12, marginTop: 0 }]}>
-            Spending this month
-          </Text>
+          <View style={{ paddingHorizontal: 20, marginBottom: 12, marginTop: 0 }}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Spending this month
+            </Text>
+            <Text style={[styles.sectionTitleAm, { color: colors.mutedForeground }]} accessibilityLanguage="am">
+              የዚህ ወር ወጪ
+            </Text>
+          </View>
           <View style={[styles.spendCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.spendHeader}>
               <Text style={[styles.spendTotal, { color: colors.foreground }]}>{formatUsd(totalSpending)}</Text>
@@ -414,6 +430,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  greetingAm: {
+    fontFamily: font.sans.regular,
+    fontSize: 11,
+    marginTop: 1,
+    lineHeight: 18,
+  },
   iconButton: {
     width: 38,
     height: 38,
@@ -480,6 +502,20 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: font.serif.semibold,
     fontSize: 21,
+  },
+  sectionTitleAm: {
+    fontFamily: font.sans.regular,
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 1,
+  },
+  balanceLabelAm: {
+    fontFamily: font.sans.regular,
+    fontSize: 9,
+    letterSpacing: 1,
+    lineHeight: 14,
+    marginTop: 1,
+    marginBottom: 4,
   },
   viewAll: {
     fontFamily: font.sans.medium,

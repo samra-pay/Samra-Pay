@@ -66,7 +66,11 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <h1 className="text-3xl font-serif">Overview</h1>
-            <p className="text-muted-foreground mt-1 font-light">Welcome back, Selam. Here's your financial snapshot.</p>
+            <p className="font-ethiopic text-xl leading-relaxed text-primary/60 -mt-0.5" lang="am">ድምር ዕይታ</p>
+            <p className="text-muted-foreground mt-1 font-light">
+              Welcome back, Selam. Here's your financial snapshot.
+            </p>
+            <p className="font-ethiopic text-sm leading-relaxed text-muted-foreground/60 mt-0.5" lang="am">እንኳን ደህና መጡ፣ ሰላም።</p>
           </div>
           <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
             <Button variant="outline" className="flex-1 md:flex-none gap-2 bg-card/50 border-white/10 hover:border-white/20 transition-colors h-12 rounded-xl shrink-0 px-6">
@@ -183,6 +187,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-end mb-4">
             <div className="flex items-baseline gap-3">
               <h3 className="text-lg font-serif">Accounts</h3>
+              <span className="font-ethiopic text-sm leading-relaxed text-muted-foreground/50 hidden sm:inline" lang="am">ሂሳቦች</span>
               <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em] hidden sm:inline">3 active</span>
             </div>
             <Link href="/dashboard/cards" className="text-sm text-primary font-medium inline-flex items-center gap-1 group/manage">
@@ -294,7 +299,10 @@ export default function Dashboard() {
 
         {/* Obligations Timeline Strip */}
         <div>
-          <h3 className="text-lg font-serif mb-4">Upcoming</h3>
+          <div className="flex items-baseline gap-3 mb-4">
+            <h3 className="text-lg font-serif">Upcoming</h3>
+            <span className="font-ethiopic text-sm leading-relaxed text-muted-foreground/50" lang="am">መጪ ክፍያዎች</span>
+          </div>
           <div className="flex overflow-x-auto gap-4 pb-4 hide-scrollbar snap-x">
             
             {/* Obligation 1 */}
@@ -450,7 +458,10 @@ export default function Dashboard() {
         {/* Transactions */}
         <Card className="bg-card/30 border-white/5 shadow-2xl">
           <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
-            <CardTitle className="text-lg font-serif">Recent Transactions</CardTitle>
+            <div>
+                <CardTitle className="text-lg font-serif">Recent Transactions</CardTitle>
+                <p className="font-ethiopic text-sm leading-relaxed text-muted-foreground/50 mt-0.5" lang="am">የቅርብ ጊዜ ግብይቶች</p>
+              </div>
             <Button variant="link" className="text-primary pr-0 hover:no-underline hover:text-primary/80">View All</Button>
           </CardHeader>
           <CardContent className="pt-4 px-0 pb-0">

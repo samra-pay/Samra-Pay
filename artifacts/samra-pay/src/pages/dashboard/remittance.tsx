@@ -963,20 +963,24 @@ export function DashboardRemittance() {
                     <ArrowLeft className="h-4 w-4" /> Back
                   </button>
                   <CardTitle>Review &amp; confirm</CardTitle>
+                  <p className="font-ethiopic text-base leading-relaxed text-primary/60 -mt-1" lang="am">ይገምግሙ እና ያረጋግጡ</p>
                   <p className="text-sm text-muted-foreground">Double-check before sending — illustrative demo</p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4 text-sm">
                     {/* Summary rows */}
                     {[
-                      { label: "You send",       value: `$${formatUsd(parsedUsdAmount)} USD` },
-                      { label: "Recipient gets", value: `${formatEtb(recipientEtb)} ETB`, gold: true },
-                      { label: "Exchange rate",  value: `1 USD = ${PROMO_RATE} ETB` },
-                      { label: "Service fee",    value: serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free", green: serviceFee === 0 },
-                      { label: "Total charged",  value: `$${formatUsd(totalCharged)}`, bold: true },
+                      { label: "You send",       labelAm: "የሚልኩት",     value: `$${formatUsd(parsedUsdAmount)} USD` },
+                      { label: "Recipient gets", labelAm: "ተቀባዩ ያገኛሉ", value: `${formatEtb(recipientEtb)} ETB`, gold: true },
+                      { label: "Exchange rate",  labelAm: "የምንዛሪ ዋጋ",  value: `1 USD = ${PROMO_RATE} ETB` },
+                      { label: "Service fee",    labelAm: "የአገልግሎት ክፍያ", value: serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free", green: serviceFee === 0 },
+                      { label: "Total charged",  labelAm: "ጠቅላላ",       value: `$${formatUsd(totalCharged)}`, bold: true },
                     ].map(row => (
                       <div key={row.label} className={cn("flex justify-between items-center py-3 border-b border-white/5", row.bold && "font-semibold text-base")}>
-                        <span className="text-muted-foreground">{row.label}</span>
+                        <span className="text-muted-foreground">
+                          {row.label}
+                          <span className="block font-ethiopic text-xs leading-relaxed text-muted-foreground/50 font-normal" lang="am">{row.labelAm}</span>
+                        </span>
                         <span className={cn(row.gold ? "text-primary font-mono" : row.green ? "text-eucalyptus" : "text-foreground")}>
                           {row.value}
                         </span>
@@ -1049,13 +1053,17 @@ export function DashboardRemittance() {
                     <CircleCheck className="w-10 h-10 text-eucalyptus" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-serif mb-2">Transfer sent!</h2>
+                    <h2 className="text-2xl font-serif mb-1">Transfer sent!</h2>
+                    <p className="font-ethiopic text-lg leading-relaxed text-eucalyptus/70 mb-2" lang="am">ዝውውር ተልኳል!</p>
                     <p className="text-muted-foreground text-sm">
                       <span className="text-primary font-semibold">{formatEtb(recipientEtb)} ETB</span> is on its way to{" "}
                       <span className="text-foreground font-medium">{recipientName}</span>
                       {recipientLocation && (
                         <span className="text-muted-foreground"> in {recipientLocation}</span>
                       )}.
+                    </p>
+                    <p className="font-ethiopic text-xs leading-relaxed text-muted-foreground/60 mt-1" lang="am">
+                      ገንዘብዎ ወደ <span className="text-foreground/80 font-medium">{recipientName}</span> እየሄደ ነው።
                     </p>
                   </div>
 

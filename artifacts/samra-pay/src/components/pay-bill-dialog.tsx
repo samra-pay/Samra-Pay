@@ -63,6 +63,7 @@ export function PayBillDialog({
             >
               <DialogHeader>
                 <DialogTitle className="font-serif text-xl">Pay Your Bill</DialogTitle>
+                <p className="font-ethiopic text-base leading-relaxed text-primary/60 -mt-1" lang="am">ቢሉዎን ይክፈሉ</p>
                 <DialogDescription>{info.name} &middot; Due {info.due}</DialogDescription>
               </DialogHeader>
 
@@ -83,6 +84,7 @@ export function PayBillDialog({
                   >
                     <div className="text-2xl font-serif text-white/90">{formatUSD(info.amount)}</div>
                     <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Statement balance</div>
+                    <div className="font-ethiopic text-[10px] leading-relaxed text-muted-foreground/60 mt-0.5" lang="am">ሙሉ ቀሪ ሒሳብ</div>
                   </button>
                   <button
                     type="button"
@@ -99,6 +101,7 @@ export function PayBillDialog({
                   >
                     <div className="text-2xl font-serif text-white/90">{formatUSD(info.minDue)}</div>
                     <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Minimum due</div>
+                    <div className="font-ethiopic text-[10px] leading-relaxed text-muted-foreground/60 mt-0.5" lang="am">አነስተኛ ክፍያ</div>
                   </button>
                 </div>
 
@@ -147,6 +150,7 @@ export function PayBillDialog({
                 <Check className="w-8 h-8 text-eucalyptus" />
               </motion.div>
               <DialogTitle className="font-serif text-xl mb-1">Payment Sent</DialogTitle>
+              <p className="font-ethiopic text-base leading-relaxed text-eucalyptus/70" lang="am">ክፍያ ተልኳል</p>
               <DialogDescription>
                 {formatUSD(payAmount)} paid from Checking &bull;&bull;&bull;&bull; 8834
               </DialogDescription>
