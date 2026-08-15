@@ -54,10 +54,14 @@ export default function Remittance() {
               Limited Time Promo Rate
             </div>
             
-            <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl mb-8 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
+            <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl mb-4 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
               Your hard work <br/>
               <span className="italic text-primary">goes further.</span>
             </h1>
+
+            <p lang="am" className="font-ethiopic text-2xl md:text-3xl text-primary/70 leading-relaxed mb-8">
+              ገንዘብ ወደ ቤት ይላኩ።
+            </p>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed font-light max-w-lg">
               Send directly to a mobile money wallet or bank account at an industry-leading exchange rate. Samra balance transfers are free, card-funded transfers include a simple 3% service fee, and standard ACH is 1% until you link your bank with Plaid.

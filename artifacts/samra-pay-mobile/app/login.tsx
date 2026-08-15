@@ -55,6 +55,9 @@ export default function LoginScreen() {
         <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
           Banking for the Ethiopian diaspora
         </Text>
+        <Text style={[styles.taglineAmharic, { color: colors.primary }]} accessibilityLanguage="am">
+          ለዲያስፖራ
+        </Text>
 
         <View style={styles.form}>
           <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -135,7 +138,13 @@ const styles = StyleSheet.create({
     fontFamily: font.serif.mediumItalic,
     fontSize: 17,
     marginTop: 10,
-    marginBottom: 48,
+    marginBottom: 8,
+  },
+  taglineAmharic: {
+    fontFamily: font.ethiopic.regular,
+    fontSize: 15,
+    lineHeight: 24,
+    marginBottom: 40,
   },
   form: {
     width: '100%',

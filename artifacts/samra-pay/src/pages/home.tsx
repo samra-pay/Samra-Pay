@@ -89,11 +89,15 @@ export default function Home() {
                 Designed in Addis. Polished in NY.
               </motion.div>
 
-              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-6 md:mb-8 text-[#F9F7F1]">
+              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-3 md:mb-4 text-[#F9F7F1]">
                 Your financial home.<br/>
                 Built for life here<br/>
                 <span className="italic text-primary">and home.</span>
               </motion.h1>
+
+              <motion.p variants={fadeUp} lang="am" className="font-ethiopic text-2xl md:text-3xl text-primary/70 leading-relaxed mb-5 md:mb-6">
+                ቤቶ ቅርብ ነው።
+              </motion.p>
 
               <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-8 md:mb-10 leading-relaxed max-w-lg font-light">
                 A modern financial platform for the Ethiopian diaspora. One card builds your life here. The other brings you home.
@@ -281,9 +285,14 @@ export default function Home() {
                   </p>
                 </div>
 
-                <Button asChild variant="gold" className="rounded-none px-8 py-6 text-sm tracking-widest uppercase">
-                  <Link href="/remittance">Send Money Home</Link>
-                </Button>
+                <div className="flex flex-col gap-4 mb-10">
+                  <Button asChild variant="gold" className="rounded-none px-8 py-6 text-sm tracking-widest uppercase self-start">
+                    <Link href="/remittance">Send Money Home</Link>
+                  </Button>
+                  <p lang="am" className="font-ethiopic text-xl text-primary/60 leading-relaxed">
+                    ገንዘብ ወደ ቤት ይላኩ።
+                  </p>
+                </div>
               </motion.div>
 
               {/* Image Collage */}
