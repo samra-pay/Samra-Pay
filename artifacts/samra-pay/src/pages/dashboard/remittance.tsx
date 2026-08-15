@@ -32,6 +32,12 @@ import {
   saveTransfers,
   type PersistedTransfer,
 } from "@/lib/transfer-storage";
+import {
+  applyEdit,
+  applyDelete,
+  applyUndoDelete,
+  type AddressBookEntry,
+} from "@/lib/recipient-book";
 
 // ─── Ethiopian data ───────────────────────────────────────────────────────────
 
@@ -149,18 +155,7 @@ type Step = "quote" | "recipient" | "confirm" | "success";
 // Re-export the shared type so the rest of the file can use a short alias
 type Transfer = PersistedTransfer;
 
-/** Address-book entry — separate from Transfer so edits/deletes never touch history. */
-interface AddressBookEntry {
-  id: number;
-  name: string;
-  location: string;
-  // Delivery details for pre-fill (mirrors the last transfer to this recipient)
-  deliveryMethod?: DeliveryMethod;
-  bankId?: string;
-  accountNumber?: string;
-  walletId?: string;
-  phoneNumber?: string;
-}
+// AddressBookEntry is imported from @/lib/recipient-book
 
 function todayLabel(): string {
   return new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -348,26 +343,28 @@ export function DashboardRemittance() {
     if (editingId === null) return;
     const newName = editDraftName.trim();
     const newLoc  = editDraftLoc.trim();
-    // Update only the address book — transfer history is immutable
-    setAddressBook(prev => prev.map(e =>
-      e.id === editingId ? { ...e, name: newName, location: newLoc } : e,
-    ));
-    // Keep the form fields in sync if this entry was selected
-    if (savedRecipientId === editingId) {
-      setRecipientName(newName);
-      setRecipientLocation(newLoc);
-    }
+    setAddressBook(prev => {
+      const { book, formSync } = applyEdit(prev, editingId, newName, newLoc, savedRecipientId);
+      // Keep the form fields in sync if this entry was selected
+      if (formSync) {
+        setRecipientName(formSync.name);
+        setRecipientLocation(formSync.location);
+      }
+      return book;
+    });
     setEditingId(null);
   }
 
   function deleteRecipient(entry: AddressBookEntry) {
-    setAddressBook(prev => prev.filter(e => e.id !== entry.id));
-    // Deselect if the deleted entry was chosen
-    if (savedRecipientId === entry.id) {
-      setSavedRecipientId(null);
-      setRecipientName("");
-      setRecipientLocation("");
-    }
+    setAddressBook(prev => {
+      const { book, deselect } = applyDelete(prev, entry, savedRecipientId);
+      if (deselect) {
+        setSavedRecipientId(null);
+        setRecipientName("");
+        setRecipientLocation("");
+      }
+      return book;
+    });
     setUndoBuffer({ entry });
     // Auto-dismiss undo after 5 s
     setTimeout(() => setUndoBuffer(b => (b?.entry.id === entry.id ? null : b)), 5000);
@@ -375,7 +372,8 @@ export function DashboardRemittance() {
 
   function undoDelete() {
     if (!undoBuffer) return;
-    setAddressBook(prev => [undoBuffer.entry, ...prev]);
+    const restoredEntry = undoBuffer.entry;
+    setAddressBook(prev => applyUndoDelete(prev, restoredEntry));
     setUndoBuffer(null);
   }
 
