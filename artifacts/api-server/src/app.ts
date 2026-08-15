@@ -1,34 +1,59 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import router from "./routes";
+import { createApiRouter } from "./routes";
+import { loadApiRuntimeConfig, type ApiRuntimeConfig } from "./config";
 import { logger } from "./lib/logger";
+import { problemHandler } from "./lib/problem";
+import { DemoRuntime } from "./domain/demo-runtime";
+import { startDemoWorker } from "./domain/demo-worker";
+import { DomainError } from "@workspace/remittance";
 
-const app: Express = express();
+export function createApp(
+  config: ApiRuntimeConfig = loadApiRuntimeConfig(),
+  demoRuntime?: DemoRuntime,
+): Express {
+  const app: Express = express();
 
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
+  app.use(
+    pinoHttp({
+      logger,
+      serializers: {
+        req(req) {
+          return {
+            id: req.id,
+            method: req.method,
+            url: req.url?.split("?")[0],
+          };
+        },
+        res(res) {
+          return {
+            statusCode: res.statusCode,
+          };
+        },
       },
-      res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
-      },
-    },
-  }),
-);
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+    }),
+  );
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", router);
+  const runtime =
+    config.backendMode === "demo" && config.providerMode === "fake"
+      ? (demoRuntime ?? new DemoRuntime())
+      : undefined;
+  app.use("/api", createApiRouter(config, runtime));
+  if (runtime && config.runWorker) {
+    app.locals["demoWorkerTimer"] = startDemoWorker(
+      runtime,
+      config.workerIntervalMilliseconds,
+    );
+  }
+  app.use((_req, _res, next) =>
+    next(new DomainError("NOT_FOUND", "The route was not found.")),
+  );
+  app.use(problemHandler);
+  return app;
+}
 
-export default app;
+export default createApp();

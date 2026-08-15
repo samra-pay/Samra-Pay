@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786812933475,
+      "tag": "0000_samra_core_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786813539564,
+      "tag": "0001_transfer_state_dimensions",
+      "breakpoints": true
+    }
+  ]
+}

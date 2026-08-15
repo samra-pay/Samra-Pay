@@ -1,55 +1,58 @@
-import { type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { Toaster } from '@workspace/samra-pay-ds/components/ui/toaster';
-import { TooltipProvider } from '@workspace/samra-pay-ds/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
-import {
-  Route,
-  Switch,
-  useLocation,
-  Router as WouterRouter,
-} from 'wouter';
+import { type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { Toaster } from "@workspace/samra-pay-ds/components/ui/toaster";
+import { TooltipProvider } from "@workspace/samra-pay-ds/components/ui/tooltip";
+import NotFound from "@/pages/not-found";
+import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 
 // Layout
-import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
+import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
 
 // Pages
-import Home from '@/pages/home';
-import Cards from '@/pages/cards';
-import ChargeCardPage from '@/pages/cards/charge';
-import CoBrandCardPage from '@/pages/cards/co-brand';
-import Remittance from '@/pages/remittance';
-import SocialHouse from '@/pages/social-house';
-import AskSamra from '@/pages/ask-samra';
-import LegalPage from '@/pages/legal';
-import Login from '@/pages/login';
-import Dashboard from '@/pages/dashboard';
-import { DashboardCards } from '@/pages/dashboard/cards';
-import { DashboardCredit } from '@/pages/dashboard/credit';
-import { DashboardAnalytics } from '@/pages/dashboard/analytics';
-import { DashboardRemittance } from '@/pages/dashboard/remittance';
-import { DashboardSettings } from '@/pages/dashboard/settings';
-import { DashboardRewards } from '@/pages/dashboard/rewards';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import { LanguageProvider } from '@/lib/i18n';
-import { useParams } from 'wouter';
+import Home from "@/pages/home";
+import Cards from "@/pages/cards";
+import ChargeCardPage from "@/pages/cards/charge";
+import CoBrandCardPage from "@/pages/cards/co-brand";
+import Remittance from "@/pages/remittance";
+import SocialHouse from "@/pages/social-house";
+import AskSamra from "@/pages/ask-samra";
+import LegalPage from "@/pages/legal";
+import Login from "@/pages/login";
+import Dashboard from "@/pages/dashboard";
+import { DashboardCards } from "@/pages/dashboard/cards";
+import { DashboardCredit } from "@/pages/dashboard/credit";
+import { DashboardAnalytics } from "@/pages/dashboard/analytics";
+import { DashboardRemittanceRoute } from "@/pages/dashboard/remittance-route";
+import { DashboardSettings } from "@/pages/dashboard/settings";
+import { DashboardRewards } from "@/pages/dashboard/rewards";
+import { DashboardLayout } from "@/components/dashboard-layout";
+import { LanguageProvider } from "@/lib/i18n";
+import { SamraRuntimeProvider } from "@/lib/samra-runtime";
+import { useParams } from "wouter";
 
 const queryClient = new QueryClient();
 
 function DashboardRouter() {
   const params = useParams();
   const page = params.page;
-  
-  switch(page) {
-    case 'cards': return <DashboardCards />;
-    case 'credit': return <DashboardCredit />;
-    case 'analytics': return <DashboardAnalytics />;
-    case 'remittance': return <DashboardRemittance />;
-    case 'rewards': return <DashboardRewards />;
-    case 'settings': return <DashboardSettings />;
-    default: return <Dashboard />;
+
+  switch (page) {
+    case "cards":
+      return <DashboardCards />;
+    case "credit":
+      return <DashboardCredit />;
+    case "analytics":
+      return <DashboardAnalytics />;
+    case "remittance":
+      return <DashboardRemittanceRoute />;
+    case "rewards":
+      return <DashboardRewards />;
+    case "settings":
+      return <DashboardSettings />;
+    default:
+      return <Dashboard />;
   }
 }
 
@@ -59,7 +62,7 @@ function Router() {
       <Switch>
         {/* No navbar/footer on login */}
         <Route path="/login" component={Login} />
-        
+
         {/* Dashboard Routes - simplified for demo */}
         <Route path="/dashboard">
           <DashboardLayout>
@@ -110,14 +113,16 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <LanguageProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </LanguageProvider>
-      </TooltipProvider>
+      <SamraRuntimeProvider>
+        <TooltipProvider>
+          <LanguageProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </LanguageProvider>
+        </TooltipProvider>
+      </SamraRuntimeProvider>
     </QueryClientProvider>
   );
 }

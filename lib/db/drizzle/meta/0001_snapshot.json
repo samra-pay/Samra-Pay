@@ -1,0 +1,3571 @@
+{
+  "id": "ce5ae1a1-5c29-48d8-a2f4-faf832c3bb97",
+  "prevId": "5d105abd-5050-4138-bf0e-aec1ce99d153",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "samra_core.audit_events": {
+      "name": "audit_events",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor_type": {
+          "name": "actor_type",
+          "type": "audit_actor_type",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "audit_events_entity_time_idx": {
+          "name": "audit_events_entity_time_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_events_correlation_idx": {
+          "name": "audit_events_correlation_idx",
+          "columns": [
+            {
+              "expression": "correlation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_events_actor_time_idx": {
+          "name": "audit_events_actor_time_idx",
+          "columns": [
+            {
+              "expression": "actor_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.idempotency_records": {
+      "name": "idempotency_records",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "idempotency_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'in_progress'"
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_status": {
+          "name": "response_status",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_body": {
+          "name": "response_body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idempotency_records_scope_key_uidx": {
+          "name": "idempotency_records_scope_key_uidx",
+          "columns": [
+            {
+              "expression": "scope",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idempotency_records_expiry_idx": {
+          "name": "idempotency_records_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "idempotency_records_response_status_chk": {
+          "name": "idempotency_records_response_status_chk",
+          "value": "\"samra_core\".\"idempotency_records\".\"response_status\" is null or (\"samra_core\".\"idempotency_records\".\"response_status\" between 100 and 599)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.ledger_accounts": {
+      "name": "ledger_accounts",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_class": {
+          "name": "account_class",
+          "type": "ledger_account_class",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normal_side": {
+          "name": "normal_side",
+          "type": "ledger_entry_side",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_account_id": {
+          "name": "product_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allow_negative_available": {
+          "name": "allow_negative_available",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "state": {
+          "name": "state",
+          "type": "record_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ledger_accounts_code_uidx": {
+          "name": "ledger_accounts_code_uidx",
+          "columns": [
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_accounts_product_account_idx": {
+          "name": "ledger_accounts_product_account_idx",
+          "columns": [
+            {
+              "expression": "product_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_accounts_class_currency_idx": {
+          "name": "ledger_accounts_class_currency_idx",
+          "columns": [
+            {
+              "expression": "account_class",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "currency",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ledger_accounts_product_account_id_product_accounts_id_fk": {
+          "name": "ledger_accounts_product_account_id_product_accounts_id_fk",
+          "tableFrom": "ledger_accounts",
+          "tableTo": "product_accounts",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "product_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.ledger_hold_events": {
+      "name": "ledger_hold_events",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hold_id": {
+          "name": "hold_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "ledger_hold_event_type",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "journal_id": {
+          "name": "journal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ledger_hold_events_type_uidx": {
+          "name": "ledger_hold_events_type_uidx",
+          "columns": [
+            {
+              "expression": "hold_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_hold_events_terminal_uidx": {
+          "name": "ledger_hold_events_terminal_uidx",
+          "columns": [
+            {
+              "expression": "hold_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"samra_core\".\"ledger_hold_events\".\"event_type\" in ('captured', 'released', 'expired')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_hold_events_hold_time_idx": {
+          "name": "ledger_hold_events_hold_time_idx",
+          "columns": [
+            {
+              "expression": "hold_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ledger_hold_events_hold_id_ledger_holds_id_fk": {
+          "name": "ledger_hold_events_hold_id_ledger_holds_id_fk",
+          "tableFrom": "ledger_hold_events",
+          "tableTo": "ledger_holds",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "hold_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "ledger_hold_events_journal_id_ledger_journals_id_fk": {
+          "name": "ledger_hold_events_journal_id_ledger_journals_id_fk",
+          "tableFrom": "ledger_hold_events",
+          "tableTo": "ledger_journals",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "journal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.ledger_holds": {
+      "name": "ledger_holds",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "business_event_type": {
+          "name": "business_event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_event_id": {
+          "name": "business_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_account_id": {
+          "name": "product_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ledger_account_id": {
+          "name": "ledger_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "ledger_hold_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "terminal_at": {
+          "name": "terminal_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ledger_holds_business_event_uidx": {
+          "name": "ledger_holds_business_event_uidx",
+          "columns": [
+            {
+              "expression": "business_event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "business_event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_holds_account_state_idx": {
+          "name": "ledger_holds_account_state_idx",
+          "columns": [
+            {
+              "expression": "ledger_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_holds_product_account_state_idx": {
+          "name": "ledger_holds_product_account_state_idx",
+          "columns": [
+            {
+              "expression": "product_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ledger_holds_product_account_id_product_accounts_id_fk": {
+          "name": "ledger_holds_product_account_id_product_accounts_id_fk",
+          "tableFrom": "ledger_holds",
+          "tableTo": "product_accounts",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "product_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "ledger_holds_ledger_account_id_ledger_accounts_id_fk": {
+          "name": "ledger_holds_ledger_account_id_ledger_accounts_id_fk",
+          "tableFrom": "ledger_holds",
+          "tableTo": "ledger_accounts",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "ledger_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ledger_holds_amount_positive_chk": {
+          "name": "ledger_holds_amount_positive_chk",
+          "value": "\"samra_core\".\"ledger_holds\".\"amount_minor\" > 0"
+        },
+        "ledger_holds_terminal_state_chk": {
+          "name": "ledger_holds_terminal_state_chk",
+          "value": "(\"samra_core\".\"ledger_holds\".\"state\" = 'active' and \"samra_core\".\"ledger_holds\".\"terminal_at\" is null) or (\"samra_core\".\"ledger_holds\".\"state\" <> 'active' and \"samra_core\".\"ledger_holds\".\"terminal_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.ledger_journals": {
+      "name": "ledger_journals",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "business_event_type": {
+          "name": "business_event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_event_id": {
+          "name": "business_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "ledger_journal_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reverses_journal_id": {
+          "name": "reverses_journal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "posted_at": {
+          "name": "posted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ledger_journals_business_event_uidx": {
+          "name": "ledger_journals_business_event_uidx",
+          "columns": [
+            {
+              "expression": "business_event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "business_event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_journals_reverses_uidx": {
+          "name": "ledger_journals_reverses_uidx",
+          "columns": [
+            {
+              "expression": "reverses_journal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"samra_core\".\"ledger_journals\".\"reverses_journal_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_journals_created_at_idx": {
+          "name": "ledger_journals_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_journals_state_idx": {
+          "name": "ledger_journals_state_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ledger_journals_reverses_journal_id_ledger_journals_id_fk": {
+          "name": "ledger_journals_reverses_journal_id_ledger_journals_id_fk",
+          "tableFrom": "ledger_journals",
+          "tableTo": "ledger_journals",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "reverses_journal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ledger_journals_posted_at_state_chk": {
+          "name": "ledger_journals_posted_at_state_chk",
+          "value": "(\"samra_core\".\"ledger_journals\".\"state\" = 'draft' and \"samra_core\".\"ledger_journals\".\"posted_at\" is null) or (\"samra_core\".\"ledger_journals\".\"state\" in ('posted', 'reversed') and \"samra_core\".\"ledger_journals\".\"posted_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.ledger_postings": {
+      "name": "ledger_postings",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "journal_id": {
+          "name": "journal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "side": {
+          "name": "side",
+          "type": "ledger_entry_side",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "memo": {
+          "name": "memo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ledger_postings_journal_sequence_uidx": {
+          "name": "ledger_postings_journal_sequence_uidx",
+          "columns": [
+            {
+              "expression": "journal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_postings_account_created_at_idx": {
+          "name": "ledger_postings_account_created_at_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_postings_journal_idx": {
+          "name": "ledger_postings_journal_idx",
+          "columns": [
+            {
+              "expression": "journal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ledger_postings_journal_id_ledger_journals_id_fk": {
+          "name": "ledger_postings_journal_id_ledger_journals_id_fk",
+          "tableFrom": "ledger_postings",
+          "tableTo": "ledger_journals",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "journal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "ledger_postings_account_id_ledger_accounts_id_fk": {
+          "name": "ledger_postings_account_id_ledger_accounts_id_fk",
+          "tableFrom": "ledger_postings",
+          "tableTo": "ledger_accounts",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ledger_postings_amount_positive_chk": {
+          "name": "ledger_postings_amount_positive_chk",
+          "value": "\"samra_core\".\"ledger_postings\".\"amount_minor\" > 0"
+        },
+        "ledger_postings_sequence_positive_chk": {
+          "name": "ledger_postings_sequence_positive_chk",
+          "value": "\"samra_core\".\"ledger_postings\".\"sequence\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.beneficiaries": {
+      "name": "beneficiaries",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_ref": {
+          "name": "external_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "varchar(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rail": {
+          "name": "rail",
+          "type": "beneficiary_rail",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payout_reference": {
+          "name": "payout_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_metadata": {
+          "name": "provider_metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "state": {
+          "name": "state",
+          "type": "record_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "beneficiaries_customer_external_ref_uidx": {
+          "name": "beneficiaries_customer_external_ref_uidx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "beneficiaries_customer_state_idx": {
+          "name": "beneficiaries_customer_state_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "beneficiaries_customer_id_customers_id_fk": {
+          "name": "beneficiaries_customer_id_customers_id_fk",
+          "tableFrom": "beneficiaries",
+          "tableTo": "customers",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.customers": {
+      "name": "customers",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "external_ref": {
+          "name": "external_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "varchar(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "customer_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "customers_external_ref_uidx": {
+          "name": "customers_external_ref_uidx",
+          "columns": [
+            {
+              "expression": "external_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "customers_state_idx": {
+          "name": "customers_state_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.product_accounts": {
+      "name": "product_accounts",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_ref": {
+          "name": "external_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "product_account_kind",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "record_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "product_accounts_external_ref_uidx": {
+          "name": "product_accounts_external_ref_uidx",
+          "columns": [
+            {
+              "expression": "external_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "product_accounts_customer_idx": {
+          "name": "product_accounts_customer_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "product_accounts_customer_state_idx": {
+          "name": "product_accounts_customer_state_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "product_accounts_customer_id_customers_id_fk": {
+          "name": "product_accounts_customer_id_customers_id_fk",
+          "tableFrom": "product_accounts",
+          "tableTo": "customers",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.provider_reports": {
+      "name": "provider_reports",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "provider_name",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_report_id": {
+          "name": "provider_report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "report_type": {
+          "name": "report_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "report_date": {
+          "name": "report_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checksum": {
+          "name": "checksum",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "storage_reference": {
+          "name": "storage_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "provider_report_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'received'"
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "parsed_at": {
+          "name": "parsed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "provider_reports_provider_ref_uidx": {
+          "name": "provider_reports_provider_ref_uidx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider_report_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_reports_checksum_uidx": {
+          "name": "provider_reports_checksum_uidx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "checksum",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_reports_date_idx": {
+          "name": "provider_reports_date_idx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "report_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.reconciliation_exceptions": {
+      "name": "reconciliation_exceptions",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exception_code": {
+          "name": "exception_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "reconciliation_exception_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolution_note": {
+          "name": "resolution_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_to": {
+          "name": "assigned_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reconciliation_exceptions_item_code_uidx": {
+          "name": "reconciliation_exceptions_item_code_uidx",
+          "columns": [
+            {
+              "expression": "item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "exception_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reconciliation_exceptions_state_idx": {
+          "name": "reconciliation_exceptions_state_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "opened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reconciliation_exceptions_item_id_reconciliation_items_id_fk": {
+          "name": "reconciliation_exceptions_item_id_reconciliation_items_id_fk",
+          "tableFrom": "reconciliation_exceptions",
+          "tableTo": "reconciliation_items",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reconciliation_exceptions_resolution_state_chk": {
+          "name": "reconciliation_exceptions_resolution_state_chk",
+          "value": "(\"samra_core\".\"reconciliation_exceptions\".\"state\" in ('resolved', 'ignored') and \"samra_core\".\"reconciliation_exceptions\".\"resolved_at\" is not null) or (\"samra_core\".\"reconciliation_exceptions\".\"state\" in ('open', 'in_review') and \"samra_core\".\"reconciliation_exceptions\".\"resolved_at\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.reconciliation_items": {
+      "name": "reconciliation_items",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "match_key": {
+          "name": "match_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result": {
+          "name": "result",
+          "type": "reconciliation_result",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_resource_type": {
+          "name": "internal_resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internal_resource_id": {
+          "name": "internal_resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_resource_id": {
+          "name": "provider_resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internal_currency": {
+          "name": "internal_currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_currency": {
+          "name": "provider_currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internal_amount_minor": {
+          "name": "internal_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_amount_minor": {
+          "name": "provider_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reconciliation_items_run_match_key_uidx": {
+          "name": "reconciliation_items_run_match_key_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "match_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reconciliation_items_run_result_idx": {
+          "name": "reconciliation_items_run_result_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "result",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reconciliation_items_internal_resource_idx": {
+          "name": "reconciliation_items_internal_resource_idx",
+          "columns": [
+            {
+              "expression": "internal_resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "internal_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reconciliation_items_run_id_reconciliation_runs_id_fk": {
+          "name": "reconciliation_items_run_id_reconciliation_runs_id_fk",
+          "tableFrom": "reconciliation_items",
+          "tableTo": "reconciliation_runs",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reconciliation_items_internal_amount_nonnegative_chk": {
+          "name": "reconciliation_items_internal_amount_nonnegative_chk",
+          "value": "\"samra_core\".\"reconciliation_items\".\"internal_amount_minor\" is null or \"samra_core\".\"reconciliation_items\".\"internal_amount_minor\" >= 0"
+        },
+        "reconciliation_items_provider_amount_nonnegative_chk": {
+          "name": "reconciliation_items_provider_amount_nonnegative_chk",
+          "value": "\"samra_core\".\"reconciliation_items\".\"provider_amount_minor\" is null or \"samra_core\".\"reconciliation_items\".\"provider_amount_minor\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.reconciliation_runs": {
+      "name": "reconciliation_runs",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "provider_name",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_report_id": {
+          "name": "provider_report_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "reconciliation_run_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "matched_count": {
+          "name": "matched_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "exception_count": {
+          "name": "exception_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reconciliation_runs_provider_period_idx": {
+          "name": "reconciliation_runs_provider_period_idx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_end",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reconciliation_runs_state_idx": {
+          "name": "reconciliation_runs_state_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reconciliation_runs_provider_report_id_provider_reports_id_fk": {
+          "name": "reconciliation_runs_provider_report_id_provider_reports_id_fk",
+          "tableFrom": "reconciliation_runs",
+          "tableTo": "provider_reports",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "provider_report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reconciliation_runs_period_chk": {
+          "name": "reconciliation_runs_period_chk",
+          "value": "\"samra_core\".\"reconciliation_runs\".\"period_end\" > \"samra_core\".\"reconciliation_runs\".\"period_start\""
+        },
+        "reconciliation_runs_counts_nonnegative_chk": {
+          "name": "reconciliation_runs_counts_nonnegative_chk",
+          "value": "\"samra_core\".\"reconciliation_runs\".\"matched_count\" >= 0 and \"samra_core\".\"reconciliation_runs\".\"exception_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.outbox_events": {
+      "name": "outbox_events",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "event_key": {
+          "name": "event_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aggregate_type": {
+          "name": "aggregate_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "outbox_event_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "outbox_events_event_key_uidx": {
+          "name": "outbox_events_event_key_uidx",
+          "columns": [
+            {
+              "expression": "event_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outbox_events_dispatch_idx": {
+          "name": "outbox_events_dispatch_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outbox_events_aggregate_idx": {
+          "name": "outbox_events_aggregate_idx",
+          "columns": [
+            {
+              "expression": "aggregate_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "aggregate_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "outbox_events_attempt_count_nonnegative_chk": {
+          "name": "outbox_events_attempt_count_nonnegative_chk",
+          "value": "\"samra_core\".\"outbox_events\".\"attempt_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.provider_events": {
+      "name": "provider_events",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "provider_name",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_event_id": {
+          "name": "provider_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "provider_event_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'received'"
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "related_resource_type": {
+          "name": "related_resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "related_resource_id": {
+          "name": "related_resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "provider_events_provider_event_uidx": {
+          "name": "provider_events_provider_event_uidx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider_event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_events_state_received_idx": {
+          "name": "provider_events_state_received_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "received_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_events_related_resource_idx": {
+          "name": "provider_events_related_resource_idx",
+          "columns": [
+            {
+              "expression": "related_resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "related_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "provider_events_attempt_count_nonnegative_chk": {
+          "name": "provider_events_attempt_count_nonnegative_chk",
+          "value": "\"samra_core\".\"provider_events\".\"attempt_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.provider_resource_links": {
+      "name": "provider_resource_links",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "provider_name",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_resource_id": {
+          "name": "internal_resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_resource_id": {
+          "name": "provider_resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "provider_resource_links_provider_ref_uidx": {
+          "name": "provider_resource_links_provider_ref_uidx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_resource_links_internal_uidx": {
+          "name": "provider_resource_links_internal_uidx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "internal_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_resource_links_internal_idx": {
+          "name": "provider_resource_links_internal_idx",
+          "columns": [
+            {
+              "expression": "internal_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "samra_core.remittance_quotes": {
+      "name": "remittance_quotes",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_account_id": {
+          "name": "product_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "beneficiary_id": {
+          "name": "beneficiary_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_currency": {
+          "name": "source_currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_currency": {
+          "name": "destination_currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_amount_minor": {
+          "name": "source_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee_amount_minor": {
+          "name": "fee_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_debit_minor": {
+          "name": "total_debit_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_amount_minor": {
+          "name": "destination_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fx_rate_numerator": {
+          "name": "fx_rate_numerator",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fx_rate_denominator": {
+          "name": "fx_rate_denominator",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "remittance_quote_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "pricing_version": {
+          "name": "pricing_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "remittance_quotes_customer_created_idx": {
+          "name": "remittance_quotes_customer_created_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "remittance_quotes_expiry_state_idx": {
+          "name": "remittance_quotes_expiry_state_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "remittance_quotes_customer_id_customers_id_fk": {
+          "name": "remittance_quotes_customer_id_customers_id_fk",
+          "tableFrom": "remittance_quotes",
+          "tableTo": "customers",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_quotes_product_account_id_product_accounts_id_fk": {
+          "name": "remittance_quotes_product_account_id_product_accounts_id_fk",
+          "tableFrom": "remittance_quotes",
+          "tableTo": "product_accounts",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "product_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_quotes_beneficiary_id_beneficiaries_id_fk": {
+          "name": "remittance_quotes_beneficiary_id_beneficiaries_id_fk",
+          "tableFrom": "remittance_quotes",
+          "tableTo": "beneficiaries",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "beneficiary_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "remittance_quotes_source_amount_positive_chk": {
+          "name": "remittance_quotes_source_amount_positive_chk",
+          "value": "\"samra_core\".\"remittance_quotes\".\"source_amount_minor\" > 0"
+        },
+        "remittance_quotes_fee_amount_nonnegative_chk": {
+          "name": "remittance_quotes_fee_amount_nonnegative_chk",
+          "value": "\"samra_core\".\"remittance_quotes\".\"fee_amount_minor\" >= 0"
+        },
+        "remittance_quotes_total_debit_chk": {
+          "name": "remittance_quotes_total_debit_chk",
+          "value": "\"samra_core\".\"remittance_quotes\".\"total_debit_minor\" = \"samra_core\".\"remittance_quotes\".\"source_amount_minor\" + \"samra_core\".\"remittance_quotes\".\"fee_amount_minor\""
+        },
+        "remittance_quotes_destination_amount_positive_chk": {
+          "name": "remittance_quotes_destination_amount_positive_chk",
+          "value": "\"samra_core\".\"remittance_quotes\".\"destination_amount_minor\" > 0"
+        },
+        "remittance_quotes_rate_positive_chk": {
+          "name": "remittance_quotes_rate_positive_chk",
+          "value": "\"samra_core\".\"remittance_quotes\".\"fx_rate_numerator\" > 0 and \"samra_core\".\"remittance_quotes\".\"fx_rate_denominator\" > 0"
+        },
+        "remittance_quotes_currency_pair_chk": {
+          "name": "remittance_quotes_currency_pair_chk",
+          "value": "\"samra_core\".\"remittance_quotes\".\"source_currency\" <> \"samra_core\".\"remittance_quotes\".\"destination_currency\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.remittance_transfer_status_history": {
+      "name": "remittance_transfer_status_history",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "transfer_id": {
+          "name": "transfer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_state": {
+          "name": "from_state",
+          "type": "remittance_transfer_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_state": {
+          "name": "to_state",
+          "type": "remittance_transfer_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_event_id": {
+          "name": "provider_event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "remittance_transfer_status_history_sequence_uidx": {
+          "name": "remittance_transfer_status_history_sequence_uidx",
+          "columns": [
+            {
+              "expression": "transfer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "remittance_transfer_status_history_time_idx": {
+          "name": "remittance_transfer_status_history_time_idx",
+          "columns": [
+            {
+              "expression": "transfer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "remittance_transfer_status_history_transfer_id_remittance_transfers_id_fk": {
+          "name": "remittance_transfer_status_history_transfer_id_remittance_transfers_id_fk",
+          "tableFrom": "remittance_transfer_status_history",
+          "tableTo": "remittance_transfers",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "transfer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_transfer_status_history_provider_event_id_provider_events_id_fk": {
+          "name": "remittance_transfer_status_history_provider_event_id_provider_events_id_fk",
+          "tableFrom": "remittance_transfer_status_history",
+          "tableTo": "provider_events",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "provider_event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "remittance_transfer_status_history_sequence_positive_chk": {
+          "name": "remittance_transfer_status_history_sequence_positive_chk",
+          "value": "\"samra_core\".\"remittance_transfer_status_history\".\"sequence\" > 0"
+        },
+        "remittance_transfer_status_history_change_chk": {
+          "name": "remittance_transfer_status_history_change_chk",
+          "value": "\"samra_core\".\"remittance_transfer_status_history\".\"from_state\" is null or \"samra_core\".\"remittance_transfer_status_history\".\"from_state\" <> \"samra_core\".\"remittance_transfer_status_history\".\"to_state\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "samra_core.remittance_transfers": {
+      "name": "remittance_transfers",
+      "schema": "samra_core",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "external_ref": {
+          "name": "external_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_account_id": {
+          "name": "product_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "beneficiary_id": {
+          "name": "beneficiary_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quote_id": {
+          "name": "quote_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hold_id": {
+          "name": "hold_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "remittance_transfer_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'created'"
+        },
+        "funding_state": {
+          "name": "funding_state",
+          "type": "remittance_funding_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unreserved'"
+        },
+        "payout_state": {
+          "name": "payout_state",
+          "type": "remittance_payout_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'not_submitted'"
+        },
+        "reconciliation_state": {
+          "name": "reconciliation_state",
+          "type": "transfer_reconciliation_state",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'not_started'"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "source_currency": {
+          "name": "source_currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_currency": {
+          "name": "destination_currency",
+          "type": "currency_code",
+          "typeSchema": "samra_core",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_amount_minor": {
+          "name": "source_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee_amount_minor": {
+          "name": "fee_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_debit_minor": {
+          "name": "total_debit_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_amount_minor": {
+          "name": "destination_amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "failure_code": {
+          "name": "failure_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "remittance_transfers_external_ref_uidx": {
+          "name": "remittance_transfers_external_ref_uidx",
+          "columns": [
+            {
+              "expression": "external_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "remittance_transfers_quote_uidx": {
+          "name": "remittance_transfers_quote_uidx",
+          "columns": [
+            {
+              "expression": "quote_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "remittance_transfers_hold_uidx": {
+          "name": "remittance_transfers_hold_uidx",
+          "columns": [
+            {
+              "expression": "hold_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"samra_core\".\"remittance_transfers\".\"hold_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "remittance_transfers_customer_created_idx": {
+          "name": "remittance_transfers_customer_created_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "remittance_transfers_state_updated_idx": {
+          "name": "remittance_transfers_state_updated_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "remittance_transfers_customer_id_customers_id_fk": {
+          "name": "remittance_transfers_customer_id_customers_id_fk",
+          "tableFrom": "remittance_transfers",
+          "tableTo": "customers",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_transfers_product_account_id_product_accounts_id_fk": {
+          "name": "remittance_transfers_product_account_id_product_accounts_id_fk",
+          "tableFrom": "remittance_transfers",
+          "tableTo": "product_accounts",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "product_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_transfers_beneficiary_id_beneficiaries_id_fk": {
+          "name": "remittance_transfers_beneficiary_id_beneficiaries_id_fk",
+          "tableFrom": "remittance_transfers",
+          "tableTo": "beneficiaries",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "beneficiary_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_transfers_quote_id_remittance_quotes_id_fk": {
+          "name": "remittance_transfers_quote_id_remittance_quotes_id_fk",
+          "tableFrom": "remittance_transfers",
+          "tableTo": "remittance_quotes",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "quote_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "remittance_transfers_hold_id_ledger_holds_id_fk": {
+          "name": "remittance_transfers_hold_id_ledger_holds_id_fk",
+          "tableFrom": "remittance_transfers",
+          "tableTo": "ledger_holds",
+          "schemaTo": "samra_core",
+          "columnsFrom": [
+            "hold_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "remittance_transfers_source_amount_positive_chk": {
+          "name": "remittance_transfers_source_amount_positive_chk",
+          "value": "\"samra_core\".\"remittance_transfers\".\"source_amount_minor\" > 0"
+        },
+        "remittance_transfers_fee_amount_nonnegative_chk": {
+          "name": "remittance_transfers_fee_amount_nonnegative_chk",
+          "value": "\"samra_core\".\"remittance_transfers\".\"fee_amount_minor\" >= 0"
+        },
+        "remittance_transfers_total_debit_chk": {
+          "name": "remittance_transfers_total_debit_chk",
+          "value": "\"samra_core\".\"remittance_transfers\".\"total_debit_minor\" = \"samra_core\".\"remittance_transfers\".\"source_amount_minor\" + \"samra_core\".\"remittance_transfers\".\"fee_amount_minor\""
+        },
+        "remittance_transfers_destination_amount_positive_chk": {
+          "name": "remittance_transfers_destination_amount_positive_chk",
+          "value": "\"samra_core\".\"remittance_transfers\".\"destination_amount_minor\" > 0"
+        },
+        "remittance_transfers_currency_pair_chk": {
+          "name": "remittance_transfers_currency_pair_chk",
+          "value": "\"samra_core\".\"remittance_transfers\".\"source_currency\" <> \"samra_core\".\"remittance_transfers\".\"destination_currency\""
+        },
+        "remittance_transfers_version_positive_chk": {
+          "name": "remittance_transfers_version_positive_chk",
+          "value": "\"samra_core\".\"remittance_transfers\".\"version\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "samra_core.audit_actor_type": {
+      "name": "audit_actor_type",
+      "schema": "samra_core",
+      "values": [
+        "system",
+        "customer",
+        "operator",
+        "provider"
+      ]
+    },
+    "samra_core.beneficiary_rail": {
+      "name": "beneficiary_rail",
+      "schema": "samra_core",
+      "values": [
+        "bank_account",
+        "mobile_wallet"
+      ]
+    },
+    "samra_core.currency_code": {
+      "name": "currency_code",
+      "schema": "samra_core",
+      "values": [
+        "USD",
+        "ETB"
+      ]
+    },
+    "samra_core.customer_state": {
+      "name": "customer_state",
+      "schema": "samra_core",
+      "values": [
+        "active",
+        "suspended",
+        "closed"
+      ]
+    },
+    "samra_core.idempotency_state": {
+      "name": "idempotency_state",
+      "schema": "samra_core",
+      "values": [
+        "in_progress",
+        "succeeded",
+        "failed"
+      ]
+    },
+    "samra_core.ledger_account_class": {
+      "name": "ledger_account_class",
+      "schema": "samra_core",
+      "values": [
+        "asset",
+        "liability",
+        "equity",
+        "revenue",
+        "expense"
+      ]
+    },
+    "samra_core.ledger_entry_side": {
+      "name": "ledger_entry_side",
+      "schema": "samra_core",
+      "values": [
+        "debit",
+        "credit"
+      ]
+    },
+    "samra_core.ledger_hold_event_type": {
+      "name": "ledger_hold_event_type",
+      "schema": "samra_core",
+      "values": [
+        "created",
+        "captured",
+        "released",
+        "expired"
+      ]
+    },
+    "samra_core.ledger_hold_state": {
+      "name": "ledger_hold_state",
+      "schema": "samra_core",
+      "values": [
+        "active",
+        "captured",
+        "released",
+        "expired"
+      ]
+    },
+    "samra_core.ledger_journal_state": {
+      "name": "ledger_journal_state",
+      "schema": "samra_core",
+      "values": [
+        "draft",
+        "posted",
+        "reversed"
+      ]
+    },
+    "samra_core.outbox_event_state": {
+      "name": "outbox_event_state",
+      "schema": "samra_core",
+      "values": [
+        "pending",
+        "processing",
+        "published",
+        "failed"
+      ]
+    },
+    "samra_core.product_account_kind": {
+      "name": "product_account_kind",
+      "schema": "samra_core",
+      "values": [
+        "domestic_cash",
+        "remittance"
+      ]
+    },
+    "samra_core.provider_event_state": {
+      "name": "provider_event_state",
+      "schema": "samra_core",
+      "values": [
+        "received",
+        "deferred",
+        "processed",
+        "ignored",
+        "failed"
+      ]
+    },
+    "samra_core.provider_name": {
+      "name": "provider_name",
+      "schema": "samra_core",
+      "values": [
+        "rain",
+        "caliza",
+        "chapa"
+      ]
+    },
+    "samra_core.provider_report_state": {
+      "name": "provider_report_state",
+      "schema": "samra_core",
+      "values": [
+        "received",
+        "parsed",
+        "failed"
+      ]
+    },
+    "samra_core.reconciliation_exception_state": {
+      "name": "reconciliation_exception_state",
+      "schema": "samra_core",
+      "values": [
+        "open",
+        "in_review",
+        "resolved",
+        "ignored"
+      ]
+    },
+    "samra_core.reconciliation_result": {
+      "name": "reconciliation_result",
+      "schema": "samra_core",
+      "values": [
+        "matched",
+        "missing_internal",
+        "missing_provider",
+        "amount_mismatch",
+        "status_mismatch",
+        "currency_mismatch"
+      ]
+    },
+    "samra_core.reconciliation_run_state": {
+      "name": "reconciliation_run_state",
+      "schema": "samra_core",
+      "values": [
+        "pending",
+        "running",
+        "completed",
+        "failed"
+      ]
+    },
+    "samra_core.record_state": {
+      "name": "record_state",
+      "schema": "samra_core",
+      "values": [
+        "active",
+        "disabled",
+        "closed"
+      ]
+    },
+    "samra_core.remittance_funding_state": {
+      "name": "remittance_funding_state",
+      "schema": "samra_core",
+      "values": [
+        "unreserved",
+        "reserved",
+        "captured",
+        "released",
+        "refund_pending",
+        "refunded"
+      ]
+    },
+    "samra_core.remittance_payout_state": {
+      "name": "remittance_payout_state",
+      "schema": "samra_core",
+      "values": [
+        "not_submitted",
+        "submitted",
+        "processing",
+        "paid",
+        "failed",
+        "reversed"
+      ]
+    },
+    "samra_core.remittance_quote_state": {
+      "name": "remittance_quote_state",
+      "schema": "samra_core",
+      "values": [
+        "active",
+        "accepted",
+        "expired",
+        "cancelled"
+      ]
+    },
+    "samra_core.remittance_transfer_state": {
+      "name": "remittance_transfer_state",
+      "schema": "samra_core",
+      "values": [
+        "created",
+        "funds_reserved",
+        "submitted",
+        "in_transit",
+        "payout_pending",
+        "completed",
+        "failed",
+        "cancelled",
+        "refund_pending",
+        "refunded",
+        "reversal_pending",
+        "reversed"
+      ]
+    },
+    "samra_core.transfer_reconciliation_state": {
+      "name": "transfer_reconciliation_state",
+      "schema": "samra_core",
+      "values": [
+        "not_started",
+        "pending",
+        "matched",
+        "exception",
+        "resolved"
+      ]
+    }
+  },
+  "schemas": {
+    "samra_core": "samra_core"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
