@@ -26,6 +26,11 @@ import {
   formatEtb,
 } from "@/lib/remittance";
 import { popRestoredQuote } from "@/lib/remittance-handoff";
+import {
+  loadTransfers,
+  saveTransfers,
+  type PersistedTransfer,
+} from "@/lib/transfer-storage";
 
 // ─── Ethiopian data ───────────────────────────────────────────────────────────
 
@@ -140,23 +145,16 @@ const ETHIOPIAN_WALLETS = [
 
 type Step = "quote" | "recipient" | "confirm" | "success";
 
+// Re-export the shared type so the rest of the file can use a short alias
+type Transfer = PersistedTransfer;
+
 function todayLabel(): string {
   return new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-interface Transfer {
-  id: number;
-  recipient: string;
-  location: string;
-  date: string;
-  usd: number;
-  etb: number;
-  status: string;
-}
-
 const INITIAL_TRANSFERS: Transfer[] = [
-  { id: 1, recipient: "Abebe Bekele", location: "Addis Ababa, ET", date: "Jun 12, 2024", usd: 500, etb: 90000, status: "Completed" },
-  { id: 2, recipient: "Tigist Haile", location: "Hawassa, ET", date: "May 28, 2024", usd: 300, etb: 54000, status: "Completed" },
+  { id: 1, recipient: "Abebe Bekele", location: "Addis Ababa, ET", date: "Jun 12, 2024", usd: 500, etb: 90000, status: "Completed", deliveryMethod: "bank", bankId: "cbe", accountNumber: "10000123456789" },
+  { id: 2, recipient: "Tigist Haile",  location: "Hawassa, ET",     date: "May 28, 2024", usd: 300, etb: 54000, status: "Completed", deliveryMethod: "bank", bankId: "awash", accountNumber: "20000987654321" },
 ];
 
 const DEMO_BALANCE_INITIAL = 4250;
@@ -211,8 +209,14 @@ export function DashboardRemittance() {
   // Demo balance (deducted on confirm when paying from balance)
   const [demoBalance, setDemoBalance] = useState<number>(DEMO_BALANCE_INITIAL);
 
-  // Transfer history
-  const [transfers, setTransfers] = useState<Transfer[]>(INITIAL_TRANSFERS);
+  // Transfer history — persisted to localStorage so saved recipients survive page refresh
+  const [transfers, setTransfers] = useState<Transfer[]>(() =>
+    loadTransfers(INITIAL_TRANSFERS),
+  );
+
+  useEffect(() => {
+    saveTransfers(transfers);
+  }, [transfers]);
 
   // ── Quote math ──────────────────────────────────────────────────────────────
   const parsedUsdAmount = parseUsd(usdAmount);
@@ -245,6 +249,11 @@ export function DashboardRemittance() {
       usd: parsedUsdAmount,
       etb: recipientEtb,
       status: "Completed",
+      // persist delivery details so the form can be pre-filled on re-use
+      deliveryMethod,
+      ...(deliveryMethod === "bank"
+        ? { bankId, accountNumber }
+        : { walletId, phoneNumber }),
     };
     setTransfers(prev => [newTransfer, ...prev]);
     if (paymentMethod === "balance") {
@@ -544,6 +553,12 @@ export function DashboardRemittance() {
                                     setSavedRecipientId(r.id);
                                     setRecipientName(r.recipient);
                                     setRecipientLocation(r.location);
+                                    // restore delivery details so the form is valid without re-entry
+                                    if (r.deliveryMethod) setDeliveryMethod(r.deliveryMethod);
+                                    if (r.bankId)         setBankId(r.bankId);
+                                    if (r.accountNumber)  setAccountNumber(r.accountNumber);
+                                    if (r.walletId)       setWalletId(r.walletId);
+                                    if (r.phoneNumber)    setPhone(r.phoneNumber);
                                   }
                                 }}
                                 className={cn(
