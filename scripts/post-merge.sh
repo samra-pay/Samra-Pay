@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
-pnpm --filter db --if-present run push
+echo "Database migrations were not run. Review them, then run: pnpm --filter @workspace/db run migrate"

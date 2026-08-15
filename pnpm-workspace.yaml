@@ -113,11 +113,11 @@ packageExtensions:
 
 autoInstallPeers: false
 
-onlyBuiltDependencies:
-  - '@swc/core'
-  - esbuild
-  - msw
-  - unrs-resolver
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+  msw: true
+  unrs-resolver: true
 
 overrides:
   # Dedupe @types/react to a single version to prevent "two different types with this name exist" TS errors

@@ -57,15 +57,18 @@ export default defineConfig({
       prettier: true,
       override: {
         zod: {
+          // The workspace intentionally resolves the Zod 3-compatible root
+          // entry. Pin output so codegen is identical on Replit and locally.
+          version: 3,
           coerce: {
-            query: ['boolean', 'number', 'string'],
-            param: ['boolean', 'number', 'string'],
-            body: ['bigint', 'date'],
-            response: ['bigint', 'date'],
+            query: ["boolean", "number", "string"],
+            param: ["boolean", "number", "string"],
           },
         },
-        useDates: true,
-        useBigInt: true,
+        // The API boundary is JSON: timestamps and bigint minor units are
+        // serialized as strings. Domain code converts them explicitly.
+        useDates: false,
+        useBigInt: false,
       },
     },
   },

@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "node --experimental-strip-types --test src/*.test.ts"
+  },
   "dependencies": {
     "zod": "catalog:"
   }
