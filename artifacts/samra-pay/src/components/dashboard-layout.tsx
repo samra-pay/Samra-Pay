@@ -105,7 +105,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 flex flex-col md:pt-0 pt-16 h-screen overflow-y-auto">
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-30">
           <h2 className="text-xl font-medium tracking-wide">
-            {navLinks.find(l => l.href === location)?.label || "Dashboard"}
+            {navLinks.find(l => l.href === location)?.label || (location === "/dashboard/settings" ? "Settings" : "Dashboard")}
           </h2>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
