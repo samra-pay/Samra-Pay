@@ -1,22 +1,24 @@
 import { useState, useEffect } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, Building2, Smartphone, CreditCard, Landmark, ShieldCheck, Check, Plane } from "lucide-react";
+import { ArrowDown, Wallet, Smartphone, CreditCard, Landmark, ShieldCheck, Check, Plane, Link2 } from "lucide-react";
 import { Link } from "wouter";
 
 const PROMO_RATE = 180; // 1 USD = 180 ETB
 const CARD_FEE_RATE = 0.03;
+const ACH_FEE_RATE = 0.01;
 const SHEBA_MILES_THRESHOLD = 500;
 const SHEBA_MILES_BONUS = 100;
 
 type DeliveryMethod = "wallet" | "bank";
-type FundingMethod = "card" | "bank";
+type PaymentMethod = "balance" | "card" | "plaid";
 
 export default function Remittance() {
   const [usdAmount, setUsdAmount] = useState<string>("1000");
   const [etbAmount, setEtbAmount] = useState<string>("");
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("bank");
-  const [fundingMethod, setFundingMethod] = useState<FundingMethod>("bank");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("plaid");
+  const [plaidLinked, setPlaidLinked] = useState(false);
 
   useEffect(() => {
     const num = parseFloat(usdAmount);
@@ -34,7 +36,11 @@ export default function Remittance() {
 
   const stdRate = 115; // Example standard rate for comparison
   const parsedUsdAmount = Math.max(parseFloat(usdAmount || "0") || 0, 0);
-  const serviceFee = fundingMethod === "card" ? parsedUsdAmount * CARD_FEE_RATE : 0;
+  const serviceFee = paymentMethod === "card"
+    ? parsedUsdAmount * CARD_FEE_RATE
+    : paymentMethod === "plaid" && !plaidLinked
+      ? parsedUsdAmount * ACH_FEE_RATE
+      : 0;
   const totalCharged = parsedUsdAmount + serviceFee;
   const shebaMilesEarned = parsedUsdAmount > SHEBA_MILES_THRESHOLD ? SHEBA_MILES_BONUS : 0;
   const difference = ((parsedUsdAmount * PROMO_RATE) - (parsedUsdAmount * stdRate)).toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -60,7 +66,7 @@ export default function Remittance() {
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed font-light max-w-lg">
-              Send directly to a mobile money wallet or bank account at an industry-leading exchange rate. Bank-funded transfers are free; card-funded transfers include a simple 3% service fee.
+              Send directly to a mobile money wallet or bank account at an industry-leading exchange rate. Samra balance transfers are free, card-funded transfers include a simple 3% service fee, and standard ACH is 1% until you link your bank with Plaid.
             </p>
             
             {/* Live Ticker Style */}
@@ -73,7 +79,7 @@ export default function Remittance() {
               <div className="flex flex-col">
                 <div className="text-sm text-muted-foreground uppercase tracking-widest mb-1">Transfer Fees</div>
                  <span className="text-4xl font-serif text-white/90 font-medium">
-                   {fundingMethod === "card" ? "3%" : "$0"}
+                    {paymentMethod === "card" ? "3%" : serviceFee > 0 ? "1%" : "$0"}
                  </span>
               </div>
             </div>
@@ -205,32 +211,40 @@ export default function Remittance() {
 
                   <div>
                     <label className="text-xs text-muted-foreground uppercase tracking-widest block mb-3">
-                      Pay with
+                       Payment method
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {[
                         {
-                          id: "card" as const,
-                          icon: CreditCard,
-                          label: "Card",
-                          detail: "3% service fee",
+                           id: "balance" as const,
+                           icon: Wallet,
+                           label: "Samra balance",
+                           detail: "No service fee",
                         },
                         {
-                          id: "bank" as const,
-                          icon: Building2,
-                          label: "Bank transfer",
-                          detail: "No service fee",
+                           id: "card" as const,
+                           icon: CreditCard,
+                           label: "Card",
+                           detail: "3% service fee",
+                         },
+                         {
+                           id: "plaid" as const,
+                           icon: Landmark,
+                           label: "ACH via Plaid",
+                           detail: plaidLinked ? "Free when linked" : "1% ACH · Free with Plaid",
                         },
                       ].map((method) => {
-                        const selected = fundingMethod === method.id;
+                         const selected = paymentMethod === method.id;
                         return (
                           <button
                             key={method.id}
                             type="button"
                             role="radio"
                             aria-checked={selected}
-                            onClick={() => setFundingMethod(method.id)}
-                            className={`relative flex min-h-[100px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all ${
+                             onClick={() => setPaymentMethod(method.id)}
+                             className={`relative flex min-h-[100px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all ${
+                               method.id === "plaid" ? "col-span-2 sm:col-span-1" : ""
+                             } ${
                               selected
                                 ? "border-primary bg-primary/10 text-primary"
                                 : "border-white/5 bg-background/50 text-muted-foreground hover:border-white/15 hover:bg-white/[0.03]"
@@ -252,6 +266,26 @@ export default function Remittance() {
                         );
                       })}
                     </div>
+                     {paymentMethod === "plaid" && (
+                       <button
+                         type="button"
+                         onClick={() => setPlaidLinked(true)}
+                         disabled={plaidLinked}
+                         className={`mt-3 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
+                           plaidLinked
+                             ? "border-green-500/20 bg-green-500/5 text-green-400"
+                             : "border-primary/20 bg-primary/5 text-primary hover:border-primary/40"
+                         }`}
+                       >
+                         <span className="flex items-center gap-2 text-sm font-medium">
+                           <Link2 className="h-4 w-4" aria-hidden="true" />
+                           {plaidLinked ? "Bank linked with Plaid" : "Link your bank with Plaid"}
+                         </span>
+                         <span className="text-xs uppercase tracking-wider">
+                           {plaidLinked ? "Fee waived" : "Waive 1% ACH fee"}
+                         </span>
+                       </button>
+                     )}
                   </div>
                 </div>
 
@@ -262,7 +296,16 @@ export default function Remittance() {
                     <span className="text-foreground">${formatUsd(parsedUsdAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between text-muted-foreground">
-                    <span>Service fee {fundingMethod === "card" ? "(3% card fee)" : "(bank-funded)"}</span>
+                     <span>
+                       Service fee{" "}
+                       {paymentMethod === "card"
+                         ? "(3% card fee)"
+                         : paymentMethod === "plaid"
+                           ? plaidLinked
+                             ? "(Plaid-linked ACH)"
+                             : "(1% ACH fee)"
+                           : "(Samra balance)"}
+                     </span>
                     <span className={serviceFee > 0 ? "text-primary" : "text-green-400"}>
                       {serviceFee > 0 ? `$${formatUsd(serviceFee)}` : "Free"}
                     </span>
