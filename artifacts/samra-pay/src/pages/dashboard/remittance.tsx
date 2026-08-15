@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
+import imgCbeBirr   from "@/assets/wallets/cbebirr.png";
+import imgAmole     from "@/assets/wallets/amole.png";
+import imgHellocash from "@/assets/wallets/hellocash.jpg";
+import imgMbirr     from "@/assets/wallets/mbirr.png";
+import imgKacha     from "@/assets/wallets/kacha.png";
+import imgAwashBirr from "@/assets/wallets/awashbirr.png";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,64 +57,71 @@ const ETHIOPIAN_WALLETS = [
     id: "telebirr",
     name: "Telebirr",
     owner: "Ethio Telecom",
-    color: "from-blue-600/20 to-blue-800/10",
-    border: "border-blue-500/30",
-    logo: "TE",
-    logoColor: "bg-blue-600",
+    color: "from-sky-700/20 to-sky-900/10",
+    border: "border-sky-500/30",
+    img: null,
+    fallback: "TE",
+    fallbackColor: "bg-sky-600",
   },
   {
     id: "cbebirr",
     name: "CBE Birr",
     owner: "Commercial Bank of Ethiopia",
-    color: "from-green-700/20 to-green-900/10",
-    border: "border-green-500/30",
-    logo: "CB",
-    logoColor: "bg-green-700",
+    color: "from-yellow-700/20 to-yellow-900/10",
+    border: "border-yellow-500/30",
+    img: imgCbeBirr,
+    fallback: "CB",
+    fallbackColor: "bg-yellow-700",
   },
   {
     id: "amole",
     name: "Amole",
     owner: "Dashen Bank",
-    color: "from-purple-700/20 to-purple-900/10",
-    border: "border-purple-500/30",
-    logo: "AM",
-    logoColor: "bg-purple-700",
+    color: "from-blue-700/20 to-blue-900/10",
+    border: "border-blue-500/30",
+    img: imgAmole,
+    fallback: "AM",
+    fallbackColor: "bg-blue-700",
   },
   {
     id: "hellocash",
     name: "HelloCash",
-    owner: "Lion Insurance / Ethio Telecom",
+    owner: "HelloCash Ethiopia",
     color: "from-orange-700/20 to-orange-900/10",
     border: "border-orange-500/30",
-    logo: "HC",
-    logoColor: "bg-orange-600",
+    img: imgHellocash,
+    fallback: "HC",
+    fallbackColor: "bg-orange-600",
   },
   {
     id: "mbirr",
     name: "M-Birr",
     owner: "Mobile Commerce Ethiopia",
-    color: "from-red-700/20 to-red-900/10",
-    border: "border-red-500/30",
-    logo: "MB",
-    logoColor: "bg-red-700",
+    color: "from-green-700/20 to-green-900/10",
+    border: "border-green-500/30",
+    img: imgMbirr,
+    fallback: "MB",
+    fallbackColor: "bg-green-700",
   },
   {
     id: "kacha",
     name: "Kacha",
     owner: "Kacha Digital Financial Services",
-    color: "from-cyan-700/20 to-cyan-900/10",
-    border: "border-cyan-500/30",
-    logo: "KA",
-    logoColor: "bg-cyan-700",
+    color: "from-amber-700/20 to-amber-900/10",
+    border: "border-amber-500/30",
+    img: imgKacha,
+    fallback: "KA",
+    fallbackColor: "bg-amber-600",
   },
   {
-    id: "lionpay",
-    name: "Lion Pay",
+    id: "awashbirr",
+    name: "Awash Birr",
     owner: "Awash Bank",
-    color: "from-yellow-700/20 to-yellow-900/10",
-    border: "border-yellow-500/30",
-    logo: "LP",
-    logoColor: "bg-yellow-600",
+    color: "from-orange-600/20 to-blue-900/10",
+    border: "border-orange-400/30",
+    img: imgAwashBirr,
+    fallback: "AB",
+    fallbackColor: "bg-orange-600",
   },
   {
     id: "payway",
@@ -116,8 +129,9 @@ const ETHIOPIAN_WALLETS = [
     owner: "PayWay Ethiopia",
     color: "from-teal-700/20 to-teal-900/10",
     border: "border-teal-500/30",
-    logo: "PW",
-    logoColor: "bg-teal-700",
+    img: null,
+    fallback: "PW",
+    fallbackColor: "bg-teal-700",
   },
 ];
 
@@ -547,8 +561,11 @@ export function DashboardRemittance() {
                                   )}
                                 >
                                   {sel && <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" /></span>}
-                                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white", w.logoColor)}>
-                                    {w.logo}
+                                  <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-white/10">
+                                    {w.img
+                                      ? <img src={w.img} alt={`${w.name} logo`} className="w-full h-full object-contain" />
+                                      : <span className={cn("w-full h-full flex items-center justify-center text-xs font-bold text-white rounded-xl", w.fallbackColor)}>{w.fallback}</span>
+                                    }
                                   </div>
                                   <div>
                                     <div className="text-sm font-semibold text-foreground leading-tight">{w.name}</div>
