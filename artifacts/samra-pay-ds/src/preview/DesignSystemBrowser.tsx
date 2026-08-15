@@ -1,4 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
+import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
 import {
@@ -92,8 +94,27 @@ function NavigationItems({
   );
 }
 
+/* Dark is the canonical Samra Pay mode; the preview defaults to it and offers
+ * a toggle so the warm-ivory light mode can be reviewed side by side. */
+function useThemeMode(): ['dark' | 'light', () => void] {
+  const [mode, setMode] = useState<'dark' | 'light'>(() => {
+    // Deep-linkable: #theme=light|dark wins over the stored preference.
+    const fromHash = new URLSearchParams(window.location.hash.slice(1)).get('theme');
+    if (fromHash === 'light' || fromHash === 'dark') return fromHash;
+    return localStorage.getItem('ds-theme') === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+    localStorage.setItem('ds-theme', mode);
+  }, [mode]);
+
+  return [mode, () => setMode((m) => (m === 'dark' ? 'light' : 'dark'))];
+}
+
 export function DesignSystemBrowser() {
   const [selectedId, select] = useSelectedId();
+  const [mode, toggleMode] = useThemeMode();
   const [query, setQuery] = useState('');
   const mobileNav = useRef<HTMLDetailsElement>(null);
   const mobileNavSummary = useRef<HTMLElement>(null);
@@ -147,6 +168,15 @@ export function DesignSystemBrowser() {
               className="h-7 w-auto"
             />
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Design System</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMode}
+              aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="ml-auto h-7 w-7"
+            >
+              {mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
         <div className="p-4 pb-2">

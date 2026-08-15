@@ -19,6 +19,26 @@ Tailwind import or a `node_modules` source path in a Tailwind v4 consumer.
 Tailwind v3 consumers keep their existing `@tailwind` directives and add
 `node_modules/@workspace/samra-pay-ds/src/components` to `content`.
 
+## Fonts (required)
+
+The theme references three web fonts that `styles.css` does NOT bundle — the
+system loads them as non-blocking `<link>` tags to avoid render-blocking CSS
+`@import`. Every consuming web app must add this to its `index.html` `<head>`
+(this exact set: Outfit for UI, EB Garamond for display, Noto Serif Ethiopic
+for Amharic / `font-ethiopic`):
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Noto+Serif+Ethiopic:wght@400;500;600;700&display=swap">
+```
+
+Without this, `font-sans`, `font-serif`, and `font-ethiopic` silently fall back
+to generic system fonts — Amharic text in particular will not render in the
+intended typeface. The design-system preview's own `index.html` is the
+reference implementation.
+
 ## Components and helpers
 
 Import every provided primitive, `cn`, and toast API directly from this package:

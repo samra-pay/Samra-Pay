@@ -159,6 +159,13 @@ function buildCss(tokens) {
   replacements.__DS_FONT_MONO__ = toFontStack(
     resolveValue(tokens.typography.fontFamily.mono, tokens),
   );
+  replacements.__DS_FONT_ETHIOPIC__ = toFontStack(
+    resolveValue(
+      tokens.typography.fontFamily.ethiopic ??
+        tokens.typography.fontFamily.serif,
+      tokens,
+    ),
+  );
   replacements.__DS_RADIUS__ = resolveValue(tokens.radius.base, tokens);
   replacements.__DS_SPACING__ = resolveValue(tokens.spacing.base, tokens);
 
@@ -185,6 +192,11 @@ function buildTs(tokens) {
       sans: resolveValue(tokens.typography.fontFamily.sans, tokens),
       serif: resolveValue(tokens.typography.fontFamily.serif, tokens),
       mono: resolveValue(tokens.typography.fontFamily.mono, tokens),
+      ethiopic: resolveValue(
+        tokens.typography.fontFamily.ethiopic ??
+          tokens.typography.fontFamily.serif,
+        tokens,
+      ),
     },
     radius: resolveValue(tokens.radius.base, tokens),
     spacing: resolveValue(tokens.spacing.base, tokens),

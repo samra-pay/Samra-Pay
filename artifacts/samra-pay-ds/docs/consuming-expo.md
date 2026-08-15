@@ -25,6 +25,11 @@ Export `useColors` from `src/hooks/use-colors.tsx`. Export a font hook from
 returns `fontsLoaded` and `fontError`. Use exact registered names such as
 `Inter_400Regular`, not CSS family names.
 
+For Amharic copy, also load Noto Serif Ethiopic (e.g. via
+`@expo-google-fonts/noto-serif-ethiopic`) in the same font hook and expose it
+through the native typography names — `tokens.fontFamily.ethiopic` names the
+CSS stack; native code must map it to the registered Expo font names.
+
 Expo imports these concrete paths directly:
 
 ```tsx

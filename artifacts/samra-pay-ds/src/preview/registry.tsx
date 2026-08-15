@@ -1,10 +1,13 @@
 import { lazy, type ComponentType } from 'react';
 import {
   ColorsPage,
+  ElevationPage,
   FontsPage,
   LayoutPage,
   LogoPage,
+  MotionPage,
   OverviewPage,
+  PatternsPage,
 } from './foundations';
 
 function lazyPage(load: () => Promise<ComponentType>) {
@@ -213,6 +216,12 @@ export const NAV_GROUPS: NavGroup[] = [
         description: 'The Samra Pay wordmark, mark, and usage guidelines.',
         Page: LogoPage,
       },
+      {
+        id: 'brand-patterns',
+        name: 'Patterns',
+        description: 'Ethiopian-inspired geometric patterns at three densities.',
+        Page: PatternsPage,
+      },
     ],
   },
   {
@@ -245,6 +254,23 @@ export const NAV_GROUPS: NavGroup[] = [
         name: 'Spacing and radius',
         description: 'The spacing rhythm and corner treatments used by the system.',
         Page: LayoutPage,
+      },
+      {
+        id: 'elevation',
+        name: 'Elevation',
+        description: 'The five-step shadow ramp and gold ambience.',
+        Page: ElevationPage,
+      },
+    ],
+  },
+  {
+    name: 'Motion',
+    entries: [
+      {
+        id: 'motion',
+        name: 'Motion',
+        description: 'Easing, duration, entrance, and ambient animation tokens.',
+        Page: MotionPage,
       },
     ],
   },

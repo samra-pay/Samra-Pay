@@ -10,7 +10,18 @@ on it and import its theme and components directly.
 - `docs/references/logos/` — retained brand marks: `logo.png` (wordmark), `icon-32.png`, `icon-192.png`. Source: `artifacts/samra-pay/public/`. Always use the real mark here for the preview logo — never invent or regenerate it. The preview loads it from `public/logo.png` (copied alongside).
 - `docs/references/component-inventory.md` — full component inventory index: all 54 UI families + custom components, chunk assignments, and implementation status. Read this before modifying any cataloged component. Pilot (chunk 1): Button, Badge, Card, Input, Avatar — all implemented. Remaining families are pending in chunks 2–3.
 - `tokens.json` — the single source of truth (DTCG format): colors (full light
-  and dark sets), typography, spacing, and radius.
+  and dark sets, including the cultural palette: `coffee`, `berbere`,
+  `eucalyptus`, `injera` + foregrounds; chart2–4 alias them), typography
+  (`sans`, `serif`, `mono`, `ethiopic` — Noto Serif Ethiopic for Amharic),
+  spacing, and radius.
+- `scripts/theme-template.css` — the hand-editable CSS template that
+  `build-tokens.mjs` fills in. Non-color foundations live here: the 5-step
+  elevation ramp (`shadow-e1…e5`) with gold-ambient variants
+  (`shadow-gold-sm|md|lg`), motion tokens (`ease-standard|entrance|emphasized|exit`,
+  `animate-float-slow`, `animate-fade-up`, `animate-shimmer`, …), the Ethiopian
+  pattern utilities (`pattern-telsem|axum|tibeb|mesob` with
+  `pattern-sparse|dense` density modifiers), and the reduced-motion contract.
+  Edit the template, not the generated `src/index.css`.
 - `scripts/build-tokens.mjs` — generates the outputs below from `tokens.json`.
 - `src/index.css` — GENERATED token theme (web), exported as `./styles.css`.
 - `src/generated/tokens.tsx` — GENERATED hex token object, the package's `.` and

@@ -1,1 +1,2 @@
 - [Samra demo trust language](samra-demo-trust-language.md) — Keep financial metrics, rates, benefits, and application CTAs explicitly illustrative until live services exist.
+- [DS foreground contrast rule](ds-foreground-contrast.md) — every token bg/fg pair must pass WCAG AA (4.5:1) in both modes; mid-luminance "lifted" dark colors are the trap.
