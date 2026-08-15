@@ -25,6 +25,7 @@ import {
   formatUsd,
   formatEtb,
 } from "@/lib/remittance";
+import { popRestoredQuote } from "@/lib/remittance-handoff";
 
 // ─── Ethiopian data ───────────────────────────────────────────────────────────
 
@@ -184,24 +185,13 @@ export function DashboardRemittance() {
 
   // On mount: restore a quote started on the public remittance page and jump to Step 2
   useEffect(() => {
-    const raw = sessionStorage.getItem("samra_remittance_quote");
-    if (!raw) return;
-    sessionStorage.removeItem("samra_remittance_quote");
-    try {
-      const q = JSON.parse(raw) as {
-        usdAmount: string;
-        deliveryMethod: DeliveryMethod;
-        paymentMethod: PaymentMethod;
-        plaidLinked: boolean;
-      };
-      if (q.usdAmount)      setUsdAmount(q.usdAmount);
-      if (q.deliveryMethod) setDeliveryMethod(q.deliveryMethod);
-      if (q.paymentMethod)  setPaymentMethod(q.paymentMethod);
-      if (q.plaidLinked)    setPlaidLinked(q.plaidLinked);
-      setStep("recipient");
-    } catch {
-      // malformed — ignore, stay on quote step
-    }
+    const q = popRestoredQuote();
+    if (!q) return;
+    if (q.usdAmount)      setUsdAmount(q.usdAmount);
+    if (q.deliveryMethod) setDeliveryMethod(q.deliveryMethod);
+    if (q.paymentMethod)  setPaymentMethod(q.paymentMethod);
+    if (q.plaidLinked)    setPlaidLinked(q.plaidLinked);
+    setStep("recipient");
   }, []);
 
   // Recipient state (bank)

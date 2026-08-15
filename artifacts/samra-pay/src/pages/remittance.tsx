@@ -15,6 +15,7 @@ import {
   formatUsd,
   formatEtb,
 } from "@/lib/remittance";
+import { storeQuoteAndRedirect } from "@/lib/remittance-handoff";
 
 export default function Remittance() {
   const [, setLocation] = useLocation();
@@ -24,14 +25,8 @@ export default function Remittance() {
   const [plaidLinked, setPlaidLinked] = useState(false);
 
   function handleContinue() {
-    sessionStorage.setItem("samra_remittance_quote", JSON.stringify({
-      usdAmount,
-      deliveryMethod,
-      paymentMethod,
-      plaidLinked,
-    }));
-    sessionStorage.setItem("samra_post_login_redirect", "/dashboard/remittance");
-    setLocation("/login");
+    const dest = storeQuoteAndRedirect({ usdAmount, deliveryMethod, paymentMethod, plaidLinked });
+    setLocation(dest);
   }
 
   const handleUsdChange = (e: React.ChangeEvent<HTMLInputElement>) => {

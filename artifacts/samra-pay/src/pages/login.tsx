@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { SamraLogo } from "@/components/samra-logo";
+import { consumePostLoginRedirect } from "@/lib/remittance-handoff";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,9 +21,7 @@ export default function Login() {
     setTimeout(() => {
       setIsLoading(false);
       // If a remittance quote was started on the public page, land on remittance Step 2
-      const redirect = sessionStorage.getItem("samra_post_login_redirect") || "/dashboard";
-      sessionStorage.removeItem("samra_post_login_redirect");
-      setLocation(redirect);
+      setLocation(consumePostLoginRedirect());
     }, 800);
   };
 
