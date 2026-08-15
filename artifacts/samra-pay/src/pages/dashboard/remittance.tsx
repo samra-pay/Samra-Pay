@@ -139,6 +139,10 @@ const ETHIOPIAN_WALLETS = [
 
 type Step = "quote" | "recipient" | "confirm" | "success";
 
+function todayLabel(): string {
+  return new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 interface Transfer {
   id: number;
   recipient: string;
@@ -150,11 +154,11 @@ interface Transfer {
 }
 
 const INITIAL_TRANSFERS: Transfer[] = [
-  { id: 1, recipient: "Abebe Bekele",  location: "Addis Ababa, ET", date: "Jun 12, 2024", usd: 500, etb: 90_000, status: "Completed" },
-  { id: 2, recipient: "Tigist Haile",  location: "Hawassa, ET",     date: "May 28, 2024", usd: 300, etb: 54_000, status: "Completed" },
+  { id: 1, recipient: "Abebe Bekele", location: "Addis Ababa, ET", date: "Jun 12, 2024", usd: 500, etb: 90000, status: "Completed" },
+  { id: 2, recipient: "Tigist Haile", location: "Hawassa, ET", date: "May 28, 2024", usd: 300, etb: 54000, status: "Completed" },
 ];
 
-const DEMO_BALANCE = 4250;
+const DEMO_BALANCE_INITIAL = 4250;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -211,6 +215,9 @@ export function DashboardRemittance() {
   // Shared recipient
   const [recipientName, setRecipientName] = useState<string>("");
 
+  // Demo balance (deducted on confirm when paying from balance)
+  const [demoBalance, setDemoBalance] = useState<number>(DEMO_BALANCE_INITIAL);
+
   // Transfer history
   const [transfers, setTransfers] = useState<Transfer[]>(INITIAL_TRANSFERS);
 
@@ -220,7 +227,7 @@ export function DashboardRemittance() {
     parsedUsdAmount, paymentMethod, plaidLinked,
   );
   const etbDisplay = formatEtb(recipientEtb);
-  const exceedsBalance = paymentMethod === "balance" && totalCharged > DEMO_BALANCE;
+  const exceedsBalance = paymentMethod === "balance" && totalCharged > demoBalance;
   const canContinue = parsedUsdAmount > 0 && !exceedsBalance;
 
   // ── Recipient step validation ───────────────────────────────────────────────
@@ -235,7 +242,7 @@ export function DashboardRemittance() {
 
   // ── Confirm → success ───────────────────────────────────────────────────────
   function handleConfirm() {
-    const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const today = todayLabel();
     const newTransfer: Transfer = {
       id: Date.now(),
       recipient: recipientName.trim(),
@@ -246,6 +253,9 @@ export function DashboardRemittance() {
       status: "Completed",
     };
     setTransfers(prev => [newTransfer, ...prev]);
+    if (paymentMethod === "balance") {
+      setDemoBalance(b => Math.round((b - totalCharged) * 100) / 100);
+    }
     setStep("success");
   }
 
@@ -342,7 +352,9 @@ export function DashboardRemittance() {
                           <span className="font-medium">USD</span>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-2 text-right">Balance: ${formatUsd(DEMO_BALANCE)}</div>
+                      <div className="text-xs text-muted-foreground mt-2 text-right">
+                        Balance: ${formatUsd(demoBalance)} <span className="opacity-60">(illustrative)</span>
+                      </div>
                     </div>
 
                     <div className="flex justify-center -my-2 relative z-10">
@@ -475,7 +487,7 @@ export function DashboardRemittance() {
 
                     {exceedsBalance && (
                       <p role="alert" className="text-sm text-red-400">
-                        This amount exceeds your ${formatUsd(DEMO_BALANCE)} Samra balance. Lower the amount or choose another payment method.
+                        This amount exceeds your ${formatUsd(demoBalance)} Samra balance. Lower the amount or choose another payment method.
                       </p>
                     )}
 
@@ -743,6 +755,12 @@ export function DashboardRemittance() {
                         <span className="text-foreground">{selectedWallet.name}</span>
                       </div>
                     )}
+                    {paymentMethod === "balance" && (
+                      <div className="flex justify-between text-muted-foreground border-t border-white/5 pt-2">
+                        <span>Remaining balance</span>
+                        <span className="text-foreground">${formatUsd(demoBalance)} <span className="opacity-60">(illustrative)</span></span>
+                      </div>
+                    )}
                   </div>
 
                   {shebaMilesEarned > 0 && (
@@ -751,6 +769,8 @@ export function DashboardRemittance() {
                       <span className="text-primary font-medium text-sm">+{SHEBA_MILES_BONUS} Sheba Miles added · Illustrative demo</span>
                     </div>
                   )}
+
+                  <p className="text-xs text-muted-foreground">Illustrative demo — no real funds were moved.</p>
 
                   <Button variant="outline" className="w-full border-white/10 rounded-xl h-12" onClick={handleReset}>
                     Send another transfer
