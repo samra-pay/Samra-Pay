@@ -103,6 +103,9 @@ const ItemDemo = lazyPage(() =>
 const KbdDemo = lazyPage(() =>
   import('./demos/kbd').then(({ KbdDemo }) => KbdDemo),
 );
+const LabelDemo = lazyPage(() =>
+  import('./demos/label').then(({ LabelDemo }) => LabelDemo),
+);
 const MenubarDemo = lazyPage(() =>
   import('./demos/menubar').then(({ MenubarDemo }) => MenubarDemo),
 );
@@ -365,6 +368,12 @@ export const NAV_GROUPS: NavGroup[] = [
         name: 'Calendar',
         description: 'A deterministic single-date calendar.',
         Page: CalendarDemo,
+      },
+      {
+        id: 'label',
+        name: 'Label',
+        description: 'Accessible labels, required markers, and error states.',
+        Page: LabelDemo,
       },
       {
         id: 'field',

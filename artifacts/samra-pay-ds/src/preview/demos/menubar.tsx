@@ -14,47 +14,82 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from '../../components/ui/menubar';
+import { Guidelines } from '../parts';
 
 export function MenubarDemo() {
-  const [showToolbar, setShowToolbar] = useState(true);
-  const [zoom, setZoom] = useState('100');
+  const [showPending, setShowPending] = useState(true);
+  const [currency, setCurrency] = useState('etb');
 
   return (
-    <div className="max-w-lg rounded-xl border bg-card p-6">
+    <div className="space-y-6 rounded-xl border bg-card p-6 text-card-foreground">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Transfers console
+      </p>
       <Menubar>
         <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
+          <MenubarTrigger>Transfer</MenubarTrigger>
           <MenubarContent>
             <MenubarItem>
-              New tab <MenubarShortcut>Cmd T</MenubarShortcut>
+              New transfer <MenubarShortcut>Cmd N</MenubarShortcut>
             </MenubarItem>
-            <MenubarItem>New window</MenubarItem>
+            <MenubarItem>
+              Add recipient <MenubarShortcut>Cmd R</MenubarShortcut>
+            </MenubarItem>
             <MenubarSeparator />
-            <MenubarItem disabled>Print</MenubarItem>
+            <MenubarItem disabled>Bulk payout (Pro)</MenubarItem>
           </MenubarContent>
         </MenubarMenu>
         <MenubarMenu>
           <MenubarTrigger>View</MenubarTrigger>
           <MenubarContent>
             <MenubarCheckboxItem
-              checked={showToolbar}
-              onCheckedChange={(checked) => setShowToolbar(checked === true)}
+              checked={showPending}
+              onCheckedChange={(checked) => setShowPending(checked === true)}
             >
-              Show toolbar
+              Show pending transfers
             </MenubarCheckboxItem>
+            <MenubarSeparator />
             <MenubarSub>
-              <MenubarSubTrigger>Zoom</MenubarSubTrigger>
+              <MenubarSubTrigger>Display currency</MenubarSubTrigger>
               <MenubarSubContent>
-                <MenubarRadioGroup value={zoom} onValueChange={setZoom}>
-                  <MenubarRadioItem value="90">90%</MenubarRadioItem>
-                  <MenubarRadioItem value="100">100%</MenubarRadioItem>
-                  <MenubarRadioItem value="110">110%</MenubarRadioItem>
+                <MenubarRadioGroup value={currency} onValueChange={setCurrency}>
+                  <MenubarRadioItem value="usd">USD</MenubarRadioItem>
+                  <MenubarRadioItem value="etb">ETB</MenubarRadioItem>
                 </MenubarRadioGroup>
               </MenubarSubContent>
             </MenubarSub>
           </MenubarContent>
         </MenubarMenu>
+        <MenubarMenu>
+          <MenubarTrigger>Help</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem>Transfer limits</MenubarItem>
+            <MenubarItem>Contact support</MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
       </Menubar>
+      <p className="text-sm text-muted-foreground">
+        Left/Right arrows move between menus; Up/Down move within an open menu.
+      </p>
+
+      <div className="border-t pt-4">
+        <Guidelines
+          items={[
+            {
+              kind: 'do',
+              text: 'Reserve the menubar for a dense desktop console such as an operations or transfers dashboard.',
+            },
+            {
+              kind: 'do',
+              text: 'Keep top-level menu labels to a short, predictable set (Transfer, View, Help).',
+            },
+            {
+              kind: 'dont',
+              text: 'Use a menubar on the consumer send-money flow; simple screens read better with plain buttons.',
+            },
+          ]}
+        />
+      </div>
     </div>
   );
 }

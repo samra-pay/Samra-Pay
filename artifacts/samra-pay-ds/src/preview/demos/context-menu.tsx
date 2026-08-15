@@ -14,39 +14,82 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '../../components/ui/context-menu';
+import { Guidelines } from '../parts';
 
 export function ContextMenuDemo() {
-  const [favorite, setFavorite] = useState(true);
-  const [location, setLocation] = useState('drafts');
+  const [pinned, setPinned] = useState(true);
+  const [category, setCategory] = useState('family');
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger className="flex h-40 max-w-lg items-center justify-center rounded-xl border border-dashed bg-card text-sm text-muted-foreground">
-        Right-click this area
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-56">
-        <ContextMenuLabel>Document</ContextMenuLabel>
-        <ContextMenuItem>
-          Rename <ContextMenuShortcut>F2</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem>Duplicate</ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuCheckboxItem
-          checked={favorite}
-          onCheckedChange={(checked) => setFavorite(checked === true)}
-        >
-          Favorite
-        </ContextMenuCheckboxItem>
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>Move to</ContextMenuSubTrigger>
-          <ContextMenuSubContent>
-            <ContextMenuRadioGroup value={location} onValueChange={setLocation}>
-              <ContextMenuRadioItem value="drafts">Drafts</ContextMenuRadioItem>
-              <ContextMenuRadioItem value="archive">Archive</ContextMenuRadioItem>
-            </ContextMenuRadioGroup>
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-      </ContextMenuContent>
-    </ContextMenu>
+    <div className="space-y-6 rounded-xl border bg-card p-6 text-card-foreground">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Recipient card · right-click for actions
+      </p>
+      <ContextMenu>
+        <ContextMenuTrigger className="flex h-40 max-w-lg flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-background text-sm text-muted-foreground">
+          <span className="text-base font-medium text-foreground">
+            Dawit Alemu
+          </span>
+          <span>Addis Ababa · CBE ···4821</span>
+          <span className="text-xs">Right-click to manage recipient</span>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-56">
+          <ContextMenuLabel>Dawit Alemu</ContextMenuLabel>
+          <ContextMenuItem>
+            Send money <ContextMenuShortcut>Cmd S</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem>Repeat last transfer</ContextMenuItem>
+          <ContextMenuItem>Edit details</ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuCheckboxItem
+            checked={pinned}
+            onCheckedChange={(checked) => setPinned(checked === true)}
+          >
+            Pin to favorites
+          </ContextMenuCheckboxItem>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>Category</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuRadioGroup
+                value={category}
+                onValueChange={setCategory}
+              >
+                <ContextMenuRadioItem value="family">
+                  Family
+                </ContextMenuRadioItem>
+                <ContextMenuRadioItem value="business">
+                  Business
+                </ContextMenuRadioItem>
+                <ContextMenuRadioItem value="bills">Bills</ContextMenuRadioItem>
+              </ContextMenuRadioGroup>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+          <ContextMenuSeparator />
+          <ContextMenuItem disabled>Merge duplicate (none found)</ContextMenuItem>
+          <ContextMenuItem className="text-destructive focus:text-destructive">
+            Remove recipient
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      <div className="border-t pt-4">
+        <Guidelines
+          items={[
+            {
+              kind: 'do',
+              text: 'Use context menus for secondary shortcuts on a recipient or transaction row — the same actions must also be reachable by button.',
+            },
+            {
+              kind: 'do',
+              text: 'Mark destructive actions like "Remove recipient" with destructive color and place them last.',
+            },
+            {
+              kind: 'dont',
+              text: 'Hide the only path to a critical action behind right-click; touch users on mobile cannot discover it.',
+            },
+          ]}
+        />
+      </div>
+    </div>
   );
 }
