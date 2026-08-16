@@ -52,6 +52,9 @@ jobs:
 
       - name: Build production artifacts
         run: pnpm -r --if-present run build
+        env:
+          PORT: "4173"
+          BASE_PATH: "/"
 
   postgres-persistence:
     name: PostgreSQL persistence gate
