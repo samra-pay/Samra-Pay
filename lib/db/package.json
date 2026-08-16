@@ -9,9 +9,12 @@
   },
   "scripts": {
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
-    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts"
+    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "test:migrate": "node --import tsx src/test-migrate.ts",
+    "test:seed": "node --import tsx src/test-seed.ts"
   },
   "dependencies": {
+    "@workspace/remittance": "workspace:*",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.22.0",
@@ -20,6 +23,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.10",
+    "tsx": "catalog:"
   }
 }
