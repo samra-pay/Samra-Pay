@@ -1,4 +1,5 @@
 import type {
+  Beneficiary,
   DeliveryMethod,
   RemittanceQuote,
   TransferStatus,
@@ -13,28 +14,22 @@ export type SyntheticBeneficiary = Readonly<{
   deliveryDetail: string;
 }>;
 
-/**
- * Temporary demo lookup. Keep these IDs behind this boundary until the API
- * exposes beneficiary discovery; screens should not depend on seed IDs.
- */
-export const SYNTHETIC_BENEFICIARIES: readonly SyntheticBeneficiary[] = [
-  {
-    id: "beneficiary_bank_001",
-    name: "Abebe Bekele",
-    location: "Addis Ababa, ET",
-    deliveryMethod: "bank",
-    deliveryLabel: "Commercial Bank of Ethiopia",
-    deliveryDetail: "Bank account ending 6789",
-  },
-  {
-    id: "beneficiary_wallet_001",
-    name: "Tigist Haile",
-    location: "Hawassa, ET",
-    deliveryMethod: "wallet",
-    deliveryLabel: "Telebirr",
-    deliveryDetail: "Mobile wallet ending 4321",
-  },
-] as const;
+export function toSyntheticBeneficiary(
+  beneficiary: Beneficiary,
+): SyntheticBeneficiary {
+  const details = beneficiary.deliveryDetails;
+  return {
+    id: beneficiary.id,
+    name: beneficiary.displayName,
+    location: `${beneficiary.city}, ${beneficiary.countryCode}`,
+    deliveryMethod: details.method,
+    deliveryLabel: details.institutionName,
+    deliveryDetail:
+      details.method === "bank"
+        ? `Bank account ending ${details.accountNumberLast4}`
+        : `Mobile wallet ending ${details.phoneNumberLast4}`,
+  };
+}
 
 export const TERMINAL_TRANSFER_STATUSES = new Set<TransferStatus>([
   "completed",

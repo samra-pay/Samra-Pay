@@ -24,6 +24,7 @@ import type {
 import {
   useAccounts,
   useActivity,
+  useBeneficiaries,
   useCancelTransfer,
   useCreateQuote,
   useCreateTransfer,
@@ -42,7 +43,6 @@ import { cn } from "@workspace/samra-pay-ds/lib/utils";
 
 import { PageTransition } from "@/components/page-transition";
 import {
-  SYNTHETIC_BENEFICIARIES,
   clearActiveRemittanceFlow,
   formatExchangeRate,
   formatMinorUnits,
@@ -55,6 +55,7 @@ import {
   readActiveTransferId,
   readTransferForQuote,
   sanitizeUsdInput,
+  toSyntheticBeneficiary,
   usdInputToMinorUnits,
 } from "@/lib/samra-api-flow";
 
@@ -472,11 +473,16 @@ export function ApiDashboardRemittance() {
     restoredQuote?.deliveryMethod ?? "bank",
   );
   const [beneficiaryId, setBeneficiaryId] = useState(
-    restoredQuote?.beneficiaryId ?? "beneficiary_bank_001",
+    restoredQuote?.beneficiaryId ?? "",
   );
 
   const accountsQuery = useAccounts();
+  const beneficiariesQuery = useBeneficiaries();
   const optionsQuery = useRemittanceOptions();
+  const beneficiaries = useMemo(
+    () => (beneficiariesQuery.data ?? []).map(toSyntheticBeneficiary),
+    [beneficiariesQuery.data],
+  );
   const account = accountsQuery.data?.find(
     (item) =>
       item.kind === "domestic" &&
@@ -503,9 +509,7 @@ export function ApiDashboardRemittance() {
   } | null>(null);
   const refreshedTerminal = useRef<string | null>(null);
   const amountMinorUnits = usdInputToMinorUnits(usdAmount);
-  const beneficiary = SYNTHETIC_BENEFICIARIES.find(
-    (item) => item.id === beneficiaryId,
-  );
+  const beneficiary = beneficiaries.find((item) => item.id === beneficiaryId);
   const transfer = transferQuery.data ?? transferMutation.data ?? null;
   const availableBalance = account?.availableBalance.minorUnits;
   const exceedsBalance =
@@ -521,6 +525,14 @@ export function ApiDashboardRemittance() {
 
   const terminalStatus = transfer?.status;
   useEffect(() => {
+    if (beneficiary) return;
+    const matching = beneficiaries.find(
+      (item) => item.deliveryMethod === deliveryMethod,
+    );
+    if (matching) setBeneficiaryId(matching.id);
+  }, [beneficiary, beneficiaries, deliveryMethod]);
+
+  useEffect(() => {
     if (!transfer || !isTerminalTransferStatus(transfer.status)) return;
     const transitionKey = `${transfer.id}:${transfer.status}`;
     if (refreshedTerminal.current === transitionKey) return;
@@ -534,7 +546,7 @@ export function ApiDashboardRemittance() {
 
   function chooseDelivery(method: "bank" | "wallet") {
     setDeliveryMethod(method);
-    const matching = SYNTHETIC_BENEFICIARIES.find(
+    const matching = beneficiaries.find(
       (item) => item.deliveryMethod === method,
     );
     if (matching) setBeneficiaryId(matching.id);
@@ -628,7 +640,7 @@ export function ApiDashboardRemittance() {
     setTransferId("");
     setUsdAmount("100.00");
     setDeliveryMethod("bank");
-    setBeneficiaryId("beneficiary_bank_001");
+    setBeneficiaryId("");
     confirmStarted.current = false;
     transferIdempotency.current = null;
     cancelIdempotency.current = null;
@@ -638,8 +650,12 @@ export function ApiDashboardRemittance() {
     cancelMutation.reset();
   }
 
-  const initialLoadFailed = accountsQuery.error ?? optionsQuery.error;
-  const initialLoading = accountsQuery.isLoading || optionsQuery.isLoading;
+  const initialLoadFailed =
+    accountsQuery.error ?? beneficiariesQuery.error ?? optionsQuery.error;
+  const initialLoading =
+    accountsQuery.isLoading ||
+    beneficiariesQuery.isLoading ||
+    optionsQuery.isLoading;
   const noAccount = !initialLoading && !initialLoadFailed && !account;
 
   let mainCard;
@@ -683,7 +699,7 @@ export function ApiDashboardRemittance() {
       );
     }
   } else if (screen === "review" && quote) {
-    const selectedBeneficiary = SYNTHETIC_BENEFICIARIES.find(
+    const selectedBeneficiary = beneficiaries.find(
       (item) => item.id === quote.beneficiaryId,
     );
     const quoteUnavailable =
@@ -815,9 +831,14 @@ export function ApiDashboardRemittance() {
             error={initialLoadFailed}
             onRetry={() => {
               void accountsQuery.refetch();
+              void beneficiariesQuery.refetch();
               void optionsQuery.refetch();
             }}
-            retrying={accountsQuery.isFetching || optionsQuery.isFetching}
+            retrying={
+              accountsQuery.isFetching ||
+              beneficiariesQuery.isFetching ||
+              optionsQuery.isFetching
+            }
           />
         </CardContent>
       </Card>
@@ -935,13 +956,13 @@ export function ApiDashboardRemittance() {
               onChange={(event) => setBeneficiaryId(event.target.value)}
               className="w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-primary/50"
             >
-              {SYNTHETIC_BENEFICIARIES.filter(
-                (item) => item.deliveryMethod === deliveryMethod,
-              ).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} — {item.location}
-                </option>
-              ))}
+              {beneficiaries
+                .filter((item) => item.deliveryMethod === deliveryMethod)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} — {item.location}
+                  </option>
+                ))}
             </select>
             {beneficiary ? (
               <div className="mt-3 flex items-start gap-3 rounded-xl border border-white/5 bg-background/40 p-4 text-sm">

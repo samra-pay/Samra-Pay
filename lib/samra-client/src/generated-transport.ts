@@ -7,6 +7,7 @@ import {
   getRemittanceTransfer,
   listAccounts,
   listActivity,
+  listBeneficiaries,
   listRemittanceTransfers,
 } from "@workspace/api-client-react";
 
@@ -40,6 +41,8 @@ export function createGeneratedSamraTransport(): SamraTransport {
     listActivity(input?: ActivityQuery) {
       return listActivity(input);
     },
+
+    listBeneficiaries,
 
     getRemittanceOptions,
 

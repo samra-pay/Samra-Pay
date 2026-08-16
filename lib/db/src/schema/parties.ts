@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   jsonb,
   text,
@@ -79,9 +80,14 @@ export const beneficiaries = samraCore.table(
       .references(() => customers.id, { onDelete: "restrict" }),
     externalRef: text("external_ref").notNull(),
     displayName: text("display_name").notNull(),
+    city: text("city").notNull(),
     countryCode: varchar("country_code", { length: 2 }).notNull(),
     rail: beneficiaryRailEnum("rail").notNull(),
     payoutReference: text("payout_reference").notNull(),
+    bankId: varchar("bank_id", { length: 32 }),
+    bankAccountNumber: varchar("bank_account_number", { length: 24 }),
+    walletId: varchar("wallet_id", { length: 32 }),
+    walletPhoneNumber: varchar("wallet_phone_number", { length: 13 }),
     providerMetadata: jsonb("provider_metadata")
       .$type<Record<string, unknown>>()
       .notNull()
@@ -93,6 +99,7 @@ export const beneficiaries = samraCore.table(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("beneficiaries_customer_external_ref_uidx").on(
@@ -100,6 +107,14 @@ export const beneficiaries = samraCore.table(
       table.externalRef,
     ),
     index("beneficiaries_customer_state_idx").on(table.customerId, table.state),
+    check(
+      "beneficiaries_delivery_details_check",
+      sql`(
+        (${table.rail} = 'bank_account' AND ${table.bankId} IS NOT NULL AND ${table.bankAccountNumber} IS NOT NULL AND ${table.walletId} IS NULL AND ${table.walletPhoneNumber} IS NULL)
+        OR
+        (${table.rail} = 'mobile_wallet' AND ${table.walletId} IS NOT NULL AND ${table.walletPhoneNumber} IS NOT NULL AND ${table.bankId} IS NULL AND ${table.bankAccountNumber} IS NULL)
+      )`,
+    ),
   ],
 );
 

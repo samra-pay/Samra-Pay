@@ -46,6 +46,7 @@ export function useSamraDataSource(): SamraDataSource {
 export const samraQueryKeys = {
   customer: ["samra", "customer"] as const,
   accounts: ["samra", "accounts"] as const,
+  beneficiaries: ["samra", "beneficiaries"] as const,
   activity: (input?: ActivityQuery) =>
     ["samra", "activity", input ?? {}] as const,
   options: ["samra", "remittance", "options"] as const,
@@ -92,6 +93,14 @@ export function useActivity(input?: ActivityQuery) {
   return useQuery({
     ...queryDefaults(samraQueryKeys.activity(input)),
     queryFn: () => source.listActivity(input),
+  });
+}
+
+export function useBeneficiaries() {
+  const source = useSamraDataSource();
+  return useQuery({
+    ...queryDefaults(samraQueryKeys.beneficiaries),
+    queryFn: () => source.listBeneficiaries(),
   });
 }
 

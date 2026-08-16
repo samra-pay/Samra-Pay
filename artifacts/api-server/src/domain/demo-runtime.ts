@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { randomUUID } from "node:crypto";
 import {
   DeterministicFakeProviders,
   DomainError,
@@ -15,6 +16,12 @@ import {
 } from "@workspace/remittance";
 import { DemoLedgerAdapter, DEMO_LEDGER_ACCOUNT_IDS } from "./demo-ledger";
 import { publicTransferStatus, serializeMoney } from "./serializers";
+import {
+  InMemoryBeneficiaryStore,
+  serializeBeneficiary,
+  type BeneficiaryDeliveryInput,
+  type BeneficiaryStore,
+} from "./beneficiary-store";
 
 export const DEMO_ACTOR: Actor = Object.freeze({
   id: "demo_customer_001",
@@ -22,10 +29,16 @@ export const DEMO_ACTOR: Actor = Object.freeze({
   kind: "SEEDED_DEMO",
 });
 
-export const DEMO_BENEFICIARIES = Object.freeze({
-  beneficiary_bank_001: "Abebe Bekele",
-  beneficiary_wallet_001: "Tigist Haile",
+export const DEMO_ACTOR_B: Actor = Object.freeze({
+  id: "demo_customer_002",
+  displayName: "Second Synthetic Customer",
+  kind: "SEEDED_DEMO",
 });
+
+const DEMO_ACTORS = new Map([
+  [DEMO_ACTOR.id, DEMO_ACTOR],
+  [DEMO_ACTOR_B.id, DEMO_ACTOR_B],
+]);
 
 export type PublicTransferDemoScenario =
   | "happy_path"
@@ -45,10 +58,25 @@ export class SeededActorResolver implements ActorResolver<Request> {
     if (actorHint !== undefined && actorHint !== DEMO_ACTOR.id) {
       throw new DomainError(
         "ACTOR_NOT_ALLOWED",
-        "Only the seeded synthetic actor is available in demo mode.",
+        "Only the primary seeded synthetic actor is available for this operation.",
       );
     }
     return DEMO_ACTOR;
+  }
+}
+
+export class BeneficiaryActorResolver implements ActorResolver<Request> {
+  async resolve(request: Request): Promise<Actor> {
+    const actorHint = request.header("x-demo-actor-id");
+    const actor =
+      actorHint === undefined ? DEMO_ACTOR : DEMO_ACTORS.get(actorHint);
+    if (!actor) {
+      throw new DomainError(
+        "ACTOR_NOT_ALLOWED",
+        "Only a seeded synthetic actor is available in demo mode.",
+      );
+    }
+    return actor;
   }
 }
 
@@ -109,13 +137,16 @@ export type DemoRuntimeDependencies = Readonly<{
   ledger?: DemoBalanceLedger;
   unitOfWork?: RemittanceUnitOfWork;
   reconciliationStore?: ReconciliationStore;
+  beneficiaryStore?: BeneficiaryStore;
   ids?: ConstructorParameters<typeof RemittanceService>[0]["ids"];
+  nextBeneficiaryId?: () => string;
   nextReconciliationId?: () => string;
   close?: () => Promise<void>;
 }>;
 
 export class DemoRuntime {
   readonly actorResolver = new SeededActorResolver();
+  readonly beneficiaryActorResolver = new BeneficiaryActorResolver();
   readonly repository: RemittanceRepository;
   readonly providers = new DeterministicFakeProviders();
   // Kept as the concrete demo adapter type for existing white-box demo tests.
@@ -124,6 +155,8 @@ export class DemoRuntime {
   readonly service: RemittanceService;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
+  readonly #beneficiaryStore: BeneficiaryStore;
+  readonly #nextBeneficiaryId: () => string;
   readonly #nextReconciliationId?: () => string;
   readonly #close?: () => Promise<void>;
   #closePromise?: Promise<void>;
@@ -137,6 +170,11 @@ export class DemoRuntime {
     this.#unitOfWork = dependencies.unitOfWork;
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
+    this.#beneficiaryStore =
+      dependencies.beneficiaryStore ?? new InMemoryBeneficiaryStore();
+    this.#nextBeneficiaryId =
+      dependencies.nextBeneficiaryId ??
+      (() => `beneficiary_${randomUUID().replaceAll("-", "")}`);
     this.#nextReconciliationId = dependencies.nextReconciliationId;
     this.#close = dependencies.close;
     this.service = new RemittanceService({
@@ -165,21 +203,86 @@ export class DemoRuntime {
     }
   }
 
-  assertBeneficiary(beneficiaryId: string): void {
-    if (!(beneficiaryId in DEMO_BENEFICIARIES)) {
-      throw new DomainError("NOT_FOUND", "The beneficiary was not found.", {
-        beneficiaryId,
-      });
-    }
+  async listBeneficiaries(actorId: string) {
+    return (await this.#beneficiaryStore.list(actorId)).map(
+      serializeBeneficiary,
+    );
   }
 
-  assertBeneficiaryRail(
+  async getBeneficiary(actorId: string, beneficiaryId: string) {
+    const beneficiary = await this.#beneficiaryStore.get(
+      actorId,
+      beneficiaryId,
+    );
+    if (!beneficiary) {
+      throw beneficiaryNotFound(beneficiaryId);
+    }
+    return serializeBeneficiary(beneficiary);
+  }
+
+  async createBeneficiary(
+    actorId: string,
+    input: Readonly<{
+      displayName: string;
+      city: string;
+      countryCode: "ET";
+      deliveryDetails: BeneficiaryDeliveryInput;
+    }>,
+  ) {
+    return this.#withTransaction(async () =>
+      serializeBeneficiary(
+        await this.#beneficiaryStore.create({
+          id: this.#nextBeneficiaryId(),
+          actorId,
+          ...input,
+          now: new Date().toISOString(),
+        }),
+      ),
+    );
+  }
+
+  async updateBeneficiary(
+    actorId: string,
+    beneficiaryId: string,
+    input: Readonly<{
+      displayName?: string;
+      city?: string;
+      deliveryDetails?: BeneficiaryDeliveryInput;
+    }>,
+  ) {
+    return this.#withTransaction(async () => {
+      const beneficiary = await this.#beneficiaryStore.update(
+        actorId,
+        beneficiaryId,
+        { ...input, now: new Date().toISOString() },
+      );
+      if (!beneficiary) throw beneficiaryNotFound(beneficiaryId);
+      return serializeBeneficiary(beneficiary);
+    });
+  }
+
+  async deleteBeneficiary(actorId: string, beneficiaryId: string) {
+    return this.#withTransaction(async () => {
+      const deleted = await this.#beneficiaryStore.softDelete(
+        actorId,
+        beneficiaryId,
+        new Date().toISOString(),
+      );
+      if (!deleted) throw beneficiaryNotFound(beneficiaryId);
+    });
+  }
+
+  async assertBeneficiaryRail(
+    actorId: string,
     beneficiaryId: string,
     deliveryMethod: "bank" | "wallet",
-  ): void {
-    this.assertBeneficiary(beneficiaryId);
-    const expected =
-      beneficiaryId === "beneficiary_bank_001" ? "bank" : "wallet";
+  ): Promise<void> {
+    const beneficiary = await this.#beneficiaryStore.get(
+      actorId,
+      beneficiaryId,
+    );
+    if (!beneficiary) throw beneficiaryNotFound(beneficiaryId);
+    const expected = beneficiary.deliveryDetails.method;
     if (deliveryMethod !== expected) {
       throw new DomainError(
         "INVALID_ARGUMENT",
@@ -189,9 +292,19 @@ export class DemoRuntime {
     }
   }
 
-  recipientDisplay(beneficiaryId: string): string {
-    this.assertBeneficiary(beneficiaryId);
-    return DEMO_BENEFICIARIES[beneficiaryId as keyof typeof DEMO_BENEFICIARIES];
+  async recipientDisplay(
+    actorId: string,
+    beneficiaryId: string,
+  ): Promise<string> {
+    const beneficiary = await this.#beneficiaryStore.get(
+      actorId,
+      beneficiaryId,
+      {
+        includeDisabled: true,
+      },
+    );
+    if (!beneficiary) throw beneficiaryNotFound(beneficiaryId);
+    return beneficiary.displayName;
   }
 
   async accountResponse() {
@@ -210,22 +323,35 @@ export class DemoRuntime {
     };
   }
 
+  async accountResponses(actorId: string) {
+    return actorId === DEMO_ACTOR.id ? [await this.accountResponse()] : [];
+  }
+
   async activity(actorId: string) {
     const transfers = await this.service.listTransfers(actorId);
+    const transferActivity = (
+      await Promise.all(
+        transfers.map((transfer) => this.#transferActivity(actorId, transfer)),
+      )
+    ).flat();
     const items = [
-      {
-        id: "activity_opening_balance_001",
-        accountId: DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
-        sourceType: "opening_balance" as const,
-        sourceId: "opening_balance_001",
-        occurredAt: "2026-01-01T00:00:00.000Z",
-        title: "Synthetic opening balance",
-        category: "deposit" as const,
-        direction: "credit" as const,
-        amount: { currency: "USD" as const, minorUnits: "425000" },
-        status: "completed" as const,
-      },
-      ...transfers.flatMap((transfer) => this.#transferActivity(transfer)),
+      ...(actorId === DEMO_ACTOR.id
+        ? [
+            {
+              id: "activity_opening_balance_001",
+              accountId: DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
+              sourceType: "opening_balance" as const,
+              sourceId: "opening_balance_001",
+              occurredAt: "2026-01-01T00:00:00.000Z",
+              title: "Synthetic opening balance",
+              category: "deposit" as const,
+              direction: "credit" as const,
+              amount: { currency: "USD" as const, minorUnits: "425000" },
+              status: "completed" as const,
+            },
+          ]
+        : []),
+      ...transferActivity,
     ].sort((left, right) => right.occurredAt.localeCompare(left.occurredAt));
     return items;
   }
@@ -240,6 +366,10 @@ export class DemoRuntime {
       );
     }
     return this.#runReconciliation(actorId, scenario);
+  }
+
+  async #withTransaction<T>(operation: () => Promise<T>): Promise<T> {
+    return this.#unitOfWork ? this.#unitOfWork.run(operation) : operation();
   }
 
   async #runReconciliation(
@@ -359,7 +489,7 @@ export class DemoRuntime {
     return pending.length;
   }
 
-  #transferActivity(transfer: RemittanceTransfer) {
+  async #transferActivity(actorId: string, transfer: RemittanceTransfer) {
     const status = publicTransferStatus(transfer.state);
     const primary = {
       id: `activity_transfer_${transfer.id}`,
@@ -367,7 +497,7 @@ export class DemoRuntime {
       sourceType: "remittance" as const,
       sourceId: transfer.id,
       occurredAt: transfer.createdAt,
-      title: `Remittance to ${this.recipientDisplay(transfer.quote.beneficiaryId)}`,
+      title: `Remittance to ${await this.recipientDisplay(actorId, transfer.quote.beneficiaryId)}`,
       category: "remittance" as const,
       direction: "debit" as const,
       amount: serializeMoney(transfer.quote.debitAmount),
@@ -399,4 +529,10 @@ export class DemoRuntime {
       },
     ];
   }
+}
+
+function beneficiaryNotFound(beneficiaryId: string): DomainError {
+  return new DomainError("NOT_FOUND", "The beneficiary was not found.", {
+    beneficiaryId,
+  });
 }
