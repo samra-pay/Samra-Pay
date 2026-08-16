@@ -111,6 +111,7 @@ export type DemoRuntimeDependencies = Readonly<{
   reconciliationStore?: ReconciliationStore;
   ids?: ConstructorParameters<typeof RemittanceService>[0]["ids"];
   nextReconciliationId?: () => string;
+  close?: () => Promise<void>;
 }>;
 
 export class DemoRuntime {
@@ -124,6 +125,8 @@ export class DemoRuntime {
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #nextReconciliationId?: () => string;
+  readonly #close?: () => Promise<void>;
+  #closePromise?: Promise<void>;
   #reconciliationSequence = 0;
 
   constructor(dependencies: DemoRuntimeDependencies = {}) {
@@ -135,6 +138,7 @@ export class DemoRuntime {
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
     this.#nextReconciliationId = dependencies.nextReconciliationId;
+    this.#close = dependencies.close;
     this.service = new RemittanceService({
       repository: this.repository,
       providers: this.providers,
@@ -143,6 +147,11 @@ export class DemoRuntime {
       unitOfWork: dependencies.unitOfWork,
       ids: dependencies.ids,
     });
+  }
+
+  async close(): Promise<void> {
+    this.#closePromise ??= this.#close?.() ?? Promise.resolve();
+    await this.#closePromise;
   }
 
   assertAccount(actorId: string, accountId: string): void {
