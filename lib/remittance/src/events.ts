@@ -94,6 +94,21 @@ export class DomainEventInbox {
   readonly #deferred = new Map<string, ProviderEvent>();
   readonly #records: InboxRecord[] = [];
 
+  constructor(records: readonly InboxRecord[] = []) {
+    for (const record of records) {
+      this.#records.push(record);
+      if (record.disposition === "DEFERRED") {
+        this.#deferred.set(record.key, record.event);
+      } else if (
+        record.disposition === "PROCESSED" ||
+        record.disposition === "IGNORED"
+      ) {
+        this.#deferred.delete(record.key);
+        this.#seen.add(record.key);
+      }
+    }
+  }
+
   ingest(
     transfer: RemittanceTransfer,
     event: ProviderEvent,
@@ -176,6 +191,14 @@ export class DomainEventInbox {
           this.#seen.add(key);
           current = result.transfer;
           processed.push(pending);
+          this.#records.push(
+            Object.freeze({
+              key,
+              event: pending,
+              disposition: "PROCESSED" as const,
+              recordedAt: pending.occurredAt,
+            }),
+          );
           madeProgress = true;
           break;
         }
