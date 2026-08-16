@@ -25,5 +25,6 @@ export function createConfiguredDemoRuntime(
     reconciliationStore: new PostgresReconciliationStore(context),
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
+    close: () => connection.pool.end(),
   });
 }
