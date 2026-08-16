@@ -11,22 +11,30 @@ transport hooks directly:
 - current customer;
 - accounts and ledger-derived balances;
 - activity;
+- actor-owned beneficiaries;
 - remittance options;
 - quote creation;
 - transfer creation, list and detail;
 - transfer cancellation.
 
-The first cutover implements one API adapter and one hard boundary:
+The web cutover implements one API adapter and one hard boundary:
 
 - `ApiSamraDataSource` calls the versioned generated client.
-- default `mock` mode renders the untouched legacy remittance component and
-  does not route its local state through the new data-source interface;
+- default `mock` mode renders the untouched legacy overview and remittance
+  components and does not route their local state through the new data-source
+  interface;
 - the mock-side interface deliberately rejects financial calls, preventing a
   new screen from accidentally treating legacy fixture state as API data.
+- `api` mode renders the backend customer, ledger-derived account balances,
+  activity, beneficiaries, quotes, transfers and transfer status;
+- financial preview pages without an approved backend contract render an
+  explicit unavailable state in `api` mode instead of falling back to mocks;
+- stalled generated-client requests fail after 15 seconds with a retryable
+  timeout error.
 
 The route choice is fixed at the application boundary. A single workflow never
-mixes local financial state and ledger-backed state. A reusable mock adapter
-and the mobile API cutover remain future work, not current capabilities.
+mixes local financial state and ledger-backed state. The mobile API cutover
+remains future work, not a current capability.
 
 ## API conventions
 
@@ -44,12 +52,13 @@ and the mobile API cutover remain future work, not current capabilities.
 
 1. Add ledger, fake providers and API with no screen imports.
 2. Add generated contract and the stable API data-source adapter.
-3. Enable web `/dashboard/remittance` in API mode.
-4. Replace web overview balance and activity.
-5. Stabilize the contract.
-6. Enable mobile remittance.
-7. Replace mobile balance and activity.
-8. Remove only the mocks whose API replacements have passed.
+3. Enable web `/remittance` and `/dashboard/remittance` in API mode.
+4. Replace web overview identity, balance and activity in API mode.
+5. Keep unsupported financial previews explicitly unavailable in API mode.
+6. Stabilize the contract.
+7. Enable mobile remittance.
+8. Replace mobile balance and activity.
+9. Remove only the mocks whose API replacements have passed.
 
 Rewards, credit, card controls and settings remain explicit legacy demos until
 their domains exist.

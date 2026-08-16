@@ -15,12 +15,12 @@ import Home from "@/pages/home";
 import Cards from "@/pages/cards";
 import ChargeCardPage from "@/pages/cards/charge";
 import CoBrandCardPage from "@/pages/cards/co-brand";
-import Remittance from "@/pages/remittance";
+import { PublicRemittanceRoute } from "@/pages/remittance-route";
 import SocialHouse from "@/pages/social-house";
 import AskSamra from "@/pages/ask-samra";
 import LegalPage from "@/pages/legal";
 import Login from "@/pages/login";
-import Dashboard from "@/pages/dashboard";
+import { DashboardHomeRoute } from "@/pages/dashboard-route";
 import { DashboardCards } from "@/pages/dashboard/cards";
 import { DashboardCredit } from "@/pages/dashboard/credit";
 import { DashboardAnalytics } from "@/pages/dashboard/analytics";
@@ -28,8 +28,10 @@ import { DashboardRemittanceRoute } from "@/pages/dashboard/remittance-route";
 import { DashboardSettings } from "@/pages/dashboard/settings";
 import { DashboardRewards } from "@/pages/dashboard/rewards";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { ApiModeUnavailable } from "@/pages/api-mode-unavailable";
 import { LanguageProvider } from "@/lib/i18n";
-import { SamraRuntimeProvider } from "@/lib/samra-runtime";
+import { SamraRuntimeProvider, useSamraDataMode } from "@/lib/samra-runtime";
+import { isUnavailableFinancialPreview } from "@/lib/dashboard-api-model";
 import { useParams } from "wouter";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,19 @@ const queryClient = new QueryClient();
 function DashboardRouter() {
   const params = useParams();
   const page = params.page;
+  const mode = useSamraDataMode();
+
+  if (mode === "api" && isUnavailableFinancialPreview(page)) {
+    const section =
+      page === "cards"
+        ? "Cards and accounts"
+        : page === "credit"
+          ? "Credit health"
+          : page === "analytics"
+            ? "Analytics"
+            : "Rewards";
+    return <ApiModeUnavailable section={section} />;
+  }
 
   switch (page) {
     case "cards":
@@ -52,7 +67,7 @@ function DashboardRouter() {
     case "settings":
       return <DashboardSettings />;
     default:
-      return <Dashboard />;
+      return <DashboardHomeRoute />;
   }
 }
 
@@ -85,7 +100,7 @@ function Router() {
                 <Route path="/cards/charge" component={ChargeCardPage} />
                 <Route path="/cards/co-brand" component={CoBrandCardPage} />
                 <Route path="/cards" component={Cards} />
-                <Route path="/remittance" component={Remittance} />
+                <Route path="/remittance" component={PublicRemittanceRoute} />
                 <Route path="/social-house" component={SocialHouse} />
                 <Route path="/ask-samra" component={AskSamra} />
                 <Route path="/privacy">

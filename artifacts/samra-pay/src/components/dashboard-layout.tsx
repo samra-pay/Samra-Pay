@@ -1,22 +1,84 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@workspace/samra-pay-ds/lib/utils";
-import { LayoutDashboard, CreditCard, BarChart3, LineChart, Send, Settings, LogOut, Menu, X, Plane } from "lucide-react";
+import {
+  LayoutDashboard,
+  CreditCard,
+  BarChart3,
+  LineChart,
+  Send,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Plane,
+} from "lucide-react";
 import { useState } from "react";
 import { SamraLogo } from "@/components/samra-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/lib/i18n";
+import { useSamraDataMode } from "@/lib/samra-runtime";
+import { useCurrentCustomer } from "@workspace/samra-client/react";
+import { customerInitials } from "@/lib/dashboard-api-model";
+
+function MockDashboardIdentity() {
+  return (
+    <>
+      <div className="text-right hidden sm:block">
+        <div className="text-sm font-medium">Selam T.</div>
+        <div className="text-xs text-muted-foreground">Member since 2024</div>
+      </div>
+      <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center font-medium">
+        ST
+      </div>
+    </>
+  );
+}
+
+function ApiDashboardIdentity() {
+  const customer = useCurrentCustomer();
+  const name = customer.data?.displayName;
+
+  return (
+    <>
+      <div className="text-right hidden sm:block">
+        <div className="text-sm font-medium">
+          {name ?? (customer.isLoading ? "Loading…" : "Profile unavailable")}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Synthetic backend identity
+        </div>
+      </div>
+      <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center font-medium">
+        {name ? customerInitials(name) : "—"}
+      </div>
+    </>
+  );
+}
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { t, langClass, langAttr } = useLanguage();
+  const dataMode = useSamraDataMode();
 
   const navLinks = [
     { icon: LayoutDashboard, label: t("dash.overview"), href: "/dashboard" },
-    { icon: CreditCard, label: t("dash.cardsAccounts"), href: "/dashboard/cards" },
-    { icon: LineChart, label: t("dash.creditHealth"), href: "/dashboard/credit" },
-    { icon: BarChart3, label: t("dash.analytics"), href: "/dashboard/analytics" },
+    {
+      icon: CreditCard,
+      label: t("dash.cardsAccounts"),
+      href: "/dashboard/cards",
+    },
+    {
+      icon: LineChart,
+      label: t("dash.creditHealth"),
+      href: "/dashboard/credit",
+    },
+    {
+      icon: BarChart3,
+      label: t("dash.analytics"),
+      href: "/dashboard/analytics",
+    },
     { icon: Send, label: t("dash.remittance"), href: "/dashboard/remittance" },
     { icon: Plane, label: t("dash.rewards"), href: "/dashboard/rewards" },
   ];
@@ -32,36 +94,56 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </Link>
         </div>
-        
+
         <div className="flex-1 py-6 px-4 space-y-1">
           {navLinks.map((link) => {
             const isActive = location === link.href;
             return (
               <Link key={link.href} href={link.href}>
-                <div lang={langAttr} className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium",
-                  langClass,
-                  isActive 
-                    ? "bg-primary/10 text-primary border border-primary/20" 
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                )}>
-                  <link.icon className={cn("w-5 h-5", isActive ? "text-primary" : "text-muted-foreground")} />
+                <div
+                  lang={langAttr}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium",
+                    langClass,
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+                  )}
+                >
+                  <link.icon
+                    className={cn(
+                      "w-5 h-5",
+                      isActive ? "text-primary" : "text-muted-foreground",
+                    )}
+                  />
                   {link.label}
                 </div>
               </Link>
-            )
+            );
           })}
         </div>
 
         <div className="p-4 border-t border-white/5 space-y-1">
           <Link href="/dashboard/settings">
-            <div lang={langAttr} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground", langClass)}>
+            <div
+              lang={langAttr}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+                langClass,
+              )}
+            >
               <Settings className="w-5 h-5 text-muted-foreground" />
               {t("dash.settings")}
             </div>
           </Link>
           <Link href="/">
-            <div lang={langAttr} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive", langClass)}>
+            <div
+              lang={langAttr}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive",
+                langClass,
+              )}
+            >
               <LogOut className="w-5 h-5" />
               {t("dash.signOut")}
             </div>
@@ -76,7 +158,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <SamraLogo size="sm" showWordmark={false} />
           </div>
         </Link>
-        <button onClick={() => setIsMobileOpen(!isMobileOpen)} className="text-foreground">
+        <button
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="text-foreground"
+        >
           {isMobileOpen ? <X /> : <Menu />}
         </button>
       </div>
@@ -87,15 +172,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex-1 py-6 px-4 space-y-2">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}>
-                <div 
+                <div
                   onClick={() => setIsMobileOpen(false)}
                   lang={langAttr}
                   className={cn(
                     "flex items-center gap-3 px-4 py-4 rounded-xl cursor-pointer transition-colors text-base font-medium",
                     langClass,
-                    location === link.href 
-                      ? "bg-primary/10 text-primary border border-primary/20" 
-                      : "text-muted-foreground"
+                    location === link.href
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground",
                   )}
                 >
                   <link.icon className="w-5 h-5" />
@@ -113,23 +198,25 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pt-0 pt-16 h-screen overflow-y-auto">
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-30">
-          <h2 lang={langAttr} className={cn("text-xl font-medium tracking-wide", langClass)}>
-            {navLinks.find(l => l.href === location)?.label || (location === "/dashboard/settings" ? t("dash.settings") : t("dash.dashboard"))}
+          <h2
+            lang={langAttr}
+            className={cn("text-xl font-medium tracking-wide", langClass)}
+          >
+            {navLinks.find((l) => l.href === location)?.label ||
+              (location === "/dashboard/settings"
+                ? t("dash.settings")
+                : t("dash.dashboard"))}
           </h2>
           <div className="flex items-center gap-4">
             <LanguageToggle className="hidden sm:inline-flex" />
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-medium">Selam T.</div>
-              <div className="text-xs text-muted-foreground">Member since 2024</div>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center font-medium">
-              ST
-            </div>
+            {dataMode === "api" ? (
+              <ApiDashboardIdentity />
+            ) : (
+              <MockDashboardIdentity />
+            )}
           </div>
         </header>
-        <div className="flex-1 p-4 sm:p-8">
-          {children}
-        </div>
+        <div className="flex-1 p-4 sm:p-8">{children}</div>
       </main>
     </div>
   );
