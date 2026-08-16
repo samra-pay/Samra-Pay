@@ -133,6 +133,21 @@ export const DELIVERY_OPTIONS = [
   { id: 'bank', label: 'Bank account', detail: 'Direct to their bank', icon: 'home' },
 ] as const;
 
+export const MOBILE_WALLETS = [
+  { id: 'telebirr', label: 'telebirr' },
+  { id: 'mpesa', label: 'M-PESA Ethiopia' },
+  { id: 'hellocash', label: 'HelloCash' },
+  { id: 'amole', label: 'Amole' },
+] as const;
+
+export const RECIPIENT_BANKS = [
+  { id: 'cbe', label: 'Commercial Bank of Ethiopia' },
+  { id: 'awash', label: 'Awash Bank' },
+  { id: 'abyssinia', label: 'Bank of Abyssinia' },
+  { id: 'dashen', label: 'Dashen Bank' },
+  { id: 'coop-oromia', label: 'Cooperative Bank of Oromia' },
+] as const;
+
 export const FUNDING_OPTIONS = [
   { id: 'card', label: 'Card', detail: '3% service fee', icon: 'credit-card' },
   { id: 'bank', label: 'Bank transfer', detail: 'No service fee', icon: 'repeat' },

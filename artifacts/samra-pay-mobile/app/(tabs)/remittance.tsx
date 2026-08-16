@@ -16,10 +16,15 @@ import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import { useTransfers } from '@/context/TransferContext';
 import {
+  hasValidRecipientDetails,
+} from '@/lib/recipient-details';
+import {
   CARD_FEE_RATE,
   DELIVERY_OPTIONS,
   FUNDING_OPTIONS,
+  MOBILE_WALLETS,
   PROMO_RATE,
+  RECIPIENT_BANKS,
   REMITTANCE_STATS,
   STANDARD_RATE,
   formatEtb,
@@ -28,6 +33,8 @@ import {
 
 type DeliveryId = (typeof DELIVERY_OPTIONS)[number]['id'];
 type FundingId = (typeof FUNDING_OPTIONS)[number]['id'];
+type RecipientBankId = (typeof RECIPIENT_BANKS)[number]['id'];
+type MobileWalletId = (typeof MOBILE_WALLETS)[number]['id'];
 type Step = 'form' | 'review' | 'success';
 
 function getTodayLabel() {
@@ -44,6 +51,12 @@ export default function RemittanceScreen() {
   const [delivery, setDelivery] = useState<DeliveryId>('bank');
   const [funding, setFunding] = useState<FundingId>('bank');
   const [recipientName, setRecipientName] = useState<string>('Almaz Tesfaye');
+  const [recipientPhone, setRecipientPhone] = useState<string>('');
+  const [recipientWallet, setRecipientWallet] = useState<MobileWalletId | null>(null);
+  const [recipientBank, setRecipientBank] = useState<RecipientBankId | null>(null);
+  const [recipientAccountNumber, setRecipientAccountNumber] = useState<string>('');
+  const [walletPickerOpen, setWalletPickerOpen] = useState<boolean>(false);
+  const [bankPickerOpen, setBankPickerOpen] = useState<boolean>(false);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -57,9 +70,20 @@ export default function RemittanceScreen() {
 
   const deliveryLabel = DELIVERY_OPTIONS.find((d) => d.id === delivery)?.label ?? delivery;
   const fundingLabel = FUNDING_OPTIONS.find((f) => f.id === funding)?.label ?? funding;
+  const recipientWalletLabel =
+    MOBILE_WALLETS.find((wallet) => wallet.id === recipientWallet)?.label ?? '';
+  const recipientBankLabel =
+    RECIPIENT_BANKS.find((bank) => bank.id === recipientBank)?.label ?? '';
 
   const recipientValid = recipientName.trim().length > 0;
-  const canContinue = amount > 0 && recipientValid;
+  const recipientDestinationValid = hasValidRecipientDetails({
+    delivery,
+    phone: recipientPhone,
+    walletId: recipientWallet,
+    bankId: recipientBank,
+    accountNumber: recipientAccountNumber,
+  });
+  const canContinue = amount > 0 && recipientValid && recipientDestinationValid;
 
   function handleContinue() {
     if (!canContinue) return;
@@ -152,6 +176,21 @@ export default function RemittanceScreen() {
           style={[styles.reviewCard, { backgroundColor: colors.card, borderColor: colors.border }]}
         >
           <Row label="Recipient" value={recipientName} colors={colors} />
+          {delivery === 'wallet' ? (
+            <>
+              <Row label="Mobile wallet" value={recipientWalletLabel} colors={colors} />
+              <Row label="Mobile number" value={recipientPhone.trim()} colors={colors} />
+            </>
+          ) : (
+            <>
+              <Row label="Recipient bank" value={recipientBankLabel} colors={colors} />
+              <Row
+                label="Account number"
+                value={recipientAccountNumber.trim()}
+                colors={colors}
+              />
+            </>
+          )}
           <Row label="Amount" value={formatUsd(amount)} colors={colors} />
           <Row label="Service fee" value={fee > 0 ? formatUsd(fee) : 'Free'} colors={colors} />
           <Row label="Total charged" value={formatUsd(total)} colors={colors} bold />
@@ -221,6 +260,197 @@ export default function RemittanceScreen() {
             placeholderTextColor={colors.mutedForeground}
           />
         </View>
+
+        {delivery === 'wallet' ? (
+          <>
+            <View style={styles.recipientField}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>MOBILE WALLET</Text>
+              <Pressable
+                testID="recipient-wallet-picker"
+                accessibilityRole="button"
+                accessibilityState={{ expanded: walletPickerOpen }}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setWalletPickerOpen((open) => !open);
+                }}
+                style={({ pressed }) => [
+                  styles.bankPicker,
+                  {
+                    borderColor: colors.input,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.bankPickerContent}>
+                  <Feather name="smartphone" size={15} color={colors.mutedForeground} />
+                  <Text
+                    style={[
+                      styles.bankPickerValue,
+                      { color: recipientWalletLabel ? colors.foreground : colors.mutedForeground },
+                    ]}
+                  >
+                    {recipientWalletLabel || 'Choose mobile wallet'}
+                  </Text>
+                </View>
+                <Feather
+                  name={walletPickerOpen ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.mutedForeground}
+                />
+              </Pressable>
+              {walletPickerOpen ? (
+                <View
+                  testID="recipient-wallet-options"
+                  style={[
+                    styles.bankMenu,
+                    { backgroundColor: colors.background, borderColor: colors.border },
+                  ]}
+                >
+                  {MOBILE_WALLETS.map((wallet) => {
+                    const active = wallet.id === recipientWallet;
+                    return (
+                      <Pressable
+                        key={wallet.id}
+                        testID={`recipient-wallet-${wallet.id}`}
+                        onPress={() => {
+                          setRecipientWallet(wallet.id);
+                          setWalletPickerOpen(false);
+                          Haptics.selectionAsync();
+                        }}
+                        style={({ pressed }) => [
+                          styles.bankOption,
+                          {
+                            backgroundColor: active ? colors.accent : colors.background,
+                            opacity: pressed ? 0.7 : 1,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.bankOptionText, { color: colors.foreground }]}>
+                          {wallet.label}
+                        </Text>
+                        {active ? <Feather name="check" size={16} color={colors.primary} /> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.recipientField}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>MOBILE NUMBER</Text>
+              <View style={[styles.recipientWrap, { borderColor: colors.input }]}>
+                <Feather name="phone" size={15} color={colors.mutedForeground} style={{ marginRight: 8 }} />
+                <TextInput
+                  testID="recipient-phone"
+                  style={[styles.recipientInput, { color: colors.foreground }]}
+                  value={recipientPhone}
+                  onChangeText={setRecipientPhone}
+                  keyboardType="phone-pad"
+                  textContentType="telephoneNumber"
+                  placeholder="+251 9XX XXX XXX"
+                  placeholderTextColor={colors.mutedForeground}
+                />
+              </View>
+              <Text style={[styles.fieldHelp, { color: colors.mutedForeground }]}>
+                Enter the number registered with the selected mobile wallet.
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.recipientField}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>RECIPIENT BANK</Text>
+              <Pressable
+                testID="recipient-bank-picker"
+                accessibilityRole="button"
+                accessibilityState={{ expanded: bankPickerOpen }}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setBankPickerOpen((open) => !open);
+                }}
+                style={({ pressed }) => [
+                  styles.bankPicker,
+                  {
+                    borderColor: colors.input,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.bankPickerContent}>
+                  <Feather name="home" size={15} color={colors.mutedForeground} />
+                  <Text
+                    style={[
+                      styles.bankPickerValue,
+                      { color: recipientBankLabel ? colors.foreground : colors.mutedForeground },
+                    ]}
+                  >
+                    {recipientBankLabel || 'Choose recipient bank'}
+                  </Text>
+                </View>
+                <Feather
+                  name={bankPickerOpen ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.mutedForeground}
+                />
+              </Pressable>
+              {bankPickerOpen ? (
+                <View
+                  testID="recipient-bank-options"
+                  style={[
+                    styles.bankMenu,
+                    { backgroundColor: colors.background, borderColor: colors.border },
+                  ]}
+                >
+                  {RECIPIENT_BANKS.map((bank) => {
+                    const active = bank.id === recipientBank;
+                    return (
+                      <Pressable
+                        key={bank.id}
+                        testID={`recipient-bank-${bank.id}`}
+                        onPress={() => {
+                          setRecipientBank(bank.id);
+                          setBankPickerOpen(false);
+                          Haptics.selectionAsync();
+                        }}
+                        style={({ pressed }) => [
+                          styles.bankOption,
+                          {
+                            backgroundColor: active ? colors.accent : colors.background,
+                            opacity: pressed ? 0.7 : 1,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.bankOptionText, { color: colors.foreground }]}>
+                          {bank.label}
+                        </Text>
+                        {active ? <Feather name="check" size={16} color={colors.primary} /> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.recipientField}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>ACCOUNT NUMBER</Text>
+              <View style={[styles.recipientWrap, { borderColor: colors.input }]}>
+                <Feather name="hash" size={15} color={colors.mutedForeground} style={{ marginRight: 8 }} />
+                <TextInput
+                  testID="recipient-account-number"
+                  style={[styles.recipientInput, { color: colors.foreground }]}
+                  value={recipientAccountNumber}
+                  onChangeText={(value) => setRecipientAccountNumber(value.replace(/\D/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="8–20 digits"
+                  placeholderTextColor={colors.mutedForeground}
+                  maxLength={20}
+                />
+              </View>
+              <Text style={[styles.fieldHelp, { color: colors.mutedForeground }]}>
+                Confirm the account number with the recipient before sending.
+              </Text>
+            </View>
+          </>
+        )}
       </View>
 
       <View style={[styles.calcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -260,6 +490,8 @@ export default function RemittanceScreen() {
               testID={`delivery-${opt.id}`}
               onPress={() => {
                 setDelivery(opt.id);
+                setWalletPickerOpen(false);
+                setBankPickerOpen(false);
                 Haptics.selectionAsync();
               }}
               style={({ pressed }) => [
@@ -493,6 +725,50 @@ const styles = StyleSheet.create({
     fontFamily: font.sans.medium,
     fontSize: 17,
     padding: 0,
+  },
+  recipientField: {
+    marginTop: 18,
+  },
+  fieldHelp: {
+    fontFamily: font.sans.regular,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 8,
+  },
+  bankPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    paddingBottom: 10,
+  },
+  bankPickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
+  bankPickerValue: {
+    fontFamily: font.sans.medium,
+    fontSize: 16,
+    flex: 1,
+  },
+  bankMenu: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+  bankOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  bankOptionText: {
+    fontFamily: font.sans.medium,
+    fontSize: 14,
   },
   amountWrap: {
     flexDirection: 'row',
