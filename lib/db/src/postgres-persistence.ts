@@ -243,9 +243,14 @@ export class PostgresRemittanceRepository implements RemittanceRepository {
       internalId = existing.rows[0].id;
       await query.query(
         `UPDATE samra_core.remittance_transfers SET
-           hold_id = COALESCE($2, hold_id), state = $3, funding_state = $4,
+           hold_id = COALESCE($2, hold_id),
+           state = $3::samra_core.remittance_transfer_state,
+           funding_state = $4,
            payout_state = $5, reconciliation_state = $6, version = $7,
-           updated_at = $8, completed_at = CASE WHEN $3 IN ('completed','refunded','reversed','cancelled','failed') THEN $8 ELSE completed_at END
+           updated_at = $8,
+           completed_at = CASE
+             WHEN $3::samra_core.remittance_transfer_state IN ('completed','refunded','reversed','cancelled','failed')
+             THEN $8 ELSE completed_at END
          WHERE id = $1`,
         [
           internalId,
