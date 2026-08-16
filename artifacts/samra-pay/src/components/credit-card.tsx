@@ -45,7 +45,8 @@ export function CreditCard({ variant, ...rest }: CreditCardProps) {
           <img
             src={ethiopianLogo}
             alt="Ethiopian Airlines"
-            className="h-[clamp(1.25rem,6cqw,2rem)] object-contain"
+            data-testid="ethiopian-airlines-logo"
+            className="h-[clamp(1.5rem,7.5cqw,2.5rem)] w-[clamp(5.5rem,31cqw,8.5rem)] object-contain object-right"
           />
         }
         {...rest}
