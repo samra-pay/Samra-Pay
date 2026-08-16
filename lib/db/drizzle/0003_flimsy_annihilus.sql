@@ -1,0 +1,2 @@
+-- Schema snapshot alignment only. The reviewed structural SQL and database
+-- invariants are applied by 0002_backend_persistence.sql.
