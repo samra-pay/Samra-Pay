@@ -6,6 +6,7 @@ import { loadApiRuntimeConfig, type ApiRuntimeConfig } from "./config";
 import { logger } from "./lib/logger";
 import { problemHandler } from "./lib/problem";
 import { DemoRuntime } from "./domain/demo-runtime";
+import { createConfiguredDemoRuntime } from "./domain/create-demo-runtime";
 import { startDemoWorker } from "./domain/demo-worker";
 import { DomainError } from "@workspace/remittance";
 
@@ -40,7 +41,7 @@ export function createApp(
 
   const runtime =
     config.backendMode === "demo" && config.providerMode === "fake"
-      ? (demoRuntime ?? new DemoRuntime())
+      ? (demoRuntime ?? createConfiguredDemoRuntime(config))
       : undefined;
   app.use("/api", createApiRouter(config, runtime));
   if (runtime && config.runWorker) {
