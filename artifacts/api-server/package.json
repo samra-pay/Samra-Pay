@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "test": "NODE_ENV=test node --import tsx --test src/*.test.ts",
+    "test:postgres": "NODE_ENV=test node --import tsx --test test/postgres.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
