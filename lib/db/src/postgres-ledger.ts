@@ -382,10 +382,10 @@ async function reverseJournal(
     `INSERT INTO samra_core.ledger_journals
      (business_event_type, business_event_id, currency, state, description,
       reverses_journal_id, metadata)
-     SELECT 'remittance_refund_reversal', $2 || ':' || id::text, currency, 'draft',
-            'Refund reversal for transfer ' || $2, id,
-            jsonb_build_object('transferId',$2,'idempotencyKey',$3)
-     FROM samra_core.ledger_journals WHERE id = $1 RETURNING id`,
+     SELECT 'remittance_refund_reversal', $2::text || ':' || id::text, currency, 'draft',
+            'Refund reversal for transfer ' || $2::text, id,
+            jsonb_build_object('transferId',$2::text,'idempotencyKey',$3::text)
+     FROM samra_core.ledger_journals WHERE id = $1::uuid RETURNING id`,
     [originalId, transferId, idempotencyKey],
   );
   const reversalId = journal.rows[0]!.id;
