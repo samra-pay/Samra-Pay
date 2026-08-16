@@ -246,7 +246,72 @@ export default function RemittanceScreen() {
         </Text>
       </View>
 
+      <View style={[styles.calcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>YOU SEND (USD)</Text>
+        <View style={[styles.amountWrap, { borderColor: colors.input }]}>
+          <Text style={[styles.dollar, { color: colors.primary }]}>$</Text>
+          <TextInput
+            testID="remit-amount"
+            style={[styles.amountInput, { color: colors.foreground }]}
+            keyboardType="decimal-pad"
+            value={amountText}
+            onChangeText={setAmountText}
+            placeholder="0"
+            placeholderTextColor={colors.mutedForeground}
+            allowFontScaling={false}
+          />
+        </View>
+
+        <View style={styles.receiveRow}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>THEY RECEIVE</Text>
+          <Text style={[styles.receiveValue, { color: colors.primary }]} allowFontScaling={false}>
+            {formatEtb(receiveEtb)}
+          </Text>
+          <Text style={[styles.compare, { color: colors.mutedForeground }]}>
+            {formatEtb(extraEtb)} more than the {STANDARD_RATE} ETB standard rate
+          </Text>
+        </View>
+      </View>
+
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Delivery method</Text>
+      <View style={styles.optionRow}>
+        {DELIVERY_OPTIONS.map((opt) => {
+          const active = delivery === opt.id;
+          return (
+            <Pressable
+              key={opt.id}
+              testID={`delivery-${opt.id}`}
+              onPress={() => {
+                setDelivery(opt.id);
+                setWalletPickerOpen(false);
+                setBankPickerOpen(false);
+                Haptics.selectionAsync();
+              }}
+              style={({ pressed }) => [
+                styles.option,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: active ? colors.primary : colors.border,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <Feather
+                name={opt.icon as never}
+                size={18}
+                color={active ? colors.primary : colors.mutedForeground}
+              />
+              <Text style={[styles.optionLabel, { color: colors.foreground }]}>{opt.label}</Text>
+              <Text style={[styles.optionDetail, { color: colors.mutedForeground }]}>
+                {opt.detail}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Recipient */}
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recipient details</Text>
       <View style={[styles.calcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.mutedForeground }]}>RECIPIENT NAME</Text>
         <View style={[styles.recipientWrap, { borderColor: colors.input }]}>
@@ -451,70 +516,6 @@ export default function RemittanceScreen() {
             </View>
           </>
         )}
-      </View>
-
-      <View style={[styles.calcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.label, { color: colors.mutedForeground }]}>YOU SEND (USD)</Text>
-        <View style={[styles.amountWrap, { borderColor: colors.input }]}>
-          <Text style={[styles.dollar, { color: colors.primary }]}>$</Text>
-          <TextInput
-            testID="remit-amount"
-            style={[styles.amountInput, { color: colors.foreground }]}
-            keyboardType="decimal-pad"
-            value={amountText}
-            onChangeText={setAmountText}
-            placeholder="0"
-            placeholderTextColor={colors.mutedForeground}
-            allowFontScaling={false}
-          />
-        </View>
-
-        <View style={styles.receiveRow}>
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>THEY RECEIVE</Text>
-          <Text style={[styles.receiveValue, { color: colors.primary }]} allowFontScaling={false}>
-            {formatEtb(receiveEtb)}
-          </Text>
-          <Text style={[styles.compare, { color: colors.mutedForeground }]}>
-            {formatEtb(extraEtb)} more than the {STANDARD_RATE} ETB standard rate
-          </Text>
-        </View>
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Delivery method</Text>
-      <View style={styles.optionRow}>
-        {DELIVERY_OPTIONS.map((opt) => {
-          const active = delivery === opt.id;
-          return (
-            <Pressable
-              key={opt.id}
-              testID={`delivery-${opt.id}`}
-              onPress={() => {
-                setDelivery(opt.id);
-                setWalletPickerOpen(false);
-                setBankPickerOpen(false);
-                Haptics.selectionAsync();
-              }}
-              style={({ pressed }) => [
-                styles.option,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: active ? colors.primary : colors.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <Feather
-                name={opt.icon as never}
-                size={18}
-                color={active ? colors.primary : colors.mutedForeground}
-              />
-              <Text style={[styles.optionLabel, { color: colors.foreground }]}>{opt.label}</Text>
-              <Text style={[styles.optionDetail, { color: colors.mutedForeground }]}>
-                {opt.detail}
-              </Text>
-            </Pressable>
-          );
-        })}
       </View>
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Pay with</Text>
