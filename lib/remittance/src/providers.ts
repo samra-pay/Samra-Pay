@@ -51,6 +51,7 @@ export interface ChapaPort {
 }
 
 export interface LedgerControlPort {
+  findHoldId(transferId: string): Promise<string | undefined>;
   reserve(input: {
     transferId: string;
     accountId: string;
@@ -256,6 +257,10 @@ export class InMemoryLedgerControl implements LedgerControlPort {
       state: "RESERVED" | "CAPTURED" | "RELEASED" | "REFUNDED";
     }>
   >();
+
+  async findHoldId(transferId: string): Promise<string | undefined> {
+    return this.#holds.get(transferId)?.holdId;
+  }
 
   async reserve(input: {
     transferId: string;
