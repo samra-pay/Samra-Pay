@@ -404,10 +404,6 @@ async function reverseJournal(
      WHERE id = $1`,
     [reversalId],
   );
-  await query.query(
-    `UPDATE samra_core.ledger_journals SET state = 'reversed' WHERE id = $1`,
-    [originalId],
-  );
 }
 
 async function saveHoldEvent(
