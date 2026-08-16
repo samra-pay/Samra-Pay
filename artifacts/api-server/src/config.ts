@@ -1,9 +1,11 @@
 export type BackendMode = "disabled" | "demo";
 export type ProviderMode = "fake";
+export type PersistenceMode = "memory" | "postgres";
 
 export type ApiRuntimeConfig = Readonly<{
   backendMode: BackendMode;
   providerMode: ProviderMode;
+  persistenceMode?: PersistenceMode;
   devControlsEnabled: boolean;
   runWorker: boolean;
   workerIntervalMilliseconds: number;
@@ -17,6 +19,7 @@ export function loadApiRuntimeConfig(
   return Object.freeze({
     backendMode,
     providerMode,
+    persistenceMode: parsePersistenceMode(environment["SAMRA_PERSISTENCE_MODE"]),
     devControlsEnabled:
       backendMode === "demo" &&
       providerMode === "fake" &&
@@ -24,6 +27,14 @@ export function loadApiRuntimeConfig(
     runWorker: parseBoolean(environment["SAMRA_RUN_WORKER"], false),
     workerIntervalMilliseconds: 1_000,
   });
+}
+
+function parsePersistenceMode(value: string | undefined): PersistenceMode {
+  if (value === undefined || value === "memory") return "memory";
+  if (value === "postgres") return "postgres";
+  throw new Error(
+    `SAMRA_PERSISTENCE_MODE must be "memory" or "postgres"; received "${value}".`,
+  );
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
