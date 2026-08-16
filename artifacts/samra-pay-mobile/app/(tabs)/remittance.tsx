@@ -49,7 +49,7 @@ export default function RemittanceScreen() {
   const [step, setStep] = useState<Step>('form');
   const [amountText, setAmountText] = useState<string>('1000');
   const [delivery, setDelivery] = useState<DeliveryId>('bank');
-  const [funding, setFunding] = useState<FundingId>('bank');
+  const [funding, setFunding] = useState<FundingId>('samra');
   const [recipientName, setRecipientName] = useState<string>('Almaz Tesfaye');
   const [recipientPhone, setRecipientPhone] = useState<string>('');
   const [recipientWallet, setRecipientWallet] = useState<MobileWalletId | null>(null);
@@ -533,12 +533,22 @@ export default function RemittanceScreen() {
               style={({ pressed }) => [
                 styles.option,
                 {
-                  backgroundColor: colors.card,
+                  backgroundColor: active && opt.recommended ? colors.accent : colors.card,
                   borderColor: active ? colors.primary : colors.border,
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
             >
+              {opt.recommended ? (
+                <View
+                  testID="funding-samra-badge"
+                  style={[styles.recommendBadge, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.recommendBadgeText, { color: colors.primaryForeground }]}>
+                    BEST VALUE
+                  </Text>
+                </View>
+              ) : null}
               <Feather
                 name={opt.icon as never}
                 size={18}
@@ -825,6 +835,19 @@ const styles = StyleSheet.create({
   optionDetail: {
     fontFamily: font.sans.regular,
     fontSize: 11,
+  },
+  recommendBadge: {
+    position: 'absolute',
+    top: -9,
+    right: 10,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  recommendBadgeText: {
+    fontFamily: font.sans.semibold,
+    fontSize: 9,
+    letterSpacing: 0.6,
   },
   summaryCard: {
     marginHorizontal: 20,

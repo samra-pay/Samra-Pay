@@ -149,8 +149,9 @@ export const RECIPIENT_BANKS = [
 ] as const;
 
 export const FUNDING_OPTIONS = [
-  { id: 'card', label: 'Card', detail: '3% service fee', icon: 'credit-card' },
-  { id: 'bank', label: 'Bank transfer', detail: 'No service fee', icon: 'repeat' },
+  { id: 'samra', label: 'Samra Wallet', detail: 'No fees · instant', icon: 'zap', recommended: true },
+  { id: 'card', label: 'Card', detail: '3% service fee', icon: 'credit-card', recommended: false },
+  { id: 'bank', label: 'Bank transfer', detail: 'No fee · 1–2 days', icon: 'repeat', recommended: false },
 ] as const;
 
 export const REMITTANCE_STATS = {
