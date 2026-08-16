@@ -9,6 +9,9 @@ import {
   type ActorResolver,
   type FakeScenario,
   type RemittanceTransfer,
+  type RemittanceRepository,
+  type RemittanceUnitOfWork,
+  type LedgerControlPort,
 } from "@workspace/remittance";
 import { DemoLedgerAdapter, DEMO_LEDGER_ACCOUNT_IDS } from "./demo-ledger";
 import { publicTransferStatus, serializeMoney } from "./serializers";
@@ -75,19 +78,81 @@ export type DemoReconciliationRun = Readonly<{
   }>[];
 }>;
 
+export interface DemoBalanceLedger extends LedgerControlPort {
+  getCustomerBalance(accountId: string): Promise<
+    Readonly<{
+      naturalBalanceMinor: bigint;
+      availableMinor: bigint;
+    }>
+  >;
+}
+
+export interface ReconciliationStore {
+  save(run: DemoReconciliationRun): Promise<void>;
+  get(runId: string): Promise<DemoReconciliationRun | undefined>;
+}
+
+class InMemoryReconciliationStore implements ReconciliationStore {
+  readonly #runs = new Map<string, DemoReconciliationRun>();
+
+  async save(run: DemoReconciliationRun): Promise<void> {
+    this.#runs.set(run.id, run);
+  }
+
+  async get(runId: string): Promise<DemoReconciliationRun | undefined> {
+    return this.#runs.get(runId);
+  }
+}
+
+export type DemoRuntimeDependencies = Readonly<{
+  repository?: RemittanceRepository;
+  ledger?: DemoBalanceLedger;
+  unitOfWork?: RemittanceUnitOfWork;
+  reconciliationStore?: ReconciliationStore;
+  ids?: ConstructorParameters<typeof RemittanceService>[0]["ids"];
+  nextReconciliationId?: () => string;
+  close?: () => Promise<void>;
+}>;
+
 export class DemoRuntime {
   readonly actorResolver = new SeededActorResolver();
-  readonly repository = new InMemoryRemittanceRepository();
+  readonly repository: RemittanceRepository;
   readonly providers = new DeterministicFakeProviders();
-  readonly ledger = new DemoLedgerAdapter();
-  readonly service = new RemittanceService({
-    repository: this.repository,
-    providers: this.providers,
-    ledger: this.ledger,
-    fakeScenarioController: this.providers,
-  });
-  readonly #reconciliationRuns = new Map<string, DemoReconciliationRun>();
+  // Kept as the concrete demo adapter type for existing white-box demo tests.
+  // PostgreSQL composition supplies the same operational surface at runtime.
+  readonly ledger: DemoLedgerAdapter;
+  readonly service: RemittanceService;
+  readonly #unitOfWork?: RemittanceUnitOfWork;
+  readonly #reconciliationStore: ReconciliationStore;
+  readonly #nextReconciliationId?: () => string;
+  readonly #close?: () => Promise<void>;
+  #closePromise?: Promise<void>;
   #reconciliationSequence = 0;
+
+  constructor(dependencies: DemoRuntimeDependencies = {}) {
+    this.repository =
+      dependencies.repository ?? new InMemoryRemittanceRepository();
+    this.ledger = (dependencies.ledger ??
+      new DemoLedgerAdapter()) as DemoLedgerAdapter;
+    this.#unitOfWork = dependencies.unitOfWork;
+    this.#reconciliationStore =
+      dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
+    this.#nextReconciliationId = dependencies.nextReconciliationId;
+    this.#close = dependencies.close;
+    this.service = new RemittanceService({
+      repository: this.repository,
+      providers: this.providers,
+      ledger: this.ledger,
+      fakeScenarioController: this.providers,
+      unitOfWork: dependencies.unitOfWork,
+      ids: dependencies.ids,
+    });
+  }
+
+  async close(): Promise<void> {
+    this.#closePromise ??= this.#close?.() ?? Promise.resolve();
+    await this.#closePromise;
+  }
 
   assertAccount(actorId: string, accountId: string): void {
     if (
@@ -129,8 +194,8 @@ export class DemoRuntime {
     return DEMO_BENEFICIARIES[beneficiaryId as keyof typeof DEMO_BENEFICIARIES];
   }
 
-  accountResponse() {
-    const balance = this.ledger.repository.getAccountBalance(
+  async accountResponse() {
+    const balance = await this.ledger.getCustomerBalance(
       DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
     );
     return {
@@ -168,6 +233,18 @@ export class DemoRuntime {
   async runReconciliation(
     actorId: string,
     scenario: PublicReconciliationDemoScenario = "happy_path",
+  ): Promise<DemoReconciliationRun> {
+    if (this.#unitOfWork) {
+      return this.#unitOfWork.run(() =>
+        this.#runReconciliation(actorId, scenario),
+      );
+    }
+    return this.#runReconciliation(actorId, scenario);
+  }
+
+  async #runReconciliation(
+    actorId: string,
+    scenario: PublicReconciliationDemoScenario,
   ): Promise<DemoReconciliationRun> {
     const transfers = await this.service.listTransfers(actorId);
     const reconcilable = transfers.filter(
@@ -209,21 +286,25 @@ export class DemoRuntime {
     }
 
     this.#reconciliationSequence += 1;
-    const completedAt = new Date().toISOString();
+    const completedAt = new Date(
+      Math.max(Date.now(), Date.parse(startedAt) + 1),
+    ).toISOString();
     const run: DemoReconciliationRun = Object.freeze({
-      id: `recon_run_${this.#reconciliationSequence.toString().padStart(6, "0")}`,
+      id:
+        this.#nextReconciliationId?.() ??
+        `recon_run_${this.#reconciliationSequence.toString().padStart(6, "0")}`,
       status: "completed" as const,
       provider: "caliza" as const,
       startedAt,
       completedAt,
       items: Object.freeze(items),
     });
-    this.#reconciliationRuns.set(run.id, run);
+    await this.#reconciliationStore.save(run);
     return run;
   }
 
-  getReconciliation(runId: string): DemoReconciliationRun {
-    const run = this.#reconciliationRuns.get(runId);
+  async getReconciliation(runId: string): Promise<DemoReconciliationRun> {
+    const run = await this.#reconciliationStore.get(runId);
     if (!run) {
       throw new DomainError(
         "NOT_FOUND",
@@ -242,6 +323,12 @@ export class DemoRuntime {
 
   async advanceWorkerBatch(limit = 25): Promise<number> {
     const transfers = await this.service.listTransfers(DEMO_ACTOR.id);
+    for (const transfer of transfers) {
+      this.providers.setScenario(
+        transfer.id,
+        await this.repository.getFakeScenario(transfer.id),
+      );
+    }
     const pending = transfers
       .filter((transfer) => {
         const scenario = this.providers.getScenario(transfer.id);

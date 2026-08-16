@@ -850,6 +850,9 @@ importers:
 
   lib/db:
     dependencies:
+      '@workspace/remittance':
+        specifier: workspace:*
+        version: link:../remittance
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
@@ -872,6 +875,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.1
 
   lib/ledger:
     devDependencies:

@@ -18,7 +18,11 @@ import {
   isQuoteExpired,
   type QuotePolicy,
 } from "./quote";
-import type { RemittanceRepository } from "./repository";
+import {
+  DirectRemittanceUnitOfWork,
+  type RemittanceRepository,
+  type RemittanceUnitOfWork,
+} from "./repository";
 import {
   appendProviderLink,
   createTransferAggregate,
@@ -56,6 +60,7 @@ export type RemittanceServiceDependencies = Readonly<{
   ids?: IdGenerator;
   quotePolicy?: QuotePolicy;
   fakeScenarioController?: FakeScenarioController;
+  unitOfWork?: RemittanceUnitOfWork;
 }>;
 
 type ProviderIngestionResult = Readonly<{
@@ -72,6 +77,7 @@ export class RemittanceService {
   readonly #ids: IdGenerator;
   readonly #quotePolicy: QuotePolicy;
   readonly #scenarioController?: FakeScenarioController;
+  readonly #unitOfWork: RemittanceUnitOfWork;
   readonly #inboxes = new Map<string, DomainEventInbox>();
   readonly #holdIds = new Map<string, string>();
   #commandTail: Promise<void> = Promise.resolve();
@@ -84,6 +90,8 @@ export class RemittanceService {
     this.#ids = dependencies.ids ?? new SequentialIdGenerator();
     this.#quotePolicy = dependencies.quotePolicy ?? DEFAULT_DEMO_QUOTE_POLICY;
     this.#scenarioController = dependencies.fakeScenarioController;
+    this.#unitOfWork =
+      dependencies.unitOfWork ?? new DirectRemittanceUnitOfWork();
   }
 
   async createQuote(input: {
@@ -100,8 +108,10 @@ export class RemittanceService {
       createdAt: this.#clock.now(),
       policy: this.#quotePolicy,
     });
-    await this.#repository.saveQuote(quote);
-    return quote;
+    return this.#unitOfWork.run(async () => {
+      await this.#repository.saveQuote(quote);
+      return quote;
+    });
   }
 
   async getQuote(quoteId: string): Promise<RemittanceQuote | undefined> {
@@ -123,7 +133,9 @@ export class RemittanceService {
     quoteId: string;
     idempotencyKey: string;
   }): Promise<RemittanceTransfer> {
-    return this.#runExclusive(() => this.#createTransfer(input));
+    return this.#runExclusive(() =>
+      this.#unitOfWork.run(() => this.#createTransfer(input)),
+    );
   }
 
   async #createTransfer(input: {
@@ -255,7 +267,9 @@ export class RemittanceService {
     transferId: string;
     idempotencyKey: string;
   }): Promise<RemittanceTransfer> {
-    return this.#runExclusive(() => this.#cancelTransfer(input));
+    return this.#runExclusive(() =>
+      this.#unitOfWork.run(() => this.#cancelTransfer(input)),
+    );
   }
 
   async #cancelTransfer(input: {
@@ -305,7 +319,7 @@ export class RemittanceService {
       );
     }
 
-    const holdId = this.#holdIds.get(transfer.id);
+    const holdId = await this.#holdIdFor(transfer.id);
     if (holdId && transfer.fundingState === "RESERVED") {
       await this.#ledger.release({
         transferId: transfer.id,
@@ -340,7 +354,9 @@ export class RemittanceService {
   async ingestProviderEvent(
     event: ProviderEvent,
   ): Promise<ProviderIngestionResult> {
-    return this.#runExclusive(() => this.#ingestProviderEvent(event));
+    return this.#runExclusive(() =>
+      this.#unitOfWork.run(() => this.#ingestProviderEvent(event)),
+    );
   }
 
   async #ingestProviderEvent(
@@ -351,8 +367,13 @@ export class RemittanceService {
       transferId: event.transferId,
     });
 
-    const inbox = this.#inboxes.get(transfer.id) ?? new DomainEventInbox();
-    this.#inboxes.set(transfer.id, inbox);
+    let inbox = this.#inboxes.get(transfer.id);
+    if (!inbox) {
+      inbox = new DomainEventInbox(
+        await this.#repository.listInbox(transfer.id),
+      );
+      this.#inboxes.set(transfer.id, inbox);
+    }
     const recordsBefore = inbox.records().length;
     const result = inbox.ingest(
       transfer,
@@ -392,7 +413,9 @@ export class RemittanceService {
     scenario: FakeScenario,
   ): Promise<RemittanceTransfer> {
     return this.#runExclusive(() =>
-      this.#selectAndAdvanceFakeScenario(actorId, transferId, scenario),
+      this.#unitOfWork.run(() =>
+        this.#selectAndAdvanceFakeScenario(actorId, transferId, scenario),
+      ),
     );
   }
 
@@ -409,6 +432,7 @@ export class RemittanceService {
     }
     let transfer = await this.getTransfer(actorId, transferId);
     this.#scenarioController.setScenario(transfer.id, scenario);
+    await this.#repository.saveFakeScenario(transfer.id, scenario);
     const occurredAt = this.#clock.now().toISOString();
 
     if (scenario === "OUT_OF_ORDER_EVENT" && transfer.state === "SUBMITTED") {
@@ -436,7 +460,9 @@ export class RemittanceService {
     outcome: "MATCHED" | "EXCEPTION",
   ): Promise<RemittanceTransfer> {
     return this.#runExclusive(() =>
-      this.#setReconciliation(actorId, transferId, outcome),
+      this.#unitOfWork.run(() =>
+        this.#setReconciliation(actorId, transferId, outcome),
+      ),
     );
   }
 
@@ -492,7 +518,7 @@ export class RemittanceService {
     transfer: RemittanceTransfer,
     event: ProviderEvent,
   ): Promise<RemittanceTransfer> {
-    const holdId = this.#holdIds.get(transfer.id);
+    const holdId = await this.#holdIdFor(transfer.id);
     if (event.kind === "CALIZA_ACCEPTED" && holdId) {
       await this.#ledger.capture({
         transferId: transfer.id,
@@ -570,6 +596,18 @@ export class RemittanceService {
         occurredAt,
       }),
     );
+  }
+
+  async #holdIdFor(transferId: string): Promise<string | undefined> {
+    const cached = this.#holdIds.get(transferId);
+    if (cached) {
+      return cached;
+    }
+    const durable = await this.#ledger.findHoldId(transferId);
+    if (durable) {
+      this.#holdIds.set(transferId, durable);
+    }
+    return durable;
   }
 }
 

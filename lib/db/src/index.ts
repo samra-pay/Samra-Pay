@@ -75,3 +75,5 @@ export async function closeDatabase(): Promise<void> {
 }
 
 export * from "./schema";
+export * from "./postgres-persistence";
+export * from "./postgres-ledger";

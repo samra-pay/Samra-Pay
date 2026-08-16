@@ -15,6 +15,20 @@
       "when": 1786813539564,
       "tag": "0001_transfer_state_dimensions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786896000000,
+      "tag": "0002_backend_persistence",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786906003917,
+      "tag": "0003_flimsy_annihilus",
+      "breakpoints": true
     }
   ]
 }

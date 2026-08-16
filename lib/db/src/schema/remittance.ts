@@ -56,6 +56,40 @@ export const providerResourceLinks = samraCore.table(
   ],
 );
 
+export const providerCommandAttempts = samraCore.table(
+  "provider_command_attempts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    commandKey: text("command_key").notNull(),
+    provider: providerNameEnum("provider").notNull(),
+    commandType: text("command_type").notNull(),
+    transferId: uuid("transfer_id").notNull(),
+    state: text("state").notNull().default("succeeded"),
+    attemptCount: integer("attempt_count").notNull().default(1),
+    request: jsonb("request").$type<Record<string, unknown>>().notNull(),
+    response: jsonb("response").$type<Record<string, unknown>>(),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("provider_command_attempts_key_uidx").on(table.commandKey),
+    index("provider_command_attempts_transfer_idx").on(table.transferId),
+    check(
+      "provider_command_attempts_count_positive_chk",
+      sql`${table.attemptCount} > 0`,
+    ),
+    check(
+      "provider_command_attempts_state_chk",
+      sql`${table.state} in ('pending', 'succeeded', 'failed')`,
+    ),
+  ],
+);
+
 export const providerEvents = samraCore.table(
   "provider_events",
   {
@@ -134,6 +168,7 @@ export const remittanceQuotes = samraCore.table(
   "remittance_quotes",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    externalRef: text("external_ref").notNull(),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
@@ -161,6 +196,9 @@ export const remittanceQuotes = samraCore.table(
     }).notNull(),
     state: remittanceQuoteStateEnum("state").notNull().default("active"),
     pricingVersion: text("pricing_version").notNull(),
+    fundingMethod: text("funding_method").notNull(),
+    deliveryMethod: text("delivery_method").notNull(),
+    estimatedDelivery: text("estimated_delivery").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -168,6 +206,7 @@ export const remittanceQuotes = samraCore.table(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex("remittance_quotes_external_ref_uidx").on(table.externalRef),
     index("remittance_quotes_customer_created_idx").on(
       table.customerId,
       table.createdAt,
@@ -199,6 +238,14 @@ export const remittanceQuotes = samraCore.table(
     check(
       "remittance_quotes_currency_pair_chk",
       sql`${table.sourceCurrency} <> ${table.destinationCurrency}`,
+    ),
+    check(
+      "remittance_quotes_funding_method_chk",
+      sql`${table.fundingMethod} = 'samra_balance'`,
+    ),
+    check(
+      "remittance_quotes_delivery_method_chk",
+      sql`${table.deliveryMethod} in ('bank', 'wallet')`,
     ),
   ],
 );
@@ -234,6 +281,7 @@ export const remittanceTransfers = samraCore.table(
       .notNull()
       .default("not_started"),
     version: integer("version").notNull().default(1),
+    demoScenario: text("demo_scenario").notNull().default("HAPPY_PATH"),
     sourceCurrency: currencyCodeEnum("source_currency").notNull(),
     destinationCurrency: currencyCodeEnum("destination_currency").notNull(),
     sourceAmountMinor: bigint("source_amount_minor", {
@@ -339,6 +387,10 @@ export const remittanceTransferStatusHistory = samraCore.table(
 
 export type ProviderResourceLink = typeof providerResourceLinks.$inferSelect;
 export type NewProviderResourceLink = typeof providerResourceLinks.$inferInsert;
+export type ProviderCommandAttempt =
+  typeof providerCommandAttempts.$inferSelect;
+export type NewProviderCommandAttempt =
+  typeof providerCommandAttempts.$inferInsert;
 export type ProviderEvent = typeof providerEvents.$inferSelect;
 export type NewProviderEvent = typeof providerEvents.$inferInsert;
 export type OutboxEvent = typeof outboxEvents.$inferSelect;

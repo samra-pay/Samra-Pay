@@ -59,6 +59,7 @@ export const reconciliationRuns = samraCore.table(
   "reconciliation_runs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    externalRef: text("external_ref").notNull(),
     provider: providerNameEnum("provider").notNull(),
     providerReportId: uuid("provider_report_id").references(
       () => providerReports.id,
@@ -77,6 +78,9 @@ export const reconciliationRuns = samraCore.table(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex("reconciliation_runs_external_ref_uidx").on(
+      table.externalRef,
+    ),
     index("reconciliation_runs_provider_period_idx").on(
       table.provider,
       table.periodStart,

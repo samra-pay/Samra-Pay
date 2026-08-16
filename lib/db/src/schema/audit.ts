@@ -1,11 +1,19 @@
 import { sql } from "drizzle-orm";
-import { index, jsonb, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  jsonb,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { auditActorTypeEnum, samraCore } from "./enums";
 
 export const auditEvents = samraCore.table(
   "audit_events",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    eventKey: text("event_key").notNull(),
     actorType: auditActorTypeEnum("actor_type").notNull(),
     actorId: text("actor_id"),
     action: text("action").notNull(),
@@ -21,6 +29,7 @@ export const auditEvents = samraCore.table(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex("audit_events_event_key_uidx").on(table.eventKey),
     index("audit_events_entity_time_idx").on(
       table.entityType,
       table.entityId,

@@ -152,6 +152,10 @@ export const ledgerHolds = samraCore.table(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
   },
   (table) => [
     uniqueIndex("ledger_holds_business_event_uidx").on(

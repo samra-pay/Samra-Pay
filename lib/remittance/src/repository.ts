@@ -1,6 +1,17 @@
 import { DomainError } from "./errors";
 import type { InboxRecord, OutboxMessage } from "./events";
 import type { RemittanceQuote, RemittanceTransfer } from "./model";
+import type { FakeScenario } from "./providers";
+
+export interface RemittanceUnitOfWork {
+  run<T>(operation: () => Promise<T>): Promise<T>;
+}
+
+export class DirectRemittanceUnitOfWork implements RemittanceUnitOfWork {
+  async run<T>(operation: () => Promise<T>): Promise<T> {
+    return operation();
+  }
+}
 
 export interface RemittanceRepository {
   saveQuote(quote: RemittanceQuote): Promise<void>;
@@ -36,7 +47,9 @@ export interface RemittanceRepository {
   appendOutbox(message: OutboxMessage): Promise<void>;
   listOutbox(): Promise<readonly OutboxMessage[]>;
   appendInboxRecords(records: readonly InboxRecord[]): Promise<void>;
-  listInbox(): Promise<readonly InboxRecord[]>;
+  listInbox(transferId?: string): Promise<readonly InboxRecord[]>;
+  saveFakeScenario(transferId: string, scenario: FakeScenario): Promise<void>;
+  getFakeScenario(transferId: string): Promise<FakeScenario>;
 }
 
 export class InMemoryRemittanceRepository implements RemittanceRepository {
@@ -50,6 +63,7 @@ export class InMemoryRemittanceRepository implements RemittanceRepository {
   readonly #cancellationIdempotency = new Map<string, string>();
   readonly #outbox: OutboxMessage[] = [];
   readonly #inbox: InboxRecord[] = [];
+  readonly #scenarios = new Map<string, FakeScenario>();
 
   async saveQuote(quote: RemittanceQuote): Promise<void> {
     this.#quotes.set(quote.id, quote);
@@ -185,8 +199,24 @@ export class InMemoryRemittanceRepository implements RemittanceRepository {
     this.#inbox.push(...records);
   }
 
-  async listInbox(): Promise<readonly InboxRecord[]> {
-    return Object.freeze([...this.#inbox]);
+  async listInbox(transferId?: string): Promise<readonly InboxRecord[]> {
+    return Object.freeze(
+      this.#inbox.filter(
+        (record) =>
+          transferId === undefined || record.event.transferId === transferId,
+      ),
+    );
+  }
+
+  async saveFakeScenario(
+    transferId: string,
+    scenario: FakeScenario,
+  ): Promise<void> {
+    this.#scenarios.set(transferId, scenario);
+  }
+
+  async getFakeScenario(transferId: string): Promise<FakeScenario> {
+    return this.#scenarios.get(transferId) ?? "HAPPY_PATH";
   }
 }
 

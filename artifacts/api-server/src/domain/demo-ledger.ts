@@ -30,6 +30,14 @@ export class DemoLedgerAdapter implements LedgerControlPort {
     this.#seed();
   }
 
+  async findHoldId(transferId: string): Promise<string | undefined> {
+    return this.#records.get(transferId)?.holdId;
+  }
+
+  async getCustomerBalance(accountId: string) {
+    return this.repository.getAccountBalance(accountId);
+  }
+
   async reserve(input: {
     transferId: string;
     accountId: string;
