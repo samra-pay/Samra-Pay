@@ -55,6 +55,7 @@ jobs:
         env:
           PORT: "4173"
           BASE_PATH: "/"
+          EXPO_PUBLIC_DOMAIN: "ci.invalid"
 
   postgres-persistence:
     name: PostgreSQL persistence gate
