@@ -77,7 +77,7 @@ export function createV1Router(
     "/accounts",
     asyncRoute(async (req, res) => {
       await runtime.actorResolver.resolve(req);
-      res.json(ListAccountsResponse.parse([runtime.accountResponse()]));
+      res.json(ListAccountsResponse.parse([await runtime.accountResponse()]));
     }),
   );
 
@@ -274,7 +274,7 @@ export function createV1Router(
         const params = parseSchema(GetDemoReconciliationRunParams, req.params);
         res.json(
           GetDemoReconciliationRunResponse.parse(
-            runtime.getReconciliation(params.runId),
+            await runtime.getReconciliation(params.runId),
           ),
         );
       }),
