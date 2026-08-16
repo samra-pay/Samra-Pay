@@ -42,6 +42,60 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     running.push(first, concurrent);
 
     assertAccount(await getAccount(first.origin), "425000", "425000");
+    const seededBeneficiaries = arrayBody(
+      await apiRequest(first.origin, "/api/v1/beneficiaries"),
+      200,
+    );
+    assert.deepEqual(
+      seededBeneficiaries.map((item) => item["id"]),
+      ["beneficiary_bank_001", "beneficiary_wallet_001"],
+    );
+    assert.deepEqual(seededBeneficiaries[0]?.["deliveryDetails"], {
+      method: "bank",
+      bankId: "cbe",
+      institutionName: "Commercial Bank of Ethiopia",
+      accountNumberLast4: "6789",
+    });
+    const actorBRead = await apiRequest(
+      first.origin,
+      "/api/v1/beneficiaries/beneficiary_bank_001",
+      { headers: { "x-demo-actor-id": "demo_customer_002" } },
+    );
+    assert.equal(actorBRead.status, 404);
+
+    const [createdBankResponse, createdWalletResponse] = await Promise.all([
+      apiRequest(first.origin, "/api/v1/beneficiaries", {
+        method: "POST",
+        body: {
+          displayName: "Durable Bank Recipient",
+          city: "Adama",
+          countryCode: "ET",
+          deliveryDetails: {
+            method: "bank",
+            bankId: "awash",
+            accountNumber: "200000005678",
+          },
+        },
+      }),
+      apiRequest(concurrent.origin, "/api/v1/beneficiaries", {
+        method: "POST",
+        body: {
+          displayName: "Durable Wallet Recipient",
+          city: "Mekelle",
+          countryCode: "ET",
+          deliveryDetails: {
+            method: "wallet",
+            walletId: "cbebirr",
+            phoneNumber: "+251933335678",
+          },
+        },
+      }),
+    ]);
+    const durableBank = objectBody(createdBankResponse, 201);
+    const durableWallet = objectBody(createdWalletResponse, 201);
+    const durableBankId = String(durableBank["id"]);
+    const durableWalletId = String(durableWallet["id"]);
+    assert.notEqual(durableBankId, durableWalletId);
     const quote = objectBody(
       await createQuote(first.origin, "10000", "beneficiary_bank_001", "bank"),
       201,
@@ -89,6 +143,32 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     );
     assert.equal(recovered["status"], "submitted");
     assertAccount(await getAccount(restarted.origin), "425000", "414700");
+    const durableBankAfterRestart = objectBody(
+      await apiRequest(
+        restarted.origin,
+        `/api/v1/beneficiaries/${durableBankId}`,
+      ),
+      200,
+    );
+    assert.equal(
+      durableBankAfterRestart["displayName"],
+      "Durable Bank Recipient",
+    );
+    const updatedWallet = objectBody(
+      await apiRequest(
+        restarted.origin,
+        `/api/v1/beneficiaries/${durableWalletId}`,
+        { method: "PATCH", body: { city: "Gondar" } },
+      ),
+      200,
+    );
+    assert.equal(updatedWallet["city"], "Gondar");
+    const deletedBank = await apiRequest(
+      restarted.origin,
+      `/api/v1/beneficiaries/${durableBankId}`,
+      { method: "DELETE" },
+    );
+    assert.equal(deletedBank.status, 204);
 
     for (const expected of ["in_transit", "payout_pending", "completed"]) {
       const advanced = objectBody(
@@ -125,6 +205,19 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       200,
     );
     assert.equal(durableTransfer["status"], "completed");
+    const deletedAfterRestart = await apiRequest(
+      afterRestart.origin,
+      `/api/v1/beneficiaries/${durableBankId}`,
+    );
+    assert.equal(deletedAfterRestart.status, 404);
+    const updatedAfterRestart = objectBody(
+      await apiRequest(
+        afterRestart.origin,
+        `/api/v1/beneficiaries/${durableWalletId}`,
+      ),
+      200,
+    );
+    assert.equal(updatedAfterRestart["city"], "Gondar");
     const durableReconciliation = objectBody(
       await apiRequest(
         afterRestart.origin,
@@ -288,6 +381,12 @@ function objectBody(response: ApiResponse, status: number): JsonObject {
   return response.body as JsonObject;
 }
 
+function arrayBody(response: ApiResponse, status: number): JsonObject[] {
+  assert.equal(response.status, status);
+  assert.ok(Array.isArray(response.body));
+  return response.body as JsonObject[];
+}
+
 async function apiRequest(
   origin: string,
   path: string,
@@ -309,5 +408,9 @@ async function apiRequest(
       ? {}
       : { body: JSON.stringify(options.body) }),
   });
-  return { status: response.status, body: await response.json() };
+  const responseBody = await response.text();
+  return {
+    status: response.status,
+    body: responseBody ? (JSON.parse(responseBody) as unknown) : {},
+  };
 }

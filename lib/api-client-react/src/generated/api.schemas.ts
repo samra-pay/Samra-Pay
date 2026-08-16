@@ -78,6 +78,142 @@ export interface CurrentCustomer {
   backendMode: CurrentCustomerBackendMode;
 }
 
+export type BankAccountDeliveryInputMethod =
+  (typeof BankAccountDeliveryInputMethod)[keyof typeof BankAccountDeliveryInputMethod];
+
+export const BankAccountDeliveryInputMethod = {
+  bank: "bank",
+} as const;
+
+export type BankAccountDeliveryInputBankId =
+  (typeof BankAccountDeliveryInputBankId)[keyof typeof BankAccountDeliveryInputBankId];
+
+export const BankAccountDeliveryInputBankId = {
+  cbe: "cbe",
+  awash: "awash",
+} as const;
+
+export interface BankAccountDeliveryInput {
+  method: BankAccountDeliveryInputMethod;
+  bankId: BankAccountDeliveryInputBankId;
+  /** @pattern ^[0-9]{8,24}$ */
+  accountNumber: string;
+}
+
+export type MobileWalletDeliveryInputMethod =
+  (typeof MobileWalletDeliveryInputMethod)[keyof typeof MobileWalletDeliveryInputMethod];
+
+export const MobileWalletDeliveryInputMethod = {
+  wallet: "wallet",
+} as const;
+
+export type MobileWalletDeliveryInputWalletId =
+  (typeof MobileWalletDeliveryInputWalletId)[keyof typeof MobileWalletDeliveryInputWalletId];
+
+export const MobileWalletDeliveryInputWalletId = {
+  telebirr: "telebirr",
+  cbebirr: "cbebirr",
+} as const;
+
+export interface MobileWalletDeliveryInput {
+  method: MobileWalletDeliveryInputMethod;
+  walletId: MobileWalletDeliveryInputWalletId;
+  /** @pattern ^\+251[0-9]{9}$ */
+  phoneNumber: string;
+}
+
+export type BeneficiaryDeliveryInput =
+  BankAccountDeliveryInput | MobileWalletDeliveryInput;
+
+export type BankAccountDeliveryDetailsMethod =
+  (typeof BankAccountDeliveryDetailsMethod)[keyof typeof BankAccountDeliveryDetailsMethod];
+
+export const BankAccountDeliveryDetailsMethod = {
+  bank: "bank",
+} as const;
+
+export type BankAccountDeliveryDetailsBankId =
+  (typeof BankAccountDeliveryDetailsBankId)[keyof typeof BankAccountDeliveryDetailsBankId];
+
+export const BankAccountDeliveryDetailsBankId = {
+  cbe: "cbe",
+  awash: "awash",
+} as const;
+
+export interface BankAccountDeliveryDetails {
+  method: BankAccountDeliveryDetailsMethod;
+  bankId: BankAccountDeliveryDetailsBankId;
+  institutionName: string;
+  /** @pattern ^[0-9]{4}$ */
+  accountNumberLast4: string;
+}
+
+export type MobileWalletDeliveryDetailsMethod =
+  (typeof MobileWalletDeliveryDetailsMethod)[keyof typeof MobileWalletDeliveryDetailsMethod];
+
+export const MobileWalletDeliveryDetailsMethod = {
+  wallet: "wallet",
+} as const;
+
+export type MobileWalletDeliveryDetailsWalletId =
+  (typeof MobileWalletDeliveryDetailsWalletId)[keyof typeof MobileWalletDeliveryDetailsWalletId];
+
+export const MobileWalletDeliveryDetailsWalletId = {
+  telebirr: "telebirr",
+  cbebirr: "cbebirr",
+} as const;
+
+export interface MobileWalletDeliveryDetails {
+  method: MobileWalletDeliveryDetailsMethod;
+  walletId: MobileWalletDeliveryDetailsWalletId;
+  institutionName: string;
+  /** @pattern ^[0-9]{4}$ */
+  phoneNumberLast4: string;
+}
+
+export type BeneficiaryDeliveryDetails =
+  BankAccountDeliveryDetails | MobileWalletDeliveryDetails;
+
+export interface Beneficiary {
+  id: string;
+  displayName: string;
+  city: string;
+  countryCode: "ET";
+  deliveryDetails: BeneficiaryDeliveryDetails;
+  status: "active";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBeneficiaryRequest {
+  /**
+   * @minLength 2
+   * @maxLength 100
+   */
+  displayName: string;
+  /**
+   * @minLength 2
+   * @maxLength 100
+   */
+  city: string;
+  countryCode: "ET";
+  deliveryDetails: BeneficiaryDeliveryInput;
+}
+
+export interface UpdateBeneficiaryRequest {
+  /**
+   * @minLength 2
+   * @maxLength 100
+   */
+  displayName?: string;
+  /**
+   * @minLength 2
+   * @maxLength 100
+   */
+  city?: string;
+  deliveryDetails?: BeneficiaryDeliveryInput;
+}
+
 export type AccountSummaryKind =
   (typeof AccountSummaryKind)[keyof typeof AccountSummaryKind];
 

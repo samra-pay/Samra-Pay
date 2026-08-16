@@ -53,6 +53,29 @@ export type ActivityPage = Readonly<{
 export type FundingMethod = "samra_balance";
 export type DeliveryMethod = "bank" | "wallet";
 
+export type Beneficiary = Readonly<{
+  id: string;
+  displayName: string;
+  city: string;
+  countryCode: "ET";
+  deliveryDetails:
+    | Readonly<{
+        method: "bank";
+        bankId: "cbe" | "awash";
+        institutionName: string;
+        accountNumberLast4: string;
+      }>
+    | Readonly<{
+        method: "wallet";
+        walletId: "telebirr" | "cbebirr";
+        institutionName: string;
+        phoneNumberLast4: string;
+      }>;
+  status: "active";
+  createdAt: string;
+  updatedAt: string;
+}>;
+
 export type RemittanceOptions = Readonly<{
   sourceCurrency: "USD";
   destinationCurrency: "ETB";
@@ -131,6 +154,7 @@ export interface SamraDataSource {
   getCurrentCustomer(): Promise<CustomerSummary>;
   listAccounts(): Promise<readonly AccountSummary[]>;
   listActivity(input?: ActivityQuery): Promise<ActivityPage>;
+  listBeneficiaries(): Promise<readonly Beneficiary[]>;
   getRemittanceOptions(): Promise<RemittanceOptions>;
   createQuote(input: CreateQuoteInput): Promise<RemittanceQuote>;
   createTransfer(
@@ -166,6 +190,10 @@ export class ApiSamraDataSource implements SamraDataSource {
 
   listActivity(input?: ActivityQuery): Promise<ActivityPage> {
     return this.transport.listActivity(input);
+  }
+
+  listBeneficiaries(): Promise<readonly Beneficiary[]> {
+    return this.transport.listBeneficiaries();
   }
 
   getRemittanceOptions(): Promise<RemittanceOptions> {

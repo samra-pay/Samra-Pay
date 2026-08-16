@@ -367,6 +367,118 @@ test("quote creation rejects a beneficiary and delivery-rail mismatch", async ()
   });
 });
 
+test("beneficiary CRUD is actor-owned, rail-safe, and soft-deleted", async () => {
+  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+    const seeded = await request(origin, "/api/v1/beneficiaries");
+    assert.equal(seeded.status, 200);
+    assert.deepEqual(
+      (seeded.body as unknown as JsonObject[]).map((item) => item["id"]),
+      ["beneficiary_bank_001", "beneficiary_wallet_001"],
+    );
+    assert.deepEqual(
+      (seeded.body as unknown as JsonObject[]).map(
+        (item) => item["displayName"],
+      ),
+      ["Abebe Bekele", "Tigist Haile"],
+    );
+
+    const actorBHeaders = { "x-demo-actor-id": "demo_customer_002" };
+    const actorBList = await request(origin, "/api/v1/beneficiaries", {
+      headers: actorBHeaders,
+    });
+    assert.deepEqual(
+      (actorBList.body as unknown as JsonObject[]).map((item) => item["id"]),
+      ["beneficiary_actor_b_001"],
+    );
+    for (const method of ["GET", "PATCH", "DELETE"]) {
+      const isolated = await request(
+        origin,
+        "/api/v1/beneficiaries/beneficiary_bank_001",
+        {
+          method,
+          headers: actorBHeaders,
+          ...(method === "PATCH" ? { body: { city: "Gondar" } } : {}),
+        },
+      );
+      assert.equal(isolated.status, 404);
+      assert.equal(isolated.body["code"], "NOT_FOUND");
+    }
+
+    const mixedRail = await request(origin, "/api/v1/beneficiaries", {
+      method: "POST",
+      body: {
+        displayName: "Invalid Recipient",
+        city: "Addis Ababa",
+        countryCode: "ET",
+        deliveryDetails: {
+          method: "bank",
+          bankId: "cbe",
+          accountNumber: "100000001111",
+          phoneNumber: "+251911111111",
+        },
+      },
+    });
+    assert.equal(mixedRail.status, 422);
+
+    const created = await request(origin, "/api/v1/beneficiaries", {
+      method: "POST",
+      body: {
+        displayName: "New Synthetic Recipient",
+        city: "Dire Dawa",
+        countryCode: "ET",
+        deliveryDetails: {
+          method: "wallet",
+          walletId: "cbebirr",
+          phoneNumber: "+251922221234",
+        },
+      },
+    });
+    assert.equal(created.status, 201);
+    const createdId = String(created.body["id"]);
+    assert.match(createdId, /^beneficiary_[0-9a-f]{32}$/);
+    assert.equal(created.body["actorId"], undefined);
+    assert.equal(created.body["customerId"], undefined);
+    assert.deepEqual(created.body["deliveryDetails"], {
+      method: "wallet",
+      walletId: "cbebirr",
+      institutionName: "CBE Birr",
+      phoneNumberLast4: "1234",
+    });
+
+    const wrongRailQuote = await request(origin, "/api/v1/remittance/quotes", {
+      method: "POST",
+      body: {
+        sourceAccountId: DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
+        beneficiaryId: createdId,
+        sendAmount: { currency: "USD", minorUnits: "10000" },
+        fundingMethod: "samra_balance",
+        deliveryMethod: "bank",
+      },
+    });
+    assert.equal(wrongRailQuote.status, 422);
+
+    const updated = await request(
+      origin,
+      `/api/v1/beneficiaries/${createdId}`,
+      { method: "PATCH", body: { displayName: "Updated Recipient" } },
+    );
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body["displayName"], "Updated Recipient");
+
+    const deleted = await request(
+      origin,
+      `/api/v1/beneficiaries/${createdId}`,
+      { method: "DELETE" },
+    );
+    assert.equal(deleted.status, 204);
+    const afterDelete = await request(
+      origin,
+      `/api/v1/beneficiaries/${createdId}`,
+    );
+    assert.equal(afterDelete.status, 404);
+  });
+});
+
 test("cancel idempotency replays exactly and rejects key reuse for another transfer", async () => {
   await withServer(demoConfig, new DemoRuntime(), async (origin) => {
     const firstTransferId = await createTransferForScenario(origin);
@@ -603,9 +715,10 @@ async function request(
       ? {}
       : { body: JSON.stringify(options.body) }),
   });
+  const responseBody = await response.text();
   return {
     status: response.status,
-    body: (await response.json()) as JsonObject,
+    body: responseBody ? (JSON.parse(responseBody) as JsonObject) : {},
   };
 }
 

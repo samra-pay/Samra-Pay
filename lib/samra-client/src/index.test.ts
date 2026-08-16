@@ -19,6 +19,7 @@ function fakeSource(name: string): SamraDataSource {
     },
     listAccounts: never,
     listActivity: never,
+    listBeneficiaries: never,
     getRemittanceOptions: never,
     createQuote: never,
     createTransfer: never,

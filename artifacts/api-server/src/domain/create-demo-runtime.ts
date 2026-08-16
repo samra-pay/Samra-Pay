@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import type { ApiRuntimeConfig } from "../config";
 import { DemoRuntime } from "./demo-runtime";
 import { PostgresReconciliationStore } from "./postgres-reconciliation";
+import { PostgresBeneficiaryStore } from "./postgres-beneficiary-store";
 
 export function createConfiguredDemoRuntime(
   config: ApiRuntimeConfig,
@@ -22,6 +23,7 @@ export function createConfiguredDemoRuntime(
     repository: new PostgresRemittanceRepository(context),
     ledger: new PostgresLedgerControl(context),
     unitOfWork: context,
+    beneficiaryStore: new PostgresBeneficiaryStore(context),
     reconciliationStore: new PostgresReconciliationStore(context),
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,

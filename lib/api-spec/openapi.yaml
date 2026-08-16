@@ -12,6 +12,7 @@ tags:
   - name: customer
   - name: accounts
   - name: activity
+  - name: beneficiaries
   - name: remittance
   - name: demo
 paths:
@@ -90,6 +91,97 @@ paths:
                 $ref: "#/components/schemas/ActivityPage"
         "422":
           $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/beneficiaries:
+    get:
+      operationId: listBeneficiaries
+      tags: [beneficiaries]
+      summary: List active beneficiaries owned by the current actor
+      responses:
+        "200":
+          description: Active synthetic beneficiaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Beneficiary"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createBeneficiary
+      tags: [beneficiaries]
+      summary: Create a synthetic beneficiary for the current actor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBeneficiaryRequest"
+      responses:
+        "201":
+          description: Beneficiary created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Beneficiary"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/beneficiaries/{beneficiaryId}:
+    parameters:
+      - $ref: "#/components/parameters/BeneficiaryId"
+    get:
+      operationId: getBeneficiary
+      tags: [beneficiaries]
+      summary: Get an active beneficiary owned by the current actor
+      responses:
+        "200":
+          description: Beneficiary detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Beneficiary"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    patch:
+      operationId: updateBeneficiary
+      tags: [beneficiaries]
+      summary: Update an active beneficiary owned by the current actor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBeneficiaryRequest"
+      responses:
+        "200":
+          description: Beneficiary updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Beneficiary"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    delete:
+      operationId: deleteBeneficiary
+      tags: [beneficiaries]
+      summary: Soft-delete an active beneficiary owned by the current actor
+      responses:
+        "204":
+          description: Beneficiary soft-deleted
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -318,6 +410,12 @@ components:
       required: true
       schema:
         type: string
+    BeneficiaryId:
+      name: beneficiaryId
+      in: path
+      required: true
+      schema:
+        type: string
 
   responses:
     ValidationProblem:
@@ -410,6 +508,158 @@ components:
           type: string
           enum: [demo]
       required: [id, displayName, synthetic, backendMode]
+
+    BankAccountDeliveryInput:
+      type: object
+      properties:
+        method:
+          type: string
+          const: bank
+        bankId:
+          type: string
+          enum: [cbe, awash]
+        accountNumber:
+          type: string
+          pattern: "^[0-9]{8,24}$"
+      required: [method, bankId, accountNumber]
+      additionalProperties: false
+
+    MobileWalletDeliveryInput:
+      type: object
+      properties:
+        method:
+          type: string
+          const: wallet
+        walletId:
+          type: string
+          enum: [telebirr, cbebirr]
+        phoneNumber:
+          type: string
+          pattern: '^\+251[0-9]{9}$'
+      required: [method, walletId, phoneNumber]
+      additionalProperties: false
+
+    BeneficiaryDeliveryInput:
+      oneOf:
+        - $ref: "#/components/schemas/BankAccountDeliveryInput"
+        - $ref: "#/components/schemas/MobileWalletDeliveryInput"
+      discriminator:
+        propertyName: method
+        mapping:
+          bank: "#/components/schemas/BankAccountDeliveryInput"
+          wallet: "#/components/schemas/MobileWalletDeliveryInput"
+
+    BankAccountDeliveryDetails:
+      type: object
+      properties:
+        method:
+          type: string
+          const: bank
+        bankId:
+          type: string
+          enum: [cbe, awash]
+        institutionName:
+          type: string
+        accountNumberLast4:
+          type: string
+          pattern: "^[0-9]{4}$"
+      required: [method, bankId, institutionName, accountNumberLast4]
+
+    MobileWalletDeliveryDetails:
+      type: object
+      properties:
+        method:
+          type: string
+          const: wallet
+        walletId:
+          type: string
+          enum: [telebirr, cbebirr]
+        institutionName:
+          type: string
+        phoneNumberLast4:
+          type: string
+          pattern: "^[0-9]{4}$"
+      required: [method, walletId, institutionName, phoneNumberLast4]
+
+    BeneficiaryDeliveryDetails:
+      oneOf:
+        - $ref: "#/components/schemas/BankAccountDeliveryDetails"
+        - $ref: "#/components/schemas/MobileWalletDeliveryDetails"
+      discriminator:
+        propertyName: method
+        mapping:
+          bank: "#/components/schemas/BankAccountDeliveryDetails"
+          wallet: "#/components/schemas/MobileWalletDeliveryDetails"
+
+    Beneficiary:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+          const: ET
+        deliveryDetails:
+          $ref: "#/components/schemas/BeneficiaryDeliveryDetails"
+        status:
+          type: string
+          const: active
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        [
+          id,
+          displayName,
+          city,
+          countryCode,
+          deliveryDetails,
+          status,
+          createdAt,
+          updatedAt,
+        ]
+
+    CreateBeneficiaryRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 100
+        city:
+          type: string
+          minLength: 2
+          maxLength: 100
+        countryCode:
+          type: string
+          const: ET
+        deliveryDetails:
+          $ref: "#/components/schemas/BeneficiaryDeliveryInput"
+      required: [displayName, city, countryCode, deliveryDetails]
+      additionalProperties: false
+
+    UpdateBeneficiaryRequest:
+      type: object
+      minProperties: 1
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 100
+        city:
+          type: string
+          minLength: 2
+          maxLength: 100
+        deliveryDetails:
+          $ref: "#/components/schemas/BeneficiaryDeliveryInput"
+      additionalProperties: false
 
     AccountSummary:
       type: object

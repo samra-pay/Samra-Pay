@@ -3,12 +3,16 @@ import {
   CancelRemittanceTransferHeader,
   CancelRemittanceTransferParams,
   CancelRemittanceTransferResponse,
+  CreateBeneficiaryBody,
+  CreateBeneficiaryResponse,
   CreateRemittanceQuoteBody,
   CreateRemittanceQuoteResponse,
   CreateRemittanceTransferBody,
   CreateRemittanceTransferHeader,
   CreateRemittanceTransferResponse,
   GetCurrentCustomerResponse,
+  GetBeneficiaryParams,
+  GetBeneficiaryResponse,
   GetDemoReconciliationRunParams,
   GetDemoReconciliationRunResponse,
   GetRemittanceOptionsResponse,
@@ -17,6 +21,7 @@ import {
   ListAccountsResponse,
   ListActivityQueryParams,
   ListActivityResponse,
+  ListBeneficiariesResponse,
   ListRemittanceTransfersQueryParams,
   ListRemittanceTransfersResponse,
   RunDemoReconciliationBody,
@@ -24,6 +29,10 @@ import {
   SelectDemoTransferScenarioBody,
   SelectDemoTransferScenarioParams,
   SelectDemoTransferScenarioResponse,
+  UpdateBeneficiaryBody,
+  UpdateBeneficiaryParams,
+  UpdateBeneficiaryResponse,
+  DeleteBeneficiaryParams,
 } from "@workspace/api-zod";
 import { parseMinor } from "@workspace/remittance";
 import type { ApiRuntimeConfig } from "../../config";
@@ -76,8 +85,10 @@ export function createV1Router(
   router.get(
     "/accounts",
     asyncRoute(async (req, res) => {
-      await runtime.actorResolver.resolve(req);
-      res.json(ListAccountsResponse.parse([await runtime.accountResponse()]));
+      const actor = await runtime.actorResolver.resolve(req);
+      res.json(
+        ListAccountsResponse.parse(await runtime.accountResponses(actor.id)),
+      );
     }),
   );
 
@@ -92,6 +103,82 @@ export function createV1Router(
       const items = await runtime.activity(actor.id);
       const page = paginate(items, query.cursor, query.limit);
       res.json(ListActivityResponse.parse(page));
+    }),
+  );
+
+  router.get(
+    "/beneficiaries",
+    asyncRoute(async (req, res) => {
+      const actor = await runtime.beneficiaryActorResolver.resolve(req);
+      res.json(
+        ListBeneficiariesResponse.parse(
+          await runtime.listBeneficiaries(actor.id),
+        ),
+      );
+    }),
+  );
+
+  router.post(
+    "/beneficiaries",
+    asyncRoute(async (req, res) => {
+      const actor = await runtime.beneficiaryActorResolver.resolve(req);
+      assertRailSpecificDeliveryInput(req.body);
+      const body = parseSchema(CreateBeneficiaryBody, req.body);
+      res
+        .status(201)
+        .json(
+          CreateBeneficiaryResponse.parse(
+            await runtime.createBeneficiary(actor.id, body),
+          ),
+        );
+    }),
+  );
+
+  router.get(
+    "/beneficiaries/:beneficiaryId",
+    asyncRoute(async (req, res) => {
+      const actor = await runtime.beneficiaryActorResolver.resolve(req);
+      const params = parseSchema(GetBeneficiaryParams, req.params);
+      res.json(
+        GetBeneficiaryResponse.parse(
+          await runtime.getBeneficiary(actor.id, params.beneficiaryId),
+        ),
+      );
+    }),
+  );
+
+  router.patch(
+    "/beneficiaries/:beneficiaryId",
+    asyncRoute(async (req, res) => {
+      const actor = await runtime.beneficiaryActorResolver.resolve(req);
+      const params = parseSchema(UpdateBeneficiaryParams, req.params);
+      assertRailSpecificDeliveryInput(req.body);
+      const body = parseSchema(UpdateBeneficiaryBody, req.body);
+      if (
+        body.displayName === undefined &&
+        body.city === undefined &&
+        body.deliveryDetails === undefined
+      ) {
+        throw new RequestValidationError(
+          "At least one beneficiary field must be provided.",
+          { request: ["Request body must contain at least one field."] },
+        );
+      }
+      res.json(
+        UpdateBeneficiaryResponse.parse(
+          await runtime.updateBeneficiary(actor.id, params.beneficiaryId, body),
+        ),
+      );
+    }),
+  );
+
+  router.delete(
+    "/beneficiaries/:beneficiaryId",
+    asyncRoute(async (req, res) => {
+      const actor = await runtime.beneficiaryActorResolver.resolve(req);
+      const params = parseSchema(DeleteBeneficiaryParams, req.params);
+      await runtime.deleteBeneficiary(actor.id, params.beneficiaryId);
+      res.status(204).end();
     }),
   );
 
@@ -116,7 +203,11 @@ export function createV1Router(
       const actor = await runtime.actorResolver.resolve(req);
       const body = parseSchema(CreateRemittanceQuoteBody, req.body);
       runtime.assertAccount(actor.id, body.sourceAccountId);
-      runtime.assertBeneficiaryRail(body.beneficiaryId, body.deliveryMethod);
+      await runtime.assertBeneficiaryRail(
+        actor.id,
+        body.beneficiaryId,
+        body.deliveryMethod,
+      );
       const quote = await runtime.service.createQuote({
         actorId: actor.id,
         sourceAccountId: body.sourceAccountId,
@@ -144,10 +235,15 @@ export function createV1Router(
       const actor = await runtime.actorResolver.resolve(req);
       const query = parseSchema(ListRemittanceTransfersQueryParams, req.query);
       const transfers = await runtime.service.listTransfers(actor.id);
-      const serialized = transfers.map((transfer) =>
-        serializeTransfer(
-          transfer,
-          runtime.recipientDisplay(transfer.quote.beneficiaryId),
+      const serialized = await Promise.all(
+        transfers.map(async (transfer) =>
+          serializeTransfer(
+            transfer,
+            await runtime.recipientDisplay(
+              actor.id,
+              transfer.quote.beneficiaryId,
+            ),
+          ),
         ),
       );
       res.json(
@@ -177,7 +273,10 @@ export function createV1Router(
           CreateRemittanceTransferResponse.parse(
             serializeTransfer(
               transfer,
-              runtime.recipientDisplay(transfer.quote.beneficiaryId),
+              await runtime.recipientDisplay(
+                actor.id,
+                transfer.quote.beneficiaryId,
+              ),
             ),
           ),
         );
@@ -197,7 +296,10 @@ export function createV1Router(
         GetRemittanceTransferResponse.parse(
           serializeTransfer(
             transfer,
-            runtime.recipientDisplay(transfer.quote.beneficiaryId),
+            await runtime.recipientDisplay(
+              actor.id,
+              transfer.quote.beneficiaryId,
+            ),
           ),
         ),
       );
@@ -221,7 +323,10 @@ export function createV1Router(
         CancelRemittanceTransferResponse.parse(
           serializeTransfer(
             transfer,
-            runtime.recipientDisplay(transfer.quote.beneficiaryId),
+            await runtime.recipientDisplay(
+              actor.id,
+              transfer.quote.beneficiaryId,
+            ),
           ),
         ),
       );
@@ -247,7 +352,10 @@ export function createV1Router(
           SelectDemoTransferScenarioResponse.parse(
             serializeTransfer(
               transfer,
-              runtime.recipientDisplay(transfer.quote.beneficiaryId),
+              await runtime.recipientDisplay(
+                actor.id,
+                transfer.quote.beneficiaryId,
+              ),
             ),
           ),
         );
@@ -305,6 +413,30 @@ function parseSchema<T>(schema: SafeParseSchema<T>, value: unknown): T {
   throw new RequestValidationError("One or more request fields are invalid.", {
     ...fieldErrors,
   });
+}
+
+function assertRailSpecificDeliveryInput(value: unknown): void {
+  if (!value || typeof value !== "object") return;
+  const delivery = (value as Record<string, unknown>)["deliveryDetails"];
+  if (!delivery || typeof delivery !== "object") return;
+  const fields = delivery as Record<string, unknown>;
+  const invalid =
+    fields["method"] === "bank"
+      ? ["walletId", "phoneNumber"].filter((field) => field in fields)
+      : fields["method"] === "wallet"
+        ? ["bankId", "accountNumber"].filter((field) => field in fields)
+        : [];
+  if (invalid.length > 0) {
+    throw new RequestValidationError(
+      "Delivery details cannot mix bank-account and mobile-wallet fields.",
+      Object.fromEntries(
+        invalid.map((field) => [
+          `deliveryDetails.${field}`,
+          ["Field is not valid for the selected delivery method."],
+        ]),
+      ),
+    );
+  }
 }
 
 function paginate<T>(

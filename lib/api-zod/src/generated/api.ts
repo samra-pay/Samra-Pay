@@ -108,6 +108,265 @@ export const ListActivityResponse = zod.object({
 });
 
 /**
+ * @summary List active beneficiaries owned by the current actor
+ */
+export const listBeneficiariesResponseDeliveryDetailsOneAccountNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+export const listBeneficiariesResponseDeliveryDetailsTwoPhoneNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+
+export const ListBeneficiariesResponseItem = zod.object({
+  id: zod.string(),
+  displayName: zod.string(),
+  city: zod.string(),
+  countryCode: zod.literal("ET"),
+  deliveryDetails: zod.union([
+    zod.object({
+      method: zod.enum(["bank"]),
+      bankId: zod.enum(["cbe", "awash"]),
+      institutionName: zod.string(),
+      accountNumberLast4: zod
+        .string()
+        .regex(
+          listBeneficiariesResponseDeliveryDetailsOneAccountNumberLast4RegExp,
+        ),
+    }),
+    zod.object({
+      method: zod.enum(["wallet"]),
+      walletId: zod.enum(["telebirr", "cbebirr"]),
+      institutionName: zod.string(),
+      phoneNumberLast4: zod
+        .string()
+        .regex(
+          listBeneficiariesResponseDeliveryDetailsTwoPhoneNumberLast4RegExp,
+        ),
+    }),
+  ]),
+  status: zod.literal("active"),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
+export const ListBeneficiariesResponse = zod.array(
+  ListBeneficiariesResponseItem,
+);
+
+/**
+ * @summary Create a synthetic beneficiary for the current actor
+ */
+export const createBeneficiaryBodyDisplayNameMin = 2;
+export const createBeneficiaryBodyDisplayNameMax = 100;
+
+export const createBeneficiaryBodyCityMin = 2;
+export const createBeneficiaryBodyCityMax = 100;
+
+export const createBeneficiaryBodyDeliveryDetailsOneAccountNumberRegExp =
+  new RegExp("^[0-9]{8,24}$");
+export const createBeneficiaryBodyDeliveryDetailsTwoPhoneNumberRegExp =
+  new RegExp("^\\+251[0-9]{9}$");
+
+export const CreateBeneficiaryBody = zod.object({
+  displayName: zod
+    .string()
+    .min(createBeneficiaryBodyDisplayNameMin)
+    .max(createBeneficiaryBodyDisplayNameMax),
+  city: zod
+    .string()
+    .min(createBeneficiaryBodyCityMin)
+    .max(createBeneficiaryBodyCityMax),
+  countryCode: zod.literal("ET"),
+  deliveryDetails: zod.union([
+    zod.object({
+      method: zod.enum(["bank"]),
+      bankId: zod.enum(["cbe", "awash"]),
+      accountNumber: zod
+        .string()
+        .regex(createBeneficiaryBodyDeliveryDetailsOneAccountNumberRegExp),
+    }),
+    zod.object({
+      method: zod.enum(["wallet"]),
+      walletId: zod.enum(["telebirr", "cbebirr"]),
+      phoneNumber: zod
+        .string()
+        .regex(createBeneficiaryBodyDeliveryDetailsTwoPhoneNumberRegExp),
+    }),
+  ]),
+});
+
+export const createBeneficiaryResponseDeliveryDetailsOneAccountNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+export const createBeneficiaryResponseDeliveryDetailsTwoPhoneNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+
+export const CreateBeneficiaryResponse = zod.object({
+  id: zod.string(),
+  displayName: zod.string(),
+  city: zod.string(),
+  countryCode: zod.literal("ET"),
+  deliveryDetails: zod.union([
+    zod.object({
+      method: zod.enum(["bank"]),
+      bankId: zod.enum(["cbe", "awash"]),
+      institutionName: zod.string(),
+      accountNumberLast4: zod
+        .string()
+        .regex(
+          createBeneficiaryResponseDeliveryDetailsOneAccountNumberLast4RegExp,
+        ),
+    }),
+    zod.object({
+      method: zod.enum(["wallet"]),
+      walletId: zod.enum(["telebirr", "cbebirr"]),
+      institutionName: zod.string(),
+      phoneNumberLast4: zod
+        .string()
+        .regex(
+          createBeneficiaryResponseDeliveryDetailsTwoPhoneNumberLast4RegExp,
+        ),
+    }),
+  ]),
+  status: zod.literal("active"),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
+
+/**
+ * @summary Get an active beneficiary owned by the current actor
+ */
+export const GetBeneficiaryParams = zod.object({
+  beneficiaryId: zod.coerce.string(),
+});
+
+export const getBeneficiaryResponseDeliveryDetailsOneAccountNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+export const getBeneficiaryResponseDeliveryDetailsTwoPhoneNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+
+export const GetBeneficiaryResponse = zod.object({
+  id: zod.string(),
+  displayName: zod.string(),
+  city: zod.string(),
+  countryCode: zod.literal("ET"),
+  deliveryDetails: zod.union([
+    zod.object({
+      method: zod.enum(["bank"]),
+      bankId: zod.enum(["cbe", "awash"]),
+      institutionName: zod.string(),
+      accountNumberLast4: zod
+        .string()
+        .regex(
+          getBeneficiaryResponseDeliveryDetailsOneAccountNumberLast4RegExp,
+        ),
+    }),
+    zod.object({
+      method: zod.enum(["wallet"]),
+      walletId: zod.enum(["telebirr", "cbebirr"]),
+      institutionName: zod.string(),
+      phoneNumberLast4: zod
+        .string()
+        .regex(getBeneficiaryResponseDeliveryDetailsTwoPhoneNumberLast4RegExp),
+    }),
+  ]),
+  status: zod.literal("active"),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
+
+/**
+ * @summary Update an active beneficiary owned by the current actor
+ */
+export const UpdateBeneficiaryParams = zod.object({
+  beneficiaryId: zod.coerce.string(),
+});
+
+export const updateBeneficiaryBodyDisplayNameMin = 2;
+export const updateBeneficiaryBodyDisplayNameMax = 100;
+
+export const updateBeneficiaryBodyCityMin = 2;
+export const updateBeneficiaryBodyCityMax = 100;
+
+export const updateBeneficiaryBodyDeliveryDetailsOneAccountNumberRegExp =
+  new RegExp("^[0-9]{8,24}$");
+export const updateBeneficiaryBodyDeliveryDetailsTwoPhoneNumberRegExp =
+  new RegExp("^\\+251[0-9]{9}$");
+
+export const UpdateBeneficiaryBody = zod.object({
+  displayName: zod
+    .string()
+    .min(updateBeneficiaryBodyDisplayNameMin)
+    .max(updateBeneficiaryBodyDisplayNameMax)
+    .optional(),
+  city: zod
+    .string()
+    .min(updateBeneficiaryBodyCityMin)
+    .max(updateBeneficiaryBodyCityMax)
+    .optional(),
+  deliveryDetails: zod
+    .union([
+      zod.object({
+        method: zod.enum(["bank"]),
+        bankId: zod.enum(["cbe", "awash"]),
+        accountNumber: zod
+          .string()
+          .regex(updateBeneficiaryBodyDeliveryDetailsOneAccountNumberRegExp),
+      }),
+      zod.object({
+        method: zod.enum(["wallet"]),
+        walletId: zod.enum(["telebirr", "cbebirr"]),
+        phoneNumber: zod
+          .string()
+          .regex(updateBeneficiaryBodyDeliveryDetailsTwoPhoneNumberRegExp),
+      }),
+    ])
+    .optional(),
+});
+
+export const updateBeneficiaryResponseDeliveryDetailsOneAccountNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+export const updateBeneficiaryResponseDeliveryDetailsTwoPhoneNumberLast4RegExp =
+  new RegExp("^[0-9]{4}$");
+
+export const UpdateBeneficiaryResponse = zod.object({
+  id: zod.string(),
+  displayName: zod.string(),
+  city: zod.string(),
+  countryCode: zod.literal("ET"),
+  deliveryDetails: zod.union([
+    zod.object({
+      method: zod.enum(["bank"]),
+      bankId: zod.enum(["cbe", "awash"]),
+      institutionName: zod.string(),
+      accountNumberLast4: zod
+        .string()
+        .regex(
+          updateBeneficiaryResponseDeliveryDetailsOneAccountNumberLast4RegExp,
+        ),
+    }),
+    zod.object({
+      method: zod.enum(["wallet"]),
+      walletId: zod.enum(["telebirr", "cbebirr"]),
+      institutionName: zod.string(),
+      phoneNumberLast4: zod
+        .string()
+        .regex(
+          updateBeneficiaryResponseDeliveryDetailsTwoPhoneNumberLast4RegExp,
+        ),
+    }),
+  ]),
+  status: zod.literal("active"),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
+
+/**
+ * @summary Soft-delete an active beneficiary owned by the current actor
+ */
+export const DeleteBeneficiaryParams = zod.object({
+  beneficiaryId: zod.coerce.string(),
+});
+
+export const DeleteBeneficiaryResponse = zod.void();
+
+/**
  * @summary List supported synthetic remittance options
  */
 export const GetRemittanceOptionsResponse = zod.object({

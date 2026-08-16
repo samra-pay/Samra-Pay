@@ -36,6 +36,7 @@ const legacyMockBoundary: SamraDataSource = {
   getCurrentCustomer: unavailableLegacyMethod,
   listAccounts: unavailableLegacyMethod,
   listActivity: unavailableLegacyMethod,
+  listBeneficiaries: unavailableLegacyMethod,
   getRemittanceOptions: unavailableLegacyMethod,
   createQuote: unavailableLegacyMethod,
   createTransfer: unavailableLegacyMethod,

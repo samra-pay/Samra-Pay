@@ -19,7 +19,9 @@ import type {
 import type {
   AccountSummary,
   ActivityPage,
+  Beneficiary,
   ConflictProblemResponse,
+  CreateBeneficiaryRequest,
   CreateQuoteRequest,
   CreateTransferRequest,
   CurrentCustomer,
@@ -36,6 +38,7 @@ import type {
   Transfer,
   TransferPage,
   UnavailableResponse,
+  UpdateBeneficiaryRequest,
   ValidationProblemResponse,
 } from "./api.schemas";
 
@@ -386,6 +389,438 @@ export function useListActivity<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListBeneficiariesUrl = () => {
+  return `/api/v1/beneficiaries`;
+};
+
+/**
+ * @summary List active beneficiaries owned by the current actor
+ */
+export const listBeneficiaries = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<Beneficiary[]> => {
+  return customFetch<Beneficiary[]>(getListBeneficiariesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBeneficiariesQueryKey = () => {
+  return [`/api/v1/beneficiaries`] as const;
+};
+
+export const getListBeneficiariesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBeneficiaries>>,
+  TError = ErrorType<UnavailableResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBeneficiaries>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBeneficiariesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listBeneficiaries>>
+  > = ({ signal }) => listBeneficiaries({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBeneficiaries>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBeneficiariesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBeneficiaries>>
+>;
+export type ListBeneficiariesQueryError = ErrorType<UnavailableResponse>;
+
+/**
+ * @summary List active beneficiaries owned by the current actor
+ */
+
+export function useListBeneficiaries<
+  TData = Awaited<ReturnType<typeof listBeneficiaries>>,
+  TError = ErrorType<UnavailableResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBeneficiaries>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBeneficiariesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateBeneficiaryUrl = () => {
+  return `/api/v1/beneficiaries`;
+};
+
+/**
+ * @summary Create a synthetic beneficiary for the current actor
+ */
+export const createBeneficiary = async (
+  createBeneficiaryRequest: CreateBeneficiaryRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<Beneficiary> => {
+  return customFetch<Beneficiary>(getCreateBeneficiaryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBeneficiaryRequest),
+  });
+};
+
+export const getCreateBeneficiaryMutationOptions = <
+  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBeneficiary>>,
+    TError,
+    { data: BodyType<CreateBeneficiaryRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBeneficiary>>,
+  TError,
+  { data: BodyType<CreateBeneficiaryRequest> },
+  TContext
+> => {
+  const mutationKey = ["createBeneficiary"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBeneficiary>>,
+    { data: BodyType<CreateBeneficiaryRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBeneficiary(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBeneficiaryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBeneficiary>>
+>;
+export type CreateBeneficiaryMutationBody = BodyType<CreateBeneficiaryRequest>;
+export type CreateBeneficiaryMutationError = ErrorType<
+  ValidationProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Create a synthetic beneficiary for the current actor
+ */
+export const useCreateBeneficiary = <
+  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBeneficiary>>,
+    TError,
+    { data: BodyType<CreateBeneficiaryRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBeneficiary>>,
+  TError,
+  { data: BodyType<CreateBeneficiaryRequest> },
+  TContext
+> => {
+  return useMutation(getCreateBeneficiaryMutationOptions(options));
+};
+
+export const getGetBeneficiaryUrl = (beneficiaryId: string) => {
+  return `/api/v1/beneficiaries/${beneficiaryId}`;
+};
+
+/**
+ * @summary Get an active beneficiary owned by the current actor
+ */
+export const getBeneficiary = async (
+  beneficiaryId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<Beneficiary> => {
+  return customFetch<Beneficiary>(getGetBeneficiaryUrl(beneficiaryId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBeneficiaryQueryKey = (beneficiaryId: string) => {
+  return [`/api/v1/beneficiaries/${beneficiaryId}`] as const;
+};
+
+export const getGetBeneficiaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBeneficiary>>,
+  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+>(
+  beneficiaryId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBeneficiary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetBeneficiaryQueryKey(beneficiaryId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeneficiary>>> = ({
+    signal,
+  }) => getBeneficiary(beneficiaryId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: beneficiaryId !== null && beneficiaryId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBeneficiary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBeneficiaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBeneficiary>>
+>;
+export type GetBeneficiaryQueryError = ErrorType<
+  NotFoundProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Get an active beneficiary owned by the current actor
+ */
+
+export function useGetBeneficiary<
+  TData = Awaited<ReturnType<typeof getBeneficiary>>,
+  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+>(
+  beneficiaryId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBeneficiary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBeneficiaryQueryOptions(beneficiaryId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateBeneficiaryUrl = (beneficiaryId: string) => {
+  return `/api/v1/beneficiaries/${beneficiaryId}`;
+};
+
+/**
+ * @summary Update an active beneficiary owned by the current actor
+ */
+export const updateBeneficiary = async (
+  beneficiaryId: string,
+  updateBeneficiaryRequest: UpdateBeneficiaryRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<Beneficiary> => {
+  return customFetch<Beneficiary>(getUpdateBeneficiaryUrl(beneficiaryId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateBeneficiaryRequest),
+  });
+};
+
+export const getUpdateBeneficiaryMutationOptions = <
+  TError = ErrorType<
+    NotFoundProblemResponse | ValidationProblemResponse | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBeneficiary>>,
+    TError,
+    { beneficiaryId: string; data: BodyType<UpdateBeneficiaryRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateBeneficiary>>,
+  TError,
+  { beneficiaryId: string; data: BodyType<UpdateBeneficiaryRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateBeneficiary"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateBeneficiary>>,
+    { beneficiaryId: string; data: BodyType<UpdateBeneficiaryRequest> }
+  > = (props) => {
+    const { beneficiaryId, data } = props ?? {};
+
+    return updateBeneficiary(beneficiaryId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateBeneficiaryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateBeneficiary>>
+>;
+export type UpdateBeneficiaryMutationBody = BodyType<UpdateBeneficiaryRequest>;
+export type UpdateBeneficiaryMutationError = ErrorType<
+  NotFoundProblemResponse | ValidationProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Update an active beneficiary owned by the current actor
+ */
+export const useUpdateBeneficiary = <
+  TError = ErrorType<
+    NotFoundProblemResponse | ValidationProblemResponse | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBeneficiary>>,
+    TError,
+    { beneficiaryId: string; data: BodyType<UpdateBeneficiaryRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateBeneficiary>>,
+  TError,
+  { beneficiaryId: string; data: BodyType<UpdateBeneficiaryRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateBeneficiaryMutationOptions(options));
+};
+
+export const getDeleteBeneficiaryUrl = (beneficiaryId: string) => {
+  return `/api/v1/beneficiaries/${beneficiaryId}`;
+};
+
+/**
+ * @summary Soft-delete an active beneficiary owned by the current actor
+ */
+export const deleteBeneficiary = async (
+  beneficiaryId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<void> => {
+  return customFetch<void>(getDeleteBeneficiaryUrl(beneficiaryId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBeneficiaryMutationOptions = <
+  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBeneficiary>>,
+    TError,
+    { beneficiaryId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBeneficiary>>,
+  TError,
+  { beneficiaryId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteBeneficiary"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBeneficiary>>,
+    { beneficiaryId: string }
+  > = (props) => {
+    const { beneficiaryId } = props ?? {};
+
+    return deleteBeneficiary(beneficiaryId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBeneficiaryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBeneficiary>>
+>;
+
+export type DeleteBeneficiaryMutationError = ErrorType<
+  NotFoundProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Soft-delete an active beneficiary owned by the current actor
+ */
+export const useDeleteBeneficiary = <
+  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBeneficiary>>,
+    TError,
+    { beneficiaryId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBeneficiary>>,
+  TError,
+  { beneficiaryId: string },
+  TContext
+> => {
+  return useMutation(getDeleteBeneficiaryMutationOptions(options));
+};
 
 export const getGetRemittanceOptionsUrl = () => {
   return `/api/v1/remittance/options`;

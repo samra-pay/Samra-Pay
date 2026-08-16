@@ -19,6 +19,13 @@ try {
      RETURNING id`,
   );
   const customerId = customer.rows[0]!.id;
+  const actorB = await client.query<{ id: string }>(
+    `INSERT INTO samra_core.customers
+     (external_ref, display_name, country_code, metadata)
+     VALUES ('demo_customer_002','Second Synthetic Customer','US','{"synthetic":true}'::jsonb)
+     ON CONFLICT (external_ref) DO UPDATE SET display_name = EXCLUDED.display_name
+     RETURNING id`,
+  );
   const account = await client.query<{ id: string }>(
     `INSERT INTO samra_core.product_accounts
      (customer_id, external_ref, kind, currency)
@@ -30,12 +37,33 @@ try {
   const productAccountId = account.rows[0]!.id;
   await client.query(
     `INSERT INTO samra_core.beneficiaries
-     (customer_id, external_ref, display_name, country_code, rail, payout_reference, provider_metadata)
+     (customer_id, external_ref, display_name, city, country_code, rail,
+      payout_reference, bank_id, bank_account_number, wallet_id,
+      wallet_phone_number, provider_metadata)
      VALUES
-       ($1,'beneficiary_bank_001','Abebe Bekele','ET','bank_account','synthetic-bank-001','{"synthetic":true}'::jsonb),
-       ($1,'beneficiary_wallet_001','Tigist Haile','ET','mobile_wallet','synthetic-wallet-001','{"synthetic":true}'::jsonb)
-     ON CONFLICT (customer_id, external_ref) DO UPDATE SET display_name = EXCLUDED.display_name`,
+       ($1,'beneficiary_bank_001','Abebe Bekele','Addis Ababa','ET','bank_account','100000006789','cbe','100000006789',NULL,NULL,'{"synthetic":true}'::jsonb),
+       ($1,'beneficiary_wallet_001','Tigist Haile','Hawassa','ET','mobile_wallet','+251911114321',NULL,NULL,'telebirr','+251911114321','{"synthetic":true}'::jsonb)
+     ON CONFLICT (customer_id, external_ref) DO UPDATE SET
+       display_name = EXCLUDED.display_name, city = EXCLUDED.city,
+       rail = EXCLUDED.rail, payout_reference = EXCLUDED.payout_reference,
+       bank_id = EXCLUDED.bank_id, bank_account_number = EXCLUDED.bank_account_number,
+       wallet_id = EXCLUDED.wallet_id, wallet_phone_number = EXCLUDED.wallet_phone_number,
+       state = 'active', deleted_at = NULL, updated_at = now()`,
     [customerId],
+  );
+  await client.query(
+    `INSERT INTO samra_core.beneficiaries
+     (customer_id, external_ref, display_name, city, country_code, rail,
+      payout_reference, bank_id, bank_account_number, provider_metadata)
+     VALUES ($1,'beneficiary_actor_b_001','Actor B Recipient','Bahir Dar','ET',
+             'bank_account','200000001234','awash','200000001234','{"synthetic":true}'::jsonb)
+     ON CONFLICT (customer_id, external_ref) DO UPDATE SET
+       display_name = EXCLUDED.display_name, city = EXCLUDED.city,
+       rail = EXCLUDED.rail, payout_reference = EXCLUDED.payout_reference,
+       bank_id = EXCLUDED.bank_id, bank_account_number = EXCLUDED.bank_account_number,
+       wallet_id = NULL, wallet_phone_number = NULL,
+       state = 'active', deleted_at = NULL, updated_at = now()`,
+    [actorB.rows[0]!.id],
   );
   const accounts = [
     ["control_rain_usd", "Rain USD control asset", "asset", "debit", null],

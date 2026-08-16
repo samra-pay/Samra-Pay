@@ -12,6 +12,7 @@ import {
   readActiveTransferId,
   readTransferForQuote,
   sanitizeUsdInput,
+  toSyntheticBeneficiary,
   usdInputToMinorUnits,
   type KeyValueStorage,
 } from "./samra-api-flow";
@@ -37,6 +38,35 @@ describe("API remittance money helpers", () => {
     expect(formatMinorUnits("425000")).toBe("4,250.00");
     expect(formatMinorUnits("180000", 2)).toBe("1,800.00");
     expect(formatExchangeRate("180.0000")).toBe("180");
+  });
+});
+
+describe("API beneficiary presentation", () => {
+  it("preserves the seeded recipient presentation without a hardcoded lookup", () => {
+    expect(
+      toSyntheticBeneficiary({
+        id: "beneficiary_bank_001",
+        displayName: "Abebe Bekele",
+        city: "Addis Ababa",
+        countryCode: "ET",
+        deliveryDetails: {
+          method: "bank",
+          bankId: "cbe",
+          institutionName: "Commercial Bank of Ethiopia",
+          accountNumberLast4: "6789",
+        },
+        status: "active",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toEqual({
+      id: "beneficiary_bank_001",
+      name: "Abebe Bekele",
+      location: "Addis Ababa, ET",
+      deliveryMethod: "bank",
+      deliveryLabel: "Commercial Bank of Ethiopia",
+      deliveryDetail: "Bank account ending 6789",
+    });
   });
 });
 
