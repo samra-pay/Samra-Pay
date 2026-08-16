@@ -92,9 +92,9 @@ try {
     await client.query(
       `INSERT INTO samra_core.ledger_postings
        (journal_id, account_id, sequence, side, amount_minor)
-       SELECT $1, id, 1, 'debit', 425000 FROM samra_core.ledger_accounts WHERE code = 'control_rain_usd'
+       SELECT $1::uuid, id, 1, 'debit', 425000 FROM samra_core.ledger_accounts WHERE code = 'control_rain_usd'
        UNION ALL
-       SELECT $1, id, 2, 'credit', 425000 FROM samra_core.ledger_accounts WHERE code = 'demo_usd_account_001'`,
+       SELECT $1::uuid, id, 2, 'credit', 425000 FROM samra_core.ledger_accounts WHERE code = 'demo_usd_account_001'`,
       [journal.rows[0]!.id],
     );
     await client.query(
