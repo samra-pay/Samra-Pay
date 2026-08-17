@@ -5,6 +5,36 @@
  * Samra Pay synthetic architecture-foundation API
  * OpenAPI spec version: 0.2.0
  */
+export interface WorkforceLoginRequest {
+  /**
+   * @minLength 1
+   * @maxLength 254
+   */
+  loginName: string;
+  /**
+   * @minLength 1
+   * @maxLength 1024
+   */
+  password: string;
+}
+
+export type WorkforceSessionRole =
+  (typeof WorkforceSessionRole)[keyof typeof WorkforceSessionRole];
+
+export const WorkforceSessionRole = {
+  support_readonly: "support_readonly",
+  operations_analyst: "operations_analyst",
+  compliance_readonly: "compliance_readonly",
+  administrator: "administrator",
+} as const;
+
+export interface WorkforceSession {
+  operatorId: string;
+  displayName: string;
+  role: WorkforceSessionRole;
+  expiresAt: string;
+}
+
 export type HealthStatusStatus =
   (typeof HealthStatusStatus)[keyof typeof HealthStatusStatus];
 
@@ -699,11 +729,17 @@ export type NotFoundProblemResponse = ApiProblem;
  */
 export type UnavailableResponse = ApiProblem;
 
+/**
+ * Workforce authentication is required or invalid
+ */
+export type UnauthorizedProblemResponse = ApiProblem;
+
+/**
+ * The authenticated workforce role lacks permission
+ */
+export type ForbiddenProblemResponse = ApiProblem;
+
 export type IdempotencyKeyParameter = string;
-
-export type DemoOperatorIdParameter = "demo_cs_agent_001";
-
-export type DemoOperatorRoleParameter = "support_readonly";
 
 export type ListActivityParams = {
   accountId?: string;

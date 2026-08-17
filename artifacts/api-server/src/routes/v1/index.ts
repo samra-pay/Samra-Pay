@@ -3,6 +3,8 @@ import {
   CancelRemittanceTransferHeader,
   CancelRemittanceTransferParams,
   CancelRemittanceTransferResponse,
+  CreateWorkforceSessionBody,
+  CreateWorkforceSessionResponse,
   CreateBeneficiaryBody,
   CreateBeneficiaryResponse,
   CreateRemittanceQuoteBody,
@@ -11,6 +13,7 @@ import {
   CreateRemittanceTransferHeader,
   CreateRemittanceTransferResponse,
   GetCurrentCustomerResponse,
+  GetWorkforceSessionResponse,
   GetBeneficiaryParams,
   GetBeneficiaryResponse,
   GetDemoReconciliationRunParams,
@@ -47,6 +50,13 @@ import {
 } from "@workspace/api-zod";
 import { DomainError, parseMinor } from "@workspace/remittance";
 import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
+import {
+  WorkforceAuthenticationError,
+  type PostgresWorkforceAuthStore,
+  type WorkforceIdentity,
+  type WorkforceRole,
+} from "@workspace/db";
 import type { ApiRuntimeConfig } from "../../config";
 import {
   DEMO_ACTOR,
@@ -56,8 +66,49 @@ import {
 import { serializeQuote, serializeTransfer } from "../../domain/serializers";
 import {
   BackendUnavailableError,
+  AuthenticationRequiredError,
+  AuthorizationDeniedError,
   RequestValidationError,
 } from "../../lib/problem";
+
+const WORKFORCE_SESSION_COOKIE = "samra_ops_session";
+const WORKFORCE_COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1_000;
+
+type OperationsPermission =
+  | "summary:read"
+  | "customers:read"
+  | "transfers:read"
+  | "reconciliation:read"
+  | "audit:read";
+
+const ROLE_PERMISSIONS: Readonly<
+  Record<WorkforceRole, ReadonlySet<OperationsPermission>>
+> = Object.freeze({
+  support_readonly: new Set<OperationsPermission>([
+    "summary:read",
+    "customers:read",
+    "transfers:read",
+  ]),
+  operations_analyst: new Set<OperationsPermission>([
+    "summary:read",
+    "customers:read",
+    "transfers:read",
+    "reconciliation:read",
+  ]),
+  compliance_readonly: new Set<OperationsPermission>([
+    "summary:read",
+    "transfers:read",
+    "reconciliation:read",
+    "audit:read",
+  ]),
+  administrator: new Set<OperationsPermission>([
+    "summary:read",
+    "customers:read",
+    "transfers:read",
+    "reconciliation:read",
+    "audit:read",
+  ]),
+});
 
 const DEMO_OPERATIONS_STATUS_WHITELIST = Object.freeze([
   "created",
@@ -418,17 +469,100 @@ export function createV1Router(
   if (
     config.devControlsEnabled &&
     config.internalOperationsEnabled &&
-    runtime.operationsStore
+    runtime.operationsStore &&
+    runtime.workforceAuthStore
   ) {
     const operations = runtime.operationsStore;
+    const workforce = runtime.workforceAuthStore;
+
+    router.post(
+      "/internal/auth/session",
+      asyncRoute(async (req, res) => {
+        const credentials = parseSchema(CreateWorkforceSessionBody, req.body);
+        try {
+          const session = await workforce.authenticate(
+            credentials.loginName,
+            credentials.password,
+          );
+          setWorkforceSessionCookie(req, res, session.token);
+          await operations.recordAudit({
+            eventKey: `operator:${session.identity.externalRef}:workforce_login_succeeded:${randomUUID()}`,
+            actorType: "operator",
+            actorId: session.identity.externalRef,
+            action: "workforce_login_succeeded",
+            entityType: "workforce_session",
+            entityId: session.identity.sessionId,
+            metadata: { role: session.identity.role, synthetic: true },
+          });
+          res
+            .status(201)
+            .json(
+              CreateWorkforceSessionResponse.parse(
+                serializeWorkforceIdentity(session.identity),
+              ),
+            );
+        } catch (error) {
+          if (!(error instanceof WorkforceAuthenticationError)) throw error;
+          await operations.recordAudit({
+            eventKey: `operator:unknown:workforce_login_failed:${randomUUID()}`,
+            actorType: "operator",
+            action: "workforce_login_failed",
+            entityType: "workforce_login",
+            entityId: hashAuditIdentifier(credentials.loginName),
+            metadata: { synthetic: true },
+          });
+          throw new AuthenticationRequiredError(
+            "The workforce credentials are invalid.",
+          );
+        }
+      }),
+    );
+
+    router.get(
+      "/internal/auth/session",
+      asyncRoute(async (req, res) => {
+        const identity = await resolveWorkforceOperator(req, workforce);
+        res.json(
+          GetWorkforceSessionResponse.parse(
+            serializeWorkforceIdentity(identity),
+          ),
+        );
+      }),
+    );
+
+    router.delete(
+      "/internal/auth/session",
+      asyncRoute(async (req, res) => {
+        const identity = await resolveWorkforceOperator(req, workforce);
+        const token = workforceSessionToken(req)!;
+        await workforce.revokeSession(token);
+        clearWorkforceSessionCookie(req, res);
+        await operations.recordAudit({
+          eventKey: `operator:${identity.externalRef}:workforce_logout:${randomUUID()}`,
+          actorType: "operator",
+          actorId: identity.externalRef,
+          action: "workforce_logout",
+          entityType: "workforce_session",
+          entityId: identity.sessionId,
+          metadata: { role: identity.role, synthetic: true },
+        });
+        res.status(204).end();
+      }),
+    );
+
     router.get(
       "/internal/operations/summary",
       asyncRoute(async (req, res) => {
-        const operatorId = resolveDemoOperator(req);
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "summary:read",
+        );
         const summary = await operations.operationsSummary();
         await auditOperatorRead(
           operations,
-          operatorId,
+          operator,
           "operations_summary",
           "all",
         );
@@ -439,7 +573,12 @@ export function createV1Router(
     router.get(
       "/internal/operations/customers",
       asyncRoute(async (req, res) => {
-        const operatorId = resolveDemoOperator(req);
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "customers:read",
+        );
         const query = parseSchema(
           ListOperationsCustomersQueryParams,
           normalizeOperationsQueryParams(req.query),
@@ -447,7 +586,7 @@ export function createV1Router(
         const customers = await operations.listOperationsCustomers(query);
         await auditOperatorRead(
           operations,
-          operatorId,
+          operator,
           "operations_customer_search",
           query.search ?? "all",
         );
@@ -477,7 +616,12 @@ export function createV1Router(
     router.get(
       "/internal/operations/transfers",
       asyncRoute(async (req, res) => {
-        const operatorId = resolveDemoOperator(req);
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "transfers:read",
+        );
         const query = parseSchema(
           ListOperationsTransfersQueryParams,
           normalizeOperationsQueryParams(req.query),
@@ -496,11 +640,15 @@ export function createV1Router(
           );
         }
         const transfers = (await operations.listOperationsTransfers(query)).map(
-          serializeOperationsTransfer,
+          (transfer) =>
+            redactOperationsTransfer(
+              serializeOperationsTransfer(transfer),
+              operator.role,
+            ),
         );
         await auditOperatorRead(
           operations,
-          operatorId,
+          operator,
           "operations_transfer_search",
           query.search ?? query.status ?? "all",
         );
@@ -511,7 +659,12 @@ export function createV1Router(
     router.get(
       "/internal/operations/transfers/:transferId",
       asyncRoute(async (req, res) => {
-        const operatorId = resolveDemoOperator(req);
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "transfers:read",
+        );
         const params = parseSchema(GetOperationsTransferParams, req.params);
         const detail = await operations.getOperationsTransfer(
           params.transferId,
@@ -523,7 +676,7 @@ export function createV1Router(
         }
         await auditOperatorRead(
           operations,
-          operatorId,
+          operator,
           "operations_transfer_detail",
           params.transferId,
         );
@@ -531,10 +684,13 @@ export function createV1Router(
         res.json(
           GetOperationsTransferResponse.parse({
             ...value,
-            transfer: serializeOperationsTransfer(
-              value["transfer"] as Parameters<
-                typeof serializeOperationsTransfer
-              >[0],
+            transfer: redactOperationsTransfer(
+              serializeOperationsTransfer(
+                value["transfer"] as Parameters<
+                  typeof serializeOperationsTransfer
+                >[0],
+              ),
+              operator.role,
             ),
           }),
         );
@@ -544,7 +700,12 @@ export function createV1Router(
     router.get(
       "/internal/operations/reconciliation/exceptions",
       asyncRoute(async (req, res) => {
-        const operatorId = resolveDemoOperator(req);
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "reconciliation:read",
+        );
         const query = parseSchema(
           ListOperationsReconciliationExceptionsQueryParams,
           req.query,
@@ -554,7 +715,7 @@ export function createV1Router(
         );
         await auditOperatorRead(
           operations,
-          operatorId,
+          operator,
           "operations_reconciliation_exceptions",
           "all",
         );
@@ -567,14 +728,19 @@ export function createV1Router(
     router.get(
       "/internal/operations/audit-events",
       asyncRoute(async (req, res) => {
-        const operatorId = resolveDemoOperator(req);
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "audit:read",
+        );
         const query = parseSchema(
           ListOperationsAuditEventsQueryParams,
           req.query,
         );
         await auditOperatorRead(
           operations,
-          operatorId,
+          operator,
           "operations_audit_events",
           query.entityId ?? query.actorId ?? "all",
         );
@@ -590,16 +756,40 @@ export function createV1Router(
   return router;
 }
 
-function resolveDemoOperator(request: Parameters<RequestHandler>[0]): string {
-  const operatorId = request.header("X-Demo-Operator-Id");
-  const role = request.header("X-Demo-Operator-Role");
-  if (operatorId !== "demo_cs_agent_001" || role !== "support_readonly") {
-    throw new DomainError(
-      "ACTOR_NOT_ALLOWED",
-      "The internal operations route was not found.",
-    );
+async function resolveWorkforceOperator(
+  request: Parameters<RequestHandler>[0],
+  workforce: PostgresWorkforceAuthStore,
+): Promise<WorkforceIdentity> {
+  const token = workforceSessionToken(request);
+  const identity = token ? await workforce.resolveSession(token) : undefined;
+  if (!identity) throw new AuthenticationRequiredError();
+  return identity;
+}
+
+async function requireOperationsPermission(
+  request: Parameters<RequestHandler>[0],
+  workforce: PostgresWorkforceAuthStore,
+  operations: NonNullable<DemoRuntime["operationsStore"]>,
+  permission: OperationsPermission,
+): Promise<WorkforceIdentity> {
+  const identity = await resolveWorkforceOperator(request, workforce);
+  if (!ROLE_PERMISSIONS[identity.role].has(permission)) {
+    await operations.recordAudit({
+      eventKey: `operator:${identity.externalRef}:workforce_access_denied:${randomUUID()}`,
+      actorType: "operator",
+      actorId: identity.externalRef,
+      action: "workforce_access_denied",
+      entityType: "operations_permission",
+      entityId: permission,
+      metadata: {
+        role: identity.role,
+        sessionId: identity.sessionId,
+        synthetic: true,
+      },
+    });
+    throw new AuthorizationDeniedError();
   }
-  return operatorId;
+  return identity;
 }
 
 function normalizeOperationsQueryParams(
@@ -626,27 +816,96 @@ function normalizeOperationsQueryParams(
       statusValue === undefined
         ? undefined
         : statusValue.trim().toLowerCase() || undefined,
-    search: searchValue === undefined ? undefined : searchValue.trim() || undefined,
+    search:
+      searchValue === undefined ? undefined : searchValue.trim() || undefined,
     limit: query.limit,
   };
 }
 
 async function auditOperatorRead(
   operations: NonNullable<DemoRuntime["operationsStore"]>,
-  operatorId: string,
+  operator: WorkforceIdentity,
   action: string,
   entityId: string,
 ): Promise<void> {
   await operations.recordAudit({
-    eventKey: `operator:${operatorId}:${action}:${randomUUID()}`,
+    eventKey: `operator:${operator.externalRef}:${action}:${randomUUID()}`,
     actorType: "operator",
-    actorId: operatorId,
+    actorId: operator.externalRef,
     action,
     entityType: "operations_view",
     entityId,
     correlationId: entityId === "all" ? undefined : entityId,
-    metadata: { role: "support_readonly", synthetic: true },
+    metadata: {
+      role: operator.role,
+      sessionId: operator.sessionId,
+      synthetic: true,
+    },
   });
+}
+
+function workforceSessionToken(
+  request: Parameters<RequestHandler>[0],
+): string | undefined {
+  const cookies = request.cookies as Record<string, unknown> | undefined;
+  const value = cookies?.[WORKFORCE_SESSION_COOKIE];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function setWorkforceSessionCookie(
+  request: Parameters<RequestHandler>[0],
+  response: Parameters<RequestHandler>[1],
+  token: string,
+): void {
+  response.cookie(WORKFORCE_SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: isSecureRequest(request),
+    sameSite: "strict",
+    path: "/api/v1/internal",
+    maxAge: WORKFORCE_COOKIE_MAX_AGE_MS,
+  });
+}
+
+function clearWorkforceSessionCookie(
+  request: Parameters<RequestHandler>[0],
+  response: Parameters<RequestHandler>[1],
+): void {
+  response.clearCookie(WORKFORCE_SESSION_COOKIE, {
+    httpOnly: true,
+    secure: isSecureRequest(request),
+    sameSite: "strict",
+    path: "/api/v1/internal",
+  });
+}
+
+function isSecureRequest(request: Parameters<RequestHandler>[0]): boolean {
+  const forwardedProtocol = request
+    .header("x-forwarded-proto")
+    ?.split(",", 1)[0]
+    ?.trim()
+    .toLowerCase();
+  return request.secure || forwardedProtocol === "https";
+}
+
+function serializeWorkforceIdentity(identity: WorkforceIdentity) {
+  return {
+    operatorId: identity.externalRef,
+    displayName: identity.displayName,
+    role: identity.role,
+    expiresAt: identity.expiresAt,
+  };
+}
+
+function hashAuditIdentifier(value: string): string {
+  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+function redactOperationsTransfer<T extends { beneficiaryDisplay: string }>(
+  transfer: T,
+  role: WorkforceRole,
+): T {
+  if (role !== "compliance_readonly") return transfer;
+  return { ...transfer, beneficiaryDisplay: "Restricted recipient" };
 }
 
 function serializeOperationsTransfer(

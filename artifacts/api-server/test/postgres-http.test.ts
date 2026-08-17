@@ -24,11 +24,6 @@ const postgresConfig: ApiRuntimeConfig = Object.freeze({
   internalOperationsEnabled: true,
 });
 
-const operationsHeaders = Object.freeze({
-  "X-Demo-Operator-Id": "demo_cs_agent_001",
-  "X-Demo-Operator-Role": "support_readonly",
-});
-
 type JsonObject = Record<string, unknown>;
 type ApiResponse = Readonly<{ status: number; body: unknown }>;
 type RunningServer = Readonly<{
@@ -46,6 +41,106 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     const first = await startServer();
     const concurrent = await startServer();
     running.push(first, concurrent);
+
+    const workforce = first.runtime.workforceAuthStore!;
+    await Promise.all([
+      workforce.upsertUser({
+        externalRef: "demo_admin_001",
+        loginName: "admin@samra.test",
+        displayName: "Synthetic Administrator",
+        role: "administrator",
+        password: "synthetic-admin-password-2026",
+      }),
+      workforce.upsertUser({
+        externalRef: "demo_support_001",
+        loginName: "support@samra.test",
+        displayName: "Synthetic Support Agent",
+        role: "support_readonly",
+        password: "synthetic-support-password-2026",
+      }),
+      workforce.upsertUser({
+        externalRef: "demo_compliance_001",
+        loginName: "compliance@samra.test",
+        displayName: "Synthetic Compliance Analyst",
+        role: "compliance_readonly",
+        password: "synthetic-compliance-password-2026",
+      }),
+      workforce.upsertUser({
+        externalRef: "demo_disabled_001",
+        loginName: "disabled@samra.test",
+        displayName: "Disabled Synthetic Operator",
+        role: "support_readonly",
+        password: "synthetic-disabled-password-2026",
+        state: "disabled",
+      }),
+    ]);
+    const operationsHeaders = await loginWorkforce(
+      first.origin,
+      "admin@samra.test",
+      "synthetic-admin-password-2026",
+    );
+    const supportHeaders = await loginWorkforce(
+      first.origin,
+      "support@samra.test",
+      "synthetic-support-password-2026",
+    );
+    const complianceHeaders = await loginWorkforce(
+      first.origin,
+      "compliance@samra.test",
+      "synthetic-compliance-password-2026",
+    );
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/auth/session", {
+          headers: operationsHeaders,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/auth/session", {
+          method: "POST",
+          body: { loginName: "admin@samra.test", password: "wrong-password" },
+        })
+      ).status,
+      401,
+    );
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/auth/session", {
+          method: "POST",
+          body: {
+            loginName: "disabled@samra.test",
+            password: "synthetic-disabled-password-2026",
+          },
+        })
+      ).status,
+      401,
+    );
+    const expiryProbe = await workforce.authenticate(
+      "admin@samra.test",
+      "synthetic-admin-password-2026",
+      new Date("2026-08-17T10:00:00.000Z"),
+    );
+    assert.equal(
+      await workforce.resolveSession(
+        expiryProbe.token,
+        new Date("2026-08-18T10:00:00.000Z"),
+      ),
+      undefined,
+    );
+    await workforce.revokeSession(
+      expiryProbe.token,
+      new Date("2026-08-17T10:30:00.000Z"),
+    );
+    assert.equal(
+      await workforce.resolveSession(
+        expiryProbe.token,
+        new Date("2026-08-17T10:31:00.000Z"),
+      ),
+      undefined,
+    );
 
     assertAccount(await getAccount(first.origin), "425000", "425000");
     const seededBeneficiaries = arrayBody(
@@ -138,7 +233,42 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       first.origin,
       "/api/v1/internal/operations/summary",
     );
-    assert.equal(hiddenOperations.status, 404);
+    assert.equal(hiddenOperations.status, 401);
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/operations/summary", {
+          headers: {
+            "X-Demo-Operator-Id": "demo_cs_agent_001",
+            "X-Demo-Operator-Role": "support_readonly",
+          },
+        })
+      ).status,
+      401,
+    );
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          "/api/v1/internal/operations/audit-events",
+          {
+            headers: supportHeaders,
+          },
+        )
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          "/api/v1/internal/operations/customers",
+          {
+            headers: complianceHeaders,
+          },
+        )
+      ).status,
+      403,
+    );
     const operationsSummary = objectBody(
       await apiRequest(first.origin, "/api/v1/internal/operations/summary", {
         headers: operationsHeaders,
@@ -181,6 +311,33 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       currency: "USD",
       minorUnits: "10300",
     });
+    const complianceTransfers = arrayBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/transfers?search=${transferId}`,
+        { headers: complianceHeaders },
+      ),
+      200,
+    );
+    assert.equal(
+      complianceTransfers[0]?.["beneficiaryDisplay"],
+      "Restricted recipient",
+    );
+    await workforce.upsertUser({
+      externalRef: "demo_compliance_001",
+      loginName: "compliance@samra.test",
+      displayName: "Synthetic Compliance Analyst",
+      role: "compliance_readonly",
+      password: "rotated-compliance-password-2026",
+    });
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/operations/summary", {
+          headers: complianceHeaders,
+        })
+      ).status,
+      401,
+    );
     const operationsDetail = objectBody(
       await apiRequest(
         first.origin,
@@ -498,4 +655,22 @@ async function apiRequest(
     status: response.status,
     body: responseBody ? (JSON.parse(responseBody) as unknown) : {},
   };
+}
+
+async function loginWorkforce(
+  origin: string,
+  loginName: string,
+  password: string,
+): Promise<Readonly<Record<string, string>>> {
+  const response = await fetch(`${origin}/api/v1/internal/auth/session`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ loginName, password }),
+  });
+  assert.equal(response.status, 201);
+  const setCookie = response.headers.get("set-cookie");
+  assert.ok(setCookie);
+  const cookie = setCookie.split(";", 1)[0];
+  assert.match(cookie, /^samra_ops_session=/);
+  return Object.freeze({ Cookie: cookie });
 }

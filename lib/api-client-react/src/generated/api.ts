@@ -26,6 +26,7 @@ import type {
   CreateTransferRequest,
   CurrentCustomer,
   ExpiredProblemResponse,
+  ForbiddenProblemResponse,
   HealthStatus,
   ListActivityParams,
   ListOperationsAuditEventsParams,
@@ -47,9 +48,12 @@ import type {
   SelectScenarioRequest,
   Transfer,
   TransferPage,
+  UnauthorizedProblemResponse,
   UnavailableResponse,
   UpdateBeneficiaryRequest,
   ValidationProblemResponse,
+  WorkforceLoginRequest,
+  WorkforceSession,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1657,12 +1661,259 @@ export function useGetDemoReconciliationRun<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getCreateWorkforceSessionUrl = () => {
+  return `/api/v1/internal/auth/session`;
+};
+
+/**
+ * @summary Create an opaque workforce session
+ */
+export const createWorkforceSession = async (
+  workforceLoginRequest: WorkforceLoginRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<WorkforceSession> => {
+  return customFetch<WorkforceSession>(getCreateWorkforceSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(workforceLoginRequest),
+  });
+};
+
+export const getCreateWorkforceSessionMutationOptions = <
+  TError = ErrorType<UnauthorizedProblemResponse | ValidationProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWorkforceSession>>,
+    TError,
+    { data: BodyType<WorkforceLoginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWorkforceSession>>,
+  TError,
+  { data: BodyType<WorkforceLoginRequest> },
+  TContext
+> => {
+  const mutationKey = ["createWorkforceSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWorkforceSession>>,
+    { data: BodyType<WorkforceLoginRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createWorkforceSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWorkforceSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWorkforceSession>>
+>;
+export type CreateWorkforceSessionMutationBody =
+  BodyType<WorkforceLoginRequest>;
+export type CreateWorkforceSessionMutationError = ErrorType<
+  UnauthorizedProblemResponse | ValidationProblemResponse
+>;
+
+/**
+ * @summary Create an opaque workforce session
+ */
+export const useCreateWorkforceSession = <
+  TError = ErrorType<UnauthorizedProblemResponse | ValidationProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWorkforceSession>>,
+    TError,
+    { data: BodyType<WorkforceLoginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createWorkforceSession>>,
+  TError,
+  { data: BodyType<WorkforceLoginRequest> },
+  TContext
+> => {
+  return useMutation(getCreateWorkforceSessionMutationOptions(options));
+};
+
+export const getGetWorkforceSessionUrl = () => {
+  return `/api/v1/internal/auth/session`;
+};
+
+/**
+ * @summary Resolve the current workforce session
+ */
+export const getWorkforceSession = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<WorkforceSession> => {
+  return customFetch<WorkforceSession>(getGetWorkforceSessionUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWorkforceSessionQueryKey = () => {
+  return [`/api/v1/internal/auth/session`] as const;
+};
+
+export const getGetWorkforceSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkforceSession>>,
+  TError = ErrorType<UnauthorizedProblemResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkforceSession>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWorkforceSessionQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkforceSession>>
+  > = ({ signal }) => getWorkforceSession({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkforceSession>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWorkforceSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkforceSession>>
+>;
+export type GetWorkforceSessionQueryError =
+  ErrorType<UnauthorizedProblemResponse>;
+
+/**
+ * @summary Resolve the current workforce session
+ */
+
+export function useGetWorkforceSession<
+  TData = Awaited<ReturnType<typeof getWorkforceSession>>,
+  TError = ErrorType<UnauthorizedProblemResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkforceSession>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWorkforceSessionQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDeleteWorkforceSessionUrl = () => {
+  return `/api/v1/internal/auth/session`;
+};
+
+/**
+ * @summary Revoke the current workforce session
+ */
+export const deleteWorkforceSession = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<void> => {
+  return customFetch<void>(getDeleteWorkforceSessionUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteWorkforceSessionMutationOptions = <
+  TError = ErrorType<UnauthorizedProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWorkforceSession>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWorkforceSession>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["deleteWorkforceSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWorkforceSession>>,
+    void
+  > = () => {
+    return deleteWorkforceSession(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWorkforceSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWorkforceSession>>
+>;
+
+export type DeleteWorkforceSessionMutationError =
+  ErrorType<UnauthorizedProblemResponse>;
+
+/**
+ * @summary Revoke the current workforce session
+ */
+export const useDeleteWorkforceSession = <
+  TError = ErrorType<UnauthorizedProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWorkforceSession>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWorkforceSession>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getDeleteWorkforceSessionMutationOptions(options));
+};
+
 export const getGetOperationsSummaryUrl = () => {
   return `/api/v1/internal/operations/summary`;
 };
 
 /**
- * Demo/PostgreSQL only. This is not a production authentication boundary.
+ * Demo/PostgreSQL only. Requires a durable, server-resolved workforce session.
  * @summary Get the synthetic internal operations health summary
  */
 export const getOperationsSummary = async (
@@ -1680,7 +1931,11 @@ export const getGetOperationsSummaryQueryKey = () => {
 
 export const getGetOperationsSummaryQueryOptions = <
   TData = Awaited<ReturnType<typeof getOperationsSummary>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getOperationsSummary>>,
@@ -1707,7 +1962,11 @@ export const getGetOperationsSummaryQueryOptions = <
 export type GetOperationsSummaryQueryResult = NonNullable<
   Awaited<ReturnType<typeof getOperationsSummary>>
 >;
-export type GetOperationsSummaryQueryError = ErrorType<NotFoundProblemResponse>;
+export type GetOperationsSummaryQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+>;
 
 /**
  * @summary Get the synthetic internal operations health summary
@@ -1715,7 +1974,11 @@ export type GetOperationsSummaryQueryError = ErrorType<NotFoundProblemResponse>;
 
 export function useGetOperationsSummary<
   TData = Awaited<ReturnType<typeof getOperationsSummary>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getOperationsSummary>>,
@@ -1778,7 +2041,12 @@ export const getListOperationsTransfersQueryKey = (
 
 export const getListOperationsTransfersQueryOptions = <
   TData = Awaited<ReturnType<typeof listOperationsTransfers>>,
-  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ValidationProblemResponse
+  >,
 >(
   params?: ListOperationsTransfersParams,
   options?: {
@@ -1811,7 +2079,10 @@ export type ListOperationsTransfersQueryResult = NonNullable<
   Awaited<ReturnType<typeof listOperationsTransfers>>
 >;
 export type ListOperationsTransfersQueryError = ErrorType<
-  NotFoundProblemResponse | ValidationProblemResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ValidationProblemResponse
 >;
 
 /**
@@ -1820,7 +2091,12 @@ export type ListOperationsTransfersQueryError = ErrorType<
 
 export function useListOperationsTransfers<
   TData = Awaited<ReturnType<typeof listOperationsTransfers>>,
-  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ValidationProblemResponse
+  >,
 >(
   params?: ListOperationsTransfersParams,
   options?: {
@@ -1886,7 +2162,12 @@ export const getListOperationsCustomersQueryKey = (
 
 export const getListOperationsCustomersQueryOptions = <
   TData = Awaited<ReturnType<typeof listOperationsCustomers>>,
-  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ValidationProblemResponse
+  >,
 >(
   params?: ListOperationsCustomersParams,
   options?: {
@@ -1919,7 +2200,10 @@ export type ListOperationsCustomersQueryResult = NonNullable<
   Awaited<ReturnType<typeof listOperationsCustomers>>
 >;
 export type ListOperationsCustomersQueryError = ErrorType<
-  NotFoundProblemResponse | ValidationProblemResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ValidationProblemResponse
 >;
 
 /**
@@ -1928,7 +2212,12 @@ export type ListOperationsCustomersQueryError = ErrorType<
 
 export function useListOperationsCustomers<
   TData = Awaited<ReturnType<typeof listOperationsCustomers>>,
-  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ValidationProblemResponse
+  >,
 >(
   params?: ListOperationsCustomersParams,
   options?: {
@@ -1975,7 +2264,11 @@ export const getGetOperationsTransferQueryKey = (transferId: string) => {
 
 export const getGetOperationsTransferQueryOptions = <
   TData = Awaited<ReturnType<typeof getOperationsTransfer>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(
   transferId: string,
   options?: {
@@ -2012,8 +2305,11 @@ export const getGetOperationsTransferQueryOptions = <
 export type GetOperationsTransferQueryResult = NonNullable<
   Awaited<ReturnType<typeof getOperationsTransfer>>
 >;
-export type GetOperationsTransferQueryError =
-  ErrorType<NotFoundProblemResponse>;
+export type GetOperationsTransferQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+>;
 
 /**
  * @summary Get a synthetic transfer troubleshooting timeline
@@ -2021,7 +2317,11 @@ export type GetOperationsTransferQueryError =
 
 export function useGetOperationsTransfer<
   TData = Awaited<ReturnType<typeof getOperationsTransfer>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(
   transferId: string,
   options?: {
@@ -2090,7 +2390,11 @@ export const getListOperationsReconciliationExceptionsQueryKey = (
 
 export const getListOperationsReconciliationExceptionsQueryOptions = <
   TData = Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(
   params?: ListOperationsReconciliationExceptionsParams,
   options?: {
@@ -2126,8 +2430,11 @@ export const getListOperationsReconciliationExceptionsQueryOptions = <
 export type ListOperationsReconciliationExceptionsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>
 >;
-export type ListOperationsReconciliationExceptionsQueryError =
-  ErrorType<NotFoundProblemResponse>;
+export type ListOperationsReconciliationExceptionsQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+>;
 
 /**
  * @summary List durable reconciliation exceptions
@@ -2135,7 +2442,11 @@ export type ListOperationsReconciliationExceptionsQueryError =
 
 export function useListOperationsReconciliationExceptions<
   TData = Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(
   params?: ListOperationsReconciliationExceptionsParams,
   options?: {
@@ -2204,7 +2515,11 @@ export const getListOperationsAuditEventsQueryKey = (
 
 export const getListOperationsAuditEventsQueryOptions = <
   TData = Awaited<ReturnType<typeof listOperationsAuditEvents>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(
   params?: ListOperationsAuditEventsParams,
   options?: {
@@ -2236,8 +2551,11 @@ export const getListOperationsAuditEventsQueryOptions = <
 export type ListOperationsAuditEventsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listOperationsAuditEvents>>
 >;
-export type ListOperationsAuditEventsQueryError =
-  ErrorType<NotFoundProblemResponse>;
+export type ListOperationsAuditEventsQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+>;
 
 /**
  * @summary List immutable synthetic audit events
@@ -2245,7 +2563,11 @@ export type ListOperationsAuditEventsQueryError =
 
 export function useListOperationsAuditEvents<
   TData = Awaited<ReturnType<typeof listOperationsAuditEvents>>,
-  TError = ErrorType<NotFoundProblemResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
 >(
   params?: ListOperationsAuditEventsParams,
   options?: {

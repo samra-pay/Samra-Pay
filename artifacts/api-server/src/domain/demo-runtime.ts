@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type {
   ClaimedOutboxEvent,
   PostgresOperationsStore,
+  PostgresWorkforceAuthStore,
   WorkflowClaim,
 } from "@workspace/db";
 import {
@@ -147,6 +148,7 @@ export type DemoRuntimeDependencies = Readonly<{
   nextBeneficiaryId?: () => string;
   nextReconciliationId?: () => string;
   operationsStore?: PostgresOperationsStore;
+  workforceAuthStore?: PostgresWorkforceAuthStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   close?: () => Promise<void>;
 }>;
@@ -161,6 +163,7 @@ export class DemoRuntime {
   readonly ledger: DemoLedgerAdapter;
   readonly service: RemittanceService;
   readonly operationsStore?: PostgresOperationsStore;
+  readonly workforceAuthStore?: PostgresWorkforceAuthStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #beneficiaryStore: BeneficiaryStore;
@@ -178,6 +181,7 @@ export class DemoRuntime {
     this.ledger = (dependencies.ledger ??
       new DemoLedgerAdapter()) as DemoLedgerAdapter;
     this.#unitOfWork = dependencies.unitOfWork;
+    this.workforceAuthStore = dependencies.workforceAuthStore;
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
     this.#beneficiaryStore =

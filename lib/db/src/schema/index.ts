@@ -5,3 +5,4 @@ export * from "./operations";
 export * from "./parties";
 export * from "./reconciliation";
 export * from "./remittance";
+export * from "./workforce";

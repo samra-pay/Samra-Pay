@@ -395,15 +395,66 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /v1/internal/auth/session:
+    post:
+      operationId: createWorkforceSession
+      tags: [operations-auth]
+      summary: Create an opaque workforce session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkforceLoginRequest"
+      responses:
+        "201":
+          description: Authenticated workforce identity; session token is returned only as an HttpOnly cookie
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkforceSession"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+    get:
+      operationId: getWorkforceSession
+      tags: [operations-auth]
+      summary: Resolve the current workforce session
+      security:
+        - WorkforceSession: []
+      responses:
+        "200":
+          description: Current workforce identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkforceSession"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+    delete:
+      operationId: deleteWorkforceSession
+      tags: [operations-auth]
+      summary: Revoke the current workforce session
+      security:
+        - WorkforceSession: []
+      responses:
+        "204":
+          description: Session revoked
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+
   /v1/internal/operations/summary:
     get:
       operationId: getOperationsSummary
       tags: [operations]
       summary: Get the synthetic internal operations health summary
-      description: Demo/PostgreSQL only. This is not a production authentication boundary.
-      parameters:
-        - $ref: "#/components/parameters/DemoOperatorId"
-        - $ref: "#/components/parameters/DemoOperatorRole"
+      description: Demo/PostgreSQL only. Requires a durable, server-resolved workforce session.
+      security:
+        - WorkforceSession: []
       responses:
         "200":
           description: Operational counts from durable state
@@ -413,15 +464,17 @@ paths:
                 $ref: "#/components/schemas/OperationsSummary"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
   /v1/internal/operations/transfers:
     get:
       operationId: listOperationsTransfers
       tags: [operations]
       summary: Search synthetic transfers for support troubleshooting
+      security:
+        - WorkforceSession: []
       parameters:
-        - $ref: "#/components/parameters/DemoOperatorId"
-        - $ref: "#/components/parameters/DemoOperatorRole"
         - name: status
           in: query
           schema:
@@ -451,15 +504,17 @@ paths:
           $ref: "#/components/responses/NotFoundProblem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
   /v1/internal/operations/customers:
     get:
       operationId: listOperationsCustomers
       tags: [operations]
       summary: Search synthetic customers for support review
+      security:
+        - WorkforceSession: []
       parameters:
-        - $ref: "#/components/parameters/DemoOperatorId"
-        - $ref: "#/components/parameters/DemoOperatorRole"
         - name: search
           in: query
           schema:
@@ -485,15 +540,17 @@ paths:
           $ref: "#/components/responses/NotFoundProblem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
   /v1/internal/operations/transfers/{transferId}:
     get:
       operationId: getOperationsTransfer
       tags: [operations]
       summary: Get a synthetic transfer troubleshooting timeline
+      security:
+        - WorkforceSession: []
       parameters:
-        - $ref: "#/components/parameters/DemoOperatorId"
-        - $ref: "#/components/parameters/DemoOperatorRole"
         - $ref: "#/components/parameters/TransferId"
       responses:
         "200":
@@ -504,15 +561,17 @@ paths:
                 $ref: "#/components/schemas/OperationsTransferDetail"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
   /v1/internal/operations/reconciliation/exceptions:
     get:
       operationId: listOperationsReconciliationExceptions
       tags: [operations]
       summary: List durable reconciliation exceptions
+      security:
+        - WorkforceSession: []
       parameters:
-        - $ref: "#/components/parameters/DemoOperatorId"
-        - $ref: "#/components/parameters/DemoOperatorRole"
         - name: limit
           in: query
           schema:
@@ -531,15 +590,17 @@ paths:
                   $ref: "#/components/schemas/OperationsReconciliationException"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
   /v1/internal/operations/audit-events:
     get:
       operationId: listOperationsAuditEvents
       tags: [operations]
       summary: List immutable synthetic audit events
+      security:
+        - WorkforceSession: []
       parameters:
-        - $ref: "#/components/parameters/DemoOperatorId"
-        - $ref: "#/components/parameters/DemoOperatorRole"
         - name: entityId
           in: query
           schema:
@@ -566,8 +627,15 @@ paths:
                   $ref: "#/components/schemas/OperationsAuditEvent"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
 components:
+  securitySchemes:
+    WorkforceSession:
+      type: apiKey
+      in: cookie
+      name: samra_ops_session
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
@@ -589,21 +657,6 @@ components:
       required: true
       schema:
         type: string
-    DemoOperatorId:
-      name: X-Demo-Operator-Id
-      in: header
-      required: true
-      schema:
-        type: string
-        const: demo_cs_agent_001
-    DemoOperatorRole:
-      name: X-Demo-Operator-Role
-      in: header
-      required: true
-      schema:
-        type: string
-        const: support_readonly
-
   responses:
     ValidationProblem:
       description: Request validation failed
@@ -635,8 +688,52 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/ApiProblem"
+    UnauthorizedProblem:
+      description: Workforce authentication is required or invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ApiProblem"
+    ForbiddenProblem:
+      description: The authenticated workforce role lacks permission
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ApiProblem"
 
   schemas:
+    WorkforceLoginRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        loginName:
+          type: string
+          minLength: 1
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required: [loginName, password]
+
+    WorkforceSession:
+      type: object
+      additionalProperties: false
+      properties:
+        operatorId: { type: string }
+        displayName: { type: string }
+        role:
+          type: string
+          enum:
+            [
+              support_readonly,
+              operations_analyst,
+              compliance_readonly,
+              administrator,
+            ]
+        expiresAt: { type: string, format: date-time }
+      required: [operatorId, displayName, role, expiresAt]
+
     HealthStatus:
       type: object
       properties:
