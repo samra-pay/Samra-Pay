@@ -84,6 +84,14 @@ export const outboxEventStateEnum = samraCore.enum("outbox_event_state", [
   "failed",
 ]);
 
+export const workflowWorkStateEnum = samraCore.enum("workflow_work_state", [
+  "pending",
+  "processing",
+  "retry",
+  "completed",
+  "failed",
+]);
+
 export const remittanceQuoteStateEnum = samraCore.enum(
   "remittance_quote_state",
   ["active", "accepted", "expired", "cancelled"],

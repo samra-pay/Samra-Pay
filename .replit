@@ -26,6 +26,10 @@ args = "artifacts/samra-pay: web"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
+args = "artifacts/samra-pay-ops: Operations Portal"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
 args = "artifacts/samra-pay-mobile: expo"
 
 [[workflows.workflow.tasks]]

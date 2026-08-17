@@ -525,6 +525,143 @@ export interface ReconciliationRun {
   items: ReconciliationItem[];
 }
 
+export interface OperationsCountMap {
+  [key: string]: number;
+}
+
+export interface OperationsSummary {
+  generatedAt: string;
+  customers: OperationsCountMap;
+  transfers: OperationsCountMap;
+  workflow: OperationsCountMap;
+  outbox: OperationsCountMap;
+  providerEvents: OperationsCountMap;
+  /** @minimum 0 */
+  openReconciliationExceptions: number;
+}
+
+export interface OperationsCustomer {
+  id: string;
+  displayName: string;
+  /**
+   * @minLength 2
+   * @maxLength 2
+   */
+  countryCode: string;
+  status: string;
+  /** @minimum 0 */
+  accountCount: number;
+  /** @minimum 0 */
+  beneficiaryCount: number;
+  /** @minimum 0 */
+  transferCount: number;
+  /** @minimum 0 */
+  completedTransferCount: number;
+  totalSent: Money;
+  lastTransferAt: string | null;
+  createdAt: string;
+}
+
+export interface OperationsTransfer {
+  id: string;
+  customerId: string;
+  beneficiaryDisplay: string;
+  status: string;
+  fundingStatus: string;
+  payoutStatus: string;
+  reconciliationStatus: string;
+  sourceAmount: Money;
+  feeAmount: Money;
+  totalDebit: Money;
+  destinationAmount: Money;
+  workflowState: string | null;
+  workflowAttempts: number | null;
+  workflowLastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OperationsTimelineItem {
+  sequence: number;
+  fromState: string | null;
+  toState: string;
+  reason: string;
+  occurredAt: string;
+}
+
+export interface OperationsProviderLink {
+  provider: string;
+  resourceType: string;
+  providerResourceId: string;
+  createdAt: string;
+}
+
+export interface OperationsProviderEvent {
+  provider: string;
+  providerEventId: string;
+  eventType: string;
+  state: string;
+  /** @minimum 0 */
+  attemptCount: number;
+  lastError: string | null;
+  occurredAt: string;
+  receivedAt: string;
+  processedAt: string | null;
+}
+
+export interface OperationsOutboxEvent {
+  eventKey: string;
+  eventType: string;
+  state: string;
+  /** @minimum 0 */
+  attemptCount: number;
+  availableAt: string;
+  publishedAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+}
+
+export type OperationsAuditEventMetadata = { [key: string]: unknown };
+
+export interface OperationsAuditEvent {
+  id: string;
+  eventKey: string;
+  actorType: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  correlationId: string | null;
+  metadata: OperationsAuditEventMetadata;
+  occurredAt: string;
+}
+
+export interface OperationsReconciliationException {
+  id: string;
+  runId: string;
+  transferId: string | null;
+  code: string;
+  state: string;
+  summary: string;
+  assignedTo: string | null;
+  openedAt: string;
+  updatedAt: string;
+}
+
+export type OperationsTransferDetailReconciliationExceptionsItem = {
+  [key: string]: unknown;
+};
+
+export interface OperationsTransferDetail {
+  transfer: OperationsTransfer;
+  timeline: OperationsTimelineItem[];
+  providerLinks: OperationsProviderLink[];
+  providerEvents: OperationsProviderEvent[];
+  outbox: OperationsOutboxEvent[];
+  audit: OperationsAuditEvent[];
+  reconciliationExceptions: OperationsTransferDetailReconciliationExceptionsItem[];
+}
+
 export type ApiProblemFieldErrors = { [key: string]: string[] };
 
 export interface ApiProblem {
@@ -564,6 +701,10 @@ export type UnavailableResponse = ApiProblem;
 
 export type IdempotencyKeyParameter = string;
 
+export type DemoOperatorIdParameter = "demo_cs_agent_001";
+
+export type DemoOperatorRoleParameter = "support_readonly";
+
 export type ListActivityParams = {
   accountId?: string;
   cursor?: string;
@@ -579,6 +720,49 @@ export type ListRemittanceTransfersParams = {
   /**
    * @minimum 1
    * @maximum 100
+   */
+  limit?: number;
+};
+
+export type ListOperationsTransfersParams = {
+  status?: string;
+  /**
+   * @maxLength 128
+   */
+  search?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
+
+export type ListOperationsCustomersParams = {
+  /**
+   * @maxLength 128
+   */
+  search?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
+
+export type ListOperationsReconciliationExceptionsParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
+
+export type ListOperationsAuditEventsParams = {
+  entityId?: string;
+  actorId?: string;
+  /**
+   * @minimum 1
+   * @maximum 200
    */
   limit?: number;
 };

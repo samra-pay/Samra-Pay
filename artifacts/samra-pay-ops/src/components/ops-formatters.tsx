@@ -10,20 +10,9 @@ import type { Money, TransferStatus, CustomerStatus, HealthStatus, WorkerJobStat
 // ─── Money display ────────────────────────────────────────────────────────────
 // Always show currency code + exact decimal string from fixture. No math done here.
 
-export function MoneyDisplay({
-  money,
-  className,
-  large,
-}: {
-  money: Money;
-  className?: string;
-  large?: boolean;
-}) {
+export function MoneyDisplay({ money, className, large }: { money: Money; className?: string; large?: boolean }) {
   return (
-    <span
-      className={cn('font-mono tabular-nums', large ? 'text-lg font-semibold' : 'text-sm', className)}
-      data-testid="money-display"
-    >
+    <span className={cn('font-mono tabular-nums', large ? 'text-lg font-semibold' : 'text-sm', className)} data-testid="money-display">
       <span className="text-muted-foreground mr-1 text-xs">{money.currency}</span>
       {money.amount}
     </span>
@@ -32,15 +21,7 @@ export function MoneyDisplay({
 
 // ─── Timestamp display with UTC / local toggle ────────────────────────────────
 
-export function TimestampDisplay({
-  iso,
-  showLocal,
-  className,
-}: {
-  iso: string;
-  showLocal?: boolean;
-  className?: string;
-}) {
+export function TimestampDisplay({ iso, showLocal, className }: { iso: string; showLocal?: boolean; className?: string }) {
   const date = new Date(iso);
   const utc = date.toISOString().replace('T', ' ').replace('.000Z', ' UTC');
   const local = date.toLocaleString(undefined, {
@@ -53,11 +34,7 @@ export function TimestampDisplay({
     timeZoneName: 'short',
   });
   return (
-    <time
-      dateTime={iso}
-      className={cn('font-mono text-xs tabular-nums', className)}
-      title={showLocal ? utc : local}
-    >
+    <time dateTime={iso} className={cn('font-mono text-xs tabular-nums', className)} title={showLocal ? utc : local}>
       {showLocal ? local : utc}
     </time>
   );
@@ -65,22 +42,9 @@ export function TimestampDisplay({
 
 // ─── UTC / Local toggle control ───────────────────────────────────────────────
 
-export function TimezoneSwitcher({
-  showLocal,
-  onToggle,
-}: {
-  showLocal: boolean;
-  onToggle: () => void;
-}) {
+export function TimezoneSwitcher({ showLocal, onToggle }: { showLocal: boolean; onToggle: () => void }) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={onToggle}
-      data-testid="timezone-toggle"
-      className="text-xs text-muted-foreground h-7 px-2"
-      aria-label={showLocal ? 'Switch to UTC timestamps' : 'Switch to local timestamps'}
-    >
+    <Button variant="ghost" size="sm" onClick={onToggle} data-testid="timezone-toggle" className="text-xs text-muted-foreground h-7 px-2" aria-label={showLocal ? 'Switch to UTC timestamps' : 'Switch to local timestamps'}>
       {showLocal ? 'Local' : 'UTC'}
     </Button>
   );
@@ -93,26 +57,44 @@ export function useTimezonePref() {
 
 // ─── Transfer status badge ────────────────────────────────────────────────────
 
-const TRANSFER_STATUS_CONFIG: Record<
-  TransferStatus,
-  { label: string; className: string }
-> = {
-  completed: { label: 'Completed', className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent' },
-  pending: { label: 'Pending', className: 'bg-injera text-injera-foreground border-transparent' },
-  failed: { label: 'Failed', className: 'bg-destructive text-destructive-foreground border-transparent' },
-  refunded: { label: 'Refunded', className: 'bg-coffee text-coffee-foreground border-transparent' },
-  reversed: { label: 'Reversed', className: 'bg-coffee text-coffee-foreground border-transparent' },
-  timed_out: { label: 'Timed Out', className: 'bg-berbere text-berbere-foreground border-transparent' },
-  reconciliation_exception: { label: 'Recon Exception', className: 'bg-berbere text-berbere-foreground border-transparent' },
+const TRANSFER_STATUS_CONFIG: Record<TransferStatus, { label: string; className: string }> = {
+  completed: {
+    label: 'Completed',
+    className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent',
+  },
+  pending: {
+    label: 'Pending',
+    className: 'bg-injera text-injera-foreground border-transparent',
+  },
+  failed: {
+    label: 'Failed',
+    className: 'bg-destructive text-destructive-foreground border-transparent',
+  },
+  refunded: {
+    label: 'Refunded',
+    className: 'bg-coffee text-coffee-foreground border-transparent',
+  },
+  reversed: {
+    label: 'Reversed',
+    className: 'bg-coffee text-coffee-foreground border-transparent',
+  },
+  timed_out: {
+    label: 'Timed Out',
+    className: 'bg-berbere text-berbere-foreground border-transparent',
+  },
+  reconciliation_exception: {
+    label: 'Recon Exception',
+    className: 'bg-berbere text-berbere-foreground border-transparent',
+  },
 };
 
 export function TransferStatusBadge({ status }: { status: TransferStatus }) {
-  const cfg = TRANSFER_STATUS_CONFIG[status] ?? { label: status, className: '' };
+  const cfg = TRANSFER_STATUS_CONFIG[status] ?? {
+    label: status,
+    className: '',
+  };
   return (
-    <Badge
-      className={cfg.className}
-      data-testid={`status-${status}`}
-    >
+    <Badge className={cfg.className} data-testid={`status-${status}`}>
       {cfg.label}
     </Badge>
   );
@@ -121,14 +103,33 @@ export function TransferStatusBadge({ status }: { status: TransferStatus }) {
 // ─── Customer status badge ────────────────────────────────────────────────────
 
 const CUSTOMER_STATUS_CONFIG: Record<CustomerStatus, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent' },
-  suspended: { label: 'Suspended', className: 'bg-berbere text-berbere-foreground border-transparent' },
-  closed: { label: 'Closed', className: 'bg-muted text-muted-foreground border-transparent' },
-  pending_kyc: { label: 'Pending KYC', className: 'bg-injera text-injera-foreground border-transparent' },
+  active: {
+    label: 'Active',
+    className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent',
+  },
+  suspended: {
+    label: 'Suspended',
+    className: 'bg-berbere text-berbere-foreground border-transparent',
+  },
+  closed: {
+    label: 'Closed',
+    className: 'bg-muted text-muted-foreground border-transparent',
+  },
+  pending_kyc: {
+    label: 'Pending KYC',
+    className: 'bg-injera text-injera-foreground border-transparent',
+  },
+  unknown: {
+    label: 'Unknown',
+    className: 'bg-muted text-muted-foreground border-transparent',
+  },
 };
 
 export function CustomerStatusBadge({ status }: { status: CustomerStatus }) {
-  const cfg = CUSTOMER_STATUS_CONFIG[status] ?? { label: status, className: '' };
+  const cfg = CUSTOMER_STATUS_CONFIG[status] ?? {
+    label: status,
+    className: '',
+  };
   return <Badge className={cfg.className}>{cfg.label}</Badge>;
 }
 
@@ -170,12 +171,30 @@ export function HealthStatusBadge({ status }: { status: HealthStatus }) {
 // ─── Worker status badge ──────────────────────────────────────────────────────
 
 const WORKER_STATUS_CONFIG: Record<WorkerJobStatus, { label: string; className: string }> = {
-  running: { label: 'Running', className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent' },
-  queued: { label: 'Queued', className: 'bg-injera text-injera-foreground border-transparent' },
-  completed: { label: 'Completed', className: 'bg-muted text-muted-foreground border-transparent' },
-  failed: { label: 'Failed', className: 'bg-destructive text-destructive-foreground border-transparent' },
-  retrying: { label: 'Retrying', className: 'bg-berbere text-berbere-foreground border-transparent' },
-  lease_expired: { label: 'Lease Expired', className: 'bg-coffee text-coffee-foreground border-transparent' },
+  running: {
+    label: 'Running',
+    className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent',
+  },
+  queued: {
+    label: 'Queued',
+    className: 'bg-injera text-injera-foreground border-transparent',
+  },
+  completed: {
+    label: 'Completed',
+    className: 'bg-muted text-muted-foreground border-transparent',
+  },
+  failed: {
+    label: 'Failed',
+    className: 'bg-destructive text-destructive-foreground border-transparent',
+  },
+  retrying: {
+    label: 'Retrying',
+    className: 'bg-berbere text-berbere-foreground border-transparent',
+  },
+  lease_expired: {
+    label: 'Lease Expired',
+    className: 'bg-coffee text-coffee-foreground border-transparent',
+  },
 };
 
 export function WorkerStatusBadge({ status }: { status: WorkerJobStatus }) {
@@ -186,19 +205,28 @@ export function WorkerStatusBadge({ status }: { status: WorkerJobStatus }) {
 // ─── Source chip ──────────────────────────────────────────────────────────────
 
 const SOURCE_CONFIG: Record<MetricSource, { label: string; title: string }> = {
-  ledger: { label: 'LEDGER', title: 'Samra canonical ledger value — authoritative source of financial truth' },
-  provider: { label: 'PROVIDER', title: 'Provider-reported evidence — not a substitute for ledger truth' },
-  computed: { label: 'COMPUTED', title: 'Derived from multiple sources — not a primary financial value' },
-  cache: { label: 'CACHE', title: 'Cached value — may be stale by up to 60 seconds' },
+  ledger: {
+    label: 'LEDGER',
+    title: 'Samra canonical ledger value — authoritative source of financial truth',
+  },
+  provider: {
+    label: 'PROVIDER',
+    title: 'Provider-reported evidence — not a substitute for ledger truth',
+  },
+  computed: {
+    label: 'COMPUTED',
+    title: 'Derived from multiple sources — not a primary financial value',
+  },
+  cache: {
+    label: 'CACHE',
+    title: 'Cached value — may be stale by up to 60 seconds',
+  },
 };
 
 export function SourceChip({ source }: { source: MetricSource }) {
   const cfg = SOURCE_CONFIG[source];
   return (
-    <span
-      title={cfg.title}
-      className="inline-block font-mono text-[10px] px-1.5 py-0.5 rounded-sm bg-muted text-muted-foreground tracking-wide cursor-help"
-    >
+    <span title={cfg.title} className="inline-block font-mono text-[10px] px-1.5 py-0.5 rounded-sm bg-muted text-muted-foreground tracking-wide cursor-help">
       {cfg.label}
     </span>
   );
@@ -208,11 +236,26 @@ export function SourceChip({ source }: { source: MetricSource }) {
 
 export function FundingStateBadge({ state }: { state: FundingState }) {
   const cfg: Record<FundingState, { label: string; className: string }> = {
-    awaiting: { label: 'Awaiting', className: 'bg-injera text-injera-foreground border-transparent' },
-    captured: { label: 'Captured', className: 'bg-coffee text-coffee-foreground border-transparent' },
-    settled: { label: 'Settled', className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent' },
-    failed: { label: 'Failed', className: 'bg-destructive text-destructive-foreground border-transparent' },
-    refunded: { label: 'Refunded', className: 'bg-coffee text-coffee-foreground border-transparent' },
+    awaiting: {
+      label: 'Awaiting',
+      className: 'bg-injera text-injera-foreground border-transparent',
+    },
+    captured: {
+      label: 'Captured',
+      className: 'bg-coffee text-coffee-foreground border-transparent',
+    },
+    settled: {
+      label: 'Settled',
+      className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent',
+    },
+    failed: {
+      label: 'Failed',
+      className: 'bg-destructive text-destructive-foreground border-transparent',
+    },
+    refunded: {
+      label: 'Refunded',
+      className: 'bg-coffee text-coffee-foreground border-transparent',
+    },
   };
   const c = cfg[state] ?? { label: state, className: '' };
   return <Badge className={c.className}>{c.label}</Badge>;
@@ -220,11 +263,26 @@ export function FundingStateBadge({ state }: { state: FundingState }) {
 
 export function PayoutStateBadge({ state }: { state: PayoutState }) {
   const cfg: Record<PayoutState, { label: string; className: string }> = {
-    queued: { label: 'Queued', className: 'bg-injera text-injera-foreground border-transparent' },
-    processing: { label: 'Processing', className: 'bg-coffee text-coffee-foreground border-transparent' },
-    delivered: { label: 'Delivered', className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent' },
-    failed: { label: 'Failed', className: 'bg-destructive text-destructive-foreground border-transparent' },
-    reversed: { label: 'Reversed', className: 'bg-muted text-muted-foreground border-transparent' },
+    queued: {
+      label: 'Queued',
+      className: 'bg-injera text-injera-foreground border-transparent',
+    },
+    processing: {
+      label: 'Processing',
+      className: 'bg-coffee text-coffee-foreground border-transparent',
+    },
+    delivered: {
+      label: 'Delivered',
+      className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent',
+    },
+    failed: {
+      label: 'Failed',
+      className: 'bg-destructive text-destructive-foreground border-transparent',
+    },
+    reversed: {
+      label: 'Reversed',
+      className: 'bg-muted text-muted-foreground border-transparent',
+    },
   };
   const c = cfg[state] ?? { label: state, className: '' };
   return <Badge className={c.className}>{c.label}</Badge>;
@@ -232,10 +290,22 @@ export function PayoutStateBadge({ state }: { state: PayoutState }) {
 
 export function ReconciliationStateBadge({ state }: { state: ReconciliationState }) {
   const cfg: Record<ReconciliationState, { label: string; className: string }> = {
-    pending: { label: 'Pending', className: 'bg-injera text-injera-foreground border-transparent' },
-    matched: { label: 'Matched', className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent' },
-    exception: { label: 'Exception', className: 'bg-berbere text-berbere-foreground border-transparent' },
-    skipped: { label: 'Skipped', className: 'bg-muted text-muted-foreground border-transparent' },
+    pending: {
+      label: 'Pending',
+      className: 'bg-injera text-injera-foreground border-transparent',
+    },
+    matched: {
+      label: 'Matched',
+      className: 'bg-eucalyptus text-eucalyptus-foreground border-transparent',
+    },
+    exception: {
+      label: 'Exception',
+      className: 'bg-berbere text-berbere-foreground border-transparent',
+    },
+    skipped: {
+      label: 'Skipped',
+      className: 'bg-muted text-muted-foreground border-transparent',
+    },
   };
   const c = cfg[state] ?? { label: state, className: '' };
   return <Badge className={c.className}>{c.label}</Badge>;
@@ -243,22 +313,12 @@ export function ReconciliationStateBadge({ state }: { state: ReconciliationState
 
 // ─── Page header ─────────────────────────────────────────────────────────────
 
-export function PageHeader({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children?: React.ReactNode;
-}) {
+export function PageHeader({ title, description, children }: { title: string; description?: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-6 py-4 border-b border-border bg-card">
       <div className="min-w-0">
         <h1 className="text-base font-semibold text-foreground">{title}</h1>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
       </div>
       {children && <div className="flex items-center gap-2 shrink-0">{children}</div>}
     </div>
@@ -272,33 +332,17 @@ import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 export function MetricCard({ metric }: { metric: OpsMetric }) {
   return (
-    <div
-      className="rounded-lg border border-border bg-card p-4 space-y-1.5"
-      data-testid={`metric-${metric.label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
+    <div className="rounded-lg border border-border bg-card p-4 space-y-1.5" data-testid={`metric-${metric.label.toLowerCase().replace(/\s+/g, '-')}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground leading-tight">{metric.label}</span>
         <SourceChip source={metric.source} />
       </div>
       <div className="flex items-end gap-2">
-        <span className="text-xl font-semibold font-mono tabular-nums text-foreground leading-none">
-          {metric.value}
-        </span>
-        {metric.unit && (
-          <span className="text-xs text-muted-foreground leading-snug pb-0.5">{metric.unit}</span>
-        )}
+        <span className="text-xl font-semibold font-mono tabular-nums text-foreground leading-none">{metric.value}</span>
+        {metric.unit && <span className="text-xs text-muted-foreground leading-snug pb-0.5">{metric.unit}</span>}
       </div>
       {metric.delta && (
-        <div
-          className={cn(
-            'flex items-center gap-1 text-xs',
-            metric.deltaDirection === 'up'
-              ? 'text-eucalyptus'
-              : metric.deltaDirection === 'down'
-              ? 'text-berbere'
-              : 'text-muted-foreground',
-          )}
-        >
+        <div className={cn('flex items-center gap-1 text-xs', metric.deltaDirection === 'up' ? 'text-eucalyptus' : metric.deltaDirection === 'down' ? 'text-berbere' : 'text-muted-foreground')}>
           {metric.deltaDirection === 'up' && <ArrowUp className="size-3" aria-hidden="true" />}
           {metric.deltaDirection === 'down' && <ArrowDown className="size-3" aria-hidden="true" />}
           {metric.deltaDirection === 'neutral' && <Minus className="size-3" aria-hidden="true" />}

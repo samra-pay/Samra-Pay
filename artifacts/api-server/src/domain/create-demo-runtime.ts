@@ -2,6 +2,7 @@ import {
   PostgresLedgerControl,
   PostgresPersistenceContext,
   PostgresRemittanceRepository,
+  PostgresOperationsStore,
   RandomIdGenerator,
   createDatabase,
 } from "@workspace/db";
@@ -25,6 +26,7 @@ export function createConfiguredDemoRuntime(
     unitOfWork: context,
     beneficiaryStore: new PostgresBeneficiaryStore(context),
     reconciliationStore: new PostgresReconciliationStore(context),
+    operationsStore: new PostgresOperationsStore(context),
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
     close: () => connection.pool.end(),

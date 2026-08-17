@@ -13,12 +13,8 @@ import WorkerOperationsPage from '@/pages/worker-operations';
 import AuditLogPage from '@/pages/audit-log';
 import ReportsPage from '@/pages/reports';
 import SystemHealthPage from '@/pages/system-health';
-import {
-  Route,
-  Switch,
-  useLocation,
-  Router as WouterRouter,
-} from 'wouter';
+import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { OPERATIONS_ENABLED } from '@/lib/data-mode';
 
 const queryClient = new QueryClient();
 
@@ -49,6 +45,17 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function App() {
+  if (!OPERATIONS_ENABLED) {
+    return (
+      <main className="dark min-h-screen bg-background text-foreground grid place-items-center p-6">
+        <section className="max-w-lg rounded-lg border border-border bg-card p-6">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Samra Pay</p>
+          <h1 className="mt-2 text-xl font-semibold">Operations Portal disabled</h1>
+          <p className="mt-3 text-sm text-muted-foreground">This private employee surface requires an explicit runtime enablement.</p>
+        </section>
+      </main>
+    );
+  }
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { AUDIT_EVENTS, MONEY_FLOWS, RECONCILIATION_RUNS, TRANSFERS } from './fixtures';
-import { parseDataMode } from './data-mode';
+import { parseApiOrigin, parseDataMode, parseOperationsEnabled } from './data-mode';
 import { EndpointUnavailable, opsApi } from './ops-api';
-import { chronologicalTimeline, filterMoneyFlows, filterTransfers, fixtureTransferLookup, isProviderEvidence, relatedFixtureTransfers } from './ops-selectors';
+import {
+  chronologicalTimeline,
+  filterMoneyFlows,
+  filterTransfers,
+  fixtureTransferLookup,
+  isProviderEvidence,
+  relatedFixtureTransfers,
+} from './ops-selectors';
 
 describe('operations data boundaries', () => {
   it('keeps explicit modes isolated and rejects unknown modes', () => {
@@ -10,10 +17,15 @@ describe('operations data boundaries', () => {
     expect(parseDataMode('mock')).toBe('mock');
     expect(parseDataMode('api')).toBe('api');
     expect(() => parseDataMode('legacy')).toThrow('must be "mock" or "api"');
+    expect(parseApiOrigin(undefined, 'mock')).toBeNull();
+    expect(() => parseApiOrigin(undefined, 'api')).toThrow('is required');
+    expect(parseApiOrigin('https://api.example.test/', 'api')).toBe('https://api.example.test');
+    expect(parseOperationsEnabled(undefined)).toBe(false);
+    expect(parseOperationsEnabled('true')).toBe(true);
+    expect(() => parseOperationsEnabled('yes')).toThrow('must be "true" or "false"');
   });
 
   it('does not use synthetic fixtures when an API endpoint is unavailable', async () => {
-    await expect(opsApi.getTransfers()).rejects.toBeInstanceOf(EndpointUnavailable);
     await expect(opsApi.getSystemHealth()).rejects.toBeInstanceOf(EndpointUnavailable);
     await expect(opsApi.getMoneyFlows()).rejects.toBeInstanceOf(EndpointUnavailable);
     expect(relatedFixtureTransfers('api', TRANSFERS, 'cust-001')).toEqual([]);
@@ -35,15 +47,9 @@ describe('operations data boundaries', () => {
       ],
     };
 
-    expect(
-      filterMoneyFlows(
-        'api',
-        [apiFlow],
-        fixtureTransferLookup('api', TRANSFERS),
-        'api-flow',
-        'failed',
-      ),
-    ).toEqual([apiFlow]);
+    expect(filterMoneyFlows('api', [apiFlow], fixtureTransferLookup('api', TRANSFERS), 'api-flow', 'failed')).toEqual([
+      apiFlow,
+    ]);
   });
 });
 
@@ -51,7 +57,10 @@ describe('read-only investigative data', () => {
   it('filters transfer records without altering exact supplied money strings', () => {
     const filtered = filterTransfers(TRANSFERS, 'txn-20240614-001', 'all');
     expect(filtered).toHaveLength(1);
-    expect(filtered[0]?.sendAmount).toEqual({ amount: '500.00', currency: 'USD' });
+    expect(filtered[0]?.sendAmount).toEqual({
+      amount: '500.00',
+      currency: 'USD',
+    });
     expect(filtered[0]?.fee).toEqual({ amount: '4.50', currency: 'USD' });
   });
 

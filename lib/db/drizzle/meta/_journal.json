@@ -36,6 +36,13 @@
       "when": 1786910377874,
       "tag": "0004_fuzzy_carlie_cooper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786929000000,
+      "tag": "0005_durable_operations",
+      "breakpoints": true
     }
   ]
 }

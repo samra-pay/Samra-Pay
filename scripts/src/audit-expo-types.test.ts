@@ -402,6 +402,8 @@ describe("resolveInstalledPackageDir", () => {
     fs.symlinkSync(realDir, link);
 
     const result = resolveInstalledPackageDir("expo-blur", tmpRoot);
-    expect(result).toBe(realDir);
+    // macOS canonicalizes /var to /private/var. Compare canonical paths so
+    // this portability check tests symlink resolution rather than path aliases.
+    expect(result).toBe(fs.realpathSync(realDir));
   });
 });

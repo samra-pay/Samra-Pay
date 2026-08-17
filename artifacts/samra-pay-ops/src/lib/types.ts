@@ -26,7 +26,7 @@ export interface OpsMetric {
 
 // ─── Customers ───────────────────────────────────────────────────────────────
 
-export type CustomerStatus = 'active' | 'suspended' | 'closed' | 'pending_kyc';
+export type CustomerStatus = 'active' | 'suspended' | 'closed' | 'pending_kyc' | 'unknown';
 export type IssueLevel = 'info' | 'warning' | 'error';
 
 export interface CustomerIssue {
@@ -48,10 +48,10 @@ export interface CustomerAccount {
 
 export interface Customer {
   id: UUID;
-  externalRef: string;
+  externalRef: string | null;
   displayName: string;
   status: CustomerStatus;
-  kycTier: number;
+  kycTier: number | null;
   registeredAt: ISODateString;
   accounts: CustomerAccount[];
   recentTransferIds: UUID[];
@@ -60,40 +60,15 @@ export interface Customer {
 
 // ─── Transfers ───────────────────────────────────────────────────────────────
 
-export type TransferStatus =
-  | 'completed'
-  | 'pending'
-  | 'failed'
-  | 'refunded'
-  | 'reversed'
-  | 'timed_out'
-  | 'reconciliation_exception';
+export type TransferStatus = 'completed' | 'pending' | 'failed' | 'refunded' | 'reversed' | 'timed_out' | 'reconciliation_exception';
 
-export type FundingState =
-  | 'awaiting'
-  | 'captured'
-  | 'settled'
-  | 'failed'
-  | 'refunded';
+export type FundingState = 'awaiting' | 'captured' | 'settled' | 'failed' | 'refunded';
 
-export type PayoutState =
-  | 'queued'
-  | 'processing'
-  | 'delivered'
-  | 'failed'
-  | 'reversed';
+export type PayoutState = 'queued' | 'processing' | 'delivered' | 'failed' | 'reversed';
 
-export type ReconciliationState =
-  | 'pending'
-  | 'matched'
-  | 'exception'
-  | 'skipped';
+export type ReconciliationState = 'pending' | 'matched' | 'exception' | 'skipped';
 
-export type TimelineEventCategory =
-  | 'samra_canonical'
-  | 'provider_evidence'
-  | 'system'
-  | 'worker';
+export type TimelineEventCategory = 'samra_canonical' | 'provider_evidence' | 'system' | 'worker';
 
 export interface TimelineEvent {
   id: UUID;
@@ -158,12 +133,7 @@ export interface MoneyFlow {
 
 export type ReconciliationRunStatus = 'completed' | 'failed' | 'running' | 'partial';
 
-export type ExceptionType =
-  | 'amount_mismatch'
-  | 'missing_provider_record'
-  | 'duplicate_settlement'
-  | 'timing_gap'
-  | 'status_conflict';
+export type ExceptionType = 'amount_mismatch' | 'missing_provider_record' | 'duplicate_settlement' | 'timing_gap' | 'status_conflict';
 
 export interface ReconciliationException {
   id: UUID;
@@ -192,13 +162,7 @@ export interface ReconciliationRun {
 
 // ─── Workers ─────────────────────────────────────────────────────────────────
 
-export type WorkerJobStatus =
-  | 'running'
-  | 'queued'
-  | 'completed'
-  | 'failed'
-  | 'retrying'
-  | 'lease_expired';
+export type WorkerJobStatus = 'running' | 'queued' | 'completed' | 'failed' | 'retrying' | 'lease_expired';
 
 export interface WorkerJob {
   id: UUID;
@@ -218,14 +182,7 @@ export interface WorkerJob {
 
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 
-export type AuditEventCategory =
-  | 'auth'
-  | 'transfer'
-  | 'customer'
-  | 'reconciliation'
-  | 'admin'
-  | 'system'
-  | 'provider';
+export type AuditEventCategory = 'auth' | 'transfer' | 'customer' | 'reconciliation' | 'admin' | 'system' | 'provider';
 
 export interface AuditEvent {
   id: UUID;

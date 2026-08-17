@@ -28,8 +28,18 @@ import type {
   ExpiredProblemResponse,
   HealthStatus,
   ListActivityParams,
+  ListOperationsAuditEventsParams,
+  ListOperationsCustomersParams,
+  ListOperationsReconciliationExceptionsParams,
+  ListOperationsTransfersParams,
   ListRemittanceTransfersParams,
   NotFoundProblemResponse,
+  OperationsAuditEvent,
+  OperationsCustomer,
+  OperationsReconciliationException,
+  OperationsSummary,
+  OperationsTransfer,
+  OperationsTransferDetail,
   ReconciliationRun,
   RemittanceOptions,
   RemittanceQuote,
@@ -1639,6 +1649,618 @@ export function useGetDemoReconciliationRun<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDemoReconciliationRunQueryOptions(runId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetOperationsSummaryUrl = () => {
+  return `/api/v1/internal/operations/summary`;
+};
+
+/**
+ * Demo/PostgreSQL only. This is not a production authentication boundary.
+ * @summary Get the synthetic internal operations health summary
+ */
+export const getOperationsSummary = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsSummary> => {
+  return customFetch<OperationsSummary>(getGetOperationsSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOperationsSummaryQueryKey = () => {
+  return [`/api/v1/internal/operations/summary`] as const;
+};
+
+export const getGetOperationsSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOperationsSummary>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationsSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOperationsSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOperationsSummary>>
+  > = ({ signal }) => getOperationsSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationsSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOperationsSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOperationsSummary>>
+>;
+export type GetOperationsSummaryQueryError = ErrorType<NotFoundProblemResponse>;
+
+/**
+ * @summary Get the synthetic internal operations health summary
+ */
+
+export function useGetOperationsSummary<
+  TData = Awaited<ReturnType<typeof getOperationsSummary>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationsSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOperationsSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListOperationsTransfersUrl = (
+  params?: ListOperationsTransfersParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/internal/operations/transfers?${stringifiedParams}`
+    : `/api/v1/internal/operations/transfers`;
+};
+
+/**
+ * @summary Search synthetic transfers for support troubleshooting
+ */
+export const listOperationsTransfers = async (
+  params?: ListOperationsTransfersParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsTransfer[]> => {
+  return customFetch<OperationsTransfer[]>(
+    getListOperationsTransfersUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListOperationsTransfersQueryKey = (
+  params?: ListOperationsTransfersParams,
+) => {
+  return [
+    `/api/v1/internal/operations/transfers`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListOperationsTransfersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOperationsTransfers>>,
+  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+>(
+  params?: ListOperationsTransfersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsTransfers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListOperationsTransfersQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOperationsTransfers>>
+  > = ({ signal }) =>
+    listOperationsTransfers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOperationsTransfers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOperationsTransfersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOperationsTransfers>>
+>;
+export type ListOperationsTransfersQueryError = ErrorType<
+  NotFoundProblemResponse | ValidationProblemResponse
+>;
+
+/**
+ * @summary Search synthetic transfers for support troubleshooting
+ */
+
+export function useListOperationsTransfers<
+  TData = Awaited<ReturnType<typeof listOperationsTransfers>>,
+  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+>(
+  params?: ListOperationsTransfersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsTransfers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOperationsTransfersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListOperationsCustomersUrl = (
+  params?: ListOperationsCustomersParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/internal/operations/customers?${stringifiedParams}`
+    : `/api/v1/internal/operations/customers`;
+};
+
+/**
+ * @summary Search synthetic customers for support review
+ */
+export const listOperationsCustomers = async (
+  params?: ListOperationsCustomersParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsCustomer[]> => {
+  return customFetch<OperationsCustomer[]>(
+    getListOperationsCustomersUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListOperationsCustomersQueryKey = (
+  params?: ListOperationsCustomersParams,
+) => {
+  return [
+    `/api/v1/internal/operations/customers`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListOperationsCustomersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOperationsCustomers>>,
+  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+>(
+  params?: ListOperationsCustomersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsCustomers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListOperationsCustomersQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOperationsCustomers>>
+  > = ({ signal }) =>
+    listOperationsCustomers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOperationsCustomers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOperationsCustomersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOperationsCustomers>>
+>;
+export type ListOperationsCustomersQueryError = ErrorType<
+  NotFoundProblemResponse | ValidationProblemResponse
+>;
+
+/**
+ * @summary Search synthetic customers for support review
+ */
+
+export function useListOperationsCustomers<
+  TData = Awaited<ReturnType<typeof listOperationsCustomers>>,
+  TError = ErrorType<NotFoundProblemResponse | ValidationProblemResponse>,
+>(
+  params?: ListOperationsCustomersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsCustomers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOperationsCustomersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetOperationsTransferUrl = (transferId: string) => {
+  return `/api/v1/internal/operations/transfers/${transferId}`;
+};
+
+/**
+ * @summary Get a synthetic transfer troubleshooting timeline
+ */
+export const getOperationsTransfer = async (
+  transferId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsTransferDetail> => {
+  return customFetch<OperationsTransferDetail>(
+    getGetOperationsTransferUrl(transferId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetOperationsTransferQueryKey = (transferId: string) => {
+  return [`/api/v1/internal/operations/transfers/${transferId}`] as const;
+};
+
+export const getGetOperationsTransferQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOperationsTransfer>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(
+  transferId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationsTransfer>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOperationsTransferQueryKey(transferId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOperationsTransfer>>
+  > = ({ signal }) =>
+    getOperationsTransfer(transferId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: transferId !== null && transferId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationsTransfer>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOperationsTransferQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOperationsTransfer>>
+>;
+export type GetOperationsTransferQueryError =
+  ErrorType<NotFoundProblemResponse>;
+
+/**
+ * @summary Get a synthetic transfer troubleshooting timeline
+ */
+
+export function useGetOperationsTransfer<
+  TData = Awaited<ReturnType<typeof getOperationsTransfer>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(
+  transferId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationsTransfer>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOperationsTransferQueryOptions(
+    transferId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListOperationsReconciliationExceptionsUrl = (
+  params?: ListOperationsReconciliationExceptionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/internal/operations/reconciliation/exceptions?${stringifiedParams}`
+    : `/api/v1/internal/operations/reconciliation/exceptions`;
+};
+
+/**
+ * @summary List durable reconciliation exceptions
+ */
+export const listOperationsReconciliationExceptions = async (
+  params?: ListOperationsReconciliationExceptionsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsReconciliationException[]> => {
+  return customFetch<OperationsReconciliationException[]>(
+    getListOperationsReconciliationExceptionsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListOperationsReconciliationExceptionsQueryKey = (
+  params?: ListOperationsReconciliationExceptionsParams,
+) => {
+  return [
+    `/api/v1/internal/operations/reconciliation/exceptions`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListOperationsReconciliationExceptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(
+  params?: ListOperationsReconciliationExceptionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListOperationsReconciliationExceptionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>
+  > = ({ signal }) =>
+    listOperationsReconciliationExceptions(params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOperationsReconciliationExceptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>
+>;
+export type ListOperationsReconciliationExceptionsQueryError =
+  ErrorType<NotFoundProblemResponse>;
+
+/**
+ * @summary List durable reconciliation exceptions
+ */
+
+export function useListOperationsReconciliationExceptions<
+  TData = Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(
+  params?: ListOperationsReconciliationExceptionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsReconciliationExceptions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOperationsReconciliationExceptionsQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListOperationsAuditEventsUrl = (
+  params?: ListOperationsAuditEventsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/internal/operations/audit-events?${stringifiedParams}`
+    : `/api/v1/internal/operations/audit-events`;
+};
+
+/**
+ * @summary List immutable synthetic audit events
+ */
+export const listOperationsAuditEvents = async (
+  params?: ListOperationsAuditEventsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsAuditEvent[]> => {
+  return customFetch<OperationsAuditEvent[]>(
+    getListOperationsAuditEventsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListOperationsAuditEventsQueryKey = (
+  params?: ListOperationsAuditEventsParams,
+) => {
+  return [
+    `/api/v1/internal/operations/audit-events`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListOperationsAuditEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOperationsAuditEvents>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(
+  params?: ListOperationsAuditEventsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsAuditEvents>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListOperationsAuditEventsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOperationsAuditEvents>>
+  > = ({ signal }) =>
+    listOperationsAuditEvents(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOperationsAuditEvents>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOperationsAuditEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOperationsAuditEvents>>
+>;
+export type ListOperationsAuditEventsQueryError =
+  ErrorType<NotFoundProblemResponse>;
+
+/**
+ * @summary List immutable synthetic audit events
+ */
+
+export function useListOperationsAuditEvents<
+  TData = Awaited<ReturnType<typeof listOperationsAuditEvents>>,
+  TError = ErrorType<NotFoundProblemResponse>,
+>(
+  params?: ListOperationsAuditEventsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsAuditEvents>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOperationsAuditEventsQueryOptions(
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

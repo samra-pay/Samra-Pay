@@ -15,6 +15,7 @@ tags:
   - name: beneficiaries
   - name: remittance
   - name: demo
+  - name: operations
 paths:
   /healthz:
     get:
@@ -394,6 +395,178 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /v1/internal/operations/summary:
+    get:
+      operationId: getOperationsSummary
+      tags: [operations]
+      summary: Get the synthetic internal operations health summary
+      description: Demo/PostgreSQL only. This is not a production authentication boundary.
+      parameters:
+        - $ref: "#/components/parameters/DemoOperatorId"
+        - $ref: "#/components/parameters/DemoOperatorRole"
+      responses:
+        "200":
+          description: Operational counts from durable state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsSummary"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /v1/internal/operations/transfers:
+    get:
+      operationId: listOperationsTransfers
+      tags: [operations]
+      summary: Search synthetic transfers for support troubleshooting
+      parameters:
+        - $ref: "#/components/parameters/DemoOperatorId"
+        - $ref: "#/components/parameters/DemoOperatorRole"
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 128
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Matching synthetic transfers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OperationsTransfer"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+
+  /v1/internal/operations/customers:
+    get:
+      operationId: listOperationsCustomers
+      tags: [operations]
+      summary: Search synthetic customers for support review
+      parameters:
+        - $ref: "#/components/parameters/DemoOperatorId"
+        - $ref: "#/components/parameters/DemoOperatorRole"
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 128
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Synthetic customer support directory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OperationsCustomer"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+
+  /v1/internal/operations/transfers/{transferId}:
+    get:
+      operationId: getOperationsTransfer
+      tags: [operations]
+      summary: Get a synthetic transfer troubleshooting timeline
+      parameters:
+        - $ref: "#/components/parameters/DemoOperatorId"
+        - $ref: "#/components/parameters/DemoOperatorRole"
+        - $ref: "#/components/parameters/TransferId"
+      responses:
+        "200":
+          description: Durable transfer, provider, workflow, reconciliation, and audit evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsTransferDetail"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /v1/internal/operations/reconciliation/exceptions:
+    get:
+      operationId: listOperationsReconciliationExceptions
+      tags: [operations]
+      summary: List durable reconciliation exceptions
+      parameters:
+        - $ref: "#/components/parameters/DemoOperatorId"
+        - $ref: "#/components/parameters/DemoOperatorRole"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Reconciliation exceptions ordered for review
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OperationsReconciliationException"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /v1/internal/operations/audit-events:
+    get:
+      operationId: listOperationsAuditEvents
+      tags: [operations]
+      summary: List immutable synthetic audit events
+      parameters:
+        - $ref: "#/components/parameters/DemoOperatorId"
+        - $ref: "#/components/parameters/DemoOperatorRole"
+        - name: entityId
+          in: query
+          schema:
+            type: string
+        - name: actorId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Append-only audit event history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OperationsAuditEvent"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
 components:
   parameters:
     IdempotencyKey:
@@ -416,6 +589,20 @@ components:
       required: true
       schema:
         type: string
+    DemoOperatorId:
+      name: X-Demo-Operator-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        const: demo_cs_agent_001
+    DemoOperatorRole:
+      name: X-Demo-Operator-Role
+      in: header
+      required: true
+      schema:
+        type: string
+        const: support_readonly
 
   responses:
     ValidationProblem:
@@ -1014,6 +1201,285 @@ components:
           items:
             $ref: "#/components/schemas/ReconciliationItem"
       required: [id, status, provider, startedAt, completedAt, items]
+
+    OperationsCountMap:
+      type: object
+      additionalProperties:
+        type: integer
+        minimum: 0
+
+    OperationsSummary:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        customers:
+          $ref: "#/components/schemas/OperationsCountMap"
+        transfers:
+          $ref: "#/components/schemas/OperationsCountMap"
+        workflow:
+          $ref: "#/components/schemas/OperationsCountMap"
+        outbox:
+          $ref: "#/components/schemas/OperationsCountMap"
+        providerEvents:
+          $ref: "#/components/schemas/OperationsCountMap"
+        openReconciliationExceptions:
+          type: integer
+          minimum: 0
+      required:
+        [
+          generatedAt,
+          customers,
+          transfers,
+          workflow,
+          outbox,
+          providerEvents,
+          openReconciliationExceptions,
+        ]
+
+    OperationsCustomer:
+      type: object
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        countryCode: { type: string, minLength: 2, maxLength: 2 }
+        status: { type: string }
+        accountCount: { type: integer, minimum: 0 }
+        beneficiaryCount: { type: integer, minimum: 0 }
+        transferCount: { type: integer, minimum: 0 }
+        completedTransferCount: { type: integer, minimum: 0 }
+        totalSent:
+          $ref: "#/components/schemas/Money"
+        lastTransferAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        createdAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          displayName,
+          countryCode,
+          status,
+          accountCount,
+          beneficiaryCount,
+          transferCount,
+          completedTransferCount,
+          totalSent,
+          lastTransferAt,
+          createdAt,
+        ]
+
+    OperationsTransfer:
+      type: object
+      properties:
+        id: { type: string }
+        customerId: { type: string }
+        beneficiaryDisplay: { type: string }
+        status: { type: string }
+        fundingStatus: { type: string }
+        payoutStatus: { type: string }
+        reconciliationStatus: { type: string }
+        sourceAmount:
+          $ref: "#/components/schemas/Money"
+        feeAmount:
+          $ref: "#/components/schemas/Money"
+        totalDebit:
+          $ref: "#/components/schemas/Money"
+        destinationAmount:
+          $ref: "#/components/schemas/Money"
+        workflowState:
+          anyOf: [{ type: string }, { type: "null" }]
+        workflowAttempts:
+          anyOf: [{ type: integer, minimum: 0 }, { type: "null" }]
+        workflowLastError:
+          anyOf: [{ type: string }, { type: "null" }]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          customerId,
+          beneficiaryDisplay,
+          status,
+          fundingStatus,
+          payoutStatus,
+          reconciliationStatus,
+          sourceAmount,
+          feeAmount,
+          totalDebit,
+          destinationAmount,
+          workflowState,
+          workflowAttempts,
+          workflowLastError,
+          createdAt,
+          updatedAt,
+        ]
+
+    OperationsTimelineItem:
+      type: object
+      properties:
+        sequence: { type: integer }
+        fromState:
+          anyOf: [{ type: string }, { type: "null" }]
+        toState: { type: string }
+        reason: { type: string }
+        occurredAt: { type: string, format: date-time }
+      required: [sequence, fromState, toState, reason, occurredAt]
+
+    OperationsProviderLink:
+      type: object
+      properties:
+        provider: { type: string }
+        resourceType: { type: string }
+        providerResourceId: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [provider, resourceType, providerResourceId, createdAt]
+
+    OperationsProviderEvent:
+      type: object
+      properties:
+        provider: { type: string }
+        providerEventId: { type: string }
+        eventType: { type: string }
+        state: { type: string }
+        attemptCount: { type: integer, minimum: 0 }
+        lastError:
+          anyOf: [{ type: string }, { type: "null" }]
+        occurredAt: { type: string, format: date-time }
+        receivedAt: { type: string, format: date-time }
+        processedAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+      required:
+        [
+          provider,
+          providerEventId,
+          eventType,
+          state,
+          attemptCount,
+          lastError,
+          occurredAt,
+          receivedAt,
+          processedAt,
+        ]
+
+    OperationsOutboxEvent:
+      type: object
+      properties:
+        eventKey: { type: string }
+        eventType: { type: string }
+        state: { type: string }
+        attemptCount: { type: integer, minimum: 0 }
+        availableAt: { type: string, format: date-time }
+        publishedAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        lastError:
+          anyOf: [{ type: string }, { type: "null" }]
+        createdAt: { type: string, format: date-time }
+      required:
+        [
+          eventKey,
+          eventType,
+          state,
+          attemptCount,
+          availableAt,
+          publishedAt,
+          lastError,
+          createdAt,
+        ]
+
+    OperationsAuditEvent:
+      type: object
+      properties:
+        id: { type: string }
+        eventKey: { type: string }
+        actorType: { type: string }
+        actorId:
+          anyOf: [{ type: string }, { type: "null" }]
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        correlationId:
+          anyOf: [{ type: string }, { type: "null" }]
+        metadata:
+          type: object
+          additionalProperties: true
+        occurredAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          eventKey,
+          actorType,
+          actorId,
+          action,
+          entityType,
+          entityId,
+          correlationId,
+          metadata,
+          occurredAt,
+        ]
+
+    OperationsReconciliationException:
+      type: object
+      properties:
+        id: { type: string }
+        runId: { type: string }
+        transferId:
+          anyOf: [{ type: string }, { type: "null" }]
+        code: { type: string }
+        state: { type: string }
+        summary: { type: string }
+        assignedTo:
+          anyOf: [{ type: string }, { type: "null" }]
+        openedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          runId,
+          transferId,
+          code,
+          state,
+          summary,
+          assignedTo,
+          openedAt,
+          updatedAt,
+        ]
+
+    OperationsTransferDetail:
+      type: object
+      properties:
+        transfer:
+          $ref: "#/components/schemas/OperationsTransfer"
+        timeline:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsTimelineItem" }
+        providerLinks:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsProviderLink" }
+        providerEvents:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsProviderEvent" }
+        outbox:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsOutboxEvent" }
+        audit:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsAuditEvent" }
+        reconciliationExceptions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+        [
+          transfer,
+          timeline,
+          providerLinks,
+          providerEvents,
+          outbox,
+          audit,
+          reconciliationExceptions,
+        ]
 
     ApiProblem:
       type: object
