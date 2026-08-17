@@ -33,8 +33,20 @@ import {
   UpdateBeneficiaryParams,
   UpdateBeneficiaryResponse,
   DeleteBeneficiaryParams,
+  GetOperationsSummaryResponse,
+  GetOperationsTransferParams,
+  GetOperationsTransferResponse,
+  ListOperationsCustomersQueryParams,
+  ListOperationsCustomersResponse,
+  ListOperationsAuditEventsQueryParams,
+  ListOperationsAuditEventsResponse,
+  ListOperationsReconciliationExceptionsQueryParams,
+  ListOperationsReconciliationExceptionsResponse,
+  ListOperationsTransfersQueryParams,
+  ListOperationsTransfersResponse,
 } from "@workspace/api-zod";
-import { parseMinor } from "@workspace/remittance";
+import { DomainError, parseMinor } from "@workspace/remittance";
+import { randomUUID } from "node:crypto";
 import type { ApiRuntimeConfig } from "../../config";
 import {
   DEMO_ACTOR,
@@ -46,6 +58,20 @@ import {
   BackendUnavailableError,
   RequestValidationError,
 } from "../../lib/problem";
+
+const DEMO_OPERATIONS_STATUS_WHITELIST = Object.freeze([
+  "created",
+  "funds_reserved",
+  "submitted",
+  "in_transit",
+  "payout_pending",
+  "completed",
+  "failed",
+  "refund_pending",
+  "refunded",
+  "reversed",
+  "cancelled",
+]);
 
 type SafeParseSchema<T> = Readonly<{
   safeParse(value: unknown):
@@ -389,7 +415,292 @@ export function createV1Router(
     );
   }
 
+  if (
+    config.devControlsEnabled &&
+    config.internalOperationsEnabled &&
+    runtime.operationsStore
+  ) {
+    const operations = runtime.operationsStore;
+    router.get(
+      "/internal/operations/summary",
+      asyncRoute(async (req, res) => {
+        const operatorId = resolveDemoOperator(req);
+        const summary = await operations.operationsSummary();
+        await auditOperatorRead(
+          operations,
+          operatorId,
+          "operations_summary",
+          "all",
+        );
+        res.json(GetOperationsSummaryResponse.parse(summary));
+      }),
+    );
+
+    router.get(
+      "/internal/operations/customers",
+      asyncRoute(async (req, res) => {
+        const operatorId = resolveDemoOperator(req);
+        const query = parseSchema(
+          ListOperationsCustomersQueryParams,
+          normalizeOperationsQueryParams(req.query),
+        );
+        const customers = await operations.listOperationsCustomers(query);
+        await auditOperatorRead(
+          operations,
+          operatorId,
+          "operations_customer_search",
+          query.search ?? "all",
+        );
+        res.json(
+          ListOperationsCustomersResponse.parse(
+            customers.map((customer) => ({
+              id: customer.id,
+              displayName: customer.displayName,
+              countryCode: customer.countryCode,
+              status: customer.status,
+              accountCount: customer.accountCount,
+              beneficiaryCount: customer.beneficiaryCount,
+              transferCount: customer.transferCount,
+              completedTransferCount: customer.completedTransferCount,
+              totalSent: {
+                currency: customer.sourceCurrency,
+                minorUnits: customer.totalSentMinor,
+              },
+              lastTransferAt: customer.lastTransferAt,
+              createdAt: customer.createdAt,
+            })),
+          ),
+        );
+      }),
+    );
+
+    router.get(
+      "/internal/operations/transfers",
+      asyncRoute(async (req, res) => {
+        const operatorId = resolveDemoOperator(req);
+        const query = parseSchema(
+          ListOperationsTransfersQueryParams,
+          normalizeOperationsQueryParams(req.query),
+        );
+        if (
+          query.status !== undefined &&
+          !DEMO_OPERATIONS_STATUS_WHITELIST.includes(query.status)
+        ) {
+          throw new RequestValidationError(
+            "The transfer status filter is not valid.",
+            {
+              status: [
+                `Expected one of: ${DEMO_OPERATIONS_STATUS_WHITELIST.join(", ")}`,
+              ],
+            },
+          );
+        }
+        const transfers = (await operations.listOperationsTransfers(query)).map(
+          serializeOperationsTransfer,
+        );
+        await auditOperatorRead(
+          operations,
+          operatorId,
+          "operations_transfer_search",
+          query.search ?? query.status ?? "all",
+        );
+        res.json(ListOperationsTransfersResponse.parse(transfers));
+      }),
+    );
+
+    router.get(
+      "/internal/operations/transfers/:transferId",
+      asyncRoute(async (req, res) => {
+        const operatorId = resolveDemoOperator(req);
+        const params = parseSchema(GetOperationsTransferParams, req.params);
+        const detail = await operations.getOperationsTransfer(
+          params.transferId,
+        );
+        if (!detail) {
+          throw new DomainError("NOT_FOUND", "The transfer was not found.", {
+            transferId: params.transferId,
+          });
+        }
+        await auditOperatorRead(
+          operations,
+          operatorId,
+          "operations_transfer_detail",
+          params.transferId,
+        );
+        const value = detail as Record<string, unknown>;
+        res.json(
+          GetOperationsTransferResponse.parse({
+            ...value,
+            transfer: serializeOperationsTransfer(
+              value["transfer"] as Parameters<
+                typeof serializeOperationsTransfer
+              >[0],
+            ),
+          }),
+        );
+      }),
+    );
+
+    router.get(
+      "/internal/operations/reconciliation/exceptions",
+      asyncRoute(async (req, res) => {
+        const operatorId = resolveDemoOperator(req);
+        const query = parseSchema(
+          ListOperationsReconciliationExceptionsQueryParams,
+          req.query,
+        );
+        const exceptions = await operations.listReconciliationExceptions(
+          query.limit,
+        );
+        await auditOperatorRead(
+          operations,
+          operatorId,
+          "operations_reconciliation_exceptions",
+          "all",
+        );
+        res.json(
+          ListOperationsReconciliationExceptionsResponse.parse(exceptions),
+        );
+      }),
+    );
+
+    router.get(
+      "/internal/operations/audit-events",
+      asyncRoute(async (req, res) => {
+        const operatorId = resolveDemoOperator(req);
+        const query = parseSchema(
+          ListOperationsAuditEventsQueryParams,
+          req.query,
+        );
+        await auditOperatorRead(
+          operations,
+          operatorId,
+          "operations_audit_events",
+          query.entityId ?? query.actorId ?? "all",
+        );
+        res.json(
+          ListOperationsAuditEventsResponse.parse(
+            await operations.listAuditEvents(query),
+          ),
+        );
+      }),
+    );
+  }
+
   return router;
+}
+
+function resolveDemoOperator(request: Parameters<RequestHandler>[0]): string {
+  const operatorId = request.header("X-Demo-Operator-Id");
+  const role = request.header("X-Demo-Operator-Role");
+  if (operatorId !== "demo_cs_agent_001" || role !== "support_readonly") {
+    throw new DomainError(
+      "ACTOR_NOT_ALLOWED",
+      "The internal operations route was not found.",
+    );
+  }
+  return operatorId;
+}
+
+function normalizeOperationsQueryParams(
+  query: Readonly<{
+    status?: unknown;
+    search?: unknown;
+    limit?: unknown;
+  }>,
+) {
+  const statusValue =
+    typeof query.status === "string"
+      ? query.status
+      : query.status === undefined
+        ? undefined
+        : String(query.status);
+  const searchValue =
+    typeof query.search === "string"
+      ? query.search
+      : query.search === undefined
+        ? undefined
+        : String(query.search);
+  return {
+    status:
+      statusValue === undefined
+        ? undefined
+        : statusValue.trim().toLowerCase() || undefined,
+    search: searchValue === undefined ? undefined : searchValue.trim() || undefined,
+    limit: query.limit,
+  };
+}
+
+async function auditOperatorRead(
+  operations: NonNullable<DemoRuntime["operationsStore"]>,
+  operatorId: string,
+  action: string,
+  entityId: string,
+): Promise<void> {
+  await operations.recordAudit({
+    eventKey: `operator:${operatorId}:${action}:${randomUUID()}`,
+    actorType: "operator",
+    actorId: operatorId,
+    action,
+    entityType: "operations_view",
+    entityId,
+    correlationId: entityId === "all" ? undefined : entityId,
+    metadata: { role: "support_readonly", synthetic: true },
+  });
+}
+
+function serializeOperationsTransfer(
+  input: Readonly<{
+    id: string;
+    customerId: string;
+    beneficiaryDisplay: string;
+    status: string;
+    fundingStatus: string;
+    payoutStatus: string;
+    reconciliationStatus: string;
+    sourceCurrency: string;
+    sourceAmountMinor: string;
+    feeAmountMinor: string;
+    totalDebitMinor: string;
+    destinationCurrency: string;
+    destinationAmountMinor: string;
+    workflowState: string | null;
+    workflowAttempts: number | null;
+    workflowLastError: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>,
+) {
+  return {
+    id: input.id,
+    customerId: input.customerId,
+    beneficiaryDisplay: input.beneficiaryDisplay,
+    status: input.status,
+    fundingStatus: input.fundingStatus,
+    payoutStatus: input.payoutStatus,
+    reconciliationStatus: input.reconciliationStatus,
+    sourceAmount: {
+      currency: input.sourceCurrency,
+      minorUnits: input.sourceAmountMinor,
+    },
+    feeAmount: {
+      currency: input.sourceCurrency,
+      minorUnits: input.feeAmountMinor,
+    },
+    totalDebit: {
+      currency: input.sourceCurrency,
+      minorUnits: input.totalDebitMinor,
+    },
+    destinationAmount: {
+      currency: input.destinationCurrency,
+      minorUnits: input.destinationAmountMinor,
+    },
+    workflowState: input.workflowState,
+    workflowAttempts: input.workflowAttempts,
+    workflowLastError: input.workflowLastError,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+  };
 }
 
 export function createUnavailableV1Router(): Router {

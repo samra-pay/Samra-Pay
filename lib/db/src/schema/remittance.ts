@@ -144,6 +144,8 @@ export const outboxEvents = samraCore.table(
       .notNull()
       .defaultNow(),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     lastError: text("last_error"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -153,6 +155,7 @@ export const outboxEvents = samraCore.table(
   (table) => [
     uniqueIndex("outbox_events_event_key_uidx").on(table.eventKey),
     index("outbox_events_dispatch_idx").on(table.state, table.availableAt),
+    index("outbox_events_lease_idx").on(table.state, table.leaseExpiresAt),
     index("outbox_events_aggregate_idx").on(
       table.aggregateType,
       table.aggregateId,
@@ -160,6 +163,10 @@ export const outboxEvents = samraCore.table(
     check(
       "outbox_events_attempt_count_nonnegative_chk",
       sql`${table.attemptCount} >= 0`,
+    ),
+    check(
+      "outbox_events_lease_chk",
+      sql`(${table.state} = 'processing' and ${table.leaseOwner} is not null and ${table.leaseExpiresAt} is not null) or (${table.state} <> 'processing' and ${table.leaseOwner} is null and ${table.leaseExpiresAt} is null)`,
     ),
   ],
 );

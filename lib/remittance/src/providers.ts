@@ -111,6 +111,11 @@ export type FakeScenario =
 export interface FakeScenarioController {
   setScenario(transferId: string, scenario: FakeScenario): void;
   getScenario(transferId: string): FakeScenario;
+  resumeAttempt?(
+    transferId: string,
+    state: RemittanceTransfer["state"],
+    completedAttempts: number,
+  ): void;
   nextEvent(
     transfer: RemittanceTransfer,
     occurredAt: string,
@@ -210,6 +215,18 @@ export class DeterministicFakeProviders
 
   getScenario(transferId: string): FakeScenario {
     return this.#scenarios.get(transferId) ?? "HAPPY_PATH";
+  }
+
+  resumeAttempt(
+    transferId: string,
+    state: RemittanceTransfer["state"],
+    completedAttempts: number,
+  ): void {
+    const key = `${transferId}:${state}`;
+    this.#attempts.set(
+      key,
+      Math.max(this.#attempts.get(key) ?? 0, completedAttempts),
+    );
   }
 
   nextEvent(

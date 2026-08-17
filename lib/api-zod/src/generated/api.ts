@@ -1174,3 +1174,460 @@ export const GetDemoReconciliationRunResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * Demo/PostgreSQL only. This is not a production authentication boundary.
+ * @summary Get the synthetic internal operations health summary
+ */
+export const GetOperationsSummaryHeader = zod.object({
+  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
+  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+});
+
+export const getOperationsSummaryResponseCustomersMinOne = 0;
+
+export const getOperationsSummaryResponseTransfersMinOne = 0;
+
+export const getOperationsSummaryResponseWorkflowMinOne = 0;
+
+export const getOperationsSummaryResponseOutboxMinOne = 0;
+
+export const getOperationsSummaryResponseProviderEventsMinOne = 0;
+
+export const getOperationsSummaryResponseOpenReconciliationExceptionsMin = 0;
+
+export const GetOperationsSummaryResponse = zod.object({
+  generatedAt: zod.string().datetime({ offset: true }),
+  customers: zod.record(
+    zod.string(),
+    zod.number().int().min(getOperationsSummaryResponseCustomersMinOne),
+  ),
+  transfers: zod.record(
+    zod.string(),
+    zod.number().int().min(getOperationsSummaryResponseTransfersMinOne),
+  ),
+  workflow: zod.record(
+    zod.string(),
+    zod.number().int().min(getOperationsSummaryResponseWorkflowMinOne),
+  ),
+  outbox: zod.record(
+    zod.string(),
+    zod.number().int().min(getOperationsSummaryResponseOutboxMinOne),
+  ),
+  providerEvents: zod.record(
+    zod.string(),
+    zod.number().int().min(getOperationsSummaryResponseProviderEventsMinOne),
+  ),
+  openReconciliationExceptions: zod
+    .number()
+    .int()
+    .min(getOperationsSummaryResponseOpenReconciliationExceptionsMin),
+});
+
+/**
+ * @summary Search synthetic transfers for support troubleshooting
+ */
+export const listOperationsTransfersQuerySearchMax = 128;
+
+export const listOperationsTransfersQueryLimitDefault = 25;
+export const listOperationsTransfersQueryLimitMax = 100;
+
+export const ListOperationsTransfersQueryParams = zod.object({
+  status: zod.coerce.string().optional(),
+  search: zod.coerce
+    .string()
+    .max(listOperationsTransfersQuerySearchMax)
+    .optional(),
+  limit: zod.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(listOperationsTransfersQueryLimitMax)
+    .default(listOperationsTransfersQueryLimitDefault),
+});
+
+export const ListOperationsTransfersHeader = zod.object({
+  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
+  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+});
+
+export const listOperationsTransfersResponseSourceAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const listOperationsTransfersResponseFeeAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const listOperationsTransfersResponseTotalDebitMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const listOperationsTransfersResponseDestinationAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const listOperationsTransfersResponseWorkflowAttemptsOneMin = 0;
+
+export const ListOperationsTransfersResponseItem = zod.object({
+  id: zod.string(),
+  customerId: zod.string(),
+  beneficiaryDisplay: zod.string(),
+  status: zod.string(),
+  fundingStatus: zod.string(),
+  payoutStatus: zod.string(),
+  reconciliationStatus: zod.string(),
+  sourceAmount: zod
+    .object({
+      currency: zod.enum(["USD", "ETB"]),
+      minorUnits: zod
+        .string()
+        .regex(listOperationsTransfersResponseSourceAmountMinorUnitsRegExp),
+    })
+    .describe("Exact minor units serialized as a base-10 string."),
+  feeAmount: zod
+    .object({
+      currency: zod.enum(["USD", "ETB"]),
+      minorUnits: zod
+        .string()
+        .regex(listOperationsTransfersResponseFeeAmountMinorUnitsRegExp),
+    })
+    .describe("Exact minor units serialized as a base-10 string."),
+  totalDebit: zod
+    .object({
+      currency: zod.enum(["USD", "ETB"]),
+      minorUnits: zod
+        .string()
+        .regex(listOperationsTransfersResponseTotalDebitMinorUnitsRegExp),
+    })
+    .describe("Exact minor units serialized as a base-10 string."),
+  destinationAmount: zod
+    .object({
+      currency: zod.enum(["USD", "ETB"]),
+      minorUnits: zod
+        .string()
+        .regex(
+          listOperationsTransfersResponseDestinationAmountMinorUnitsRegExp,
+        ),
+    })
+    .describe("Exact minor units serialized as a base-10 string."),
+  workflowState: zod.union([zod.string(), zod.null()]),
+  workflowAttempts: zod.union([
+    zod
+      .number()
+      .int()
+      .min(listOperationsTransfersResponseWorkflowAttemptsOneMin),
+    zod.null(),
+  ]),
+  workflowLastError: zod.union([zod.string(), zod.null()]),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
+export const ListOperationsTransfersResponse = zod.array(
+  ListOperationsTransfersResponseItem,
+);
+
+/**
+ * @summary Search synthetic customers for support review
+ */
+export const listOperationsCustomersQuerySearchMax = 128;
+
+export const listOperationsCustomersQueryLimitDefault = 25;
+export const listOperationsCustomersQueryLimitMax = 100;
+
+export const ListOperationsCustomersQueryParams = zod.object({
+  search: zod.coerce
+    .string()
+    .max(listOperationsCustomersQuerySearchMax)
+    .optional(),
+  limit: zod.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(listOperationsCustomersQueryLimitMax)
+    .default(listOperationsCustomersQueryLimitDefault),
+});
+
+export const ListOperationsCustomersHeader = zod.object({
+  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
+  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+});
+
+export const listOperationsCustomersResponseCountryCodeMin = 2;
+export const listOperationsCustomersResponseCountryCodeMax = 2;
+
+export const listOperationsCustomersResponseAccountCountMin = 0;
+
+export const listOperationsCustomersResponseBeneficiaryCountMin = 0;
+
+export const listOperationsCustomersResponseTransferCountMin = 0;
+
+export const listOperationsCustomersResponseCompletedTransferCountMin = 0;
+
+export const listOperationsCustomersResponseTotalSentMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+
+export const ListOperationsCustomersResponseItem = zod.object({
+  id: zod.string(),
+  displayName: zod.string(),
+  countryCode: zod
+    .string()
+    .min(listOperationsCustomersResponseCountryCodeMin)
+    .max(listOperationsCustomersResponseCountryCodeMax),
+  status: zod.string(),
+  accountCount: zod
+    .number()
+    .int()
+    .min(listOperationsCustomersResponseAccountCountMin),
+  beneficiaryCount: zod
+    .number()
+    .int()
+    .min(listOperationsCustomersResponseBeneficiaryCountMin),
+  transferCount: zod
+    .number()
+    .int()
+    .min(listOperationsCustomersResponseTransferCountMin),
+  completedTransferCount: zod
+    .number()
+    .int()
+    .min(listOperationsCustomersResponseCompletedTransferCountMin),
+  totalSent: zod
+    .object({
+      currency: zod.enum(["USD", "ETB"]),
+      minorUnits: zod
+        .string()
+        .regex(listOperationsCustomersResponseTotalSentMinorUnitsRegExp),
+    })
+    .describe("Exact minor units serialized as a base-10 string."),
+  lastTransferAt: zod.union([
+    zod.string().datetime({ offset: true }),
+    zod.null(),
+  ]),
+  createdAt: zod.string().datetime({ offset: true }),
+});
+export const ListOperationsCustomersResponse = zod.array(
+  ListOperationsCustomersResponseItem,
+);
+
+/**
+ * @summary Get a synthetic transfer troubleshooting timeline
+ */
+export const GetOperationsTransferParams = zod.object({
+  transferId: zod.coerce.string(),
+});
+
+export const GetOperationsTransferHeader = zod.object({
+  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
+  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+});
+
+export const getOperationsTransferResponseTransferSourceAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const getOperationsTransferResponseTransferFeeAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const getOperationsTransferResponseTransferTotalDebitMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const getOperationsTransferResponseTransferDestinationAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const getOperationsTransferResponseTransferWorkflowAttemptsOneMin = 0;
+
+export const getOperationsTransferResponseProviderEventsItemAttemptCountMin = 0;
+
+export const getOperationsTransferResponseOutboxItemAttemptCountMin = 0;
+
+export const GetOperationsTransferResponse = zod.object({
+  transfer: zod.object({
+    id: zod.string(),
+    customerId: zod.string(),
+    beneficiaryDisplay: zod.string(),
+    status: zod.string(),
+    fundingStatus: zod.string(),
+    payoutStatus: zod.string(),
+    reconciliationStatus: zod.string(),
+    sourceAmount: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            getOperationsTransferResponseTransferSourceAmountMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    feeAmount: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            getOperationsTransferResponseTransferFeeAmountMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    totalDebit: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            getOperationsTransferResponseTransferTotalDebitMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    destinationAmount: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            getOperationsTransferResponseTransferDestinationAmountMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    workflowState: zod.union([zod.string(), zod.null()]),
+    workflowAttempts: zod.union([
+      zod
+        .number()
+        .int()
+        .min(getOperationsTransferResponseTransferWorkflowAttemptsOneMin),
+      zod.null(),
+    ]),
+    workflowLastError: zod.union([zod.string(), zod.null()]),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+  }),
+  timeline: zod.array(
+    zod.object({
+      sequence: zod.number().int(),
+      fromState: zod.union([zod.string(), zod.null()]),
+      toState: zod.string(),
+      reason: zod.string(),
+      occurredAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  providerLinks: zod.array(
+    zod.object({
+      provider: zod.string(),
+      resourceType: zod.string(),
+      providerResourceId: zod.string(),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  providerEvents: zod.array(
+    zod.object({
+      provider: zod.string(),
+      providerEventId: zod.string(),
+      eventType: zod.string(),
+      state: zod.string(),
+      attemptCount: zod
+        .number()
+        .int()
+        .min(getOperationsTransferResponseProviderEventsItemAttemptCountMin),
+      lastError: zod.union([zod.string(), zod.null()]),
+      occurredAt: zod.string().datetime({ offset: true }),
+      receivedAt: zod.string().datetime({ offset: true }),
+      processedAt: zod.union([
+        zod.string().datetime({ offset: true }),
+        zod.null(),
+      ]),
+    }),
+  ),
+  outbox: zod.array(
+    zod.object({
+      eventKey: zod.string(),
+      eventType: zod.string(),
+      state: zod.string(),
+      attemptCount: zod
+        .number()
+        .int()
+        .min(getOperationsTransferResponseOutboxItemAttemptCountMin),
+      availableAt: zod.string().datetime({ offset: true }),
+      publishedAt: zod.union([
+        zod.string().datetime({ offset: true }),
+        zod.null(),
+      ]),
+      lastError: zod.union([zod.string(), zod.null()]),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  audit: zod.array(
+    zod.object({
+      id: zod.string(),
+      eventKey: zod.string(),
+      actorType: zod.string(),
+      actorId: zod.union([zod.string(), zod.null()]),
+      action: zod.string(),
+      entityType: zod.string(),
+      entityId: zod.string(),
+      correlationId: zod.union([zod.string(), zod.null()]),
+      metadata: zod.record(zod.string(), zod.unknown()),
+      occurredAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  reconciliationExceptions: zod.array(zod.record(zod.string(), zod.unknown())),
+});
+
+/**
+ * @summary List durable reconciliation exceptions
+ */
+export const listOperationsReconciliationExceptionsQueryLimitDefault = 25;
+export const listOperationsReconciliationExceptionsQueryLimitMax = 100;
+
+export const ListOperationsReconciliationExceptionsQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(listOperationsReconciliationExceptionsQueryLimitMax)
+    .default(listOperationsReconciliationExceptionsQueryLimitDefault),
+});
+
+export const ListOperationsReconciliationExceptionsHeader = zod.object({
+  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
+  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+});
+
+export const ListOperationsReconciliationExceptionsResponseItem = zod.object({
+  id: zod.string(),
+  runId: zod.string(),
+  transferId: zod.union([zod.string(), zod.null()]),
+  code: zod.string(),
+  state: zod.string(),
+  summary: zod.string(),
+  assignedTo: zod.union([zod.string(), zod.null()]),
+  openedAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
+export const ListOperationsReconciliationExceptionsResponse = zod.array(
+  ListOperationsReconciliationExceptionsResponseItem,
+);
+
+/**
+ * @summary List immutable synthetic audit events
+ */
+export const listOperationsAuditEventsQueryLimitDefault = 50;
+export const listOperationsAuditEventsQueryLimitMax = 200;
+
+export const ListOperationsAuditEventsQueryParams = zod.object({
+  entityId: zod.coerce.string().optional(),
+  actorId: zod.coerce.string().optional(),
+  limit: zod.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(listOperationsAuditEventsQueryLimitMax)
+    .default(listOperationsAuditEventsQueryLimitDefault),
+});
+
+export const ListOperationsAuditEventsHeader = zod.object({
+  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
+  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+});
+
+export const ListOperationsAuditEventsResponseItem = zod.object({
+  id: zod.string(),
+  eventKey: zod.string(),
+  actorType: zod.string(),
+  actorId: zod.union([zod.string(), zod.null()]),
+  action: zod.string(),
+  entityType: zod.string(),
+  entityId: zod.string(),
+  correlationId: zod.union([zod.string(), zod.null()]),
+  metadata: zod.record(zod.string(), zod.unknown()),
+  occurredAt: zod.string().datetime({ offset: true }),
+});
+export const ListOperationsAuditEventsResponse = zod.array(
+  ListOperationsAuditEventsResponseItem,
+);

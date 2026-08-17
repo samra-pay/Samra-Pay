@@ -9,6 +9,7 @@ export type ApiRuntimeConfig = Readonly<{
   devControlsEnabled: boolean;
   runWorker: boolean;
   workerIntervalMilliseconds: number;
+  internalOperationsEnabled?: boolean;
 }>;
 
 export function loadApiRuntimeConfig(
@@ -16,16 +17,33 @@ export function loadApiRuntimeConfig(
 ): ApiRuntimeConfig {
   const backendMode = parseBackendMode(environment["SAMRA_BACKEND_MODE"]);
   const providerMode = parseProviderMode(environment["SAMRA_PROVIDER_MODE"]);
+  const persistenceMode = parsePersistenceMode(
+    environment["SAMRA_PERSISTENCE_MODE"],
+  );
+  const devControlsEnabled =
+    backendMode === "demo" &&
+    providerMode === "fake" &&
+    environment["NODE_ENV"] !== "production";
+  const operationsRequested = parseBoolean(
+    environment["SAMRA_INTERNAL_OPERATIONS_ENABLED"],
+    false,
+  );
+  if (
+    operationsRequested &&
+    (!devControlsEnabled || persistenceMode !== "postgres")
+  ) {
+    throw new Error(
+      "SAMRA_INTERNAL_OPERATIONS_ENABLED requires non-production demo/fake mode with PostgreSQL persistence.",
+    );
+  }
   return Object.freeze({
     backendMode,
     providerMode,
-    persistenceMode: parsePersistenceMode(environment["SAMRA_PERSISTENCE_MODE"]),
-    devControlsEnabled:
-      backendMode === "demo" &&
-      providerMode === "fake" &&
-      environment["NODE_ENV"] !== "production",
+    persistenceMode,
+    devControlsEnabled,
     runWorker: parseBoolean(environment["SAMRA_RUN_WORKER"], false),
     workerIntervalMilliseconds: 1_000,
+    internalOperationsEnabled: operationsRequested,
   });
 }
 
