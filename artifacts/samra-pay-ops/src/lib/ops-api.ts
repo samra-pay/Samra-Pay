@@ -2,18 +2,29 @@
 // Replit-built portal view model. API mode never reads fixture data.
 
 import {
+  addOperationsCaseNote,
+  createOperationsCase,
+  getOperationsCase,
   getOperationsSummary,
+  listOperationsCases,
   getOperationsTransfer,
   listOperationsAuditEvents,
   listOperationsCustomers,
   listOperationsReconciliationExceptions,
   listOperationsTransfers,
   setBaseUrl,
+  updateOperationsCase,
+  type AddOperationsCaseNoteRequest,
+  type CreateOperationsCaseRequest,
+  type ListOperationsCasesParams,
+  type OperationsCase,
+  type OperationsCaseDetail,
   type OperationsAuditEvent,
   type OperationsCustomer,
   type OperationsSummary,
   type OperationsTransfer,
   type OperationsTransferDetail,
+  type UpdateOperationsCaseRequest,
 } from "@workspace/api-client-react";
 import { API_ORIGIN } from "./data-mode";
 
@@ -67,6 +78,36 @@ export class ApiServerError extends Error {
 // ─── OpsApi class ────────────────────────────────────────────────────────────
 
 export class OpsApi {
+  async getCases(
+    params?: ListOperationsCasesParams,
+  ): Promise<OperationsCase[]> {
+    return listOperationsCases(params, OPERATOR_REQUEST);
+  }
+
+  async getCase(caseId: string): Promise<OperationsCaseDetail> {
+    return getOperationsCase(caseId, OPERATOR_REQUEST);
+  }
+
+  async createCase(
+    input: CreateOperationsCaseRequest,
+  ): Promise<OperationsCaseDetail> {
+    return createOperationsCase(input, mutationRequest());
+  }
+
+  async updateCase(
+    caseId: string,
+    input: UpdateOperationsCaseRequest,
+  ): Promise<OperationsCaseDetail> {
+    return updateOperationsCase(caseId, input, mutationRequest());
+  }
+
+  async addCaseNote(
+    caseId: string,
+    input: AddOperationsCaseNoteRequest,
+  ): Promise<OperationsCaseDetail> {
+    return addOperationsCaseNote(caseId, input, mutationRequest());
+  }
+
   async getOverviewMetrics(): Promise<OpsMetric[]> {
     const summary = await getOperationsSummary(OPERATOR_REQUEST);
     return mapSummary(summary);
@@ -222,6 +263,13 @@ export class OpsApi {
 }
 
 export const opsApi = new OpsApi();
+
+function mutationRequest() {
+  return {
+    ...OPERATOR_REQUEST,
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+  };
+}
 
 function minorUnitsToDecimal(value: string): string {
   const padded = value.padStart(3, "0");

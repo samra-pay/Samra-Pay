@@ -13,6 +13,7 @@ import WorkerOperationsPage from "@/pages/worker-operations";
 import AuditLogPage from "@/pages/audit-log";
 import ReportsPage from "@/pages/reports";
 import SystemHealthPage from "@/pages/system-health";
+import CasesPage from "@/pages/cases";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { IS_API, OPERATIONS_ENABLED } from "@/lib/data-mode";
 import {
@@ -33,6 +34,7 @@ function Router() {
         <Route path="/" component={OverviewPage} />
         <Route path="/customers" component={CustomersPage} />
         <Route path="/transfers" component={TransfersPage} />
+        <Route path="/cases" component={CasesPage} />
         <Route path="/money-flow" component={MoneyFlowPage} />
         <Route path="/reconciliation" component={ReconciliationPage} />
         <Route path="/worker-operations" component={WorkerOperationsPage} />

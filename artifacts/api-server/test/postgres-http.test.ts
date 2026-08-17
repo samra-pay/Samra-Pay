@@ -323,6 +323,215 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       complianceTransfers[0]?.["beneficiaryDisplay"],
       "Restricted recipient",
     );
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/operations/cases", {
+          headers: complianceHeaders,
+        })
+      ).status,
+      403,
+    );
+
+    const caseInput = {
+      transferId,
+      title: "Recipient has not received completed transfer",
+      category: "payout",
+      priority: "normal",
+    };
+    const [createdCaseA, createdCaseB] = await Promise.all([
+      apiRequest(first.origin, "/api/v1/internal/operations/cases", {
+        method: "POST",
+        headers: {
+          ...supportHeaders,
+          "Idempotency-Key": "case-concurrent-create-key",
+        },
+        body: caseInput,
+      }),
+      apiRequest(concurrent.origin, "/api/v1/internal/operations/cases", {
+        method: "POST",
+        headers: {
+          ...supportHeaders,
+          "Idempotency-Key": "case-concurrent-create-key",
+        },
+        body: caseInput,
+      }),
+    ]);
+    const createdCaseDetailA = objectBody(createdCaseA, 201);
+    const createdCaseDetailB = objectBody(createdCaseB, 201);
+    const caseId = String((createdCaseDetailA["case"] as JsonObject)["id"]);
+    assert.equal((createdCaseDetailB["case"] as JsonObject)["id"], caseId);
+    assert.equal(
+      (createdCaseDetailA["case"] as JsonObject)["version"] as number,
+      1,
+    );
+    assert.equal(
+      ((createdCaseDetailA["events"] as JsonObject[])[0] as JsonObject)[
+        "eventType"
+      ],
+      "created",
+    );
+    assert.equal(
+      (
+        await apiRequest(first.origin, "/api/v1/internal/operations/cases", {
+          method: "POST",
+          headers: {
+            ...supportHeaders,
+            "Idempotency-Key": "case-concurrent-create-key",
+          },
+          body: { ...caseInput, title: "Different request" },
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          `/api/v1/internal/operations/cases/${caseId}`,
+          {
+            method: "PATCH",
+            headers: {
+              ...supportHeaders,
+              "Idempotency-Key": "case-support-cannot-assign",
+            },
+            body: { expectedVersion: 1, assignedTo: "demo_support_001" },
+          },
+        )
+      ).status,
+      403,
+    );
+    const assignedCase = objectBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/cases/${caseId}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...operationsHeaders,
+            "Idempotency-Key": "case-admin-assignment",
+          },
+          body: {
+            expectedVersion: 1,
+            assignedTo: "demo_support_001",
+            priority: "urgent",
+          },
+        },
+      ),
+      200,
+    );
+    assert.equal((assignedCase["case"] as JsonObject)["version"], 2);
+    assert.equal(
+      (assignedCase["case"] as JsonObject)["assignedTo"],
+      "demo_support_001",
+    );
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          `/api/v1/internal/operations/cases/${caseId}`,
+          {
+            method: "PATCH",
+            headers: {
+              ...supportHeaders,
+              "Idempotency-Key": "case-stale-version",
+            },
+            body: { expectedVersion: 1, status: "in_progress" },
+          },
+        )
+      ).status,
+      409,
+    );
+    const notedCase = objectBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/cases/${caseId}/notes`,
+        {
+          method: "POST",
+          headers: {
+            ...supportHeaders,
+            "Idempotency-Key": "case-first-note",
+          },
+          body: {
+            body: "Confirmed recipient details and escalated payout evidence.",
+          },
+        },
+      ),
+      200,
+    );
+    assert.equal((notedCase["case"] as JsonObject)["version"], 3);
+    const replayedNote = objectBody(
+      await apiRequest(
+        concurrent.origin,
+        `/api/v1/internal/operations/cases/${caseId}/notes`,
+        {
+          method: "POST",
+          headers: {
+            ...supportHeaders,
+            "Idempotency-Key": "case-first-note",
+          },
+          body: {
+            body: "Confirmed recipient details and escalated payout evidence.",
+          },
+        },
+      ),
+      200,
+    );
+    assert.equal((replayedNote["notes"] as JsonObject[]).length, 1);
+    const activeCase = objectBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/cases/${caseId}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...supportHeaders,
+            "Idempotency-Key": "case-start-work",
+          },
+          body: { expectedVersion: 3, status: "in_progress" },
+        },
+      ),
+      200,
+    );
+    assert.equal((activeCase["case"] as JsonObject)["version"], 4);
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          `/api/v1/internal/operations/cases/${caseId}`,
+          {
+            method: "PATCH",
+            headers: {
+              ...supportHeaders,
+              "Idempotency-Key": "case-missing-resolution",
+            },
+            body: { expectedVersion: 4, status: "resolved" },
+          },
+        )
+      ).status,
+      422,
+    );
+    const resolvedCase = objectBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/cases/${caseId}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...supportHeaders,
+            "Idempotency-Key": "case-resolve",
+          },
+          body: {
+            expectedVersion: 4,
+            status: "resolved",
+            resolution:
+              "Provider evidence confirmed delivery to the recipient.",
+          },
+        },
+      ),
+      200,
+    );
+    assert.equal((resolvedCase["case"] as JsonObject)["version"], 5);
+    assert.equal((resolvedCase["case"] as JsonObject)["status"], "resolved");
     await workforce.upsertUser({
       externalRef: "demo_compliance_001",
       loginName: "compliance@samra.test",
@@ -364,6 +573,28 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       200,
     );
     assert.equal(recovered["status"], "submitted");
+    const recoveredCase = objectBody(
+      await apiRequest(
+        restarted.origin,
+        `/api/v1/internal/operations/cases/${caseId}`,
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.equal((recoveredCase["case"] as JsonObject)["status"], "resolved");
+    assert.equal((recoveredCase["notes"] as JsonObject[]).length, 1);
+    const caseAudit = arrayBody(
+      await apiRequest(
+        restarted.origin,
+        `/api/v1/internal/operations/audit-events?entityId=${caseId}`,
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    const caseAuditActions = new Set(caseAudit.map((event) => event["action"]));
+    assert.ok(caseAuditActions.has("operations_case_created"));
+    assert.ok(caseAuditActions.has("operations_case_updated"));
+    assert.ok(caseAuditActions.has("operations_case_note_added"));
     assertAccount(await getAccount(restarted.origin), "425000", "414700");
     const durableBankAfterRestart = objectBody(
       await apiRequest(

@@ -10,6 +10,7 @@ import {
   BarChart3,
   Cpu,
   ClipboardList,
+  MessagesSquare,
   FileText,
   Activity,
   Menu,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
+  { href: '/cases', label: 'Support Cases', icon: MessagesSquare },
   { href: '/money-flow', label: 'Money Flow', icon: GitBranch },
   { href: '/reconciliation', label: 'Reconciliation', icon: BarChart3 },
   { href: '/worker-operations', label: 'Worker Ops', icon: Cpu },
@@ -117,7 +119,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
               {IS_MOCK ? 'MODE: MOCK' : 'MODE: API'}
             </div>
             <div className="text-xs text-muted-foreground">
-              Read-only portal
+              Financial state read-only
             </div>
           </div>
         </aside>

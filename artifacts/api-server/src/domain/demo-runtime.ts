@@ -4,6 +4,7 @@ import type {
   ClaimedOutboxEvent,
   PostgresOperationsStore,
   PostgresWorkforceAuthStore,
+  PostgresOperationsCaseStore,
   WorkflowClaim,
 } from "@workspace/db";
 import {
@@ -149,6 +150,7 @@ export type DemoRuntimeDependencies = Readonly<{
   nextReconciliationId?: () => string;
   operationsStore?: PostgresOperationsStore;
   workforceAuthStore?: PostgresWorkforceAuthStore;
+  operationsCaseStore?: PostgresOperationsCaseStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   close?: () => Promise<void>;
 }>;
@@ -164,6 +166,7 @@ export class DemoRuntime {
   readonly service: RemittanceService;
   readonly operationsStore?: PostgresOperationsStore;
   readonly workforceAuthStore?: PostgresWorkforceAuthStore;
+  readonly operationsCaseStore?: PostgresOperationsCaseStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #beneficiaryStore: BeneficiaryStore;
@@ -182,6 +185,7 @@ export class DemoRuntime {
       new DemoLedgerAdapter()) as DemoLedgerAdapter;
     this.#unitOfWork = dependencies.unitOfWork;
     this.workforceAuthStore = dependencies.workforceAuthStore;
+    this.operationsCaseStore = dependencies.operationsCaseStore;
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
     this.#beneficiaryStore =

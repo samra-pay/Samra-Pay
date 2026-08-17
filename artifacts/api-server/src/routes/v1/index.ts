@@ -47,6 +47,21 @@ import {
   ListOperationsReconciliationExceptionsResponse,
   ListOperationsTransfersQueryParams,
   ListOperationsTransfersResponse,
+  AddOperationsCaseNoteBody,
+  AddOperationsCaseNoteHeader,
+  AddOperationsCaseNoteParams,
+  AddOperationsCaseNoteResponse,
+  CreateOperationsCaseBody,
+  CreateOperationsCaseHeader,
+  CreateOperationsCaseResponse,
+  GetOperationsCaseParams,
+  GetOperationsCaseResponse,
+  ListOperationsCasesQueryParams,
+  ListOperationsCasesResponse,
+  UpdateOperationsCaseBody,
+  UpdateOperationsCaseHeader,
+  UpdateOperationsCaseParams,
+  UpdateOperationsCaseResponse,
 } from "@workspace/api-zod";
 import { DomainError, parseMinor } from "@workspace/remittance";
 import { randomUUID } from "node:crypto";
@@ -79,7 +94,10 @@ type OperationsPermission =
   | "customers:read"
   | "transfers:read"
   | "reconciliation:read"
-  | "audit:read";
+  | "audit:read"
+  | "cases:read"
+  | "cases:work"
+  | "cases:manage";
 
 const ROLE_PERMISSIONS: Readonly<
   Record<WorkforceRole, ReadonlySet<OperationsPermission>>
@@ -88,12 +106,17 @@ const ROLE_PERMISSIONS: Readonly<
     "summary:read",
     "customers:read",
     "transfers:read",
+    "cases:read",
+    "cases:work",
   ]),
   operations_analyst: new Set<OperationsPermission>([
     "summary:read",
     "customers:read",
     "transfers:read",
     "reconciliation:read",
+    "cases:read",
+    "cases:work",
+    "cases:manage",
   ]),
   compliance_readonly: new Set<OperationsPermission>([
     "summary:read",
@@ -107,6 +130,9 @@ const ROLE_PERMISSIONS: Readonly<
     "transfers:read",
     "reconciliation:read",
     "audit:read",
+    "cases:read",
+    "cases:work",
+    "cases:manage",
   ]),
 });
 
@@ -751,6 +777,154 @@ export function createV1Router(
         );
       }),
     );
+
+    if (runtime.operationsCaseStore) {
+      const cases = runtime.operationsCaseStore;
+
+      router.get(
+        "/internal/operations/cases",
+        asyncRoute(async (req, res) => {
+          const operator = await requireOperationsPermission(
+            req,
+            workforce,
+            operations,
+            "cases:read",
+          );
+          const query = parseSchema(ListOperationsCasesQueryParams, req.query);
+          const records = await cases.listCases({
+            ...query,
+            assignedTo: query.assignedTo?.trim() || undefined,
+            search: query.search?.trim() || undefined,
+          });
+          await auditOperatorRead(
+            operations,
+            operator,
+            "operations_case_search",
+            query.search ?? query.status ?? "all",
+          );
+          res.json(ListOperationsCasesResponse.parse(records));
+        }),
+      );
+
+      router.post(
+        "/internal/operations/cases",
+        asyncRoute(async (req, res) => {
+          let operator = await requireOperationsPermission(
+            req,
+            workforce,
+            operations,
+            "cases:work",
+          );
+          const header = parseSchema(CreateOperationsCaseHeader, {
+            "Idempotency-Key": req.header("Idempotency-Key"),
+          });
+          const body = parseSchema(CreateOperationsCaseBody, req.body);
+          if (
+            body.priority !== "normal" ||
+            body.assignedTo !== undefined ||
+            body.dueAt !== undefined
+          ) {
+            operator = await requireOperationsPermission(
+              req,
+              workforce,
+              operations,
+              "cases:manage",
+            );
+          }
+          const detail = await cases.createCase({
+            operatorUserId: operator.id,
+            operatorRef: operator.externalRef,
+            idempotencyKey: header["Idempotency-Key"],
+            ...body,
+            dueAt: body.dueAt ? new Date(body.dueAt) : undefined,
+          });
+          res.status(201).json(CreateOperationsCaseResponse.parse(detail));
+        }),
+      );
+
+      router.get(
+        "/internal/operations/cases/:caseId",
+        asyncRoute(async (req, res) => {
+          const operator = await requireOperationsPermission(
+            req,
+            workforce,
+            operations,
+            "cases:read",
+          );
+          const params = parseSchema(GetOperationsCaseParams, req.params);
+          const detail = await cases.getCase(params.caseId);
+          await auditOperatorRead(
+            operations,
+            operator,
+            "operations_case_detail",
+            params.caseId,
+          );
+          res.json(GetOperationsCaseResponse.parse(detail));
+        }),
+      );
+
+      router.patch(
+        "/internal/operations/cases/:caseId",
+        asyncRoute(async (req, res) => {
+          const params = parseSchema(UpdateOperationsCaseParams, req.params);
+          const header = parseSchema(UpdateOperationsCaseHeader, {
+            "Idempotency-Key": req.header("Idempotency-Key"),
+          });
+          const body = parseSchema(UpdateOperationsCaseBody, req.body);
+          const permission: OperationsPermission =
+            body.priority !== undefined ||
+            body.assignedTo !== undefined ||
+            body.dueAt !== undefined
+              ? "cases:manage"
+              : "cases:work";
+          const operator = await requireOperationsPermission(
+            req,
+            workforce,
+            operations,
+            permission,
+          );
+          const detail = await cases.updateCase({
+            operatorUserId: operator.id,
+            operatorRef: operator.externalRef,
+            idempotencyKey: header["Idempotency-Key"],
+            caseRef: params.caseId,
+            ...body,
+            dueAt:
+              body.dueAt === undefined
+                ? undefined
+                : body.dueAt === null
+                  ? null
+                  : new Date(body.dueAt),
+          });
+          res.json(UpdateOperationsCaseResponse.parse(detail));
+        }),
+      );
+
+      router.post(
+        "/internal/operations/cases/:caseId/notes",
+        asyncRoute(async (req, res) => {
+          const operator = await requireOperationsPermission(
+            req,
+            workforce,
+            operations,
+            "cases:work",
+          );
+          const params = parseSchema(AddOperationsCaseNoteParams, req.params);
+          const header = parseSchema(AddOperationsCaseNoteHeader, {
+            "Idempotency-Key": req.header("Idempotency-Key"),
+          });
+          const body = parseSchema(AddOperationsCaseNoteBody, req.body);
+          const detail = await cases.addNote({
+            operatorUserId: operator.id,
+            operatorRef: operator.externalRef,
+            idempotencyKey: header["Idempotency-Key"],
+            caseRef: params.caseId,
+            body: body.body,
+          });
+          res.json(AddOperationsCaseNoteResponse.parse(detail));
+        }),
+      );
+    }
   }
 
   return router;

@@ -1645,3 +1645,435 @@ export const ListOperationsAuditEventsResponseItem = zod.object({
 export const ListOperationsAuditEventsResponse = zod.array(
   ListOperationsAuditEventsResponseItem,
 );
+
+/**
+ * @summary List durable customer-support cases
+ */
+export const listOperationsCasesQueryAssignedToMax = 128;
+
+export const listOperationsCasesQuerySearchMax = 128;
+
+export const listOperationsCasesQueryLimitDefault = 25;
+export const listOperationsCasesQueryLimitMax = 100;
+
+export const ListOperationsCasesQueryParams = zod.object({
+  status: zod
+    .enum(["open", "in_progress", "pending_customer", "resolved", "closed"])
+    .optional(),
+  priority: zod.enum(["low", "normal", "high", "urgent"]).optional(),
+  assignedTo: zod.coerce
+    .string()
+    .max(listOperationsCasesQueryAssignedToMax)
+    .optional(),
+  search: zod.coerce.string().max(listOperationsCasesQuerySearchMax).optional(),
+  limit: zod.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(listOperationsCasesQueryLimitMax)
+    .default(listOperationsCasesQueryLimitDefault),
+});
+
+export const ListOperationsCasesResponseItem = zod.object({
+  id: zod.string(),
+  customerId: zod.union([zod.string(), zod.null()]),
+  transferId: zod.union([zod.string(), zod.null()]),
+  title: zod.string(),
+  category: zod.enum([
+    "transfer_status",
+    "funding",
+    "payout",
+    "refund",
+    "identity",
+    "reconciliation",
+    "technical",
+    "other",
+  ]),
+  priority: zod.enum(["low", "normal", "high", "urgent"]),
+  status: zod.enum([
+    "open",
+    "in_progress",
+    "pending_customer",
+    "resolved",
+    "closed",
+  ]),
+  assignedTo: zod.union([zod.string(), zod.null()]),
+  assignedToDisplayName: zod.union([zod.string(), zod.null()]),
+  openedBy: zod.string(),
+  openedByDisplayName: zod.string(),
+  resolution: zod.union([zod.string(), zod.null()]),
+  dueAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  version: zod.number().int().min(1),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  resolvedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  closedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+});
+export const ListOperationsCasesResponse = zod.array(
+  ListOperationsCasesResponseItem,
+);
+
+/**
+ * @summary Open an auditable support case without changing financial state
+ */
+export const createOperationsCaseHeaderIdempotencyKeyMin = 8;
+export const createOperationsCaseHeaderIdempotencyKeyMax = 128;
+
+export const CreateOperationsCaseHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(createOperationsCaseHeaderIdempotencyKeyMin)
+    .max(createOperationsCaseHeaderIdempotencyKeyMax),
+});
+
+export const createOperationsCaseBodyThreeTitleMin = 3;
+export const createOperationsCaseBodyThreeTitleMax = 160;
+
+export const createOperationsCaseBodyThreeAssignedToMax = 128;
+
+export const CreateOperationsCaseBody = zod
+  .union([zod.unknown(), zod.unknown()])
+  .and(
+    zod.object({
+      customerId: zod.string().optional(),
+      transferId: zod.string().optional(),
+      title: zod
+        .string()
+        .min(createOperationsCaseBodyThreeTitleMin)
+        .max(createOperationsCaseBodyThreeTitleMax),
+      category: zod.enum([
+        "transfer_status",
+        "funding",
+        "payout",
+        "refund",
+        "identity",
+        "reconciliation",
+        "technical",
+        "other",
+      ]),
+      priority: zod.enum(["low", "normal", "high", "urgent"]),
+      assignedTo: zod
+        .string()
+        .max(createOperationsCaseBodyThreeAssignedToMax)
+        .optional(),
+      dueAt: zod.string().datetime({ offset: true }).optional(),
+    }),
+  );
+
+export const CreateOperationsCaseResponse = zod.object({
+  case: zod.object({
+    id: zod.string(),
+    customerId: zod.union([zod.string(), zod.null()]),
+    transferId: zod.union([zod.string(), zod.null()]),
+    title: zod.string(),
+    category: zod.enum([
+      "transfer_status",
+      "funding",
+      "payout",
+      "refund",
+      "identity",
+      "reconciliation",
+      "technical",
+      "other",
+    ]),
+    priority: zod.enum(["low", "normal", "high", "urgent"]),
+    status: zod.enum([
+      "open",
+      "in_progress",
+      "pending_customer",
+      "resolved",
+      "closed",
+    ]),
+    assignedTo: zod.union([zod.string(), zod.null()]),
+    assignedToDisplayName: zod.union([zod.string(), zod.null()]),
+    openedBy: zod.string(),
+    openedByDisplayName: zod.string(),
+    resolution: zod.union([zod.string(), zod.null()]),
+    dueAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+    version: zod.number().int().min(1),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+    resolvedAt: zod.union([
+      zod.string().datetime({ offset: true }),
+      zod.null(),
+    ]),
+    closedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  }),
+  notes: zod.array(
+    zod.object({
+      id: zod.string(),
+      author: zod.string(),
+      authorDisplayName: zod.string(),
+      body: zod.string(),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  events: zod.array(
+    zod.object({
+      id: zod.string(),
+      eventType: zod.enum(["created", "updated", "note_added"]),
+      actor: zod.string(),
+      actorDisplayName: zod.string(),
+      detail: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+});
+
+/**
+ * @summary Get a support case, internal notes, and immutable history
+ */
+export const GetOperationsCaseParams = zod.object({
+  caseId: zod.coerce.string(),
+});
+
+export const GetOperationsCaseResponse = zod.object({
+  case: zod.object({
+    id: zod.string(),
+    customerId: zod.union([zod.string(), zod.null()]),
+    transferId: zod.union([zod.string(), zod.null()]),
+    title: zod.string(),
+    category: zod.enum([
+      "transfer_status",
+      "funding",
+      "payout",
+      "refund",
+      "identity",
+      "reconciliation",
+      "technical",
+      "other",
+    ]),
+    priority: zod.enum(["low", "normal", "high", "urgent"]),
+    status: zod.enum([
+      "open",
+      "in_progress",
+      "pending_customer",
+      "resolved",
+      "closed",
+    ]),
+    assignedTo: zod.union([zod.string(), zod.null()]),
+    assignedToDisplayName: zod.union([zod.string(), zod.null()]),
+    openedBy: zod.string(),
+    openedByDisplayName: zod.string(),
+    resolution: zod.union([zod.string(), zod.null()]),
+    dueAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+    version: zod.number().int().min(1),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+    resolvedAt: zod.union([
+      zod.string().datetime({ offset: true }),
+      zod.null(),
+    ]),
+    closedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  }),
+  notes: zod.array(
+    zod.object({
+      id: zod.string(),
+      author: zod.string(),
+      authorDisplayName: zod.string(),
+      body: zod.string(),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  events: zod.array(
+    zod.object({
+      id: zod.string(),
+      eventType: zod.enum(["created", "updated", "note_added"]),
+      actor: zod.string(),
+      actorDisplayName: zod.string(),
+      detail: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+});
+
+/**
+ * @summary Update workflow metadata using optimistic concurrency
+ */
+export const UpdateOperationsCaseParams = zod.object({
+  caseId: zod.coerce.string(),
+});
+
+export const updateOperationsCaseHeaderIdempotencyKeyMin = 8;
+export const updateOperationsCaseHeaderIdempotencyKeyMax = 128;
+
+export const UpdateOperationsCaseHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(updateOperationsCaseHeaderIdempotencyKeyMin)
+    .max(updateOperationsCaseHeaderIdempotencyKeyMax),
+});
+
+export const updateOperationsCaseBodyAssignedToOneMax = 128;
+
+export const updateOperationsCaseBodyResolutionOneMin = 3;
+export const updateOperationsCaseBodyResolutionOneMax = 2000;
+
+export const UpdateOperationsCaseBody = zod.object({
+  expectedVersion: zod.number().int().min(1),
+  status: zod
+    .enum(["open", "in_progress", "pending_customer", "resolved", "closed"])
+    .optional(),
+  priority: zod.enum(["low", "normal", "high", "urgent"]).optional(),
+  assignedTo: zod
+    .union([
+      zod.string().max(updateOperationsCaseBodyAssignedToOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  dueAt: zod
+    .union([zod.string().datetime({ offset: true }), zod.null()])
+    .optional(),
+  resolution: zod
+    .union([
+      zod
+        .string()
+        .min(updateOperationsCaseBodyResolutionOneMin)
+        .max(updateOperationsCaseBodyResolutionOneMax),
+      zod.null(),
+    ])
+    .optional(),
+});
+
+export const UpdateOperationsCaseResponse = zod.object({
+  case: zod.object({
+    id: zod.string(),
+    customerId: zod.union([zod.string(), zod.null()]),
+    transferId: zod.union([zod.string(), zod.null()]),
+    title: zod.string(),
+    category: zod.enum([
+      "transfer_status",
+      "funding",
+      "payout",
+      "refund",
+      "identity",
+      "reconciliation",
+      "technical",
+      "other",
+    ]),
+    priority: zod.enum(["low", "normal", "high", "urgent"]),
+    status: zod.enum([
+      "open",
+      "in_progress",
+      "pending_customer",
+      "resolved",
+      "closed",
+    ]),
+    assignedTo: zod.union([zod.string(), zod.null()]),
+    assignedToDisplayName: zod.union([zod.string(), zod.null()]),
+    openedBy: zod.string(),
+    openedByDisplayName: zod.string(),
+    resolution: zod.union([zod.string(), zod.null()]),
+    dueAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+    version: zod.number().int().min(1),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+    resolvedAt: zod.union([
+      zod.string().datetime({ offset: true }),
+      zod.null(),
+    ]),
+    closedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  }),
+  notes: zod.array(
+    zod.object({
+      id: zod.string(),
+      author: zod.string(),
+      authorDisplayName: zod.string(),
+      body: zod.string(),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  events: zod.array(
+    zod.object({
+      id: zod.string(),
+      eventType: zod.enum(["created", "updated", "note_added"]),
+      actor: zod.string(),
+      actorDisplayName: zod.string(),
+      detail: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+});
+
+/**
+ * @summary Append an immutable internal note
+ */
+export const AddOperationsCaseNoteParams = zod.object({
+  caseId: zod.coerce.string(),
+});
+
+export const addOperationsCaseNoteHeaderIdempotencyKeyMin = 8;
+export const addOperationsCaseNoteHeaderIdempotencyKeyMax = 128;
+
+export const AddOperationsCaseNoteHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(addOperationsCaseNoteHeaderIdempotencyKeyMin)
+    .max(addOperationsCaseNoteHeaderIdempotencyKeyMax),
+});
+
+export const addOperationsCaseNoteBodyBodyMax = 4000;
+
+export const AddOperationsCaseNoteBody = zod.object({
+  body: zod.string().min(1).max(addOperationsCaseNoteBodyBodyMax),
+});
+
+export const AddOperationsCaseNoteResponse = zod.object({
+  case: zod.object({
+    id: zod.string(),
+    customerId: zod.union([zod.string(), zod.null()]),
+    transferId: zod.union([zod.string(), zod.null()]),
+    title: zod.string(),
+    category: zod.enum([
+      "transfer_status",
+      "funding",
+      "payout",
+      "refund",
+      "identity",
+      "reconciliation",
+      "technical",
+      "other",
+    ]),
+    priority: zod.enum(["low", "normal", "high", "urgent"]),
+    status: zod.enum([
+      "open",
+      "in_progress",
+      "pending_customer",
+      "resolved",
+      "closed",
+    ]),
+    assignedTo: zod.union([zod.string(), zod.null()]),
+    assignedToDisplayName: zod.union([zod.string(), zod.null()]),
+    openedBy: zod.string(),
+    openedByDisplayName: zod.string(),
+    resolution: zod.union([zod.string(), zod.null()]),
+    dueAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+    version: zod.number().int().min(1),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+    resolvedAt: zod.union([
+      zod.string().datetime({ offset: true }),
+      zod.null(),
+    ]),
+    closedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  }),
+  notes: zod.array(
+    zod.object({
+      id: zod.string(),
+      author: zod.string(),
+      authorDisplayName: zod.string(),
+      body: zod.string(),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  events: zod.array(
+    zod.object({
+      id: zod.string(),
+      eventType: zod.enum(["created", "updated", "note_added"]),
+      actor: zod.string(),
+      actorDisplayName: zod.string(),
+      detail: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+});
