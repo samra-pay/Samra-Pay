@@ -1,0 +1,69 @@
+Validate Phase 5 in the current Samra Pay Replit workspace.
+
+This is a TEST-ONLY task. Do not modify source files, create commits, pull or switch branches, change `.replit`, change saved environment variables or Secrets, run database migrations, connect to any shared database, or deploy anything.
+
+1. Locate the workspace root containing `pnpm-workspace.yaml` and `artifacts/samra-pay`.
+
+2. Record and report:
+
+- Current branch
+- Current commit SHA
+- Initial `git status --short`
+
+If the working tree has unexpected changes or the Phase 5 files are missing, stop and report the issue.
+
+3. Install dependencies using the existing lockfile:
+
+`pnpm install --frozen-lockfile`
+
+4. Run the automated Phase 5 gates:
+
+`pnpm run typecheck`
+
+`pnpm run test`
+
+`pnpm run build`
+
+Then run these Phase 5 web tests specifically:
+
+`pnpm -C artifacts/samra-pay test src/lib/dashboard-api-model.test.ts src/lib/samra-api-flow.test.ts src/lib/handoff.test.ts`
+
+5. Test default mock mode using temporary runtime values only. Do not save them:
+
+`SAMRA_BACKEND_MODE=disabled`
+`SAMRA_PROVIDER_MODE=fake`
+`SAMRA_RUN_WORKER=false`
+`VITE_SAMRA_DATA_MODE=mock`
+
+Launch the app with its existing Replit workflows and verify:
+
+- `/dashboard/cards` shows the existing legacy page.
+- `/dashboard/credit` shows the existing legacy page.
+- `/dashboard/analytics` shows the existing legacy page.
+- `/dashboard/rewards` shows the existing legacy page.
+- `/dashboard/remittance` shows the existing legacy remittance experience.
+- `/remittance` shows the existing public remittance experience.
+- The public remittance → login → dashboard remittance handoff preserves the entered quote.
+
+6. Test deliberate API mode using temporary runtime values only:
+
+`SAMRA_BACKEND_MODE=demo`
+`SAMRA_PROVIDER_MODE=fake`
+`SAMRA_RUN_WORKER=true`
+`VITE_SAMRA_DATA_MODE=api`
+
+Launch both the API and web app using the existing Replit workflows. Verify:
+
+- `/api/healthz` responds successfully.
+- `/dashboard/cards` clearly says cards/accounts are not connected in API mode.
+- `/dashboard/credit` clearly says credit health is not connected in API mode.
+- `/dashboard/analytics` clearly says analytics is not connected in API mode.
+- `/dashboard/rewards` clearly says rewards are not connected in API mode.
+- `/dashboard/remittance` renders the API-backed remittance flow.
+- `/remittance` renders the API-backed remittance flow.
+- Create a synthetic $100 remittance quote.
+- Submit the synthetic transfer.
+- Confirm the fake worker advances it to its expected terminal state.
+- Confirm API failures remain visible and never silently fall back to mock financial data.
+
+7. Stop all temporary test processes and run
