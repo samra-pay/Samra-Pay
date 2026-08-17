@@ -228,7 +228,27 @@ test("durable workers claim once across processes and resume timeout retries aft
     "demo_customer_001",
     transfer.id,
   );
-  assert.equal(advancedOnce.state, "IN_TRANSIT");
+  const workerDiagnostic = await first.connection.pool.query(
+    `SELECT t.state AS transfer_state, t.version,
+            w.state AS workflow_state, w.attempt_count,
+            w.transfer_version, w.last_error, w.terminal_reason,
+            w.lease_owner, w.lease_expires_at,
+            (SELECT jsonb_agg(jsonb_build_object(
+               'action', a.action, 'eventKey', a.event_key, 'metadata', a.metadata
+             ) ORDER BY a.occurred_at)
+             FROM samra_core.audit_events a
+             WHERE a.entity_type = 'remittance_transfer'
+               AND a.entity_id = t.external_ref) AS audit_events
+       FROM samra_core.remittance_transfers t
+       LEFT JOIN samra_core.remittance_workflow_work w ON w.transfer_id = t.id
+       WHERE t.external_ref = $1`,
+    [transfer.id],
+  );
+  assert.equal(
+    advancedOnce.state,
+    "IN_TRANSIT",
+    JSON.stringify(workerDiagnostic.rows[0]),
+  );
 
   const timeoutQuote = await first.runtime.service.createQuote({
     actorId: "demo_customer_001",
