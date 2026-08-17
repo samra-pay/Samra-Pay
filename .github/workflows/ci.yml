@@ -1,6 +1,27 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      qase_api_base_url:
+        description: Qase API URL
+        required: false
+        default: https://api.qase.io
+      qase_report:
+        description: Report automated acceptance results to Qase
+        required: false
+        default: "true"
+      qase_project_code:
+        description: Qase project code
+        required: false
+        default: SAMP
+      qase_run_id:
+        description: Existing Qase automated run ID
+        required: false
+      qase_run_complete:
+        description: Complete the Qase run after reporting
+        required: false
+        default: "true"
   pull_request:
     branches:
       - main
@@ -105,8 +126,20 @@ jobs:
           pnpm --filter @workspace/db run test:seed
           pnpm --filter @workspace/db run test:seed
 
+      - name: Prepare JUnit results directory
+        run: mkdir -p artifacts/api-server/test-results
+
       - name: Run PostgreSQL acceptance tests
-        run: pnpm --filter @workspace/api-server run test:postgres
+        run: pnpm --filter @workspace/api-server run test:postgres:junit
+
+      - name: Preserve PostgreSQL acceptance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-persistence-junit
+          path: artifacts/api-server/test-results/postgres-persistence.xml
+          if-no-files-found: error
+          retention-days: 14
 
   postgres-http:
     name: PostgreSQL HTTP acceptance gate
@@ -154,5 +187,103 @@ jobs:
       - name: Seed synthetic test accounts
         run: pnpm --filter @workspace/db run test:seed
 
+      - name: Prepare JUnit results directory
+        run: mkdir -p artifacts/api-server/test-results
+
       - name: Run HTTP-to-PostgreSQL acceptance test
-        run: pnpm --filter @workspace/api-server run test:postgres-http
+        run: pnpm --filter @workspace/api-server run test:postgres-http:junit
+
+      - name: Preserve HTTP-to-PostgreSQL results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-http-junit
+          path: artifacts/api-server/test-results/postgres-http.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  qase-report:
+    name: Qase automated acceptance report
+    needs:
+      - postgres-persistence
+      - postgres-http
+    if: >-
+      always() &&
+      inputs.qase_report != 'false' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      QASE_API_BASE_URL: ${{ inputs.qase_api_base_url || 'https://api.qase.io' }}
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+      QASE_TESTOPS_PROJECT: ${{ inputs.qase_project_code || 'SAMP' }}
+      QASE_TESTOPS_RUN_ID: ${{ inputs.qase_run_id }}
+      QASE_TESTOPS_RUN_COMPLETE: ${{ inputs.qase_run_complete || 'true' }}
+
+    steps:
+      - name: Link a Qase-triggered workflow run
+        if: inputs.qase_run_id != ''
+        uses: cskmnrpt/qase-link-run@v2
+
+      - name: Download acceptance results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-junit"
+          path: test-results
+          merge-multiple: true
+
+      - name: Create Qase run for GitHub-triggered CI
+        id: qase-run-create
+        if: inputs.qase_run_id == ''
+        continue-on-error: true
+        uses: qase-tms/gh-actions/run-create@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          title: Samra Pay automated acceptance — ${{ github.ref_name }} @ ${{ github.sha }}
+          description: PostgreSQL durability and HTTP-to-ledger acceptance results from GitHub Actions.
+
+      - name: Resolve Qase run
+        id: qase-run
+        env:
+          INPUT_RUN_ID: ${{ inputs.qase_run_id }}
+          CREATED_RUN_ID: ${{ steps.qase-run-create.outputs.id }}
+        run: |
+          run_id="${INPUT_RUN_ID:-$CREATED_RUN_ID}"
+          if [ -n "$run_id" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "id=$run_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Qase reporting skipped because no run ID was available."
+          fi
+
+      - name: Upload PostgreSQL durability results to Qase
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: true
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/postgres-persistence.xml
+
+      - name: Upload HTTP-to-ledger results to Qase
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: true
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/postgres-http.xml
+
+      - name: Complete Qase run
+        if: >-
+          always() &&
+          steps.qase-run.outputs.available == 'true' &&
+          (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
+        continue-on-error: true
+        uses: qase-tms/gh-actions/run-complete@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
