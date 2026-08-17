@@ -1,20 +1,26 @@
-import { type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { Toaster } from '@workspace/samra-pay-ds/components/ui/toaster';
-import { TooltipProvider } from '@workspace/samra-pay-ds/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
-import OverviewPage from '@/pages/overview';
-import CustomersPage from '@/pages/customers';
-import TransfersPage from '@/pages/transfers';
-import MoneyFlowPage from '@/pages/money-flow';
-import ReconciliationPage from '@/pages/reconciliation';
-import WorkerOperationsPage from '@/pages/worker-operations';
-import AuditLogPage from '@/pages/audit-log';
-import ReportsPage from '@/pages/reports';
-import SystemHealthPage from '@/pages/system-health';
-import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
-import { OPERATIONS_ENABLED } from '@/lib/data-mode';
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { Toaster } from "@workspace/samra-pay-ds/components/ui/toaster";
+import { TooltipProvider } from "@workspace/samra-pay-ds/components/ui/tooltip";
+import NotFound from "@/pages/not-found";
+import OverviewPage from "@/pages/overview";
+import CustomersPage from "@/pages/customers";
+import TransfersPage from "@/pages/transfers";
+import MoneyFlowPage from "@/pages/money-flow";
+import ReconciliationPage from "@/pages/reconciliation";
+import WorkerOperationsPage from "@/pages/worker-operations";
+import AuditLogPage from "@/pages/audit-log";
+import ReportsPage from "@/pages/reports";
+import SystemHealthPage from "@/pages/system-health";
+import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
+import { IS_API, OPERATIONS_ENABLED } from "@/lib/data-mode";
+import {
+  closeWorkforceSession,
+  createWorkforceSession,
+  loadWorkforceSession,
+  type WorkforceSession,
+} from "@/lib/workforce-auth";
 
 const queryClient = new QueryClient();
 
@@ -49,9 +55,16 @@ function App() {
     return (
       <main className="dark min-h-screen bg-background text-foreground grid place-items-center p-6">
         <section className="max-w-lg rounded-lg border border-border bg-card p-6">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Samra Pay</p>
-          <h1 className="mt-2 text-xl font-semibold">Operations Portal disabled</h1>
-          <p className="mt-3 text-sm text-muted-foreground">This private employee surface requires an explicit runtime enablement.</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Samra Pay
+          </p>
+          <h1 className="mt-2 text-xl font-semibold">
+            Operations Portal disabled
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            This private employee surface requires an explicit runtime
+            enablement.
+          </p>
         </section>
       </main>
     );
@@ -59,12 +72,154 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
+        <WorkforceGate>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+        </WorkforceGate>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
+  );
+}
+
+function WorkforceGate({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<WorkforceSession | null>(
+    IS_API
+      ? null
+      : {
+          operatorId: "fixture-operator",
+          displayName: "Fixture operator",
+          role: "support_readonly",
+          expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        },
+  );
+  const [loading, setLoading] = useState(IS_API);
+
+  useEffect(() => {
+    if (!IS_API) return;
+    void loadWorkforceSession()
+      .then(setSession)
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <WorkforceStatus
+        title="Verifying workforce session"
+        detail="Checking employee access…"
+      />
+    );
+  }
+  if (!session) return <WorkforceLogin onAuthenticated={setSession} />;
+  return (
+    <>
+      <div className="sr-only" data-workforce-role={session.role}>
+        {session.displayName}
+      </div>
+      {children}
+      <button
+        type="button"
+        className="fixed bottom-4 right-4 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground"
+        onClick={() =>
+          void closeWorkforceSession().finally(() => setSession(null))
+        }
+      >
+        Sign out
+      </button>
+    </>
+  );
+}
+
+function WorkforceLogin({
+  onAuthenticated,
+}: {
+  onAuthenticated: (session: WorkforceSession) => void;
+}) {
+  const [loginName, setLoginName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      onAuthenticated(await createWorkforceSession(loginName, password));
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Authentication failed.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="dark min-h-screen bg-background text-foreground grid place-items-center p-6">
+      <form
+        className="w-full max-w-sm rounded-lg border border-border bg-card p-6"
+        onSubmit={submit}
+      >
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Samra Pay
+        </p>
+        <h1 className="mt-2 text-xl font-semibold">
+          Operations workforce sign in
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Employee access only. Every sensitive read is recorded.
+        </p>
+        <label className="mt-6 block text-sm" htmlFor="workforce-login">
+          Workforce login
+        </label>
+        <input
+          id="workforce-login"
+          autoComplete="username"
+          required
+          value={loginName}
+          onChange={(event) => setLoginName(event.target.value)}
+          className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2"
+        />
+        <label className="mt-4 block text-sm" htmlFor="workforce-password">
+          Password
+        </label>
+        <input
+          id="workforce-password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2"
+        />
+        {error ? (
+          <p role="alert" className="mt-4 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <button
+          disabled={submitting}
+          className="mt-6 w-full rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+          type="submit"
+        >
+          {submitting ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+    </main>
+  );
+}
+
+function WorkforceStatus({ title, detail }: { title: string; detail: string }) {
+  return (
+    <main className="dark min-h-screen bg-background text-foreground grid place-items-center p-6">
+      <section className="max-w-lg rounded-lg border border-border bg-card p-6">
+        <h1 className="text-xl font-semibold">{title}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
+      </section>
+    </main>
   );
 }
 

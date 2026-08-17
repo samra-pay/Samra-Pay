@@ -21,6 +21,22 @@ export class BackendUnavailableError extends Error {
   }
 }
 
+export class AuthenticationRequiredError extends Error {
+  constructor(message = "A valid workforce session is required.") {
+    super(message);
+    this.name = "AuthenticationRequiredError";
+  }
+}
+
+export class AuthorizationDeniedError extends Error {
+  constructor(
+    message = "The workforce role is not permitted to access this resource.",
+  ) {
+    super(message);
+    this.name = "AuthorizationDeniedError";
+  }
+}
+
 export const problemHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const mapped = mapError(error);
   const traceId = requestTraceId(req);
@@ -61,6 +77,24 @@ function mapError(error: unknown): Readonly<{
       status: 503,
       code: "BACKEND_UNAVAILABLE",
       title: "Demo backend unavailable",
+      detail: error.message,
+      fieldErrors: {},
+    };
+  }
+  if (error instanceof AuthenticationRequiredError) {
+    return {
+      status: 401,
+      code: "AUTHENTICATION_REQUIRED",
+      title: "Authentication required",
+      detail: error.message,
+      fieldErrors: {},
+    };
+  }
+  if (error instanceof AuthorizationDeniedError) {
+    return {
+      status: 403,
+      code: "AUTHORIZATION_DENIED",
+      title: "Authorization denied",
       detail: error.message,
       fieldErrors: {},
     };

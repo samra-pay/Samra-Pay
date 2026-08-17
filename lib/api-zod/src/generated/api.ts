@@ -1176,14 +1176,53 @@ export const GetDemoReconciliationRunResponse = zod.object({
 });
 
 /**
- * Demo/PostgreSQL only. This is not a production authentication boundary.
- * @summary Get the synthetic internal operations health summary
+ * @summary Create an opaque workforce session
  */
-export const GetOperationsSummaryHeader = zod.object({
-  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
-  "X-Demo-Operator-Role": zod.literal("support_readonly"),
+export const createWorkforceSessionBodyLoginNameMax = 254;
+
+export const createWorkforceSessionBodyPasswordMax = 1024;
+
+export const CreateWorkforceSessionBody = zod.object({
+  loginName: zod.string().min(1).max(createWorkforceSessionBodyLoginNameMax),
+  password: zod.string().min(1).max(createWorkforceSessionBodyPasswordMax),
 });
 
+export const CreateWorkforceSessionResponse = zod.object({
+  operatorId: zod.string(),
+  displayName: zod.string(),
+  role: zod.enum([
+    "support_readonly",
+    "operations_analyst",
+    "compliance_readonly",
+    "administrator",
+  ]),
+  expiresAt: zod.string().datetime({ offset: true }),
+});
+
+/**
+ * @summary Resolve the current workforce session
+ */
+export const GetWorkforceSessionResponse = zod.object({
+  operatorId: zod.string(),
+  displayName: zod.string(),
+  role: zod.enum([
+    "support_readonly",
+    "operations_analyst",
+    "compliance_readonly",
+    "administrator",
+  ]),
+  expiresAt: zod.string().datetime({ offset: true }),
+});
+
+/**
+ * @summary Revoke the current workforce session
+ */
+export const DeleteWorkforceSessionResponse = zod.void();
+
+/**
+ * Demo/PostgreSQL only. Requires a durable, server-resolved workforce session.
+ * @summary Get the synthetic internal operations health summary
+ */
 export const getOperationsSummaryResponseCustomersMinOne = 0;
 
 export const getOperationsSummaryResponseTransfersMinOne = 0;
@@ -1244,11 +1283,6 @@ export const ListOperationsTransfersQueryParams = zod.object({
     .min(1)
     .max(listOperationsTransfersQueryLimitMax)
     .default(listOperationsTransfersQueryLimitDefault),
-});
-
-export const ListOperationsTransfersHeader = zod.object({
-  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
-  "X-Demo-Operator-Role": zod.literal("support_readonly"),
 });
 
 export const listOperationsTransfersResponseSourceAmountMinorUnitsRegExp =
@@ -1340,11 +1374,6 @@ export const ListOperationsCustomersQueryParams = zod.object({
     .default(listOperationsCustomersQueryLimitDefault),
 });
 
-export const ListOperationsCustomersHeader = zod.object({
-  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
-  "X-Demo-Operator-Role": zod.literal("support_readonly"),
-});
-
 export const listOperationsCustomersResponseCountryCodeMin = 2;
 export const listOperationsCustomersResponseCountryCodeMax = 2;
 
@@ -1406,11 +1435,6 @@ export const ListOperationsCustomersResponse = zod.array(
  */
 export const GetOperationsTransferParams = zod.object({
   transferId: zod.coerce.string(),
-});
-
-export const GetOperationsTransferHeader = zod.object({
-  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
-  "X-Demo-Operator-Role": zod.literal("support_readonly"),
 });
 
 export const getOperationsTransferResponseTransferSourceAmountMinorUnitsRegExp =
@@ -1574,11 +1598,6 @@ export const ListOperationsReconciliationExceptionsQueryParams = zod.object({
     .default(listOperationsReconciliationExceptionsQueryLimitDefault),
 });
 
-export const ListOperationsReconciliationExceptionsHeader = zod.object({
-  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
-  "X-Demo-Operator-Role": zod.literal("support_readonly"),
-});
-
 export const ListOperationsReconciliationExceptionsResponseItem = zod.object({
   id: zod.string(),
   runId: zod.string(),
@@ -1609,11 +1628,6 @@ export const ListOperationsAuditEventsQueryParams = zod.object({
     .min(1)
     .max(listOperationsAuditEventsQueryLimitMax)
     .default(listOperationsAuditEventsQueryLimitDefault),
-});
-
-export const ListOperationsAuditEventsHeader = zod.object({
-  "X-Demo-Operator-Id": zod.literal("demo_cs_agent_001"),
-  "X-Demo-Operator-Role": zod.literal("support_readonly"),
 });
 
 export const ListOperationsAuditEventsResponseItem = zod.object({

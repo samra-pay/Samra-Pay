@@ -14,8 +14,8 @@ import {
   type OperationsSummary,
   type OperationsTransfer,
   type OperationsTransferDetail,
-} from '@workspace/api-client-react';
-import { API_ORIGIN } from './data-mode';
+} from "@workspace/api-client-react";
+import { API_ORIGIN } from "./data-mode";
 
 import type {
   Customer,
@@ -32,29 +32,26 @@ import type {
   ReconciliationState,
   TransferStatus,
   TimelineEvent,
-} from './types';
+} from "./types";
 
 setBaseUrl(API_ORIGIN);
 
 const OPERATOR_REQUEST = Object.freeze({
-  headers: Object.freeze({
-    'X-Demo-Operator-Id': 'demo_cs_agent_001',
-    'X-Demo-Operator-Role': 'support_readonly',
-  }),
+  credentials: "include" as const,
   timeoutMs: 10_000,
 });
 
 export class EndpointUnavailable extends Error {
   constructor(operation: string) {
     super(`No authorized operations API is available for: ${operation}`);
-    this.name = 'EndpointUnavailable';
+    this.name = "EndpointUnavailable";
   }
 }
 
 export class ApiTimeout extends Error {
   constructor(endpoint: string, timeoutMs: number) {
     super(`Request to ${endpoint} timed out after ${timeoutMs}ms`);
-    this.name = 'ApiTimeout';
+    this.name = "ApiTimeout";
   }
 }
 
@@ -62,7 +59,7 @@ export class ApiServerError extends Error {
   status: number;
   constructor(endpoint: string, status: number, message?: string) {
     super(message ?? `Server error ${status} from ${endpoint}`);
-    this.name = 'ApiServerError';
+    this.name = "ApiServerError";
     this.status = status;
   }
 }
@@ -89,11 +86,13 @@ export class OpsApi {
       OPERATOR_REQUEST,
     );
     const customers = values.map(mapCustomer);
-    return _params?.status ? customers.filter((customer) => customer.status === _params.status) : customers;
+    return _params?.status
+      ? customers.filter((customer) => customer.status === _params.status)
+      : customers;
   }
 
   async getCustomer(_id: string): Promise<Customer> {
-    throw new EndpointUnavailable('customer detail');
+    throw new EndpointUnavailable("customer detail");
   }
 
   async getTransfers(_params?: {
@@ -115,8 +114,12 @@ export class OpsApi {
       ),
       listOperationsCustomers(undefined, OPERATOR_REQUEST),
     ]);
-    const customerNames = new Map(customers.map((customer) => [customer.id, customer.displayName]));
-    return values.map((value) => mapTransfer(value, customerNames.get(value.customerId)));
+    const customerNames = new Map(
+      customers.map((customer) => [customer.id, customer.displayName]),
+    );
+    return values.map((value) =>
+      mapTransfer(value, customerNames.get(value.customerId)),
+    );
   }
 
   async getTransfer(_id: string): Promise<Transfer> {
@@ -125,15 +128,21 @@ export class OpsApi {
   }
 
   async getMoneyFlow(_transferId: string): Promise<MoneyFlow> {
-    throw new EndpointUnavailable('money-flow detail');
+    throw new EndpointUnavailable("money-flow detail");
   }
 
   async getMoneyFlows(): Promise<MoneyFlow[]> {
-    throw new EndpointUnavailable('money-flow search');
+    throw new EndpointUnavailable("money-flow search");
   }
 
-  async getReconciliationRuns(_params?: { status?: string; page?: number }): Promise<ReconciliationRun[]> {
-    const exceptions = await listOperationsReconciliationExceptions(undefined, OPERATOR_REQUEST);
+  async getReconciliationRuns(_params?: {
+    status?: string;
+    page?: number;
+  }): Promise<ReconciliationRun[]> {
+    const exceptions = await listOperationsReconciliationExceptions(
+      undefined,
+      OPERATOR_REQUEST,
+    );
     const byRun = new Map<string, typeof exceptions>();
     for (const exception of exceptions) {
       const group = byRun.get(exception.runId) ?? [];
@@ -147,11 +156,11 @@ export class OpsApi {
         (oldest, value) => (value.openedAt < oldest ? value.openedAt : oldest),
         values[0]!.openedAt,
       ),
-      status: 'partial',
+      status: "partial",
       totalRecords: values.length,
       matchedRecords: 0,
       exceptionCount: values.length,
-      provider: 'Durable reconciliation exceptions',
+      provider: "Durable reconciliation exceptions",
       exceptions: values.map((value) => ({
         id: value.id,
         runId: value.runId,
@@ -165,11 +174,15 @@ export class OpsApi {
   }
 
   async getReconciliationRun(_id: string): Promise<ReconciliationRun> {
-    throw new EndpointUnavailable('reconciliation run detail');
+    throw new EndpointUnavailable("reconciliation run detail");
   }
 
-  async getWorkerJobs(_params?: { queue?: string; status?: string; page?: number }): Promise<WorkerJob[]> {
-    throw new EndpointUnavailable('worker operations');
+  async getWorkerJobs(_params?: {
+    queue?: string;
+    status?: string;
+    page?: number;
+  }): Promise<WorkerJob[]> {
+    throw new EndpointUnavailable("worker operations");
   }
 
   async getAuditEvents(_params?: {
@@ -193,15 +206,15 @@ export class OpsApi {
   }
 
   async getSystemHealth(): Promise<SystemHealth> {
-    throw new EndpointUnavailable('system health');
+    throw new EndpointUnavailable("system health");
   }
 
   async getReports(): Promise<AggregateReport[]> {
-    throw new EndpointUnavailable('reports');
+    throw new EndpointUnavailable("reports");
   }
 
   async getReport(_id: string): Promise<AggregateReport> {
-    throw new EndpointUnavailable('report detail');
+    throw new EndpointUnavailable("report detail");
   }
 
   // System health, reports, worker controls, and cross-transfer money-flow
@@ -211,7 +224,7 @@ export class OpsApi {
 export const opsApi = new OpsApi();
 
 function minorUnitsToDecimal(value: string): string {
-  const padded = value.padStart(3, '0');
+  const padded = value.padStart(3, "0");
   return `${padded.slice(0, -2)}.${padded.slice(-2)}`;
 }
 
@@ -224,25 +237,25 @@ function mapMoney(value: { currency: string; minorUnits: string }) {
 
 function mapSummary(summary: OperationsSummary): OpsMetric[] {
   const groups: Array<[string, Record<string, number>]> = [
-    ['Customers', summary.customers],
-    ['Transfers', summary.transfers],
-    ['Workflow', summary.workflow],
-    ['Outbox', summary.outbox],
-    ['Provider events', summary.providerEvents],
+    ["Customers", summary.customers],
+    ["Transfers", summary.transfers],
+    ["Workflow", summary.workflow],
+    ["Outbox", summary.outbox],
+    ["Provider events", summary.providerEvents],
   ];
   const metrics = groups.flatMap(([group, counts]) =>
     Object.entries(counts).map(([key, value]) => ({
-      source: 'ledger' as const,
-      label: `${group} · ${key.replaceAll('_', ' ')}`,
+      source: "ledger" as const,
+      label: `${group} · ${key.replaceAll("_", " ")}`,
       value: String(value),
-      unit: 'records',
+      unit: "records",
     })),
   );
   metrics.push({
-    source: 'ledger',
-    label: 'Open reconciliation exceptions',
+    source: "ledger",
+    label: "Open reconciliation exceptions",
     value: String(summary.openReconciliationExceptions),
-    unit: 'records',
+    unit: "records",
   });
   return metrics;
 }
@@ -275,14 +288,14 @@ function mapTransfer(
     sendAmount: mapMoney(value.sourceAmount),
     receiveAmount: mapMoney(value.destinationAmount),
     fee: mapMoney(value.feeAmount),
-    exchangeRate: 'Not exposed',
+    exchangeRate: "Not exposed",
     status: mapTransferStatus(value.status),
     fundingState: mapFundingState(value.fundingStatus),
     payoutState: mapPayoutState(value.payoutStatus),
     reconciliationState: mapReconciliationState(value.reconciliationStatus),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
-    completedAt: value.status === 'completed' ? value.updatedAt : undefined,
+    completedAt: value.status === "completed" ? value.updatedAt : undefined,
     timeline,
   };
 }
@@ -292,14 +305,14 @@ function mapTransferDetail(value: OperationsTransferDetail): Transfer {
     ...value.timeline.map((event) => ({
       id: `${value.transfer.id}:state:${event.sequence}`,
       timestamp: event.occurredAt,
-      category: 'samra_canonical' as const,
-      label: event.toState.replaceAll('_', ' '),
+      category: "samra_canonical" as const,
+      label: event.toState.replaceAll("_", " "),
       detail: event.reason,
     })),
     ...value.providerEvents.map((event) => ({
       id: `${event.provider}:${event.providerEventId}`,
       timestamp: event.occurredAt,
-      category: 'provider_evidence' as const,
+      category: "provider_evidence" as const,
       label: `${event.provider} · ${event.eventType}`,
       detail: event.lastError ?? `State: ${event.state}`,
       correlationRef: event.providerEventId,
@@ -307,18 +320,26 @@ function mapTransferDetail(value: OperationsTransferDetail): Transfer {
     ...value.outbox.map((event) => ({
       id: event.eventKey,
       timestamp: event.createdAt,
-      category: 'worker' as const,
+      category: "worker" as const,
       label: event.eventType,
-      detail: event.lastError ?? `State: ${event.state}; attempts: ${event.attemptCount}`,
+      detail:
+        event.lastError ??
+        `State: ${event.state}; attempts: ${event.attemptCount}`,
       correlationRef: event.eventKey,
     })),
   ];
-  const transfer = mapTransfer(value.transfer, value.transfer.customerId, timeline);
+  const transfer = mapTransfer(
+    value.transfer,
+    value.transfer.customerId,
+    timeline,
+  );
   const providerLink = value.providerLinks[0];
   return {
     ...transfer,
     providerRef: providerLink?.providerResourceId,
-    providerCorrelationRef: value.audit.find((event) => event.correlationId)?.correlationId ?? undefined,
+    providerCorrelationRef:
+      value.audit.find((event) => event.correlationId)?.correlationId ??
+      undefined,
   };
 }
 
@@ -328,7 +349,7 @@ function mapAuditEvent(value: OperationsAuditEvent): AuditEvent {
     timestamp: value.occurredAt,
     category: mapAuditCategory(value.entityType),
     action: value.action,
-    actorId: value.actorId ?? 'system',
+    actorId: value.actorId ?? "system",
     actorType: mapActorType(value.actorType),
     resourceType: value.entityType,
     resourceId: value.entityId,
@@ -337,57 +358,82 @@ function mapAuditEvent(value: OperationsAuditEvent): AuditEvent {
   };
 }
 
-function mapCustomerStatus(value: string): Customer['status'] {
-  if (value === 'suspended' || value === 'closed' || value === 'pending_kyc') return value;
-  if (value === 'active') return value;
-  return 'unknown';
+function mapCustomerStatus(value: string): Customer["status"] {
+  if (value === "suspended" || value === "closed" || value === "pending_kyc")
+    return value;
+  if (value === "active") return value;
+  return "unknown";
 }
 
 function mapTransferStatus(value: string): TransferStatus {
-  if (value === 'completed' || value === 'failed' || value === 'refunded' || value === 'reversed') return value;
-  return 'pending';
+  if (
+    value === "completed" ||
+    value === "failed" ||
+    value === "refunded" ||
+    value === "reversed"
+  )
+    return value;
+  return "pending";
 }
 
-function normalizeTransferQueryStatus(value: string | undefined): string | undefined {
-  if (!value || value === 'all' || value === 'pending') return undefined;
+function normalizeTransferQueryStatus(
+  value: string | undefined,
+): string | undefined {
+  if (!value || value === "all" || value === "pending") return undefined;
   return value;
 }
 
 function mapFundingState(value: string): FundingState {
-  if (value === 'captured' || value === 'settled' || value === 'failed' || value === 'refunded') return value;
-  return 'awaiting';
+  if (
+    value === "captured" ||
+    value === "settled" ||
+    value === "failed" ||
+    value === "refunded"
+  )
+    return value;
+  return "awaiting";
 }
 
 function mapPayoutState(value: string): PayoutState {
-  if (value === 'processing' || value === 'delivered' || value === 'failed' || value === 'reversed') return value;
-  return 'queued';
+  if (
+    value === "processing" ||
+    value === "delivered" ||
+    value === "failed" ||
+    value === "reversed"
+  )
+    return value;
+  return "queued";
 }
 
 function mapReconciliationState(value: string): ReconciliationState {
-  if (value === 'matched' || value === 'exception' || value === 'skipped') return value;
-  return 'pending';
+  if (value === "matched" || value === "exception" || value === "skipped")
+    return value;
+  return "pending";
 }
 
-function mapExceptionType(value: string): ReconciliationRun['exceptions'][number]['exceptionType'] {
+function mapExceptionType(
+  value: string,
+): ReconciliationRun["exceptions"][number]["exceptionType"] {
   if (
-    value === 'amount_mismatch' ||
-    value === 'missing_provider_record' ||
-    value === 'duplicate_settlement' ||
-    value === 'timing_gap'
+    value === "amount_mismatch" ||
+    value === "missing_provider_record" ||
+    value === "duplicate_settlement" ||
+    value === "timing_gap"
   )
     return value;
-  return 'status_conflict';
+  return "status_conflict";
 }
 
-function mapAuditCategory(value: string): AuditEvent['category'] {
-  if (value.includes('transfer')) return 'transfer';
-  if (value.includes('customer')) return 'customer';
-  if (value.includes('reconciliation')) return 'reconciliation';
-  if (value.includes('provider')) return 'provider';
-  return 'system';
+function mapAuditCategory(value: string): AuditEvent["category"] {
+  if (value.includes("transfer")) return "transfer";
+  if (value.includes("customer")) return "customer";
+  if (value.includes("reconciliation")) return "reconciliation";
+  if (value.includes("provider")) return "provider";
+  return "system";
 }
 
-function mapActorType(value: string): AuditEvent['actorType'] {
-  if (value === 'user' || value === 'service' || value === 'worker') return value;
-  return 'system';
+function mapActorType(value: string): AuditEvent["actorType"] {
+  if (value === "user" || value === "service" || value === "worker")
+    return value;
+  return "system";
 }
