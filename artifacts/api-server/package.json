@@ -9,7 +9,9 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "test": "NODE_ENV=test node --import tsx --test src/*.test.ts",
     "test:postgres": "NODE_ENV=test node --import tsx --test test/postgres.test.ts",
+    "test:postgres:junit": "NODE_ENV=test node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results/postgres-persistence.xml test/postgres.test.ts",
     "test:postgres-http": "NODE_ENV=test node --import tsx --test test/postgres-http.test.ts",
+    "test:postgres-http:junit": "NODE_ENV=test node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results/postgres-http.xml test/postgres-http.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
