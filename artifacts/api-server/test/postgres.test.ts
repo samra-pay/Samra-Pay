@@ -221,8 +221,8 @@ test("durable workers claim once across processes and resume timeout retries aft
   });
 
   await Promise.all([
-    first.runtime.advanceWorkerBatch(1),
-    second.runtime.advanceWorkerBatch(1),
+    first.runtime.advanceWorkerBatch(25),
+    second.runtime.advanceWorkerBatch(25),
   ]);
   const advancedOnce = await first.runtime.service.getTransfer(
     "demo_customer_001",
