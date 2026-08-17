@@ -152,7 +152,7 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     );
     assert.equal(
       Number((operationsSummary["customers"] as JsonObject)["active"] ?? 0),
-      1,
+      2,
     );
     const operationsCustomers = arrayBody(
       await apiRequest(

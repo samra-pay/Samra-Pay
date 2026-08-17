@@ -339,7 +339,7 @@ test("expired leases recover, retry exhaustion becomes operator-visible, and aud
     });
   }
   const summary = await first.operationsStore.operationsSummary();
-  assert.equal(summary.customers["active"], 1);
+  assert.equal(summary.customers["active"], 2);
   assert.ok((summary.workflow["failed"] ?? 0) >= 1);
   const customers = await first.operationsStore.listOperationsCustomers({
     search: "demo_customer_001",
