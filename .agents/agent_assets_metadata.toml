@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Zgty1y6YNaj33Bk-x155Y"
+uri = "file://artifacts/samra-pay-commercial/public/audio/bg_music.mp3"
+type = "audio"
+title = "Samra Pay background music"
+description = "Generated music: Cinematic uplifting orchestral instrumental background music scoring a premium fintech brand film. Warm Ethiopian-inspired acoustic textures, restrained piano, soft strings, subtle h…"

@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Noto+Serif+Ethiopic:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+/* Samra Pay Commercial — Brand Tokens */
+:root {
+  /* Samra Pay brand palette */
+  --gold: #C99A2E;
+  --gold-light: #E8C96A;
+  --gold-dark: #9A7520;
+  --espresso: #120D06;
+  --dark: #1A1108;
+  --warm-dark: #2A1F0E;
+  --cream: #F5F0E8;
+  --ivory: #FAF8F3;
+  --berbere: #8B3A22;
+  --berbere-light: #C4572E;
+  --coffee: #5C3A1E;
+  --eucalyptus: #3D6B4F;
+
+  /* Semantic assignments */
+  --color-primary: var(--gold);
+  --color-accent: var(--berbere);
+  --color-bg: var(--espresso);
+  --color-bg-warm: var(--dark);
+  --color-text: var(--cream);
+  --color-text-muted: rgba(245, 240, 232, 0.6);
+
+  /* Typography */
+  --font-display: 'EB Garamond', Georgia, serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-ethiopic: 'Noto Serif Ethiopic', serif;
+}
+
+@theme inline {
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-espresso: var(--espresso);
+  --color-dark: var(--dark);
+  --color-warm-dark: var(--warm-dark);
+  --color-cream: var(--cream);
+  --color-berbere: var(--berbere);
+  --color-berbere-light: var(--berbere-light);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-ethiopic: var(--font-ethiopic);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--espresso);
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Gold shimmer animation */
+@keyframes goldShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes lineDraw {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 20px rgba(201, 154, 46, 0.3); }
+  50% { opacity: 1; box-shadow: 0 0 40px rgba(201, 154, 46, 0.6); }
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(20px, -15px) rotate(1deg); }
+  66% { transform: translate(-10px, 10px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes fadeGrainIn {
+  from { opacity: 0; }
+  to { opacity: 0.035; }
+}
+
+.gold-text {
+  background: linear-gradient(135deg, #C99A2E 0%, #E8C96A 40%, #C99A2E 60%, #9A7520 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gold-shimmer {
+  background: linear-gradient(135deg, #C99A2E 0%, #E8C96A 30%, #FAE89A 50%, #E8C96A 70%, #C99A2E 100%);
+  background-size: 300% auto;
+  animation: goldShimmer 3s linear infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.noise-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+.font-ethiopic { font-family: var(--font-ethiopic); }

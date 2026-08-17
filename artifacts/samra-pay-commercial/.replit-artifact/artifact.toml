@@ -1,0 +1,28 @@
+kind = "video"
+previewPath = "/samra-pay-commercial/"
+title = "Samra Pay Product Commercial"
+description = "A 16:9 animated product commercial for Samra Pay, telling the story of one financial home for Ethiopian diaspora life here and home in Ethiopia."
+version = "1.0.0"
+id = "artifacts/samra-pay-commercial"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/samra-pay-commercial/" ]
+localPort = 22141
+
+[services.development]
+run = "pnpm --filter @workspace/samra-pay-commercial run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/samra-pay-commercial", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/samra-pay-commercial/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22141"
+BASE_PATH = "/samra-pay-commercial/"
