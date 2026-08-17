@@ -16,6 +16,7 @@ import { Search, AlertCircle } from 'lucide-react';
 import type { Transfer, TimelineEvent } from '@/lib/types';
 import { cn } from '@workspace/samra-pay-ds/lib/utils';
 import { chronologicalTimeline, filterTransfers } from '@/lib/ops-selectors';
+import { useWorkforceRole } from '@/lib/workforce-access';
 
 const TIMELINE_CATEGORY_CONFIG = {
   samra_canonical: {
@@ -74,12 +75,15 @@ export default function TransfersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedTransferSummary, setSelectedTransfer] = useState<Transfer | null>(null);
   const { showLocal, toggleLocal } = useTimezonePref();
+  const workforceRole = useWorkforceRole();
 
   const transfersQuery = useQuery<Transfer[]>({
-    queryKey: ['transfers', { mock: IS_MOCK }],
+    queryKey: ['transfers', { mock: IS_MOCK, workforceRole }],
     queryFn: async () => {
       if (IS_MOCK) return TRANSFERS;
-      return opsApi.getTransfers();
+      return opsApi.getTransfers({
+        includeCustomerNames: workforceRole !== 'compliance_readonly',
+      });
     },
     retry: 1,
   });
