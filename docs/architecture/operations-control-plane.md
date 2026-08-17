@@ -48,7 +48,7 @@ The transfer detail response combines canonical transfer state, exact money stri
 
 ## Standalone operator web surface
 
-`artifacts/samra-operations` is the independently deployable **Samra Pay Operations Portal**. The customer application does not contain an employee or admin route. The portal remains private by default and requires `VITE_SAMRA_OPERATIONS_ENABLED=true`; it can target the API explicitly with `VITE_SAMRA_API_ORIGIN` when the preview uses a separate origin.
+`artifacts/samra-pay-ops` is the independently deployable **Samra Pay Operations Portal** imported from the Replit workspace. The customer application does not contain an employee or admin route. The portal remains disabled by default and requires `VITE_SAMRA_OPERATIONS_ENABLED=true`; `VITE_SAMRA_OPS_DATA_MODE=api` selects the durable backend and `VITE_SAMRA_API_ORIGIN` identifies the separate private API preview.
 
 The current employee surface includes durable customer counts and search, transaction search and status filtering, exact-money transfer detail, workflow and provider evidence, reconciliation exceptions, the immutable audit explorer, and an explicit locked-controls boundary. Requests use the temporary demo operator headers above, and reads are not automatically polled because each read creates audit evidence. Refresh is explicit.
 
@@ -60,6 +60,7 @@ SAMRA_PROVIDER_MODE=fake
 SAMRA_PERSISTENCE_MODE=postgres
 SAMRA_INTERNAL_OPERATIONS_ENABLED=true
 VITE_SAMRA_OPERATIONS_ENABLED=true
+VITE_SAMRA_OPS_DATA_MODE=api
 VITE_SAMRA_API_ORIGIN=<private API preview origin>
 ```
 

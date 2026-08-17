@@ -78,6 +78,7 @@ Security hardening is deferred, but these controls are not security extras:
 | `SAMRA_INTERNAL_OPERATIONS_ENABLED` | `false`, `true`      | `false`    | Enables demo/PostgreSQL read-only operations APIs |
 | `VITE_SAMRA_DATA_MODE`              | `mock`, `api`        | `mock`     | Web data source                                   |
 | `VITE_SAMRA_OPERATIONS_ENABLED`     | `false`, `true`      | `false`    | Explicitly enables the private operations portal  |
+| `VITE_SAMRA_OPS_DATA_MODE`          | `mock`, `api`        | `mock`     | Selects fixture or durable operations data         |
 | `VITE_SAMRA_API_ORIGIN`             | URL                  | unset      | Operations portal API origin                      |
 | `EXPO_PUBLIC_SAMRA_DATA_MODE`       | `mock`, `api`        | `mock`     | Mobile data source                                |
 | `EXPO_PUBLIC_API_ORIGIN`            | URL                  | unset      | Native mobile API origin                          |
