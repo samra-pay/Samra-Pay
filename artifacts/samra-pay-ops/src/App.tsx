@@ -22,6 +22,7 @@ import {
   loadWorkforceSession,
   type WorkforceSession,
 } from "@/lib/workforce-auth";
+import { WorkforceRoleProvider } from "@/lib/workforce-access";
 
 const queryClient = new QueryClient();
 
@@ -120,7 +121,9 @@ function WorkforceGate({ children }: { children: ReactNode }) {
       <div className="sr-only" data-workforce-role={session.role}>
         {session.displayName}
       </div>
-      {children}
+      <WorkforceRoleProvider role={session.role}>
+        {children}
+      </WorkforceRoleProvider>
       <button
         type="button"
         className="fixed bottom-4 right-4 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground"

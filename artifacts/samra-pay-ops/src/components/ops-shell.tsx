@@ -3,6 +3,11 @@ import { Link, useLocation } from 'wouter';
 import { cn } from '@workspace/samra-pay-ds/lib/utils';
 import { IS_MOCK } from '@/lib/data-mode';
 import {
+  canAccessOperationsRoute,
+  type OperationsRoute,
+  useWorkforceRole,
+} from '@/lib/workforce-access';
+import {
   LayoutDashboard,
   Users,
   ArrowLeftRight,
@@ -18,7 +23,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: ReadonlyArray<{
+  href: OperationsRoute;
+  label: string;
+  icon: React.ElementType;
+}> = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
@@ -68,6 +77,12 @@ function NavItem({
 export function OpsShell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const workforceRole = useWorkforceRole();
+  const visibleNavItems = IS_MOCK
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter((item) =>
+        canAccessOperationsRoute(workforceRole, item.href),
+      );
 
   const isActive = (href: string) =>
     href === '/' ? location === '/' : location.startsWith(href);
@@ -105,7 +120,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5" role="navigation">
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavItem
                 key={item.href}
                 {...item}
@@ -155,7 +170,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-                {NAV_ITEMS.map((item) => (
+                {visibleNavItems.map((item) => (
                   <NavItem
                     key={item.href}
                     {...item}
@@ -181,7 +196,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
               <Menu className="size-5" />
             </button>
             <span className="text-sm font-semibold text-foreground">
-              {NAV_ITEMS.find((n) => isActive(n.href))?.label ?? 'Ops Portal'}
+              {visibleNavItems.find((n) => isActive(n.href))?.label ?? 'Ops Portal'}
             </span>
           </header>
 
