@@ -1,6 +1,7 @@
 # Samra Pay Architecture Foundation
 
-Status: approved for synthetic-data implementation on `codex/architecture-foundation`.
+Status: synthetic-data backend implementation. Production rails, authentication,
+security hardening, and deployment remain out of scope.
 
 This foundation creates **functioning logic truth**, not financial truth. It is a
 deterministic product-development environment for proving balances, holds,
@@ -32,16 +33,15 @@ provider capability.
 ## Current execution state
 
 `SAMRA_BACKEND_MODE=demo` runs the domain services, ledger, fake providers,
-inbox/outbox records and reconciliation in process memory. It proves the
-accounting and workflow behavior without a database, but a process restart
-resets the synthetic customer and all transfers.
+inbox/outbox records, reconciliation, and optional worker. Memory persistence
+remains useful for fast unit testing and resets on restart.
 
-The additive PostgreSQL schema and reviewed migrations are present but
-unapplied. The PostgreSQL repository/transaction adapter is the next
-persistence slice; until it is implemented and tested against an isolated
-database, the inbox/outbox is not durable and restart recovery is not claimed.
-No authentication, real customer data or live provider connection exists in
-this foundation.
+`SAMRA_PERSISTENCE_MODE=postgres` uses the durable PostgreSQL repositories and
+transaction boundaries. Transfer progression is claimed through leased work
+items, retry state survives restart, expired leases recover, outbox publication
+is claimed idempotently, and retry exhaustion is visible to operations. No
+authentication, real customer data, live provider connection, or production
+deployment exists.
 
 ## First vertical slice
 
@@ -69,14 +69,16 @@ Security hardening is deferred, but these controls are not security extras:
 
 ## Runtime modes
 
-| Variable                      | Values             | Default    | Purpose                                 |
-| ----------------------------- | ------------------ | ---------- | --------------------------------------- |
-| `SAMRA_BACKEND_MODE`          | `disabled`, `demo` | `disabled` | Enables synthetic application routes    |
-| `SAMRA_PROVIDER_MODE`         | `fake`             | `fake`     | Selects deterministic provider adapters |
-| `SAMRA_RUN_WORKER`            | `false`, `true`    | `false`    | Runs the in-process event worker        |
-| `VITE_SAMRA_DATA_MODE`        | `mock`, `api`      | `mock`     | Web data source                         |
-| `EXPO_PUBLIC_SAMRA_DATA_MODE` | `mock`, `api`      | `mock`     | Mobile data source                      |
-| `EXPO_PUBLIC_API_ORIGIN`      | URL                | unset      | Native mobile API origin                |
+| Variable                            | Values               | Default    | Purpose                                           |
+| ----------------------------------- | -------------------- | ---------- | ------------------------------------------------- |
+| `SAMRA_BACKEND_MODE`                | `disabled`, `demo`   | `disabled` | Enables synthetic application routes              |
+| `SAMRA_PROVIDER_MODE`               | `fake`               | `fake`     | Selects deterministic provider adapters           |
+| `SAMRA_PERSISTENCE_MODE`            | `memory`, `postgres` | `memory`   | Selects process-local or durable persistence      |
+| `SAMRA_RUN_WORKER`                  | `false`, `true`      | `false`    | Runs fake-provider workflow and outbox processing |
+| `SAMRA_INTERNAL_OPERATIONS_ENABLED` | `false`, `true`      | `false`    | Enables demo/PostgreSQL read-only operations APIs |
+| `VITE_SAMRA_DATA_MODE`              | `mock`, `api`        | `mock`     | Web data source                                   |
+| `EXPO_PUBLIC_SAMRA_DATA_MODE`       | `mock`, `api`        | `mock`     | Mobile data source                                |
+| `EXPO_PUBLIC_API_ORIGIN`            | URL                  | unset      | Native mobile API origin                          |
 
 Unknown values fail clearly. API mode never silently falls back to mock data.
 The current web and mobile screens remain in mock mode until each API cutover
@@ -87,4 +89,5 @@ passes its acceptance gate.
 - [Ledger model](./ledger.md)
 - [Remittance lifecycle](./remittance.md)
 - [Frontend cutover](./frontend-cutover.md)
+- [Operations control plane](./operations-control-plane.md)
 - [Replit safety and release gates](./replit-runbook.md)

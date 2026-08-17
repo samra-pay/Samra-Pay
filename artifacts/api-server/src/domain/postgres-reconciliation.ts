@@ -34,13 +34,15 @@ export class PostgresReconciliationStore implements ReconciliationStore {
         `SELECT id FROM samra_core.remittance_transfers WHERE external_ref = $1`,
         [item.matchKey],
       );
-      await query.query(
+      const insertedItem = await query.query<{ id: string }>(
         `INSERT INTO samra_core.reconciliation_items (
            run_id, match_key, result, internal_resource_type,
            internal_resource_id, internal_currency, provider_currency,
            internal_amount_minor, provider_amount_minor, details
          ) VALUES ($1,$2,$3,'remittance_transfer',$4,$5,$6,$7,$8,$9::jsonb)
-         ON CONFLICT (run_id, match_key) DO NOTHING`,
+         ON CONFLICT (run_id, match_key) DO UPDATE SET
+           details = EXCLUDED.details
+         RETURNING id`,
         [
           runId,
           item.matchKey,
@@ -53,6 +55,36 @@ export class PostgresReconciliationStore implements ReconciliationStore {
           JSON.stringify({ classification: item.classification }),
         ],
       );
+      if (item.classification !== "matched") {
+        const exceptionCode = toDatabaseClassification(item.classification);
+        await query.query(
+          `INSERT INTO samra_core.reconciliation_exceptions
+           (item_id, exception_code, state, summary, opened_at, updated_at)
+           VALUES ($1,$2,'open',$3,$4,$4)
+           ON CONFLICT (item_id, exception_code) DO NOTHING`,
+          [
+            insertedItem.rows[0]!.id,
+            exceptionCode,
+            reconciliationSummary(item.classification, item.matchKey),
+            run.completedAt,
+          ],
+        );
+        await query.query(
+          `INSERT INTO samra_core.audit_events
+           (event_key, actor_type, action, entity_type, entity_id,
+            correlation_id, metadata, occurred_at)
+           VALUES ($1,'system','reconciliation_exception_opened',
+                   'remittance_transfer',$2,$3,$4::jsonb,$5)
+           ON CONFLICT (event_key) DO NOTHING`,
+          [
+            `reconciliation:${run.id}:exception:${item.matchKey}:${exceptionCode}`,
+            item.matchKey,
+            run.id,
+            JSON.stringify({ classification: item.classification }),
+            run.completedAt,
+          ],
+        );
+      }
     }
     await query.query(
       `INSERT INTO samra_core.audit_events
@@ -139,6 +171,26 @@ export class PostgresReconciliationStore implements ReconciliationStore {
         ),
       ),
     });
+  }
+}
+
+function reconciliationSummary(
+  classification: DemoReconciliationRun["items"][number]["classification"],
+  matchKey: string,
+): string {
+  switch (classification) {
+    case "amount_mismatch":
+      return `Provider evidence does not match Samra's amount for ${matchKey}.`;
+    case "missing_externally":
+      return `Samra transfer ${matchKey} is missing from provider evidence.`;
+    case "missing_internally":
+      return `Provider evidence has no matching Samra transfer for ${matchKey}.`;
+    case "currency_mismatch":
+      return `Provider evidence uses a different currency for ${matchKey}.`;
+    case "status_mismatch":
+      return `Provider status does not match Samra's transfer state for ${matchKey}.`;
+    default:
+      return `Reconciliation requires review for ${matchKey}.`;
   }
 }
 

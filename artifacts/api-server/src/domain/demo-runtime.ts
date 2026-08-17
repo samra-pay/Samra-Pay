@@ -1,5 +1,10 @@
 import type { Request } from "express";
 import { randomUUID } from "node:crypto";
+import type {
+  ClaimedOutboxEvent,
+  PostgresOperationsStore,
+  WorkflowClaim,
+} from "@workspace/db";
 import {
   DeterministicFakeProviders,
   DomainError,
@@ -141,6 +146,8 @@ export type DemoRuntimeDependencies = Readonly<{
   ids?: ConstructorParameters<typeof RemittanceService>[0]["ids"];
   nextBeneficiaryId?: () => string;
   nextReconciliationId?: () => string;
+  operationsStore?: PostgresOperationsStore;
+  publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   close?: () => Promise<void>;
 }>;
 
@@ -153,11 +160,14 @@ export class DemoRuntime {
   // PostgreSQL composition supplies the same operational surface at runtime.
   readonly ledger: DemoLedgerAdapter;
   readonly service: RemittanceService;
+  readonly operationsStore?: PostgresOperationsStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #beneficiaryStore: BeneficiaryStore;
   readonly #nextBeneficiaryId: () => string;
   readonly #nextReconciliationId?: () => string;
+  readonly #publishOutbox: (event: ClaimedOutboxEvent) => Promise<void>;
+  readonly #workerId = `demo-worker-${randomUUID()}`;
   readonly #close?: () => Promise<void>;
   #closePromise?: Promise<void>;
   #reconciliationSequence = 0;
@@ -176,6 +186,8 @@ export class DemoRuntime {
       dependencies.nextBeneficiaryId ??
       (() => `beneficiary_${randomUUID().replaceAll("-", "")}`);
     this.#nextReconciliationId = dependencies.nextReconciliationId;
+    this.operationsStore = dependencies.operationsStore;
+    this.#publishOutbox = dependencies.publishOutbox ?? (async () => undefined);
     this.#close = dependencies.close;
     this.service = new RemittanceService({
       repository: this.repository,
@@ -452,6 +464,9 @@ export class DemoRuntime {
   }
 
   async advanceWorkerBatch(limit = 25): Promise<number> {
+    if (this.operationsStore) {
+      return this.#advanceDurableWorkerBatch(limit);
+    }
     const transfers = await this.service.listTransfers(DEMO_ACTOR.id);
     for (const transfer of transfers) {
       this.providers.setScenario(
@@ -487,6 +502,122 @@ export class DemoRuntime {
       );
     }
     return pending.length;
+  }
+
+  async #advanceDurableWorkerBatch(limit: number): Promise<number> {
+    const store = this.operationsStore!;
+    const now = new Date();
+    const claims = await store.claimWorkflowBatch({
+      workerId: this.#workerId,
+      limit,
+      now,
+      leaseMilliseconds: 30_000,
+    });
+    for (const claim of claims) {
+      await this.#processWorkflowClaim(claim);
+    }
+    const outbox = await store.claimOutboxBatch({
+      workerId: this.#workerId,
+      limit,
+      now: new Date(),
+      leaseMilliseconds: 30_000,
+    });
+    for (const event of outbox) {
+      try {
+        await this.#publishOutbox(event);
+        const publishedAt = new Date();
+        await store.markOutboxPublished({
+          eventId: event.id,
+          workerId: this.#workerId,
+          publishedAt,
+        });
+        await store.recordAudit({
+          eventKey: `outbox:${event.eventKey}:published`,
+          actorType: "system",
+          actorId: this.#workerId,
+          action: "outbox_published",
+          entityType: "remittance_transfer",
+          entityId: event.aggregateId,
+          correlationId: event.eventKey,
+          metadata: { eventType: event.eventType, attempt: event.attemptCount },
+          occurredAt: publishedAt,
+        });
+      } catch (error) {
+        await store.failOutbox({
+          eventId: event.id,
+          workerId: this.#workerId,
+          error: errorMessage(error),
+          retryAt: retryAt(event.attemptCount),
+          maxAttempts: 5,
+        });
+      }
+    }
+    return claims.length;
+  }
+
+  async #processWorkflowClaim(claim: WorkflowClaim): Promise<void> {
+    const store = this.operationsStore!;
+    try {
+      const before = await this.service.getTransfer(
+        claim.actorId,
+        claim.transferId,
+      );
+      const scenario = await this.repository.getFakeScenario(claim.transferId);
+      this.providers.setScenario(claim.transferId, scenario);
+      this.providers.resumeAttempt?.(
+        claim.transferId,
+        before.state,
+        claim.attemptCount - 1,
+      );
+      const after = await this.service.selectAndAdvanceFakeScenario(
+        claim.actorId,
+        claim.transferId,
+        scenario,
+      );
+      const progressed = after.version > before.version;
+      const actionable = isWorkerActionable(after.state, scenario);
+      await store.settleWorkflowClaim({
+        claimId: claim.id,
+        workerId: this.#workerId,
+        transferVersion: after.version,
+        actionable,
+        progressed,
+        retryAt:
+          progressed || !actionable ? new Date() : retryAt(claim.attemptCount),
+      });
+      await store.recordAudit({
+        eventKey: `workflow:${claim.transferId}:v${claim.transferVersion}:attempt:${claim.attemptCount}`,
+        actorType: "system",
+        actorId: this.#workerId,
+        action: progressed ? "workflow_advanced" : "workflow_retry_scheduled",
+        entityType: "remittance_transfer",
+        entityId: claim.transferId,
+        correlationId: claim.transferId,
+        metadata: {
+          fromState: before.state,
+          toState: after.state,
+          attempt: claim.attemptCount,
+          actionable,
+        },
+      });
+    } catch (error) {
+      await store.failWorkflowClaim({
+        claimId: claim.id,
+        workerId: this.#workerId,
+        error: errorMessage(error),
+        retryAt: retryAt(claim.attemptCount),
+      });
+      await store.recordAudit({
+        eventKey: `workflow:${claim.transferId}:v${claim.transferVersion}:attempt:${claim.attemptCount}:failed`,
+        actorType: "system",
+        actorId: this.#workerId,
+        action: "workflow_attempt_failed",
+        entityType: "remittance_transfer",
+        entityId: claim.transferId,
+        correlationId: claim.transferId,
+        metadata: { attempt: claim.attemptCount, error: errorMessage(error) },
+      });
+    }
   }
 
   async #transferActivity(actorId: string, transfer: RemittanceTransfer) {
@@ -529,6 +660,33 @@ export class DemoRuntime {
       },
     ];
   }
+}
+
+function isWorkerActionable(
+  state: RemittanceTransfer["state"],
+  scenario: FakeScenario,
+): boolean {
+  if (
+    [
+      "SUBMITTED",
+      "IN_TRANSIT",
+      "PAYOUT_PENDING",
+      "REFUND_PENDING",
+      "REVERSAL_PENDING",
+    ].includes(state)
+  ) {
+    return true;
+  }
+  return state === "COMPLETED" && scenario === "SETTLEMENT_REFUND";
+}
+
+function retryAt(attempt: number): Date {
+  const delay = Math.min(5_000, 100 * 2 ** Math.max(0, attempt - 1));
+  return new Date(Date.now() + delay);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function beneficiaryNotFound(beneficiaryId: string): DomainError {

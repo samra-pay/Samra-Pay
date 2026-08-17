@@ -21,6 +21,12 @@ const postgresConfig: ApiRuntimeConfig = Object.freeze({
   devControlsEnabled: true,
   runWorker: false,
   workerIntervalMilliseconds: 5,
+  internalOperationsEnabled: true,
+});
+
+const operationsHeaders = Object.freeze({
+  "X-Demo-Operator-Id": "demo_cs_agent_001",
+  "X-Demo-Operator-Role": "support_readonly",
 });
 
 type JsonObject = Record<string, unknown>;
@@ -128,6 +134,47 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     const transferId = String(transferA["id"]);
     assertAccount(await getAccount(concurrent.origin), "425000", "414700");
 
+    const hiddenOperations = await apiRequest(
+      first.origin,
+      "/api/v1/internal/operations/summary",
+    );
+    assert.equal(hiddenOperations.status, 404);
+    const operationsSummary = objectBody(
+      await apiRequest(first.origin, "/api/v1/internal/operations/summary", {
+        headers: operationsHeaders,
+      }),
+      200,
+    );
+    assert.ok(
+      Number(
+        (operationsSummary["transfers"] as JsonObject)["submitted"] ?? 0,
+      ) >= 1,
+    );
+    const operationsTransfers = arrayBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/transfers?search=${transferId}`,
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.equal(operationsTransfers[0]?.["id"], transferId);
+    assert.deepEqual(operationsTransfers[0]?.["totalDebit"], {
+      currency: "USD",
+      minorUnits: "10300",
+    });
+    const operationsDetail = objectBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/transfers/${transferId}`,
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.ok((operationsDetail["timeline"] as JsonObject[]).length >= 3);
+    assert.ok((operationsDetail["outbox"] as JsonObject[]).length >= 3);
+    assert.ok((operationsDetail["audit"] as JsonObject[]).length >= 1);
+
     await stopServer(concurrent);
     await stopServer(first);
     running.splice(0);
@@ -182,14 +229,14 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     const reconciliation = objectBody(
       await apiRequest(restarted.origin, "/api/v1/dev/reconciliation/runs", {
         method: "POST",
-        body: { scenario: "happy_path" },
+        body: { scenario: "reconciliation_amount_mismatch" },
       }),
       201,
     );
     assert.equal(reconciliation["status"], "completed");
     const reconciliationItems = reconciliation["items"] as JsonObject[];
     assert.equal(reconciliationItems.length, 1);
-    assert.equal(reconciliationItems[0]?.["classification"], "matched");
+    assert.equal(reconciliationItems[0]?.["classification"], "amount_mismatch");
     const reconciliationId = String(reconciliation["id"]);
 
     await stopServer(restarted);
@@ -226,6 +273,26 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       200,
     );
     assert.deepEqual(durableReconciliation, reconciliation);
+    const exceptions = arrayBody(
+      await apiRequest(
+        afterRestart.origin,
+        "/api/v1/internal/operations/reconciliation/exceptions",
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.ok(
+      exceptions.some((exception) => exception["transferId"] === transferId),
+    );
+    const auditEvents = arrayBody(
+      await apiRequest(
+        afterRestart.origin,
+        `/api/v1/internal/operations/audit-events?entityId=${transferId}`,
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.ok(auditEvents.length >= 1);
     assertAccount(await getAccount(afterRestart.origin), "414700", "414700");
 
     const activity = objectBody(
