@@ -157,7 +157,7 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     const operationsCustomers = arrayBody(
       await apiRequest(
         first.origin,
-        "/api/v1/internal/operations/customers?search=Selam",
+        "/api/v1/internal/operations/customers?search=Samra",
         { headers: operationsHeaders },
       ),
       200,

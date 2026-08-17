@@ -346,7 +346,7 @@ test("expired leases recover, retry exhaustion becomes operator-visible, and aud
     limit: 10,
   });
   assert.equal(customers.length, 1);
-  assert.equal(customers[0]!.displayName, "Selam T.");
+  assert.equal(customers[0]!.displayName, "Samra Demo Customer");
   assert.ok(customers[0]!.transferCount >= 1);
   assert.ok(BigInt(customers[0]!.totalSentMinor) > 0n);
   const exhausted = await first.operationsStore.claimWorkflowBatch({
