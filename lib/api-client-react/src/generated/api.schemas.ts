@@ -692,6 +692,130 @@ export interface OperationsTransferDetail {
   reconciliationExceptions: OperationsTransferDetailReconciliationExceptionsItem[];
 }
 
+export type OperationsCaseCategory =
+  (typeof OperationsCaseCategory)[keyof typeof OperationsCaseCategory];
+
+export const OperationsCaseCategory = {
+  transfer_status: "transfer_status",
+  funding: "funding",
+  payout: "payout",
+  refund: "refund",
+  identity: "identity",
+  reconciliation: "reconciliation",
+  technical: "technical",
+  other: "other",
+} as const;
+
+export type OperationsCasePriority =
+  (typeof OperationsCasePriority)[keyof typeof OperationsCasePriority];
+
+export const OperationsCasePriority = {
+  low: "low",
+  normal: "normal",
+  high: "high",
+  urgent: "urgent",
+} as const;
+
+export type OperationsCaseStatus =
+  (typeof OperationsCaseStatus)[keyof typeof OperationsCaseStatus];
+
+export const OperationsCaseStatus = {
+  open: "open",
+  in_progress: "in_progress",
+  pending_customer: "pending_customer",
+  resolved: "resolved",
+  closed: "closed",
+} as const;
+
+export interface OperationsCase {
+  id: string;
+  customerId: string | null;
+  transferId: string | null;
+  title: string;
+  category: OperationsCaseCategory;
+  priority: OperationsCasePriority;
+  status: OperationsCaseStatus;
+  assignedTo: string | null;
+  assignedToDisplayName: string | null;
+  openedBy: string;
+  openedByDisplayName: string;
+  resolution: string | null;
+  dueAt: string | null;
+  /** @minimum 1 */
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  closedAt: string | null;
+}
+
+export interface OperationsCaseNote {
+  id: string;
+  author: string;
+  authorDisplayName: string;
+  body: string;
+  createdAt: string;
+}
+
+export type OperationsCaseEventEventType =
+  (typeof OperationsCaseEventEventType)[keyof typeof OperationsCaseEventEventType];
+
+export const OperationsCaseEventEventType = {
+  created: "created",
+  updated: "updated",
+  note_added: "note_added",
+} as const;
+
+export type OperationsCaseEventDetail = { [key: string]: unknown };
+
+export interface OperationsCaseEvent {
+  id: string;
+  eventType: OperationsCaseEventEventType;
+  actor: string;
+  actorDisplayName: string;
+  detail: OperationsCaseEventDetail;
+  createdAt: string;
+}
+
+export interface OperationsCaseDetail {
+  case: OperationsCase;
+  notes: OperationsCaseNote[];
+  events: OperationsCaseEvent[];
+}
+
+export type CreateOperationsCaseRequest = unknown & {
+  customerId?: string;
+  transferId?: string;
+  /**
+   * @minLength 3
+   * @maxLength 160
+   */
+  title: string;
+  category: OperationsCaseCategory;
+  priority: OperationsCasePriority;
+  /** @maxLength 128 */
+  assignedTo?: string;
+  dueAt?: string;
+};
+
+export interface UpdateOperationsCaseRequest {
+  /** @minimum 1 */
+  expectedVersion: number;
+  status?: OperationsCaseStatus;
+  priority?: OperationsCasePriority;
+  assignedTo?: string | null;
+  dueAt?: string | null;
+  resolution?: string | null;
+}
+
+export interface AddOperationsCaseNoteRequest {
+  /**
+   * @minLength 1
+   * @maxLength 4000
+   */
+  body: string;
+}
+
 export type ApiProblemFieldErrors = { [key: string]: string[] };
 
 export interface ApiProblem {
@@ -799,6 +923,24 @@ export type ListOperationsAuditEventsParams = {
   /**
    * @minimum 1
    * @maximum 200
+   */
+  limit?: number;
+};
+
+export type ListOperationsCasesParams = {
+  status?: OperationsCaseStatus;
+  priority?: OperationsCasePriority;
+  /**
+   * @maxLength 128
+   */
+  assignedTo?: string;
+  /**
+   * @maxLength 128
+   */
+  search?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
    */
   limit?: number;
 };

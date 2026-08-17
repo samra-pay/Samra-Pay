@@ -630,6 +630,136 @@ paths:
         "401": { $ref: "#/components/responses/UnauthorizedProblem" }
         "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
+  /v1/internal/operations/cases:
+    get:
+      operationId: listOperationsCases
+      tags: [operations]
+      summary: List durable customer-support cases
+      security:
+        - WorkforceSession: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/OperationsCaseStatus" }
+        - name: priority
+          in: query
+          schema: { $ref: "#/components/schemas/OperationsCasePriority" }
+        - name: assignedTo
+          in: query
+          schema: { type: string, maxLength: 128 }
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 128 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Prioritized case queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OperationsCase" }
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+    post:
+      operationId: createOperationsCase
+      tags: [operations]
+      summary: Open an auditable support case without changing financial state
+      security:
+        - WorkforceSession: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOperationsCaseRequest" }
+      responses:
+        "201":
+          description: Case opened
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationsCaseDetail" }
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+
+  /v1/internal/operations/cases/{caseId}:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    get:
+      operationId: getOperationsCase
+      tags: [operations]
+      summary: Get a support case, internal notes, and immutable history
+      security:
+        - WorkforceSession: []
+      responses:
+        "200":
+          description: Case detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationsCaseDetail" }
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "404": { $ref: "#/components/responses/NotFoundProblem" }
+    patch:
+      operationId: updateOperationsCase
+      tags: [operations]
+      summary: Update workflow metadata using optimistic concurrency
+      security:
+        - WorkforceSession: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateOperationsCaseRequest" }
+      responses:
+        "200":
+          description: Updated case detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationsCaseDetail" }
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "404": { $ref: "#/components/responses/NotFoundProblem" }
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+
+  /v1/internal/operations/cases/{caseId}/notes:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    post:
+      operationId: addOperationsCaseNote
+      tags: [operations]
+      summary: Append an immutable internal note
+      security:
+        - WorkforceSession: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: "#/components/schemas/AddOperationsCaseNoteRequest" }
+      responses:
+        "200":
+          description: Case detail with appended note
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationsCaseDetail" }
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "404": { $ref: "#/components/responses/NotFoundProblem" }
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+
 components:
   securitySchemes:
     WorkforceSession:
@@ -653,6 +783,12 @@ components:
         type: string
     BeneficiaryId:
       name: beneficiaryId
+      in: path
+      required: true
+      schema:
+        type: string
+    CaseId:
+      name: caseId
       in: path
       required: true
       schema:
@@ -1577,6 +1713,153 @@ components:
           audit,
           reconciliationExceptions,
         ]
+
+    OperationsCaseCategory:
+      type: string
+      enum:
+        [
+          transfer_status,
+          funding,
+          payout,
+          refund,
+          identity,
+          reconciliation,
+          technical,
+          other,
+        ]
+
+    OperationsCasePriority:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    OperationsCaseStatus:
+      type: string
+      enum: [open, in_progress, pending_customer, resolved, closed]
+
+    OperationsCase:
+      type: object
+      properties:
+        id: { type: string }
+        customerId:
+          anyOf: [{ type: string }, { type: "null" }]
+        transferId:
+          anyOf: [{ type: string }, { type: "null" }]
+        title: { type: string }
+        category: { $ref: "#/components/schemas/OperationsCaseCategory" }
+        priority: { $ref: "#/components/schemas/OperationsCasePriority" }
+        status: { $ref: "#/components/schemas/OperationsCaseStatus" }
+        assignedTo:
+          anyOf: [{ type: string }, { type: "null" }]
+        assignedToDisplayName:
+          anyOf: [{ type: string }, { type: "null" }]
+        openedBy: { type: string }
+        openedByDisplayName: { type: string }
+        resolution:
+          anyOf: [{ type: string }, { type: "null" }]
+        dueAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        resolvedAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        closedAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+      required:
+        [
+          id,
+          customerId,
+          transferId,
+          title,
+          category,
+          priority,
+          status,
+          assignedTo,
+          assignedToDisplayName,
+          openedBy,
+          openedByDisplayName,
+          resolution,
+          dueAt,
+          version,
+          createdAt,
+          updatedAt,
+          resolvedAt,
+          closedAt,
+        ]
+
+    OperationsCaseNote:
+      type: object
+      properties:
+        id: { type: string }
+        author: { type: string }
+        authorDisplayName: { type: string }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, author, authorDisplayName, body, createdAt]
+
+    OperationsCaseEvent:
+      type: object
+      properties:
+        id: { type: string }
+        eventType:
+          type: string
+          enum: [created, updated, note_added]
+        actor: { type: string }
+        actorDisplayName: { type: string }
+        detail:
+          type: object
+          additionalProperties: true
+        createdAt: { type: string, format: date-time }
+      required: [id, eventType, actor, actorDisplayName, detail, createdAt]
+
+    OperationsCaseDetail:
+      type: object
+      properties:
+        case: { $ref: "#/components/schemas/OperationsCase" }
+        notes:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsCaseNote" }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/OperationsCaseEvent" }
+      required: [case, notes, events]
+
+    CreateOperationsCaseRequest:
+      type: object
+      properties:
+        customerId: { type: string }
+        transferId: { type: string }
+        title: { type: string, minLength: 3, maxLength: 160 }
+        category: { $ref: "#/components/schemas/OperationsCaseCategory" }
+        priority: { $ref: "#/components/schemas/OperationsCasePriority" }
+        assignedTo: { type: string, maxLength: 128 }
+        dueAt: { type: string, format: date-time }
+      required: [title, category, priority]
+      anyOf:
+        - required: [customerId]
+        - required: [transferId]
+
+    UpdateOperationsCaseRequest:
+      type: object
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        status: { $ref: "#/components/schemas/OperationsCaseStatus" }
+        priority: { $ref: "#/components/schemas/OperationsCasePriority" }
+        assignedTo:
+          anyOf: [{ type: string, maxLength: 128 }, { type: "null" }]
+        dueAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        resolution:
+          anyOf:
+            [{ type: string, minLength: 3, maxLength: 2000 }, { type: "null" }]
+      required: [expectedVersion]
+      minProperties: 2
+
+    AddOperationsCaseNoteRequest:
+      type: object
+      properties:
+        body: { type: string, minLength: 1, maxLength: 4000 }
+      required: [body]
 
     ApiProblem:
       type: object

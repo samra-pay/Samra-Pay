@@ -19,9 +19,11 @@ import type {
 import type {
   AccountSummary,
   ActivityPage,
+  AddOperationsCaseNoteRequest,
   Beneficiary,
   ConflictProblemResponse,
   CreateBeneficiaryRequest,
+  CreateOperationsCaseRequest,
   CreateQuoteRequest,
   CreateTransferRequest,
   CurrentCustomer,
@@ -30,12 +32,15 @@ import type {
   HealthStatus,
   ListActivityParams,
   ListOperationsAuditEventsParams,
+  ListOperationsCasesParams,
   ListOperationsCustomersParams,
   ListOperationsReconciliationExceptionsParams,
   ListOperationsTransfersParams,
   ListRemittanceTransfersParams,
   NotFoundProblemResponse,
   OperationsAuditEvent,
+  OperationsCase,
+  OperationsCaseDetail,
   OperationsCustomer,
   OperationsReconciliationException,
   OperationsSummary,
@@ -51,6 +56,7 @@ import type {
   UnauthorizedProblemResponse,
   UnavailableResponse,
   UpdateBeneficiaryRequest,
+  UpdateOperationsCaseRequest,
   ValidationProblemResponse,
   WorkforceLoginRequest,
   WorkforceSession,
@@ -2590,3 +2596,535 @@ export function useListOperationsAuditEvents<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListOperationsCasesUrl = (
+  params?: ListOperationsCasesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/internal/operations/cases?${stringifiedParams}`
+    : `/api/v1/internal/operations/cases`;
+};
+
+/**
+ * @summary List durable customer-support cases
+ */
+export const listOperationsCases = async (
+  params?: ListOperationsCasesParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsCase[]> => {
+  return customFetch<OperationsCase[]>(getListOperationsCasesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListOperationsCasesQueryKey = (
+  params?: ListOperationsCasesParams,
+) => {
+  return [
+    `/api/v1/internal/operations/cases`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListOperationsCasesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOperationsCases>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+  >,
+>(
+  params?: ListOperationsCasesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsCases>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListOperationsCasesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOperationsCases>>
+  > = ({ signal }) =>
+    listOperationsCases(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOperationsCases>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOperationsCasesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOperationsCases>>
+>;
+export type ListOperationsCasesQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary List durable customer-support cases
+ */
+
+export function useListOperationsCases<
+  TData = Awaited<ReturnType<typeof listOperationsCases>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+  >,
+>(
+  params?: ListOperationsCasesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationsCases>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOperationsCasesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateOperationsCaseUrl = () => {
+  return `/api/v1/internal/operations/cases`;
+};
+
+/**
+ * @summary Open an auditable support case without changing financial state
+ */
+export const createOperationsCase = async (
+  createOperationsCaseRequest: CreateOperationsCaseRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsCaseDetail> => {
+  return customFetch<OperationsCaseDetail>(getCreateOperationsCaseUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createOperationsCaseRequest),
+  });
+};
+
+export const getCreateOperationsCaseMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOperationsCase>>,
+    TError,
+    { data: BodyType<CreateOperationsCaseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOperationsCase>>,
+  TError,
+  { data: BodyType<CreateOperationsCaseRequest> },
+  TContext
+> => {
+  const mutationKey = ["createOperationsCase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOperationsCase>>,
+    { data: BodyType<CreateOperationsCaseRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOperationsCase(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOperationsCaseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOperationsCase>>
+>;
+export type CreateOperationsCaseMutationBody =
+  BodyType<CreateOperationsCaseRequest>;
+export type CreateOperationsCaseMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary Open an auditable support case without changing financial state
+ */
+export const useCreateOperationsCase = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOperationsCase>>,
+    TError,
+    { data: BodyType<CreateOperationsCaseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOperationsCase>>,
+  TError,
+  { data: BodyType<CreateOperationsCaseRequest> },
+  TContext
+> => {
+  return useMutation(getCreateOperationsCaseMutationOptions(options));
+};
+
+export const getGetOperationsCaseUrl = (caseId: string) => {
+  return `/api/v1/internal/operations/cases/${caseId}`;
+};
+
+/**
+ * @summary Get a support case, internal notes, and immutable history
+ */
+export const getOperationsCase = async (
+  caseId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsCaseDetail> => {
+  return customFetch<OperationsCaseDetail>(getGetOperationsCaseUrl(caseId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOperationsCaseQueryKey = (caseId: string) => {
+  return [`/api/v1/internal/operations/cases/${caseId}`] as const;
+};
+
+export const getGetOperationsCaseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOperationsCase>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
+>(
+  caseId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationsCase>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOperationsCaseQueryKey(caseId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOperationsCase>>
+  > = ({ signal }) => getOperationsCase(caseId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: caseId !== null && caseId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationsCase>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOperationsCaseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOperationsCase>>
+>;
+export type GetOperationsCaseQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+>;
+
+/**
+ * @summary Get a support case, internal notes, and immutable history
+ */
+
+export function useGetOperationsCase<
+  TData = Awaited<ReturnType<typeof getOperationsCase>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+  >,
+>(
+  caseId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationsCase>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOperationsCaseQueryOptions(caseId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateOperationsCaseUrl = (caseId: string) => {
+  return `/api/v1/internal/operations/cases/${caseId}`;
+};
+
+/**
+ * @summary Update workflow metadata using optimistic concurrency
+ */
+export const updateOperationsCase = async (
+  caseId: string,
+  updateOperationsCaseRequest: UpdateOperationsCaseRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsCaseDetail> => {
+  return customFetch<OperationsCaseDetail>(getUpdateOperationsCaseUrl(caseId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateOperationsCaseRequest),
+  });
+};
+
+export const getUpdateOperationsCaseMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOperationsCase>>,
+    TError,
+    { caseId: string; data: BodyType<UpdateOperationsCaseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateOperationsCase>>,
+  TError,
+  { caseId: string; data: BodyType<UpdateOperationsCaseRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateOperationsCase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateOperationsCase>>,
+    { caseId: string; data: BodyType<UpdateOperationsCaseRequest> }
+  > = (props) => {
+    const { caseId, data } = props ?? {};
+
+    return updateOperationsCase(caseId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateOperationsCaseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateOperationsCase>>
+>;
+export type UpdateOperationsCaseMutationBody =
+  BodyType<UpdateOperationsCaseRequest>;
+export type UpdateOperationsCaseMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary Update workflow metadata using optimistic concurrency
+ */
+export const useUpdateOperationsCase = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOperationsCase>>,
+    TError,
+    { caseId: string; data: BodyType<UpdateOperationsCaseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateOperationsCase>>,
+  TError,
+  { caseId: string; data: BodyType<UpdateOperationsCaseRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateOperationsCaseMutationOptions(options));
+};
+
+export const getAddOperationsCaseNoteUrl = (caseId: string) => {
+  return `/api/v1/internal/operations/cases/${caseId}/notes`;
+};
+
+/**
+ * @summary Append an immutable internal note
+ */
+export const addOperationsCaseNote = async (
+  caseId: string,
+  addOperationsCaseNoteRequest: AddOperationsCaseNoteRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsCaseDetail> => {
+  return customFetch<OperationsCaseDetail>(
+    getAddOperationsCaseNoteUrl(caseId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(addOperationsCaseNoteRequest),
+    },
+  );
+};
+
+export const getAddOperationsCaseNoteMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addOperationsCaseNote>>,
+    TError,
+    { caseId: string; data: BodyType<AddOperationsCaseNoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addOperationsCaseNote>>,
+  TError,
+  { caseId: string; data: BodyType<AddOperationsCaseNoteRequest> },
+  TContext
+> => {
+  const mutationKey = ["addOperationsCaseNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addOperationsCaseNote>>,
+    { caseId: string; data: BodyType<AddOperationsCaseNoteRequest> }
+  > = (props) => {
+    const { caseId, data } = props ?? {};
+
+    return addOperationsCaseNote(caseId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddOperationsCaseNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addOperationsCaseNote>>
+>;
+export type AddOperationsCaseNoteMutationBody =
+  BodyType<AddOperationsCaseNoteRequest>;
+export type AddOperationsCaseNoteMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary Append an immutable internal note
+ */
+export const useAddOperationsCaseNote = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addOperationsCaseNote>>,
+    TError,
+    { caseId: string; data: BodyType<AddOperationsCaseNoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addOperationsCaseNote>>,
+  TError,
+  { caseId: string; data: BodyType<AddOperationsCaseNoteRequest> },
+  TContext
+> => {
+  return useMutation(getAddOperationsCaseNoteMutationOptions(options));
+};
