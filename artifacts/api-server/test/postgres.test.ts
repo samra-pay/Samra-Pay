@@ -244,11 +244,11 @@ test("durable workers claim once across processes and resume timeout retries aft
        WHERE t.external_ref = $1`,
     [transfer.id],
   );
-  assert.equal(
-    advancedOnce.state,
-    "IN_TRANSIT",
-    JSON.stringify(workerDiagnostic.rows[0]),
-  );
+  if (advancedOnce.state !== "IN_TRANSIT") {
+    throw new Error(
+      `Expected the concurrently claimed transfer to reach IN_TRANSIT: ${JSON.stringify(workerDiagnostic.rows[0])}`,
+    );
+  }
 
   const timeoutQuote = await first.runtime.service.createQuote({
     actorId: "demo_customer_001",
