@@ -107,6 +107,39 @@ describe("authorized operations API adapter", () => {
     });
   });
 
+  it("loads Compliance transfers without requesting the restricted customer directory", async () => {
+    vi.mocked(listOperationsTransfers).mockResolvedValue([
+      {
+        id: "transfer-compliance-1",
+        customerId: "customer-restricted",
+        beneficiaryDisplay: "Restricted recipient",
+        status: "submitted",
+        fundingStatus: "captured",
+        payoutStatus: "queued",
+        reconciliationStatus: "pending",
+        sourceAmount: money("USD", "10000"),
+        feeAmount: money("USD", "300"),
+        totalDebit: money("USD", "10300"),
+        destinationAmount: money("ETB", "1800000"),
+        workflowState: "submitted",
+        workflowAttempts: 1,
+        workflowLastError: null,
+        createdAt: "2026-08-17T10:00:00.000Z",
+        updatedAt: "2026-08-17T10:01:00.000Z",
+      },
+    ]);
+
+    const [transfer] = await opsApi.getTransfers({
+      includeCustomerNames: false,
+    });
+
+    expect(listOperationsCustomers).not.toHaveBeenCalled();
+    expect(transfer).toMatchObject({
+      senderName: "customer-restricted",
+      recipientName: "Restricted recipient",
+    });
+  });
+
   it("combines canonical, provider, and worker evidence in transfer detail", async () => {
     vi.mocked(getOperationsTransfer).mockResolvedValue({
       transfer: {

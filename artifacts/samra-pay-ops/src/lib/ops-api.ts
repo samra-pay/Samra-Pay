@@ -143,18 +143,24 @@ export class OpsApi {
     senderId?: string;
     page?: number;
     limit?: number;
+    includeCustomerNames?: boolean;
   }): Promise<Transfer[]> {
-    const [values, customers] = await Promise.all([
-      listOperationsTransfers(
-        {
-          status: normalizeTransferQueryStatus(_params?.status),
-          search: undefined,
-          limit: _params?.limit,
-        },
-        OPERATOR_REQUEST,
-      ),
-      listOperationsCustomers(undefined, OPERATOR_REQUEST),
-    ]);
+    const values = await listOperationsTransfers(
+      {
+        status: normalizeTransferQueryStatus(_params?.status),
+        search: undefined,
+        limit: _params?.limit,
+      },
+      OPERATOR_REQUEST,
+    );
+    if (_params?.includeCustomerNames === false) {
+      return values.map((value) => mapTransfer(value));
+    }
+
+    const customers = await listOperationsCustomers(
+      undefined,
+      OPERATOR_REQUEST,
+    );
     const customerNames = new Map(
       customers.map((customer) => [customer.id, customer.displayName]),
     );

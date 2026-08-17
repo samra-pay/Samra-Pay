@@ -11,11 +11,13 @@ import { Badge } from '@workspace/samra-pay-ds/components/ui/badge';
 import { Separator } from '@workspace/samra-pay-ds/components/ui/separator';
 import { Link } from 'wouter';
 import type { OpsMetric, Transfer } from '@/lib/types';
+import { useWorkforceRole } from '@/lib/workforce-access';
 
 export default function OverviewPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('today');
   const { showLocal, toggleLocal } = useTimezonePref();
+  const workforceRole = useWorkforceRole();
 
   const metricsQuery = useQuery<OpsMetric[]>({
     queryKey: ['overview-metrics', { mock: IS_MOCK }],
@@ -27,10 +29,12 @@ export default function OverviewPage() {
   });
 
   const transfersQuery = useQuery<Transfer[]>({
-    queryKey: ['transfers', { mock: IS_MOCK }],
+    queryKey: ['transfers', { mock: IS_MOCK, workforceRole }],
     queryFn: async () => {
       if (IS_MOCK) return TRANSFERS;
-      return opsApi.getTransfers();
+      return opsApi.getTransfers({
+        includeCustomerNames: workforceRole !== 'compliance_readonly',
+      });
     },
     retry: 1,
   });
