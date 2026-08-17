@@ -22,11 +22,36 @@ import {
   loadWorkforceSession,
   type WorkforceSession,
 } from "@/lib/workforce-auth";
-import { WorkforceRoleProvider } from "@/lib/workforce-access";
+import {
+  canAccessOperationsRoute,
+  isOperationsRoute,
+  useWorkforceRole,
+  WorkforceRoleProvider,
+} from "@/lib/workforce-access";
 
 const queryClient = new QueryClient();
 
 function Router() {
+  const [location, setLocation] = useLocation();
+  const workforceRole = useWorkforceRole();
+  const forbidden =
+    IS_API &&
+    isOperationsRoute(location) &&
+    !canAccessOperationsRoute(workforceRole, location);
+
+  useEffect(() => {
+    if (forbidden) setLocation("/", { replace: true });
+  }, [forbidden, setLocation]);
+
+  if (forbidden) {
+    return (
+      <WorkforceStatus
+        title="Redirecting to an authorized page"
+        detail="This workforce role does not have access to that operations route."
+      />
+    );
+  }
+
   return (
     // Keep a shared shell (sidebar, navbar) outside the boundary so it
     // survives a page crash.
@@ -115,7 +140,16 @@ function WorkforceGate({ children }: { children: ReactNode }) {
       />
     );
   }
-  if (!session) return <WorkforceLogin onAuthenticated={setSession} />;
+  if (!session) {
+    return (
+      <WorkforceLogin
+        onAuthenticated={(authenticatedSession) => {
+          queryClient.clear();
+          setSession(authenticatedSession);
+        }}
+      />
+    );
+  }
   return (
     <>
       <div className="sr-only" data-workforce-role={session.role}>
@@ -127,9 +161,14 @@ function WorkforceGate({ children }: { children: ReactNode }) {
       <button
         type="button"
         className="fixed bottom-4 right-4 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground"
-        onClick={() =>
-          void closeWorkforceSession().finally(() => setSession(null))
-        }
+        onClick={() => {
+          setLoading(true);
+          queryClient.clear();
+          void closeWorkforceSession().finally(() => {
+            setSession(null);
+            setLoading(false);
+          });
+        }}
       >
         Sign out
       </button>

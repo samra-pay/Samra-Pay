@@ -23,6 +23,8 @@ export const OPERATIONS_ROUTES = Object.freeze([
 
 export type OperationsRoute = (typeof OPERATIONS_ROUTES)[number];
 
+const OPERATIONS_ROUTE_SET: ReadonlySet<string> = new Set(OPERATIONS_ROUTES);
+
 const ROUTES_BY_ROLE: Readonly<
   Record<WorkforceRole, ReadonlySet<OperationsRoute>>
 > = Object.freeze({
@@ -57,6 +59,10 @@ export function canAccessOperationsRoute(
   route: OperationsRoute,
 ): boolean {
   return ROUTES_BY_ROLE[role].has(route);
+}
+
+export function isOperationsRoute(value: string): value is OperationsRoute {
+  return OPERATIONS_ROUTE_SET.has(value);
 }
 
 export function visibleOperationsRoutes(
