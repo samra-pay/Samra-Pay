@@ -21,9 +21,11 @@ test-case mapping change.
   finish.
 - A run started from Qase supplies its run ID through `workflow_dispatch`; the
   workflow links to and updates that run instead of creating another one.
-- The two GitHub test jobs remain authoritative for pass or fail. Reporting steps
-  are non-blocking so a Qase API outage cannot hide a test failure or block a
-  correct build.
+- The two GitHub test jobs remain authoritative for pass or fail. A Qase API
+  outage is non-blocking for ordinary GitHub-triggered CI, but Qase-triggered runs
+  fail if their reporting contract fails.
+- JUnit payloads must contain a non-empty standard test suite before a Qase run is
+  updated. A run is completed only after both result uploads succeed.
 - Pull requests from forks do not receive the repository token and skip the Qase
   reporting job.
 - JUnit artifacts are retained in GitHub for 14 days as independent evidence.
