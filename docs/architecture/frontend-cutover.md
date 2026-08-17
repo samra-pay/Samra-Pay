@@ -33,8 +33,23 @@ The web cutover implements one API adapter and one hard boundary:
   timeout error.
 
 The route choice is fixed at the application boundary. A single workflow never
-mixes local financial state and ledger-backed state. The mobile API cutover
-remains future work, not a current capability.
+mixes local financial state and ledger-backed state.
+
+The mobile application follows the same explicit boundary:
+
+- EXPO_PUBLIC_SAMRA_DATA_MODE=mock preserves the existing Expo presentation and
+  session-only demo behavior;
+- EXPO_PUBLIC_SAMRA_DATA_MODE=api loads the synthetic actor, ledger-derived
+  account balances and activity, beneficiaries, remittance options, quotes,
+  transfers, and canonical transfer status through the shared generated client;
+- native API mode requires EXPO_PUBLIC_API_ORIGIN unless EXPO_PUBLIC_DOMAIN
+  supplies the Replit preview origin;
+- API-mode cards and rewards are explicitly unavailable until their backend
+  contracts exist, so mock financial data never appears as backend truth;
+- React Query owns lifecycle-aware polling and stops after a terminal state or
+  three consecutive fetch failures;
+- the mobile client formats integer minor units but never calculates balances,
+  fees, FX, recipient amounts, or canonical status.
 
 ## API conventions
 
@@ -58,7 +73,8 @@ remains future work, not a current capability.
 6. Stabilize the contract.
 7. Enable mobile remittance.
 8. Replace mobile balance and activity.
-9. Remove only the mocks whose API replacements have passed.
+9. Keep unsupported mobile financial previews unavailable in API mode.
+10. Remove only the mocks whose API replacements have passed.
 
 Rewards, credit, card controls and settings remain explicit legacy demos until
 their domains exist.

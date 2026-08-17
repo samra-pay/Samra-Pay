@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { TransferProvider } from '@/context/TransferContext';
+import { SamraRuntimeProvider } from '@/lib/samra-runtime';
 import { tokens } from '@workspace/samra-pay-ds/tokens';
 import { useDesignSystemFonts } from '@workspace/samra-pay-ds/hooks/use-fonts';
 import { Stack } from 'expo-router';
@@ -61,8 +62,10 @@ export default function RootLayout() {
               <AuthProvider>
                 <LanguageProvider>
                   <TransferProvider>
-                    <StatusBar style="light" />
-                    <RootLayoutNav />
+                    <SamraRuntimeProvider>
+                      <StatusBar style="light" />
+                      <RootLayoutNav />
+                    </SamraRuntimeProvider>
                   </TransferProvider>
                 </LanguageProvider>
               </AuthProvider>

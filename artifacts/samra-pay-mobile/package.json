@@ -60,6 +60,7 @@
     "@expo-google-fonts/eb-garamond": "^0.4.3",
     "@expo-google-fonts/noto-serif-ethiopic": "^0.4.1",
     "@expo-google-fonts/outfit": "^0.4.3",
+    "@workspace/samra-client": "workspace:*",
     "@workspace/samra-pay-ds": "workspace:*",
     "expo-clipboard": "^57.0.1"
   }

@@ -14,7 +14,9 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
+import { ApiRemittanceScreen } from '@/components/ApiRemittance';
 import { useTransfers } from '@/context/TransferContext';
+import { useSamraDataMode } from '@/lib/samra-runtime';
 import {
   hasValidRecipientDetails,
 } from '@/lib/recipient-details';
@@ -41,7 +43,7 @@ function getTodayLabel() {
   return 'Today';
 }
 
-export default function RemittanceScreen() {
+function MockRemittanceScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { addTransfer } = useTransfers();
@@ -626,6 +628,14 @@ export default function RemittanceScreen() {
       </Pressable>
     </KeyboardAwareScrollViewCompat>
   );
+}
+
+export default function RemittanceScreen() {
+  const mode = useSamraDataMode();
+  if (mode === 'api') {
+    return <ApiRemittanceScreen />;
+  }
+  return <MockRemittanceScreen />;
 }
 
 // ── Small helper component ────────────────────────────────────────────────────

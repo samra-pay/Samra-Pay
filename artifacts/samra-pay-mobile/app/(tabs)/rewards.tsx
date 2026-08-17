@@ -21,8 +21,10 @@ import {
   formatMiles,
   type RewardItem,
 } from '@/lib/mock-data';
+import { ApiModeUnavailable } from '@/components/ApiModeUnavailable';
+import { useSamraDataMode } from '@/lib/samra-runtime';
 
-export default function RewardsScreen() {
+function MockRewardsScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
 
@@ -281,6 +283,14 @@ export default function RewardsScreen() {
       </Modal>
     </>
   );
+}
+
+export default function RewardsScreen() {
+  const mode = useSamraDataMode();
+  if (mode === 'api') {
+    return <ApiModeUnavailable section="Rewards" />;
+  }
+  return <MockRewardsScreen />;
 }
 
 const font = nativeTheme.fontFamily;

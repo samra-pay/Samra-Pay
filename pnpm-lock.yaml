@@ -690,6 +690,9 @@ importers:
       '@expo-google-fonts/outfit':
         specifier: ^0.4.3
         version: 0.4.3
+      '@workspace/samra-client':
+        specifier: workspace:*
+        version: link:../../lib/samra-client
       '@workspace/samra-pay-ds':
         specifier: workspace:*
         version: link:../samra-pay-ds

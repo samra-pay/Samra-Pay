@@ -16,6 +16,8 @@ import { BankCard } from '@/components/BankCard';
 import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import { CARDS, CARD_TRANSACTIONS, DEMO_DISCLAIMER, formatUsd } from '@/lib/mock-data';
+import { ApiModeUnavailable } from '@/components/ApiModeUnavailable';
+import { useSamraDataMode } from '@/lib/samra-runtime';
 
 type CopiedField = 'number' | 'expiry' | 'cvc' | null;
 
@@ -23,7 +25,7 @@ function formatCardNumber(n: string) {
   return `${n.slice(0,4)} ${n.slice(4,8)} ${n.slice(8,12)} ${n.slice(12)}`;
 }
 
-export default function CardsScreen() {
+function MockCardsScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -286,6 +288,14 @@ export default function CardsScreen() {
       <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>{DEMO_DISCLAIMER}</Text>
     </ScrollView>
   );
+}
+
+export default function CardsScreen() {
+  const mode = useSamraDataMode();
+  if (mode === 'api') {
+    return <ApiModeUnavailable section="Cards and accounts" />;
+  }
+  return <MockCardsScreen />;
 }
 
 const font = nativeTheme.fontFamily;

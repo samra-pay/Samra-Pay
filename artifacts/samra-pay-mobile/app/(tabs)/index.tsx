@@ -17,6 +17,8 @@ import { useRouter } from 'expo-router';
 import { SamraLogo } from '@/components/SamraLogo';
 import { useAuth } from '@/context/AuthContext';
 import { useTransfers } from '@/context/TransferContext';
+import { ApiDashboard } from '@/components/ApiDashboard';
+import { useSamraDataMode } from '@/lib/samra-runtime';
 import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import {
@@ -136,7 +138,7 @@ function MoreSheet({ onClose, colors }: { onClose: () => void; colors: ReturnTyp
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
-export default function DashboardScreen() {
+function MockDashboardScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -410,6 +412,14 @@ export default function DashboardScreen() {
       </Modal>
     </>
   );
+}
+
+export default function DashboardScreen() {
+  const mode = useSamraDataMode();
+  if (mode === 'api') {
+    return <ApiDashboard />;
+  }
+  return <MockDashboardScreen />;
 }
 
 // ─── Stylesheet ───────────────────────────────────────────────────────────────

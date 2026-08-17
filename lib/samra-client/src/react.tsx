@@ -135,6 +135,7 @@ export function useTransfer(id: string) {
     enabled: id.length > 0,
     refetchInterval(query) {
       const transfer = query.state.data;
+      if (query.state.fetchFailureCount >= 3) return false;
       if (!transfer || TERMINAL_TRANSFER_STATES.has(transfer.status))
         return false;
       return 1_500;
