@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/samra-pay-ops/"
+title = "Samra Pay Operations Portal"
+description = "A separate, read-only internal operations portal for authorized Samra Pay staff to investigate synthetic customers, transfers, ledger-adjacent evidence, worker queues, reconciliation, audit activity, reports, and system health in explicit mock or API data modes."
+version = "1.0.0"
+id = "artifacts/samra-pay-ops"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/samra-pay-ops/" ]
+localPort = 21446
+
+[services.development]
+run = "pnpm --filter @workspace/samra-pay-ops run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/samra-pay-ops", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/samra-pay-ops/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21446"
+BASE_PATH = "/samra-pay-ops/"

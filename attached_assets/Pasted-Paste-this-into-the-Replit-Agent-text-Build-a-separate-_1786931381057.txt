@@ -1,0 +1,387 @@
+Paste this into the Replit Agent:
+
+```text
+Build a separate internal Samra Pay Operations Portal for authorized customer-service and operations staff.
+
+This is a frontend implementation only. Do not modify the customer-facing Samra Pay design, financial ledger logic, existing API behavior, database schema, deployment, secrets, provider integrations, or production configuration.
+
+OBJECTIVE
+
+Create a professional internal portal that allows Samra Pay staff to:
+
+1. Find synthetic customers and review their accounts.
+2. Track transfers and money movement from quote through completion, failure, refund, or reversal.
+3. Monitor the ledger, provider workflow, worker queues, retries, reconciliation, and system health.
+4. Investigate customer-support issues using a complete transaction timeline.
+5. Review immutable audit activity.
+6. Generate operational reports without changing financial truth.
+
+SOURCE-OF-TRUTH RULES
+
+- The Samra backend and ledger are authoritative.
+- The frontend must never calculate balances, fees, FX rates, recipient amounts, transfer status, or reconciliation results.
+- Never create a frontend balance counter.
+- Never permit direct balance edits.
+- Never modify ledger journals, postings, holds, or provider events from the browser.
+- Never silently fall back from API data to mock data.
+- All current data must remain synthetic.
+- Do not introduce real names, PII, credentials, bank information, or provider access.
+- Do not claim this portal provides production-grade authentication or security.
+
+GIT PREFLIGHT
+
+Before making changes:
+
+1. Run:
+   git status --short
+   git branch --show-current
+   git rev-parse HEAD
+   git remote -v
+   git fetch origin main
+
+2. Stop and report if:
+   - The working tree is not clean.
+   - GitHub authentication fails.
+   - `origin/main` cannot be verified.
+   - There are unreviewed changes.
+   - The requested work would overwrite another branch.
+
+3. Create a new branch from confirmed current GitHub main:
+   codex/ops-admin-portal
+
+4. Do not push directly to main.
+5. Do not deploy or publish the portal.
+
+APPLICATION BOUNDARY
+
+Create the portal as a separate workspace application, preferably:
+
+artifacts/samra-pay-ops
+
+Do not place internal operations pages inside the consumer-facing Samra Pay application.
+
+Reuse the existing Samra Pay design system, typography, colors, components, spacing, and accessibility conventions. The portal should feel like an internal Samra product, but prioritize operational clarity and information density over marketing presentation.
+
+DATA MODES
+
+Support two explicit modes:
+
+VITE_SAMRA_OPS_DATA_MODE=mock
+VITE_SAMRA_OPS_DATA_MODE=api
+
+Mock mode:
+
+- Use clearly labeled synthetic fixtures.
+- Display “Synthetic operations data” prominently.
+- Keep all fixtures isolated from API-mode code.
+- Include realistic completed, pending, failed, refunded, reversed, timed-out, and reconciliation-exception examples.
+
+API mode:
+
+- Use only existing generated Samra clients and authorized operations endpoints.
+- If an endpoint does not exist, do not invent a browser-side answer.
+- Show an explicit “Not connected” or “Endpoint unavailable” state.
+- Do not fall back to mock fixtures.
+- Include Retry where appropriate.
+- Handle loading, empty, timeout, server-error, and unavailable states.
+
+If the backend operations endpoints are not available yet, define a typed `OpsApi` interface and keep the API adapter incomplete but explicit. Document the required endpoints. Do not modify the backend during this task.
+
+NAVIGATION
+
+Create these primary sections:
+
+1. Overview
+2. Customers
+3. Transfers
+4. Money Flow
+5. Reconciliation
+6. Worker Operations
+7. Audit Log
+8. Reports
+9. System Health
+
+OVERVIEW
+
+Display backend-supplied operational metrics:
+
+- Transfers created
+- Transfers completed
+- Transfers pending
+- Transfers failed
+- Transfers refunded
+- Transfers reversed
+- Total source amount
+- Total fees
+- Funds currently held
+- Open reconciliation exceptions
+- Outbox backlog
+- Inbox-event backlog
+- Retry-exhausted items
+- Oldest pending transfer
+- Worker heartbeat
+- API and database health
+
+Include date-range and status filters.
+
+Clearly distinguish:
+
+- Customer funds
+- Ledger book balance
+- Available balance
+- Held amount
+- Transfer principal
+- Fee amount
+- Provider evidence
+
+Do not combine these into one generic “money moved” figure.
+
+CUSTOMERS
+
+Create a searchable customer list with synthetic data only.
+
+Support filtering by:
+
+- Customer reference
+- Account reference
+- Transfer reference
+- Account state
+- Transfer status
+- Reconciliation state
+
+Customer detail should show:
+
+- Synthetic customer reference
+- Account references
+- Backend-supplied book balance
+- Backend-supplied available balance
+- Active holds
+- Recent transfers
+- Recent ledger activity
+- Open support or reconciliation issues
+- Audit events associated with the customer
+
+Do not display unnecessary sensitive fields.
+
+TRANSFERS
+
+Create a searchable transfer table with:
+
+- Transfer reference
+- Customer reference
+- Beneficiary reference
+- Source amount
+- Fee
+- Total debit
+- Destination amount
+- FX rate
+- Current canonical status
+- Funding state
+- Payout state
+- Reconciliation state
+- Created time
+- Updated time
+- Provider correlation references
+
+Transfer detail must provide a chronological investigation timeline containing:
+
+- Quote created
+- Quote accepted
+- Hold placed
+- Transfer created
+- Ledger journal references
+- Outbox command created
+- Provider command claimed
+- Caliza evidence
+- Chapa evidence
+- Inbox events
+- Payout result
+- Hold capture or release
+- Fee recognition
+- Refund or reversal
+- Reconciliation result
+- Audit events
+
+The timeline must distinguish Samra canonical state from provider-reported evidence.
+
+MONEY FLOW
+
+Create a visual but precise money-flow view:
+
+Customer account
+→ Samra hold
+→ Samra transfer
+→ Caliza synthetic movement
+→ Chapa synthetic payout
+→ Beneficiary
+→ Reconciliation evidence
+
+For each stage show:
+
+- State
+- Amount and currency
+- Timestamp
+- Correlation ID
+- Attempt count
+- Last error
+- Next retry time
+- Evidence source
+
+Do not imply that provider evidence replaces Samra’s ledger.
+
+RECONCILIATION
+
+Create:
+
+- Reconciliation-run list
+- Run details
+- Matched-item count
+- Exception count
+- Missing internal record
+- Missing provider record
+- Amount mismatch
+- Currency mismatch
+- Status mismatch
+- Duplicate provider evidence
+- Open, in-review, resolved, and ignored states
+
+This version is read-only. Do not add “resolve,” “ignore,” or manual-adjustment functionality unless the backend already exposes an authorized, audited command.
+
+WORKER OPERATIONS
+
+Show:
+
+- Worker identity
+- Last heartbeat
+- Current lease
+- Pending work
+- Claimed work
+- Attempt count
+- Next-attempt timestamp
+- Last error
+- Retry-exhausted state
+- Dead-letter/operator-action-required state
+- Outbox and inbox processing latency
+
+Do not implement browser-side retries or direct queue mutation.
+
+AUDIT LOG
+
+Create an immutable audit-event viewer showing:
+
+- Timestamp
+- Event key
+- Actor type
+- Actor reference
+- Action
+- Entity type
+- Entity reference
+- Correlation ID
+- Reason code
+- Request or idempotency key
+- Structured metadata
+
+Support filters and a detail drawer.
+
+The interface must never suggest that audit events can be edited or deleted.
+
+REPORTS
+
+Create read-only operational reports for:
+
+- Transfer volume by status
+- Completion and failure rates
+- Average completion time
+- Retry frequency
+- Refund and reversal rates
+- Fees recorded
+- Open reconciliation exceptions
+- Provider-stage failures
+- Worker backlog and processing latency
+
+Reports must use backend-supplied aggregates or clearly identified synthetic mock aggregates. Do not recompute financial truth from incomplete browser data.
+
+CONTROLLED-ACTION BOUNDARY
+
+This first portal version is read-only.
+
+Do not add:
+
+- Balance adjustments
+- Manual ledger entries
+- Database-edit forms
+- Transfer-status overrides
+- Direct refund buttons
+- Direct reversal buttons
+- Direct retry buttons
+- Reconciliation resolution buttons
+- User deletion
+- Provider command injection
+
+You may display disabled action placeholders labeled “Requires audited operations command” so the future workflow is clear.
+
+Future operational actions must require:
+
+- An authenticated operator
+- An authorized role
+- A reason code
+- Written notes
+- An idempotency key
+- A legal domain transition
+- An immutable audit event
+- Before-and-after state
+- A confirmation step
+- Maker/checker approval for money-affecting actions
+
+Do not implement those actions in this frontend task.
+
+ACCESSIBILITY AND UX
+
+- Desktop-first but responsive.
+- Keyboard-accessible navigation and tables.
+- Clear focus indicators.
+- Proper table headers and labels.
+- Do not rely only on color for status.
+- Use UTC timestamps with a clear local-time option.
+- Preserve exact decimal-string money presentation.
+- Show currency beside every amount.
+- Provide useful empty and failure states.
+- No visual redesign of the consumer application.
+
+TESTS
+
+Add tests covering:
+
+1. Mock and API modes remain isolated.
+2. API failure never displays mock financial data.
+3. Balance, fee, FX, and status values come directly from API responses.
+4. Transfer filters and timeline ordering work.
+5. Canonical Samra state and provider evidence are visually distinguished.
+6. Reconciliation exceptions render correctly.
+7. Audit events cannot be edited or deleted.
+8. Money-affecting actions are absent or disabled.
+9. Loading, empty, timeout, unavailable, and error states render.
+10. Keyboard navigation and accessible labels exist.
+11. Typecheck, tests, and production build pass.
+
+DELIVERABLES
+
+When complete, report:
+
+- Starting branch and SHA
+- New branch and final SHA
+- Exact files changed
+- Routes created
+- Components created
+- Data-mode boundary
+- Existing APIs used
+- Missing backend endpoints
+- Tests added
+- Typecheck result
+- Test result
+- Build result
+- Known gaps
+- Confirmation that no deployment, backend, database, Secret, provider, production-authentication, or consumer-design changes were made
+
+Stop after implementation and validation. Do not merge, deploy, publish, or modify Replit production settings.
+```
