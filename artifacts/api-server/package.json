@@ -7,11 +7,11 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "test": "NODE_ENV=test node --import tsx --test src/*.test.ts",
+    "test": "NODE_ENV=test node --import tsx --test src/*.test.ts && node --test test/run-with-junit.test.mjs",
     "test:postgres": "NODE_ENV=test node --import tsx --test test/postgres.test.ts",
-    "test:postgres:junit": "NODE_ENV=test node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results/postgres-persistence.xml test/postgres.test.ts",
+    "test:postgres:junit": "node test/run-with-junit.mjs test-results/postgres-persistence.xml 'PostgreSQL persistence' test/postgres.test.ts",
     "test:postgres-http": "NODE_ENV=test node --import tsx --test test/postgres-http.test.ts",
-    "test:postgres-http:junit": "NODE_ENV=test node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results/postgres-http.xml test/postgres-http.test.ts",
+    "test:postgres-http:junit": "node test/run-with-junit.mjs test-results/postgres-http.xml 'HTTP to PostgreSQL acceptance' test/postgres-http.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
