@@ -232,10 +232,21 @@ jobs:
           path: test-results
           merge-multiple: true
 
+      - name: Validate Qase JUnit payloads
+        run: |
+          for report in \
+            test-results/postgres-persistence.xml \
+            test-results/postgres-http.xml
+          do
+            test -s "$report"
+            grep -q '<testsuite ' "$report"
+            grep -q '<testcase ' "$report"
+          done
+
       - name: Create Qase run for GitHub-triggered CI
         id: qase-run-create
         if: inputs.qase_run_id == ''
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-create@v1
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
@@ -258,8 +269,9 @@ jobs:
           fi
 
       - name: Upload PostgreSQL durability results to Qase
+        id: qase-upload-persistence
         if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/report@v1
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
@@ -268,8 +280,9 @@ jobs:
           path: test-results/postgres-persistence.xml
 
       - name: Upload HTTP-to-ledger results to Qase
+        id: qase-upload-http
         if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/report@v1
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
@@ -281,8 +294,10 @@ jobs:
         if: >-
           always() &&
           steps.qase-run.outputs.available == 'true' &&
+          steps.qase-upload-persistence.outcome == 'success' &&
+          steps.qase-upload-http.outcome == 'success' &&
           (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-complete@v1
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
