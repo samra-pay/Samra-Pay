@@ -7,6 +7,8 @@
     ".": "./src/generated/tokens.tsx",
     "./tokens": "./src/generated/tokens.tsx",
     "./styles.css": "./src/index.css",
+    "./components/native": "./src/components/native/index.tsx",
+    "./components/native/patterns": "./src/components/native/patterns/index.tsx",
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.tsx",
     "./hooks/*": "./src/hooks/*.tsx"

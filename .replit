@@ -12,6 +12,39 @@ env = { "CI" = "true" }
 runButton = "Project"
 
 [[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/api-server: API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/samra-pay: web"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/samra-pay-ops: web"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/samra-pay-commercial: web"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/samra-pay-mobile: expo"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/mockup-sandbox: Component Preview Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/samra-pay-ds: web"
+
+[[workflows.workflow]]
 name = "test"
 author = "agent"
 
@@ -206,4 +239,4 @@ SAMRA_RUN_WORKER = "true"
 VITE_SAMRA_DATA_MODE = "api"
 VITE_SAMRA_OPERATIONS_ENABLED = "true"
 VITE_SAMRA_OPS_DATA_MODE = "api"
-VITE_SAMRA_API_ORIGIN = "https://3400c1a5-15ed-481c-bb47-fda8d46ec7a9-00-1bt3es7szmlwn.worf.replit.dev"
+# Configure VITE_SAMRA_API_ORIGIN as a Replit Secret for this workspace.\n
