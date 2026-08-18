@@ -292,9 +292,11 @@ export async function verifyManifest(
       ...manifest.missingEvidenceFiles,
     ];
     if (
-      JSON.stringify(actualGates) !== JSON.stringify(expectedGates) ||
-      JSON.stringify(recordedEvidence) !==
-        JSON.stringify(contract.requiredEvidenceFiles) ||
+      !haveSameUniqueMembers(actualGates, expectedGates) ||
+      !haveSameUniqueMembers(
+        recordedEvidence,
+        contract.requiredEvidenceFiles,
+      ) ||
       manifest.qaseEnvironment !== contract.qaseEnvironment ||
       JSON.stringify(manifest.boundaries) !==
         JSON.stringify(contract.boundaries)
@@ -347,6 +349,21 @@ export async function readContract(
 function isInside(root: string, candidate: string): boolean {
   const path = relative(root, candidate);
   return path === "" || (!path.startsWith("..") && !path.startsWith("/"));
+}
+
+function haveSameUniqueMembers(
+  actual: readonly string[],
+  expected: readonly string[],
+): boolean {
+  if (
+    actual.length !== expected.length ||
+    new Set(actual).size !== actual.length ||
+    new Set(expected).size !== expected.length
+  ) {
+    return false;
+  }
+  const expectedMembers = new Set(expected);
+  return actual.every((value) => expectedMembers.has(value));
 }
 
 function xmlEscape(value: string): string {

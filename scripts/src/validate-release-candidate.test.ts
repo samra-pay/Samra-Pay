@@ -51,6 +51,10 @@ const workflow = [
   "        required: true",
   "cancel-in-progress: false",
   "timeout-minutes: 90",
+  "      postgres-persistence:",
+  "      postgres-http:",
+  "      postgres-resilience:",
+  "      postgres-performance:",
   "image: postgres:16",
   "persist-credentials: false",
   "fetch-depth: 0",
@@ -68,6 +72,38 @@ const workflow = [
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
   ...requiredGates.map(({ id }) => `id: ${id}`),
   ...requiredEvidenceFiles,
+  "      - name: Apply migrations and prove repeatable seed",
+  "        env:",
+  "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/p",
+  "        run: |",
+  "          pnpm --filter @workspace/db run test:migrate",
+  "          pnpm --filter @workspace/db run test:seed",
+  "          pnpm --filter @workspace/db run test:seed",
+  "      - name: Run PostgreSQL persistence and ledger release suite",
+  "        env:",
+  "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/p",
+  "        run: pnpm --filter @workspace/api-server run test:postgres:junit",
+  "      - name: Run HTTP, daily journey, and process-restart release suite",
+  "        env:",
+  "          TEST_DATABASE_URL: postgresql://h:h@127.0.0.1:5433/h",
+  "        run: |",
+  "          pnpm --filter @workspace/db run test:migrate",
+  "          pnpm --filter @workspace/db run test:seed",
+  "          pnpm --filter @workspace/api-server run build",
+  "      - name: Run weekly backend resilience release suite",
+  "        env:",
+  "          TEST_DATABASE_URL: postgresql://r:r@127.0.0.1:5434/r",
+  "        run: |",
+  "          pnpm --filter @workspace/db run test:migrate",
+  "          pnpm --filter @workspace/db run test:seed",
+  "          pnpm --filter @workspace/api-server run test:weekly-concurrency:junit",
+  "      - name: Run million-posting materialized balance gate",
+  "        env:",
+  "          TEST_DATABASE_URL: postgresql://f:f@127.0.0.1:5435/f",
+  "        run: |",
+  "          pnpm --filter @workspace/db run test:migrate",
+  "          pnpm --filter @workspace/db run test:seed",
+  "          pnpm --filter @workspace/api-server run test:ledger-performance:junit",
   "name: Complete Qase release-candidate run",
   "if: steps.qase_create.outputs.id != '' && !cancelled()",
   "name: Record Qase release identity",
@@ -118,5 +154,31 @@ describe("validateReleaseCandidateContract", () => {
         { automatedReports: reports },
       ),
     ).toThrow(/close every created Qase run/);
+  });
+
+  it("rejects a database shared across release suites", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        workflow.replace(
+          "postgresql://h:h@127.0.0.1:5433/h",
+          "postgresql://p:p@127.0.0.1:5432/p",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/must use isolated database URLs/);
+  });
+
+  it("rejects an isolated suite that runs before its database is prepared", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        workflow.replace(
+          "          pnpm --filter @workspace/db run test:seed\n          pnpm --filter @workspace/api-server run build",
+          "          pnpm --filter @workspace/api-server run build",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/migrated and seeded before its suite/);
   });
 });

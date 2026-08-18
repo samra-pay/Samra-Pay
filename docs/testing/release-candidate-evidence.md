@@ -52,7 +52,9 @@ therefore remains inspectable, but it cannot be treated as passed.
 
 ## Boundaries
 
-This workflow uses synthetic data and its own disposable PostgreSQL 16 service.
-It does not deploy, access Replit, change cloud resources, migrate a shared
-database, use real providers, read customer data, authorize production money,
-or certify legal and regulatory readiness.
+This workflow uses synthetic data and four separately migrated and seeded
+disposable PostgreSQL 16 databases: persistence, HTTP/restart, resilience, and
+performance. A suite cannot inherit ledger or balance mutations from another
+suite. The workflow does not deploy, access Replit, change cloud resources,
+migrate a shared database, use real providers, read customer data, authorize
+production money, or certify legal and regulatory readiness.

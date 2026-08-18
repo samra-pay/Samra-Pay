@@ -91,7 +91,9 @@ required gates, files, retention, Qase attribution, and controlled boundaries.
 The manual workflow checks out the exact 40-character candidate SHA with no
 persisted Git credentials, verifies it is contained in GitHub `main`, and runs
 quality, commercial, migration, PostgreSQL, HTTP/restart, resilience, and
-million-posting performance gates against one disposable PostgreSQL 16 service.
+million-posting performance gates. Persistence, HTTP/restart, resilience, and
+performance each use a separately migrated and seeded disposable PostgreSQL 16
+database so one suite cannot change another suite's financial baseline.
 
 Every required JUnit and performance result is SHA-256 hashed into
 `release-evidence-manifest.json`. GitHub retains the manifest, its independent
