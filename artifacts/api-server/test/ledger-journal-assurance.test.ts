@@ -229,6 +229,14 @@ test("CLAUDE-LED-009 Multi-leg journal posts all legs with contiguous sequence",
   await assertNoEventResidue(eventId);
 });
 
+test("CLAUDE-LED-007 Zero-amount posting is rejected by database constraint", async () => {
+  await assertDatabaseAmountRejected("zero-amount", 0n);
+});
+
+test("CLAUDE-LED-008 Negative-amount posting is rejected by database constraint", async () => {
+  await assertDatabaseAmountRejected("negative-amount", -100n);
+});
+
 function command(
   eventId: string,
   postings: DurableJournalCommand["postings"],
@@ -270,6 +278,48 @@ async function assertNoEventResidue(eventId: string): Promise<void> {
   );
   assert.equal(result.rows[0]!.journal_count, "0");
   assert.equal(result.rows[0]!.posting_count, "0");
+}
+
+async function assertDatabaseAmountRejected(
+  label: string,
+  amountMinor: bigint,
+): Promise<void> {
+  const eventId = assuranceEventId(label);
+
+  await assert.rejects(
+    context.run(async () => {
+      const journal = await context.query().query<{ id: string }>(
+        `INSERT INTO samra_core.ledger_journals
+         (business_event_type, business_event_id, currency, state, description, metadata)
+         VALUES ('ledger_assurance',$1,'USD','draft',
+                 'Database amount constraint assurance','{}'::jsonb)
+         RETURNING id`,
+        [eventId],
+      );
+      await context.query().query(
+        `INSERT INTO samra_core.ledger_postings
+         (journal_id, account_id, sequence, side, amount_minor)
+         SELECT $1::uuid, id, 1, 'debit'::samra_core.ledger_entry_side, $2::bigint
+         FROM samra_core.ledger_accounts WHERE code = 'control_rain_usd'
+         UNION ALL
+         SELECT $1::uuid, id, 2, 'credit'::samra_core.ledger_entry_side, $2::bigint
+         FROM samra_core.ledger_accounts WHERE code = 'demo_usd_account_001'`,
+        [journal.rows[0]!.id, amountMinor.toString()],
+      );
+    }),
+    postgresError("23514", /ledger_postings_amount_positive_chk/),
+  );
+
+  await assertNoEventResidue(eventId);
+}
+
+function postgresError(code: string, message: RegExp) {
+  return (error: unknown): boolean => {
+    assert.ok(error instanceof Error);
+    assert.equal((error as Error & { code?: string }).code, code);
+    assert.match(error.message, message);
+    return true;
+  };
 }
 
 class RollbackAfterAssurance extends Error {}
