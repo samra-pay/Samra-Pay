@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const workflowPath = ".github/workflows/container-portability.yml";
 const smokePath = "deploy/gcp/smoke-containers.sh";
 const workflow = await readFile(workflowPath, "utf8");
 const smoke = await readFile(smokePath, "utf8");
+const dockerignore = await readFile(".dockerignore", "utf8");
 
 const images = [
   ["api", "samra-api"],
@@ -14,6 +15,19 @@ const images = [
   ["design-system", "samra-design-system-preview"],
   ["migrate", "samra-migrations"],
 ];
+
+async function collectSourceFiles(directory) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) {
+      files.push(...(await collectSourceFiles(entryPath)));
+    } else if (/\.[cm]?[jt]sx?$/.test(entry.name)) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
 
 test("builds every Google Cloud target from the exact GitHub SHA", async () => {
   assert.match(workflow, /SAMRA_CONTAINER_IMAGE_TAG: \$\{\{ github\.sha \}\}/);
@@ -43,6 +57,32 @@ test("builds every Google Cloud target from the exact GitHub SHA", async () => {
     );
   }
   assert.doesNotMatch(workflow, /docker push|gcloud\s|replit|worf\.replit/i);
+});
+
+test("includes every customer asset import in the Docker build context", async () => {
+  const allowlistedAssets = new Set(
+    dockerignore
+      .split("\n")
+      .filter((line) => line.startsWith("!attached_assets/"))
+      .map((line) => line.slice(1)),
+  );
+  const sourceFiles = await collectSourceFiles("artifacts/samra-pay/src");
+  const importedAssets = new Set();
+
+  for (const sourceFile of sourceFiles) {
+    const source = await readFile(sourceFile, "utf8");
+    for (const match of source.matchAll(/from\s+["']@assets\/([^"']+)["']/g)) {
+      importedAssets.add(`attached_assets/${match[1]}`);
+    }
+  }
+
+  assert.ok(importedAssets.size > 0, "Expected customer asset imports");
+  for (const asset of importedAssets) {
+    assert.ok(
+      allowlistedAssets.has(asset),
+      `${asset} must be included in the Docker build context`,
+    );
+  }
 });
 
 test("runs migrations before API and browser runtime probes", () => {
@@ -79,6 +119,9 @@ test("keeps the portability job isolated, recurring, and evidence-producing", ()
     "if: always()",
     "uses: actions/upload-artifact@v4",
     "retention-days: 30",
+    '"attached_assets/**"',
+    "Initialize container runtime evidence",
+    "node deploy/gcp/prepare-container-evidence.mjs",
   ]) {
     assert.ok(
       workflow.includes(required),
@@ -87,4 +130,18 @@ test("keeps the portability job isolated, recurring, and evidence-producing", ()
   }
   assert.ok(smoke.includes("container-portability.json"));
   assert.ok(smoke.includes("container-portability.xml"));
+});
+
+test("initializes auditable failure evidence before image builds", async () => {
+  const initializer = await readFile(
+    "deploy/gcp/prepare-container-evidence.mjs",
+    "utf8",
+  );
+  assert.match(initializer, /status: "incomplete"/);
+  assert.match(initializer, /container-portability\.json/);
+  assert.match(initializer, /container-portability\.xml/);
+  assert.ok(
+    workflow.indexOf("Initialize container runtime evidence") <
+      workflow.indexOf("Build API image"),
+  );
 });

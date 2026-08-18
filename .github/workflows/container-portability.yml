@@ -8,6 +8,7 @@ on:
     paths:
       - ".dockerignore"
       - ".github/workflows/container-portability.yml"
+      - "attached_assets/**"
       - "artifacts/api-server/**"
       - "artifacts/samra-pay/**"
       - "artifacts/samra-pay-ds/**"
@@ -23,6 +24,7 @@ on:
     paths:
       - ".dockerignore"
       - ".github/workflows/container-portability.yml"
+      - "attached_assets/**"
       - "artifacts/api-server/**"
       - "artifacts/samra-pay/**"
       - "artifacts/samra-pay-ds/**"
@@ -79,6 +81,9 @@ jobs:
 
       - name: Validate container portability contract
         run: node --test deploy/gcp/*.test.mjs
+
+      - name: Initialize container runtime evidence
+        run: node deploy/gcp/prepare-container-evidence.mjs
 
       - name: Build API image
         run: >-
