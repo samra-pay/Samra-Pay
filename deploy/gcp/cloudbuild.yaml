@@ -1,9 +1,25 @@
 substitutions:
-  _IMAGE_TAG: manual
-  _REGION: us-east1
-  _REPOSITORY: samra-staging
+  _BUILD_SERVICE_ACCOUNT: unset
+  _ENVIRONMENT: unset
+  _IMAGE_TAG: unset
+  _REGION: unset
+  _REPOSITORY: unset
 
 steps:
+  - id: validate-build-inputs
+    name: node:24-bookworm-slim
+    entrypoint: node
+    args:
+      - deploy/gcp/validate-build-inputs.mjs
+    env:
+      - SAMRA_BUILD_ENVIRONMENT=${_ENVIRONMENT}
+      - SAMRA_BUILD_EXPECTED_SERVICE_ACCOUNT=${_BUILD_SERVICE_ACCOUNT}
+      - SAMRA_BUILD_IMAGE_TAG=${_IMAGE_TAG}
+      - SAMRA_BUILD_PROJECT_ID=$PROJECT_ID
+      - SAMRA_BUILD_REGION=${_REGION}
+      - SAMRA_BUILD_REPOSITORY=${_REPOSITORY}
+      - SAMRA_BUILD_SOURCE_SHA=$COMMIT_SHA
+
   - id: platform-contract-tests
     name: node:24-bookworm-slim
     entrypoint: bash
@@ -65,5 +81,8 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  requestedVerifyOption: VERIFIED
+
+serviceAccount: projects/$PROJECT_ID/serviceAccounts/${_BUILD_SERVICE_ACCOUNT}
 
 timeout: 2400s
