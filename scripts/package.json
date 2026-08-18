@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "audit-expo-types": "tsx ./src/audit-expo-types.ts",
     "validate-qase-contract": "tsx ./src/validate-qase-contract.ts",
+    "validate-testing-cadence": "tsx ./src/validate-testing-cadence.ts",
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
