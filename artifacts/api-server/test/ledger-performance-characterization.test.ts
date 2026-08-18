@@ -199,45 +199,44 @@ async function insertPostingRange(input: {
   await input.client.query(
     `ALTER TABLE samra_core.ledger_postings DISABLE TRIGGER USER`,
   );
-  try {
-    await input.client.query(
-      `INSERT INTO samra_core.ledger_journals
-       (business_event_type, business_event_id, currency, state,
-        description, posted_at, metadata)
-       SELECT $1, series::text, 'USD', 'posted',
-              'Synthetic balance performance fixture', now(),
-              '{"synthetic":"true"}'::jsonb
-       FROM generate_series($2::integer, $3::integer) AS series`,
-      [input.eventType, input.first, input.last],
-    );
-    await input.client.query(
-      `INSERT INTO samra_core.ledger_postings
-       (journal_id, account_id, sequence, side, amount_minor)
-       SELECT journal.id, $2::uuid, 1, 'credit', 1
-       FROM samra_core.ledger_journals journal
-       WHERE journal.business_event_type = $1
-         AND journal.business_event_id::integer BETWEEN $4 AND $5
-       UNION ALL
-       SELECT journal.id, $3::uuid, 2, 'debit', 1
-       FROM samra_core.ledger_journals journal
-       WHERE journal.business_event_type = $1
-         AND journal.business_event_id::integer BETWEEN $4 AND $5`,
-      [
-        input.eventType,
-        input.targetAccountId,
-        input.controlAccountId,
-        input.first,
-        input.last,
-      ],
-    );
-  } finally {
-    await input.client.query(
-      `ALTER TABLE samra_core.ledger_postings ENABLE TRIGGER USER`,
-    );
-    await input.client.query(
-      `ALTER TABLE samra_core.ledger_journals ENABLE TRIGGER USER`,
-    );
-  }
+  await input.client.query(
+    `INSERT INTO samra_core.ledger_journals
+     (business_event_type, business_event_id, currency, state,
+      description, posted_at, metadata)
+     SELECT $1, series::text, 'USD', 'posted',
+            'Synthetic balance performance fixture', now(),
+            '{"synthetic":"true"}'::jsonb
+     FROM generate_series($2::integer, $3::integer) AS series`,
+    [input.eventType, input.first, input.last],
+  );
+  await input.client.query(
+    `INSERT INTO samra_core.ledger_postings
+     (journal_id, account_id, sequence, side, amount_minor)
+     SELECT journal.id, $2::uuid, 1,
+            'credit'::samra_core.ledger_entry_side, 1
+     FROM samra_core.ledger_journals journal
+     WHERE journal.business_event_type = $1
+       AND journal.business_event_id::integer BETWEEN $4 AND $5
+     UNION ALL
+     SELECT journal.id, $3::uuid, 2,
+            'debit'::samra_core.ledger_entry_side, 1
+     FROM samra_core.ledger_journals journal
+     WHERE journal.business_event_type = $1
+       AND journal.business_event_id::integer BETWEEN $4 AND $5`,
+    [
+      input.eventType,
+      input.targetAccountId,
+      input.controlAccountId,
+      input.first,
+      input.last,
+    ],
+  );
+  await input.client.query(
+    `ALTER TABLE samra_core.ledger_postings ENABLE TRIGGER USER`,
+  );
+  await input.client.query(
+    `ALTER TABLE samra_core.ledger_journals ENABLE TRIGGER USER`,
+  );
   await input.client.query(`ANALYZE samra_core.ledger_journals`);
   await input.client.query(`ANALYZE samra_core.ledger_postings`);
 }
