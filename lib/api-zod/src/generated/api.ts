@@ -15,6 +15,13 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Runtime and persistence readiness
+ */
+export const ReadinessCheckResponse = zod.object({
+  status: zod.enum(["ready", "not_ready"]),
+});
+
+/**
  * @summary Get the synthetic demo customer
  */
 export const GetCurrentCustomerResponse = zod.object({

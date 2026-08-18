@@ -62,6 +62,18 @@ export interface HealthStatus {
   status: HealthStatusStatus;
 }
 
+export type ReadinessStatusStatus =
+  (typeof ReadinessStatusStatus)[keyof typeof ReadinessStatusStatus];
+
+export const ReadinessStatusStatus = {
+  ready: "ready",
+  not_ready: "not_ready",
+} as const;
+
+export interface ReadinessStatus {
+  status: ReadinessStatusStatus;
+}
+
 export type MoneyCurrency = (typeof MoneyCurrency)[keyof typeof MoneyCurrency];
 
 export const MoneyCurrency = {

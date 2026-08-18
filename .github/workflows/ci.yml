@@ -238,18 +238,26 @@ jobs:
       - name: Seed synthetic test accounts
         run: pnpm --filter @workspace/db run test:seed
 
+      - name: Build compiled API process
+        run: pnpm --filter @workspace/api-server run build
+
       - name: Prepare JUnit results directory
         run: mkdir -p artifacts/api-server/test-results
 
       - name: Run HTTP-to-PostgreSQL acceptance test
         run: pnpm --filter @workspace/api-server run test:postgres-http:junit
 
+      - name: Run compiled process startup and restart test
+        run: pnpm --filter @workspace/api-server run test:process-restart:junit
+
       - name: Preserve HTTP-to-PostgreSQL results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: postgres-http-junit
-          path: artifacts/api-server/test-results/postgres-http.xml
+          path: |
+            artifacts/api-server/test-results/postgres-http.xml
+            artifacts/api-server/test-results/postgres-process-restart.xml
           if-no-files-found: error
           retention-days: 14
 
@@ -299,7 +307,8 @@ jobs:
             test-results/ledger-materialized-balances.xml \
             test-results/ledger-sweeps.xml \
             test-results/ledger-reconciliation-controls.xml \
-            test-results/postgres-http.xml
+            test-results/postgres-http.xml \
+            test-results/postgres-process-restart.xml
           do
             test -s "$report"
             grep -q '<testsuite ' "$report"
@@ -352,6 +361,17 @@ jobs:
           id: ${{ steps.qase-run.outputs.id }}
           format: junit
           path: test-results/postgres-http.xml
+
+      - name: Upload compiled process restart results to Qase
+        id: qase-upload-process-restart
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/postgres-process-restart.xml
 
       - name: Upload ledger journal assurance results to Qase
         id: qase-upload-ledger-journals

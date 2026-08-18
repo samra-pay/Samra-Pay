@@ -1,6 +1,7 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import { assertPostgresRuntimeReady } from "./postgres-readiness";
 
 const { Pool } = pg;
 
@@ -73,6 +74,8 @@ export async function closeDatabase(): Promise<void> {
     await connection.pool.end();
   }
 }
+
+export { assertPostgresRuntimeReady };
 
 export * from "./schema";
 export * from "./postgres-persistence";
