@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "audit-expo-types": "tsx ./src/audit-expo-types.ts",
+    "validate-qase-contract": "tsx ./src/validate-qase-contract.ts",
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

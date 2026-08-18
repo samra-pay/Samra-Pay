@@ -9,6 +9,7 @@ used by the reporting job.
 | GitHub gate                   | Source                                                                  | Qase result source                        |
 | ----------------------------- | ----------------------------------------------------------------------- | ----------------------------------------- |
 | PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                            | `postgres-persistence.xml`                |
+| Compiled process restart      | `artifacts/api-server/test/process-startup-recovery.test.mjs`           | `postgres-process-restart.xml`            |
 | Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts`            | `ledger-journal-assurance.xml`            |
 | Ledger account resolution     | `artifacts/api-server/test/ledger-account-resolution.test.ts`           | `ledger-account-resolution.xml`           |
 | Ledger currency and precision | `artifacts/api-server/test/ledger-currency-precision.test.ts`           | `ledger-currency-precision.xml`           |
@@ -27,6 +28,37 @@ used by the reporting job.
 Qase identifies the automated cases by their stable Node test names in the JUnit
 files. Renaming a test changes its automation identity and must be treated as a
 test-case mapping change.
+
+## Governance contract
+
+[`qase-governance.json`](qase-governance.json) is the version-controlled map of
+the Qase project, execution environments, release plans, manual catalogs, and
+automated JUnit reports. The Linux quality gate validates that every required
+report is generated, uploaded, documented, and included in the run-completion
+condition.
+
+Automated acceptance uses the Qase environment slug `github-ci-postgres`. It
+means an isolated PostgreSQL 16 service in GitHub Actions with synthetic data;
+it is not a deployment environment. `replit-development` remains limited to
+manual synthetic browser validation.
+
+The current release plans are:
+
+| Plan                             | Cases | Use                                                                        |
+| -------------------------------- | ----: | -------------------------------------------------------------------------- |
+| P0 — Critical Financial Controls |    22 | Any ledger, money, idempotency, refund, reversal, or reconciliation change |
+| P1 — Operations Portal Smoke     |    18 | Workforce, portal, case-management, audit, or reconciliation UI changes    |
+| P2 — Full Backend Regression     |    89 | Release candidate or broad platform cutover                                |
+
+The portable-client catalog at
+[`qase-portable-client-smoke.csv`](qase-portable-client-smoke.csv) contains 15
+manual cases for customer web, iOS, Android, and cross-surface recovery. They are
+imported as `SAMP-101` through `SAMP-115` under suite `12 Portable Client Smoke`
+and belong to plan `P1 — Customer Web & Mobile Smoke`. Keep the CSV under
+version control so the intended case definitions and stable Qase IDs remain
+reviewable and recoverable. Future bulk updates must use **Replace matching test
+cases** and must first confirm those IDs and suite IDs still match the governance
+manifest.
 
 The Claude ledger reports also preserve the exact Qase suite hierarchy in the
 JUnit `testsuites` and `testsuite` names. Qase therefore links each result by its
@@ -117,7 +149,7 @@ for the same reason.
   outage is non-blocking for ordinary GitHub-triggered CI, but Qase-triggered runs
   fail if their reporting contract fails.
 - JUnit payloads must contain a non-empty standard test suite before a Qase run is
-  updated. A run is completed only after both result uploads succeed.
+  updated. A run is completed only after all 15 required result uploads succeed.
 - Pull requests from forks do not receive the repository token and skip the Qase
   reporting job.
 - JUnit artifacts are retained in GitHub for 14 days as independent evidence.
@@ -134,10 +166,12 @@ The measured baseline and resulting materialization gate are recorded in
 
 ## Manual scope
 
-The existing manual Qase plan remains the acceptance record for operator-facing
-workflow review, role-specific behavior, audit-log inspection, and visual
-verification of double-entry postings. CI results supplement those cases; they do
-not mark manual cases complete.
+Use P0 for financial-control changes, P1 Operations Portal Smoke for workforce
+and operations changes, and P1 Customer Web & Mobile Smoke for portable-client
+changes. Use P2 Full Backend Regression before a release candidate or broad
+platform cutover. Manual runs remain the acceptance record for visual,
+role-specific, and cross-surface behavior. CI results supplement those cases;
+they do not mark manual cases complete.
 
 ## Credential rotation
 
