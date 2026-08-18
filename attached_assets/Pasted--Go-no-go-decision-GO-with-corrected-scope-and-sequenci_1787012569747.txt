@@ -1,0 +1,721 @@
+## Go/no-go decision
+
+**GO—with corrected scope and sequencing.**
+
+This is the right work to complete before broader mobile API integration. A governed design system will reduce visual and accessibility drift when mobile moves from mock data to backend truth.
+
+**NO-GO** on Replit’s original recommendation as written because:
+
+- `tokens.json` and its generator already exist.
+- The work should not run as loosely coordinated parallel changes.
+- The mobile app, backend, deployment, and database must remain untouched.
+- Replit must not claim S-tier without automated and documented acceptance gates.
+- The resulting ZIP must exclude `dist`, `.tsbuildinfo`, `.replit-artifact`, credentials, and dependency caches.
+
+Copy and paste this into the Replit Agent:
+
+```text
+Upgrade the existing Samra Pay design-system package to an S-tier reference system for future web, iOS, and Android builds.
+
+WORKING DIRECTORY
+
+Work only inside the existing:
+
+samra-pay-ds/
+
+This package corresponds to the Samra Pay design-system source. It is a reference and reusable component package, not the customer application, backend, operations portal, database, or deployment.
+
+CORRECTION TO THE PREVIOUS AUDIT
+
+Before beginning, acknowledge these verified facts:
+
+1. tokens.json already exists.
+2. scripts/build-tokens.mjs already exists.
+3. Generated token outputs already exist.
+4. The package already has:
+   - A strong Midnight Gold token foundation
+   - Web components
+   - Component previews
+   - Samra-specific web patterns
+   - Native colors, spacing, radius, and font mappings
+   - Expo consumption and migration documentation
+5. The React Native component layer is missing.
+6. Semantic typography, touch-target, icon-size, and semantic layout tokens are incomplete.
+7. The component inventory references component Markdown files that do not exist.
+8. AGENTS.md and the component inventory disagree about component implementation status.
+9. Automated visual-regression and accessibility testing is missing.
+
+Do not “restore” tokens.json or replace the token pipeline. Strengthen the existing source and generator.
+
+OBJECTIVE
+
+Turn samra-pay-ds into a controlled, portable, documented, tested design-system reference that:
+
+- Preserves the existing Samra Pay visual identity
+- Supports web and React Native
+- Establishes semantic design tokens
+- Supplies reusable native components
+- Supplies fintech-specific presentation patterns
+- Documents financial UI truth
+- Documents accessibility and localization standards
+- Prevents generated-token drift
+- Provides component and state references
+- Can be integrated into Git without Replit dependencies
+- Does not change any consuming application
+
+HARD BOUNDARIES
+
+Do not modify anything outside samra-pay-ds/.
+
+Do not modify:
+
+- artifacts/samra-pay-mobile
+- artifacts/samra-pay
+- artifacts/samra-pay-ops
+- Backend code
+- API contracts
+- Database code or data
+- Git configuration
+- Replit workflows
+- Replit deployment settings
+- Replit Secrets
+- Environment variables
+- Provider integrations
+- Authentication
+- Financial logic
+- Production configuration
+
+Do not commit, push, merge, deploy, or publish.
+
+Do not change the established Samra Pay visual identity unless a change is documented as a proposal requiring approval.
+
+Do not invent:
+
+- New partnerships
+- Provider capabilities
+- Financial products
+- Exchange rates
+- Fees
+- Regulatory claims
+- Third-party branding rights
+- A new logo
+- A replacement color palette
+- A replacement typography system
+
+Use synthetic content only.
+
+SOURCE OF TRUTH
+
+Preserve these foundations:
+
+- Canonical Midnight Gold dark mode
+- Warm-ivory derived light mode
+- Outfit for interface typography
+- EB Garamond for editorial and display typography
+- Noto Serif Ethiopic for Amharic
+- Midnight Gold primary
+- Coffee, berbere, eucalyptus, and injera cultural colors
+- Existing logo and icon assets
+- Existing motion and elevation character
+- Existing web components and Samra-specific patterns
+
+tokens.json must remain the only hand-edited token source.
+
+Generated CSS and TypeScript token outputs must remain generated.
+
+PHASE 1 — PREFLIGHT AND BASELINE
+
+Before changing anything:
+
+1. Inventory every file in samra-pay-ds/.
+2. Record the current build, typecheck, and token-generation results.
+3. Record all current component families.
+4. Record all existing preview pages and component demos.
+5. Record every missing or broken documentation reference.
+6. Record every contradiction between documentation and implementation.
+7. Record all Replit-specific package dependencies, files, and configuration.
+8. Record existing hard-coded visual values.
+9. Record existing third-party logos, marks, names, or visual assets.
+10. Save the findings in:
+
+   docs/current-state-audit.md
+
+Do not make source changes until this audit is complete.
+
+PHASE 2 — TOKEN SYSTEM
+
+Extend the existing tokens.json and generator without replacing them.
+
+A. Semantic typography
+
+Add semantic typography roles with font family, size, weight, and line height.
+
+At minimum:
+
+- display.xl
+- display.lg
+- display.md
+- heading.xl
+- heading.lg
+- heading.md
+- heading.sm
+- body.lg
+- body.md
+- body.sm
+- label.lg
+- label.md
+- label.sm
+- caption
+- numeric.balance
+- numeric.amount
+- numeric.rate
+- ethiopic.display
+- ethiopic.heading
+- ethiopic.body
+- ethiopic.label
+
+Document intended usage and prohibited usage.
+
+B. Interaction tokens
+
+Add semantic tokens for:
+
+- Minimum iOS touch target: 44 points
+- Minimum Android touch target: 48 dp
+- Control heights
+- Icon sizes
+- Focus-ring width
+- Pressed opacity
+- Disabled opacity
+- Loading treatment
+- Selection treatment
+
+Do not treat safe-area insets as fixed values. Document that they must come from platform APIs.
+
+C. Semantic layout tokens
+
+Add:
+
+- Page gutters
+- Section gaps
+- Card padding
+- Form spacing
+- Inline spacing
+- Compact, standard, and spacious density
+- Mobile content width guidance
+- Web content maximum widths
+- Responsive breakpoints
+- Modal and sheet widths
+- Header and bottom-navigation dimensions
+
+Preserve the existing 4px base spacing system.
+
+D. Elevation and motion
+
+Expose existing web elevation and motion concepts through portable semantic tokens where appropriate.
+
+Include:
+
+- Elevation levels
+- Native shadow mappings
+- Motion durations
+- Standard easing
+- Entrance easing
+- Exit easing
+- Emphasized easing
+- Reduced-motion behavior
+
+Do not create decorative motion that interferes with financial comprehension.
+
+E. Financial-status semantics
+
+Define semantic visual mappings for:
+
+- neutral
+- information
+- warning
+- submitted
+- processing
+- completed
+- failed
+- cancelled
+- refundPending
+- refunded
+- reversed
+- stale
+- offline
+- unavailable
+
+Each status must specify:
+
+- Foreground
+- Background
+- Border
+- Icon treatment
+- Text label requirement
+- Accessibility rule
+
+Do not communicate status by color alone.
+
+Reuse established palette values whenever possible. Any new color must be listed in docs/open-decisions.md with contrast evidence and rationale.
+
+PHASE 3 — TOKEN GOVERNANCE
+
+Strengthen scripts/build-tokens.mjs so it:
+
+- Validates required token paths
+- Validates token references
+- Rejects unresolved aliases
+- Generates deterministic output
+- Generates web values
+- Generates portable TypeScript values
+- Preserves React Native-compatible values
+- Fails clearly on invalid input
+
+Add scripts that:
+
+- Regenerate tokens
+- Check generated outputs for drift
+- Validate required semantic tokens
+- Validate documented foreground/background contrast pairs
+- Fail if generated files were hand-edited
+
+Add appropriate package scripts, including equivalents of:
+
+- tokens
+- tokens:check
+- test
+- test:a11y
+- typecheck
+- build
+- validate
+
+Do not add unnecessary dependencies. Document every new dependency and why it is required.
+
+PHASE 4 — REACT NATIVE FOUNDATION
+
+Create the missing React Native component layer under:
+
+src/components/native/
+
+Native components must use React Native primitives. Do not import DOM elements, Radix UI, Tailwind CSS, or web-only components.
+
+Use:
+
+- tokens
+- native-theme
+- useColors
+- useDesignSystemFonts
+
+Build and document at minimum:
+
+1. Text / Typography
+2. Button
+3. IconButton
+4. Card
+5. Input
+6. CurrencyInput presentation wrapper
+7. Label
+8. Field
+9. Badge
+10. StatusBadge
+11. Spinner
+12. Skeleton
+13. Divider
+14. Alert
+15. EmptyState
+16. ErrorState
+17. OfflineState
+18. RetryPanel
+19. Modal presentation shell
+20. BottomSheet presentation shell
+21. Toast presentation model
+22. ListRow
+
+For every native component provide:
+
+- Typed public API
+- Variants
+- Sizes
+- Default state
+- Pressed state
+- Focus state
+- Selected state where applicable
+- Disabled state
+- Loading state
+- Error state where applicable
+- Accessibility role
+- Accessibility label requirements
+- Touch-target enforcement
+- Dynamic font scaling behavior
+- Light and dark behavior
+- iOS and Android differences
+- Usage example
+- Prohibited usage
+
+Match the equivalent web component’s public concepts where React Native supports them. Document necessary platform differences.
+
+Keep product data, routing, business logic, API calls, and application state out of the design-system package.
+
+PHASE 5 — FINTECH NATIVE PATTERNS
+
+Create reusable presentation-only native patterns under:
+
+src/components/native/patterns/
+
+At minimum:
+
+1. MoneyAmount
+2. BalanceDisplay
+3. AccountSummary
+4. TransactionRow
+5. QuotePanel
+6. ExchangeRateDisclosure
+7. FeeBreakdown
+8. RecipientCard
+9. DestinationSummary
+10. TransferStatus
+11. TransferTimeline
+12. TransferReceipt
+13. ConfirmationPanel
+14. StaleDataNotice
+15. ServiceUnavailablePanel
+
+These are presentation components only.
+
+They must not:
+
+- Calculate authoritative balances
+- Calculate exchange rates
+- Calculate fees
+- Change transfer status
+- Call APIs
+- Store financial state
+- Invent completion
+- Perform retries themselves
+
+They must render values and states supplied by the consuming application.
+
+Money values must accept exact string or minor-unit representations. Do not use floating-point arithmetic inside design components.
+
+PHASE 6 — FINANCIAL UI TRUTH
+
+Create:
+
+docs/financial-ui-truth.md
+
+Document these mandatory rules:
+
+- The server owns authoritative balances.
+- The server owns quotes, rates, fees, and expiration.
+- Submission is not completion.
+- Processing, completed, failed, cancelled, refunded, and reversed are different states.
+- Retry must not imply a new transaction.
+- API failure must not silently fall back to mock financial data.
+- Stale data must be labeled.
+- Corrections appear as refunds, reversals, or adjustments.
+- Status must include text, not color alone.
+- Fees and rates must be disclosed before confirmation.
+- Every transfer requires a visible support reference or transfer ID.
+- Financial components display supplied values; they do not create financial truth.
+
+Include recommended and prohibited UI copy.
+
+PHASE 7 — DOCUMENTATION REPAIR
+
+Repair all broken and contradictory documentation.
+
+Requirements:
+
+- No link may reference a nonexistent file.
+- Component implementation status must match the source.
+- AGENTS.md and component-inventory.md must agree.
+- Replace missing component Markdown references with real source, preview, or documentation references.
+- Do not claim native components exist until they are implemented and validated.
+
+Create or update:
+
+- docs/AGENTS.md
+- docs/design-foundations.md
+- docs/semantic-tokens.md
+- docs/component-governance.md
+- docs/accessibility.md
+- docs/localization.md
+- docs/financial-ui-truth.md
+- docs/ios-android.md
+- docs/testing.md
+- docs/asset-rights.md
+- docs/open-decisions.md
+- docs/references/component-inventory.md
+- docs/references/native-component-inventory.md
+- docs/consuming-web.md
+- docs/consuming-expo.md
+- docs/migrating-web.md
+- docs/migrating-expo.md
+- CHANGELOG.md
+
+PHASE 8 — ACCESSIBILITY
+
+Create enforceable standards for:
+
+- WCAG AA contrast
+- 44-point iOS touch targets
+- 48-dp Android touch targets
+- Dynamic Type and font scaling
+- VoiceOver
+- TalkBack
+- Focus order
+- Visible labels
+- Field-level and summary errors
+- Reduced motion
+- Keyboard behavior
+- Meaning independent of color
+- Large numbers
+- Long customer names
+- English expansion
+- Amharic line wrapping
+- Noto Serif Ethiopic line heights
+- Small-screen behavior
+- Screen-reader status announcements
+
+Add automated accessibility checks wherever the environment supports them.
+
+Where native-device validation cannot be performed in Replit, document the limitation honestly. Do not claim physical iOS or Android device validation.
+
+PHASE 9 — LOCALIZATION AND CONTENT
+
+Create standards for:
+
+- English
+- Amharic
+- Font selection
+- Text expansion
+- Currency
+- Numbers
+- Dates
+- Times
+- Names
+- Phone numbers
+- Bank-account masking
+- Transfer IDs
+- Error messages
+- Status labels
+- Rate disclosures
+- Fee disclosures
+
+Create:
+
+docs/content-and-voice.md
+
+Use calm, direct, trustworthy financial language.
+
+Prohibit:
+
+- False urgency
+- Unsupported “best rate” claims
+- Unsupported savings claims
+- Implying submission equals completion
+- Vague error messages
+- Unsupported provider or partnership claims
+- Cultural clichés
+- Compliance language presented as legal approval
+
+PHASE 10 — COMPONENT CATALOGS
+
+Keep the existing web design-system preview.
+
+Update it to show:
+
+- Semantic typography
+- Interaction tokens
+- Layout tokens
+- Financial statuses
+- Accessibility behavior
+- Financial UI truth
+- Content and voice
+- Localization examples
+- English and Amharic
+- Light and dark modes
+- Reduced-motion behavior
+
+Create a native component catalog or isolated example inside samra-pay-ds/.
+
+It must:
+
+- Demonstrate every native primitive
+- Demonstrate every fintech native pattern
+- Show important states
+- Use synthetic data only
+- Avoid API calls
+- Avoid navigation/business logic
+- Avoid Replit-specific plugins
+- Be portable
+- Clearly identify any React Native Web limitations
+
+PHASE 11 — TESTING
+
+Add appropriate tests for:
+
+- Token generation
+- Token drift
+- Required token paths
+- Token alias resolution
+- Contrast pairs
+- Typography roles
+- Native component variants
+- Disabled/loading behavior
+- Touch-target dimensions
+- Accessibility labels
+- Financial-status mappings
+- Money components preserving exact input values
+- English and Amharic rendering
+- Web component smoke coverage
+- Broken documentation links
+
+Add visual-regression coverage for critical reference pages if supported.
+
+At minimum capture baselines for:
+
+- Foundations
+- Typography
+- Colors
+- Buttons
+- Inputs
+- Status badges
+- Quote panel
+- Balance display
+- Transaction row
+- Transfer timeline
+- Receipt
+- Error/offline states
+- English
+- Amharic
+- Light
+- Dark
+- Large text
+
+Do not claim visual regression is implemented if only screenshots were manually captured.
+
+PHASE 12 — ASSET AND RIGHTS AUDIT
+
+Inventory:
+
+- Samra Pay logo
+- Icons
+- Fonts
+- Patterns
+- Card graphics
+- Third-party marks
+- Provider names
+- Airline branding
+- Card-network branding
+- Bank and wallet branding
+
+For every asset document:
+
+- File
+- Source
+- Intended use
+- Ownership or licensing status
+- Whether it is safe to ship
+- Whether replacement or permission is required
+
+Do not assume rights to Mastercard, Ethiopian Airlines, ShebaMiles, Rain, Caliza, Chapa, banks, wallets, or other third-party marks.
+
+PHASE 13 — PORTABILITY
+
+Remove design-system dependencies on Replit where removal does not change product behavior.
+
+The final source package must not require:
+
+- Replit Vite plugins
+- Replit runtime variables
+- Replit domains
+- Replit deployment settings
+- Replit connectors
+
+Do not modify other applications that may still use Replit.
+
+Document any portability issue that cannot be resolved inside samra-pay-ds/.
+
+VALIDATION GATES
+
+Before declaring completion, run and report:
+
+1. Token generation
+2. Token drift validation
+3. Typecheck
+4. Unit tests
+5. Accessibility tests
+6. Documentation-link validation
+7. Production build
+8. Native catalog validation, within environmental limits
+9. Source-package inspection
+10. Replit-dependency search
+
+Acceptance requires:
+
+- No change outside samra-pay-ds/
+- No unresolved token alias
+- No generated-token drift
+- No broken documentation link
+- No contradictory component status
+- No undocumented new color
+- No undocumented dependency
+- No missing required native component
+- No authoritative financial calculation inside a design component
+- No real customer data
+- No unsupported partnership claim
+- No backend, API, database, deployment, Secret, Git, or workflow change
+- All supported automated gates pass
+
+If a gate cannot run because of a platform limitation, record the exact limitation. Do not mark it passed.
+
+FINAL SOURCE PACKAGE
+
+Create a clean source-only archive:
+
+samra-pay-ds-s-tier-source.zip
+
+Exclude:
+
+- dist/
+- node_modules/
+- .tsbuildinfo
+- .replit-artifact/
+- caches
+- logs
+- temporary screenshots
+- environment files
+- credentials
+- Secrets
+- generated dependency caches
+
+Include generated token outputs only when they are verified against tokens.json.
+
+FINAL REPORT
+
+Return:
+
+1. Exact working folder
+2. Exact ZIP location
+3. Files created
+4. Files modified
+5. Files removed
+6. Token additions
+7. Native components added
+8. Fintech patterns added
+9. Documentation repaired
+10. Tests added
+11. Full validation results
+12. Platform limitations
+13. Open design decisions
+14. Asset-rights warnings
+15. New dependencies and justification
+16. Confirmation that nothing outside samra-pay-ds/ changed
+17. Confirmation that nothing was committed, pushed, deployed, or published
+
+Stop after creating the clean source package and report.
+
+Do not integrate this package into the customer mobile app, web app, operations portal, backend, database, or deployment.
+```

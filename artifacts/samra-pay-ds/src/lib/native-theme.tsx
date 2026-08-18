@@ -71,6 +71,8 @@ export const fontFamily = {
     regular: "NotoSerifEthiopic_400Regular",
     semibold: "NotoSerifEthiopic_600SemiBold",
   },
+  /** System monospace stack — used for reference IDs, account numbers, transfer IDs. */
+  mono: "ui-monospace, 'Courier New', monospace",
 } as const;
 
 export const nativeTheme = {

@@ -18,6 +18,10 @@
   },
   "scripts": {
     "tokens": "node scripts/build-tokens.mjs",
+    "tokens:check": "node scripts/check-token-drift.mjs",
+    "validate": "node scripts/build-tokens.mjs && node scripts/check-token-drift.mjs && pnpm run typecheck",
+    "test": "node --test src/tests/tokens.test.mjs src/tests/contrast.test.mjs src/tests/a11y.test.mjs src/tests/docs.test.mjs",
+    "test:a11y": "node --test src/tests/a11y.test.mjs",
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "prebuild": "node scripts/build-tokens.mjs",
     "build": "vite build --config vite.config.ts",

@@ -1,65 +1,80 @@
 # Samra Pay Design System — Component Inventory
 
-Source: `artifacts/samra-pay/src/components/ui/` (55 families) + 7 custom components.
-All families are shadcn/ui built on Radix UI primitives, themed by Midnight Gold tokens.
+All component families are implemented and located in `src/components/ui/`.
+Themes are driven by Midnight Gold tokens via `src/index.css`.
 Key brand customizations: `Button` adds a `gold` gradient variant; `Badge` adds a `gold` variant for promotional labels.
 
-| # | Family | Reference file | Chunk | Status |
-|---|--------|---------------|-------|--------|
-| 1 | Button | components/button.md | 1 — pilot | implemented |
-| 2 | Badge | components/badge.md | 1 — pilot | implemented |
-| 3 | Card | components/card.md | 1 — pilot | implemented |
-| 4 | Input | components/input.md | 1 — pilot | implemented |
-| 5 | Avatar | components/avatar.md | 1 — pilot | implemented |
-| 6 | Accordion | components/accordion.md | 2 | implemented |
-| 7 | Alert | components/alert.md | 2 | implemented |
-| 8 | Alert Dialog | components/alert-dialog.md | 2 | implemented |
-| 9 | Aspect Ratio | components/aspect-ratio.md | 2 | implemented |
-| 10 | Breadcrumb | components/breadcrumb.md | 2 | implemented |
-| 11 | Button Group | components/button-group.md | 2 | implemented |
-| 12 | Calendar | components/calendar.md | 3 | implemented |
-| 13 | Carousel | components/carousel.md | 3 | implemented |
-| 14 | Chart | components/chart.md | 3 | implemented |
-| 15 | Checkbox | components/checkbox.md | 2 | implemented |
-| 16 | Collapsible | components/collapsible.md | 3 | implemented |
-| 17 | Command | components/command.md | 3 | implemented |
-| 18 | Context Menu | components/context-menu.md | 3 | implemented |
-| 19 | Dialog | components/dialog.md | 2 | implemented |
-| 20 | Drawer | components/drawer.md | 2 | implemented |
-| 21 | Dropdown Menu | components/dropdown-menu.md | 2 | implemented |
-| 22 | Empty State | components/empty.md | 2 | implemented |
-| 23 | Field | components/field.md | 2 | implemented |
-| 24 | Form | components/form.md | 3 | implemented |
-| 25 | Hover Card | components/hover-card.md | 3 | implemented |
-| 26 | Input Group | components/input-group.md | 2 | implemented |
-| 27 | Input OTP | components/input-otp.md | 3 | implemented |
-| 28 | Item | components/item.md | 2 | implemented |
-| 29 | Kbd | components/kbd.md | 3 | implemented |
-| 30 | Label | components/label.md | 2 | implemented |
-| 31 | Menubar | components/menubar.md | 3 | implemented |
-| 32 | Navigation Menu | components/navigation-menu.md | 3 | implemented |
-| 33 | Pagination | components/pagination.md | 3 | implemented |
-| 34 | Popover | components/popover.md | 2 | implemented |
-| 35 | Progress | components/progress.md | 2 | implemented |
-| 36 | Radio Group | components/radio-group.md | 2 | implemented |
-| 37 | Resizable | components/resizable.md | 3 | implemented |
-| 38 | Scroll Area | components/scroll-area.md | 2 | implemented |
-| 39 | Select | components/select.md | 2 | implemented |
-| 40 | Separator | components/separator.md | 2 | implemented |
-| 41 | Sheet | components/sheet.md | 2 | implemented |
-| 42 | Sidebar | components/sidebar.md | 3 | implemented |
-| 43 | Skeleton | components/skeleton.md | 2 | implemented |
-| 44 | Slider | components/slider.md | 2 | implemented |
-| 45 | Sonner | components/sonner.md | 2 | implemented |
-| 46 | Spinner | components/spinner.md | 2 | implemented |
-| 47 | Switch | components/switch.md | 2 | implemented |
-| 48 | Table | components/table.md | 2 | implemented |
-| 49 | Tabs | components/tabs.md | 2 | implemented |
-| 50 | Textarea | components/textarea.md | 2 | implemented |
-| 51 | Toast / Toaster | components/toast.md | 2 | implemented |
-| 52 | Toggle | components/toggle.md | 2 | implemented |
-| 53 | Toggle Group | components/toggle-group.md | 2 | implemented |
-| 54 | Tooltip | components/tooltip.md | 2 | implemented |
-| — | *Custom: Credit Card* | — | deferred | deferred — app-specific composition, not a reusable primitive |
-| — | *Custom: SamraLogo* | — | deferred | deferred — brand asset, not a UI component |
-| — | *Custom: PageTransition* | — | deferred | deferred — app-specific layout wrapper |
+> **Note:** Component reference files are `.tsx` source files — there are no `.md` doc files per component.
+> For usage, see: each component's source file + its demo at `src/preview/demos/<name>.tsx`.
+
+## Web UI Components (src/components/ui/)
+
+| # | Family | Source file | Demo | Chunk | Status |
+|---|--------|------------|------|-------|--------|
+| 1 | Button | src/components/ui/button.tsx | src/preview/demos/button.tsx | 1 — pilot | ✅ implemented |
+| 2 | Badge | src/components/ui/badge.tsx | src/preview/demos/badge.tsx | 1 — pilot | ✅ implemented |
+| 3 | Card | src/components/ui/card.tsx | src/preview/demos/card.tsx | 1 — pilot | ✅ implemented |
+| 4 | Input | src/components/ui/input.tsx | src/preview/demos/input.tsx | 1 — pilot | ✅ implemented |
+| 5 | Avatar | src/components/ui/avatar.tsx | src/preview/demos/avatar.tsx | 1 — pilot | ✅ implemented |
+| 6 | Accordion | src/components/ui/accordion.tsx | src/preview/demos/accordion.tsx | 2 | ✅ implemented |
+| 7 | Alert | src/components/ui/alert.tsx | src/preview/demos/alert.tsx | 2 | ✅ implemented |
+| 8 | Alert Dialog | src/components/ui/alert-dialog.tsx | src/preview/demos/alert-dialog.tsx | 2 | ✅ implemented |
+| 9 | Aspect Ratio | src/components/ui/aspect-ratio.tsx | src/preview/demos/aspect-ratio.tsx | 2 | ✅ implemented |
+| 10 | Breadcrumb | src/components/ui/breadcrumb.tsx | src/preview/demos/breadcrumb.tsx | 2 | ✅ implemented |
+| 11 | Button Group | src/components/ui/button-group.tsx | src/preview/demos/button-group.tsx | 2 | ✅ implemented |
+| 12 | Calendar | src/components/ui/calendar.tsx | src/preview/demos/calendar.tsx | 3 | ✅ implemented |
+| 13 | Carousel | src/components/ui/carousel.tsx | src/preview/demos/carousel.tsx | 3 | ✅ implemented |
+| 14 | Chart | src/components/ui/chart.tsx | src/preview/demos/chart.tsx | 3 | ✅ implemented |
+| 15 | Checkbox | src/components/ui/checkbox.tsx | src/preview/demos/checkbox.tsx | 2 | ✅ implemented |
+| 16 | Collapsible | src/components/ui/collapsible.tsx | src/preview/demos/collapsible.tsx | 3 | ✅ implemented |
+| 17 | Command | src/components/ui/command.tsx | src/preview/demos/command.tsx | 3 | ✅ implemented |
+| 18 | Context Menu | src/components/ui/context-menu.tsx | src/preview/demos/context-menu.tsx | 3 | ✅ implemented |
+| 19 | Dialog | src/components/ui/dialog.tsx | src/preview/demos/dialog.tsx | 2 | ✅ implemented |
+| 20 | Drawer | src/components/ui/drawer.tsx | src/preview/demos/drawer.tsx | 2 | ✅ implemented |
+| 21 | Dropdown Menu | src/components/ui/dropdown-menu.tsx | src/preview/demos/dropdown-menu.tsx | 2 | ✅ implemented |
+| 22 | Empty State | src/components/ui/empty.tsx | src/preview/demos/empty.tsx | 2 | ✅ implemented |
+| 23 | Field | src/components/ui/field.tsx | src/preview/demos/field.tsx | 2 | ✅ implemented |
+| 24 | Form | src/components/ui/form.tsx | src/preview/demos/form.tsx | 3 | ✅ implemented |
+| 25 | Hover Card | src/components/ui/hover-card.tsx | src/preview/demos/hover-card.tsx | 3 | ✅ implemented |
+| 26 | Input Group | src/components/ui/input-group.tsx | src/preview/demos/input-group.tsx | 2 | ✅ implemented |
+| 27 | Input OTP | src/components/ui/input-otp.tsx | src/preview/demos/input-otp.tsx | 3 | ✅ implemented |
+| 28 | Item | src/components/ui/item.tsx | src/preview/demos/item.tsx | 2 | ✅ implemented |
+| 29 | Kbd | src/components/ui/kbd.tsx | src/preview/demos/kbd.tsx | 3 | ✅ implemented |
+| 30 | Label | src/components/ui/label.tsx | src/preview/demos/label.tsx | 2 | ✅ implemented |
+| 31 | Menubar | src/components/ui/menubar.tsx | src/preview/demos/menubar.tsx | 3 | ✅ implemented |
+| 32 | Navigation Menu | src/components/ui/navigation-menu.tsx | src/preview/demos/navigation-menu.tsx | 3 | ✅ implemented |
+| 33 | Pagination | src/components/ui/pagination.tsx | src/preview/demos/pagination.tsx | 3 | ✅ implemented |
+| 34 | Popover | src/components/ui/popover.tsx | src/preview/demos/popover.tsx | 2 | ✅ implemented |
+| 35 | Progress | src/components/ui/progress.tsx | src/preview/demos/progress.tsx | 2 | ✅ implemented |
+| 36 | Radio Group | src/components/ui/radio-group.tsx | src/preview/demos/radio-group.tsx | 2 | ✅ implemented |
+| 37 | Resizable | src/components/ui/resizable.tsx | src/preview/demos/resizable.tsx | 3 | ✅ implemented |
+| 38 | Scroll Area | src/components/ui/scroll-area.tsx | src/preview/demos/scroll-area.tsx | 2 | ✅ implemented |
+| 39 | Select | src/components/ui/select.tsx | src/preview/demos/select.tsx | 2 | ✅ implemented |
+| 40 | Separator | src/components/ui/separator.tsx | src/preview/demos/separator.tsx | 2 | ✅ implemented |
+| 41 | Sheet | src/components/ui/sheet.tsx | src/preview/demos/sheet.tsx | 2 | ✅ implemented |
+| 42 | Sidebar | src/components/ui/sidebar.tsx | src/preview/demos/sidebar.tsx | 3 | ✅ implemented |
+| 43 | Skeleton | src/components/ui/skeleton.tsx | src/preview/demos/skeleton.tsx | 2 | ✅ implemented |
+| 44 | Slider | src/components/ui/slider.tsx | src/preview/demos/slider.tsx | 2 | ✅ implemented |
+| 45 | Sonner | src/components/ui/sonner.tsx | src/preview/demos/sonner.tsx | 2 | ✅ implemented |
+| 46 | Spinner | src/components/ui/spinner.tsx | src/preview/demos/spinner.tsx | 2 | ✅ implemented |
+| 47 | Switch | src/components/ui/switch.tsx | src/preview/demos/switch.tsx | 2 | ✅ implemented |
+| 48 | Table | src/components/ui/table.tsx | src/preview/demos/table.tsx | 2 | ✅ implemented |
+| 49 | Tabs | src/components/ui/tabs.tsx | src/preview/demos/tabs.tsx | 2 | ✅ implemented |
+| 50 | Textarea | src/components/ui/textarea.tsx | src/preview/demos/textarea.tsx | 2 | ✅ implemented |
+| 51 | Toast / Toaster | src/components/ui/toast.tsx + toaster.tsx | src/preview/demos/toast.tsx | 2 | ✅ implemented |
+| 52 | Toggle | src/components/ui/toggle.tsx | src/preview/demos/toggle.tsx | 2 | ✅ implemented |
+| 53 | Toggle Group | src/components/ui/toggle-group.tsx | src/preview/demos/toggle-group.tsx | 2 | ✅ implemented |
+| 54 | Tooltip | src/components/ui/tooltip.tsx | src/preview/demos/tooltip.tsx | 2 | ✅ implemented |
+
+## Web Patterns (src/components/patterns/)
+
+| Pattern | Source file | Demo |
+|---------|------------|------|
+| BankCard | src/components/patterns/bank-card.tsx | src/preview/demos/pattern-bank-card.tsx |
+| QuotePanel | src/components/patterns/quote-panel.tsx | src/preview/demos/pattern-quote-panel.tsx |
+| RewardCard | src/components/patterns/reward-card.tsx | src/preview/demos/pattern-reward-card.tsx |
+| SelectableTile | src/components/patterns/selectable-tile.tsx | src/preview/demos/pattern-selectable-tile.tsx |
+
+## Native Components (src/components/native/)
+
+See [docs/references/native-component-inventory.md](./native-component-inventory.md) for the complete native component inventory.
