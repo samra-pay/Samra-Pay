@@ -66,26 +66,44 @@ The portability gate runs on relevant pull requests and `main` changes, every
 Monday to catch base-image drift, and on manual dispatch. It creates no cloud
 resource, pushes no image, uses no credential, and does not access Replit.
 
-Required Cloud Build substitutions:
+Every Cloud Build input defaults to `unset` and the first build step rejects
+the request before installing dependencies or building an image unless the
+complete staging identity is supplied. The build must run as the dedicated
+`samra-cloud-build-staging` service account and requests verified build
+provenance. The Artifact Registry repository must be created separately with
+immutable tags enabled.
 
-| Substitution  | Default         | Meaning                                                  |
-| ------------- | --------------- | -------------------------------------------------------- |
-| `_REGION`     | `us-east1`      | Artifact Registry and runtime region; confirm before use |
-| `_REPOSITORY` | `samra-staging` | Existing Artifact Registry Docker repository             |
-| `_IMAGE_TAG`  | `manual`        | Use the immutable Git commit SHA for controlled releases |
+Required Cloud Build substitutions and built-in source identity:
+
+| Value                    | Required contract                                                        |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `_ENVIRONMENT`           | Exactly `staging`                                                        |
+| `_REGION`                | Explicit regional location; confirm before use                           |
+| `_REPOSITORY`            | Exactly `samra-staging`; create with immutable tags                      |
+| `_IMAGE_TAG`             | Full lowercase 40-character Git SHA                                      |
+| `COMMIT_SHA`             | Full source SHA, identical to `_IMAGE_TAG`                               |
+| `_BUILD_SERVICE_ACCOUNT` | `samra-cloud-build-staging@<staging-project>.iam.gserviceaccount.com`    |
+| `PROJECT_ID`             | Dedicated Google Cloud project ID containing the `staging` boundary word |
 
 Example for a future authorized build from Cloud Shell:
 
 ```sh
+SAMRA_CANDIDATE_SHA="$(git rev-parse HEAD)"
+SAMRA_STAGING_PROJECT="replace-with-approved-staging-project"
+
 gcloud builds submit \
+  --project="${SAMRA_STAGING_PROJECT}" \
   --config deploy/gcp/cloudbuild.yaml \
-  --substitutions _REGION=us-east1,_REPOSITORY=samra-staging,_IMAGE_TAG="$(git rev-parse HEAD)" \
+  --substitutions COMMIT_SHA="${SAMRA_CANDIDATE_SHA}",_ENVIRONMENT=staging,_REGION=us-east1,_REPOSITORY=samra-staging,_IMAGE_TAG="${SAMRA_CANDIDATE_SHA}",_BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${SAMRA_STAGING_PROJECT}.iam.gserviceaccount.com" \
   .
 ```
 
 This command must not be run until the project, billing account, region,
 Artifact Registry repository, and least-privilege Cloud Build service account
-have been approved.
+have been approved. The repository must enforce immutable image tags. The
+build service account must have only the permissions required to read source,
+write the staging repository, and emit build logs/provenance; it is not the
+runtime, migration, or deployment identity.
 
 ## Staging runtime contract
 
