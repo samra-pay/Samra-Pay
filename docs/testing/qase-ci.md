@@ -118,6 +118,8 @@ product pass/fail threshold: the workflow records p50, p99, PostgreSQL execution
 plans, observed growth, and a 25% regression-warning margin. Its JSON and JUnit
 evidence are retained for 90 days. Ordinary pull requests that do not affect the
 ledger balance path do not pay the one-million-posting runtime cost.
+The measured baseline and resulting materialization gate are recorded in
+[`ledger-performance-baseline.md`](ledger-performance-baseline.md).
 
 ## Manual scope
 
