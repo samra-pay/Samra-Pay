@@ -195,7 +195,9 @@ candidate identity, full workspace quality, commercial isolation, migrations,
 PostgreSQL/ledger controls, HTTP and restart behavior, weekly resilience, and
 the million-posting performance gate. The detailed JUnit files remain in the
 same GitHub release artifact and are individually SHA-256 hashed by the release
-manifest.
+manifest. Persistence, HTTP/restart, resilience, and performance run against
+four independent disposable PostgreSQL databases to prevent cross-suite state
+from changing later test baselines.
 
 Qase creation, upload, and completion are required release gates. An ordinary
 Qase outage remains non-blocking for pull-request CI, but it blocks release-

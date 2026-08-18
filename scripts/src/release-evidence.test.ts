@@ -152,6 +152,32 @@ describe("release evidence", () => {
     );
   });
 
+  it("validates a failed manifest against the contract before reporting missing evidence", async () => {
+    const root = await mkdtemp(join(tmpdir(), "samra-release-missing-"));
+    await mkdir(join(root, "evidence"), { recursive: true });
+    await mkdir(join(root, "out"), { recursive: true });
+    await writeFile(join(root, "evidence/one.xml"), "<testsuite/>\n", "utf8");
+    const manifest = await createReleaseEvidenceManifest({
+      workspaceRoot: root,
+      contract,
+      identity,
+      gateResults: { identity: "success", quality: "failure" },
+      generatedAt: "2026-08-18T00:00:00.000Z",
+    });
+    const manifestPath = join(root, contract.manifest);
+    const hashPath = join(root, contract.manifestHash);
+    await writeManifestAndHash(manifest, manifestPath, hashPath);
+
+    await expect(
+      verifyManifest(manifestPath, hashPath, false, root, contract),
+    ).resolves.toEqual(manifest);
+    await expect(
+      verifyManifest(manifestPath, hashPath, true, root, contract),
+    ).rejects.toThrow(
+      /Release candidate failed: quality=failure; 1 evidence files missing/,
+    );
+  });
+
   it("rejects evidence changed after the manifest was written", async () => {
     const root = await mkdtemp(join(tmpdir(), "samra-release-files-"));
     await mkdir(join(root, "evidence"), { recursive: true });

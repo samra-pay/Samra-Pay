@@ -20,21 +20,59 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     services:
-      postgres:
+      postgres-persistence:
         image: postgres:16
         env:
-          POSTGRES_USER: samra_release
-          POSTGRES_PASSWORD: samra_release
-          POSTGRES_DB: samra_release
+          POSTGRES_USER: samra_release_persistence
+          POSTGRES_PASSWORD: samra_release_persistence
+          POSTGRES_DB: samra_release_persistence
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U samra_release -d samra_release"
+          --health-cmd "pg_isready -U samra_release_persistence -d samra_release_persistence"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgres-http:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_release_http
+          POSTGRES_PASSWORD: samra_release_http
+          POSTGRES_DB: samra_release_http
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_release_http -d samra_release_http"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgres-resilience:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_release_resilience
+          POSTGRES_PASSWORD: samra_release_resilience
+          POSTGRES_DB: samra_release_resilience
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_release_resilience -d samra_release_resilience"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgres-performance:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_release_performance
+          POSTGRES_PASSWORD: samra_release_performance
+          POSTGRES_DB: samra_release_performance
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_release_performance -d samra_release_performance"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgresql://samra_release:samra_release@127.0.0.1:5432/samra_release
       WEEKLY_CONCURRENCY_ROUNDS: "24"
       WEEKLY_RANDOM_STEPS: "96"
       WEEKLY_RANDOM_SEED: "23063"
@@ -121,6 +159,8 @@ jobs:
       - name: Apply migrations and prove repeatable seed
         id: migrations
         continue-on-error: true
+        env:
+          TEST_DATABASE_URL: postgresql://samra_release_persistence:samra_release_persistence@127.0.0.1:5432/samra_release_persistence
         run: |
           pnpm --filter @workspace/db run test:migrate
           pnpm --filter @workspace/db run test:seed
@@ -130,6 +170,8 @@ jobs:
         id: postgres_persistence
         if: ${{ !cancelled() }}
         continue-on-error: true
+        env:
+          TEST_DATABASE_URL: postgresql://samra_release_persistence:samra_release_persistence@127.0.0.1:5432/samra_release_persistence
         run: |
           pnpm --filter @workspace/api-server run test:postgres:junit
           pnpm --filter @workspace/api-server run test:ledger-journals:junit
@@ -149,7 +191,11 @@ jobs:
         id: postgres_http
         if: ${{ !cancelled() }}
         continue-on-error: true
+        env:
+          TEST_DATABASE_URL: postgresql://samra_release_http:samra_release_http@127.0.0.1:5433/samra_release_http
         run: |
+          pnpm --filter @workspace/db run test:migrate
+          pnpm --filter @workspace/db run test:seed
           pnpm --filter @workspace/api-server run build
           pnpm --filter @workspace/api-server run test:postgres-http:junit
           pnpm --filter @workspace/api-server run test:daily-synthetic:junit
@@ -159,7 +205,11 @@ jobs:
         id: resilience
         if: ${{ !cancelled() }}
         continue-on-error: true
+        env:
+          TEST_DATABASE_URL: postgresql://samra_release_resilience:samra_release_resilience@127.0.0.1:5434/samra_release_resilience
         run: |
+          pnpm --filter @workspace/db run test:migrate
+          pnpm --filter @workspace/db run test:seed
           pnpm --filter @workspace/api-server run test:weekly-concurrency:junit
           pnpm --filter @workspace/api-server run test:weekly-randomized:junit
           pnpm --filter @workspace/api-server run test:weekly-faults:junit
@@ -169,7 +219,12 @@ jobs:
         id: performance
         if: ${{ !cancelled() }}
         continue-on-error: true
-        run: pnpm --filter @workspace/api-server run test:ledger-performance:junit
+        env:
+          TEST_DATABASE_URL: postgresql://samra_release_performance:samra_release_performance@127.0.0.1:5435/samra_release_performance
+        run: |
+          pnpm --filter @workspace/db run test:migrate
+          pnpm --filter @workspace/db run test:seed
+          pnpm --filter @workspace/api-server run test:ledger-performance:junit
 
       - name: Build stable Qase release gate payload
         id: qase_payload
