@@ -26,6 +26,10 @@ on:
         description: Complete the Qase run after reporting
         required: false
         default: "true"
+      run_commercial:
+        description: Run the isolated commercial typecheck and build
+        required: false
+        default: "true"
   pull_request:
     branches:
       - main
@@ -33,12 +37,14 @@ on:
     branches:
       - main
       - "codex/**"
+  schedule:
+    - cron: "17 6 * * *"
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -72,11 +78,17 @@ jobs:
       - name: Validate Qase governance contract
         run: pnpm run test:qase-contract
 
+      - name: Validate testing cadence contract
+        run: pnpm run test:testing-cadence
+
       - name: Typecheck workspace
         run: pnpm run typecheck
 
       - name: Run workspace tests
         run: pnpm run test
+
+      - name: Validate Google Cloud portability contracts
+        run: pnpm run test:gcp-platform
 
       - name: Build production artifacts
         run: pnpm -r --filter "!@workspace/samra-pay-commercial" --if-present run build
@@ -86,6 +98,40 @@ jobs:
           EXPO_PUBLIC_DOMAIN: "ci.invalid"
           EXPO_PUBLIC_SAMRA_DATA_MODE: "api"
           EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.ci.invalid"
+
+  commercial-daily:
+    name: Daily commercial isolation gate
+    if: github.event_name == 'schedule' || inputs.run_commercial == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck isolated commercial package
+        run: pnpm run commercial:typecheck
+
+      - name: Build isolated commercial package
+        run: pnpm run commercial:build
+        env:
+          PORT: "4173"
+          BASE_PATH: "/"
 
   postgres-persistence:
     name: PostgreSQL persistence gate
@@ -331,8 +377,8 @@ jobs:
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: Samra Pay automated acceptance — ${{ github.ref_name }} @ ${{ github.sha }}
-          description: PostgreSQL durability and HTTP-to-ledger acceptance results from GitHub Actions.
+          title: ${{ github.event_name == 'schedule' && 'Samra Pay daily backend acceptance' || 'Samra Pay automated backend acceptance' }} — ${{ github.ref_name }} @ ${{ github.sha }}
+          description: PostgreSQL durability and HTTP-to-ledger acceptance from ${{ github.event_name }} GitHub Actions.
 
       - name: Resolve Qase run
         id: qase-run

@@ -42,6 +42,14 @@ means an isolated PostgreSQL 16 service in GitHub Actions with synthetic data;
 it is not a deployment environment. `replit-development` remains limited to
 manual synthetic browser validation.
 
+The same governed CI workflow runs from `main` every day at `06:17 UTC` and
+names the resulting Qase record `Samra Pay daily backend acceptance`. The
+weekly ledger-performance workflow also uses `github-ci-postgres`; performance
+evidence must not appear as an unclassified Qase run. The complete product-stack
+cadence and stop conditions are defined in
+[`testing-cadence.json`](testing-cadence.json) and explained in
+[`testing-strategy.md`](testing-strategy.md).
+
 The current release plans are:
 
 | Plan                             | Cases | Use                                                                        |

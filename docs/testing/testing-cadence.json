@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "authority": {
+    "merge": "GitHub Actions",
+    "traceability": "Qase",
+    "financialTruth": "PostgreSQL API and Samra control ledger",
+    "manualEvidence": "Qase runs against synthetic non-production environments"
+  },
+  "riskTiers": [
+    {
+      "id": "P0",
+      "meaning": "Money movement, ledger balance, idempotency, authorization, audit integrity, or reconciliation",
+      "requiredCadences": ["pull-request", "main", "daily", "release"],
+      "manualOverrideAllowed": false
+    },
+    {
+      "id": "P1",
+      "meaning": "Critical customer or workforce journey, failure recovery, refund, reversal, or operational visibility",
+      "requiredCadences": ["pull-request", "main", "daily", "release"],
+      "manualOverrideAllowed": false
+    },
+    {
+      "id": "P2",
+      "meaning": "Reporting, secondary workflow, visual behavior, or uncommon edge case",
+      "requiredCadences": ["release"],
+      "manualOverrideAllowed": true
+    }
+  ],
+  "cadences": [
+    {
+      "id": "pull-request",
+      "workflow": ".github/workflows/ci.yml",
+      "trigger": "pull_request",
+      "maximumMinutes": 20,
+      "requiredJobs": [
+        "linux-quality",
+        "postgres-persistence",
+        "postgres-http"
+      ],
+      "qaseEnvironment": "github-ci-postgres"
+    },
+    {
+      "id": "main",
+      "workflow": ".github/workflows/ci.yml",
+      "trigger": "push:main",
+      "maximumMinutes": 20,
+      "requiredJobs": [
+        "linux-quality",
+        "postgres-persistence",
+        "postgres-http"
+      ],
+      "qaseEnvironment": "github-ci-postgres"
+    },
+    {
+      "id": "daily",
+      "workflow": ".github/workflows/ci.yml",
+      "trigger": "schedule",
+      "cron": "17 6 * * *",
+      "maximumMinutes": 30,
+      "requiredJobs": [
+        "linux-quality",
+        "postgres-persistence",
+        "postgres-http",
+        "commercial-daily"
+      ],
+      "qaseEnvironment": "github-ci-postgres"
+    },
+    {
+      "id": "weekly-ledger",
+      "workflow": ".github/workflows/ledger-performance.yml",
+      "trigger": "schedule",
+      "cron": "17 6 * * 0",
+      "maximumMinutes": 45,
+      "requiredJobs": ["performance"],
+      "qaseEnvironment": "github-ci-postgres"
+    },
+    {
+      "id": "release",
+      "workflow": ".github/workflows/ci.yml",
+      "trigger": "workflow_dispatch",
+      "maximumMinutes": 30,
+      "requiredJobs": [
+        "linux-quality",
+        "postgres-persistence",
+        "postgres-http"
+      ],
+      "qaseEnvironment": "github-ci-postgres"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "financial-core",
+      "risk": "P0",
+      "paths": [
+        "artifacts/api-server/**",
+        "lib/db/**",
+        "lib/ledger/**",
+        "lib/remittance/**",
+        "lib/api-spec/**",
+        "lib/api-zod/**",
+        "lib/integrations/**"
+      ],
+      "cadences": ["pull-request", "main", "daily", "weekly-ledger", "release"]
+    },
+    {
+      "id": "customer-web",
+      "risk": "P1",
+      "paths": [
+        "artifacts/samra-pay/**",
+        "lib/api-client-react/**",
+        "lib/samra-client/**"
+      ],
+      "cadences": ["pull-request", "main", "daily", "release"]
+    },
+    {
+      "id": "mobile",
+      "risk": "P1",
+      "paths": ["artifacts/samra-pay-mobile/**"],
+      "cadences": ["pull-request", "main", "daily", "release"]
+    },
+    {
+      "id": "operations-portal",
+      "risk": "P1",
+      "paths": ["artifacts/samra-pay-ops/**"],
+      "cadences": ["pull-request", "main", "daily", "release"]
+    },
+    {
+      "id": "design-system",
+      "risk": "P2",
+      "paths": ["artifacts/samra-pay-ds/**"],
+      "cadences": ["pull-request", "main", "daily", "release"]
+    },
+    {
+      "id": "cloud-portability",
+      "risk": "P1",
+      "paths": ["deploy/gcp/**"],
+      "cadences": ["pull-request", "main", "daily", "release"]
+    },
+    {
+      "id": "commercial",
+      "risk": "P2",
+      "paths": ["artifacts/samra-pay-commercial/**"],
+      "cadences": ["daily", "release"]
+    },
+    {
+      "id": "test-governance",
+      "risk": "P0",
+      "paths": [
+        ".github/workflows/**",
+        "docs/testing/**",
+        "scripts/src/validate-*-contract.ts",
+        "scripts/src/validate-testing-cadence.ts"
+      ],
+      "cadences": ["pull-request", "main", "daily", "release"]
+    }
+  ],
+  "stopConditions": [
+    "A required P0 test fails or is skipped without explicit release evidence.",
+    "A migration, idempotent seed, restart, atomicity, or concurrency control fails.",
+    "A journal is unbalanced or a reconciliation variance is unexplained.",
+    "A duplicate command can move money twice or changed replay evidence is accepted.",
+    "An API outage silently exposes mock financial data.",
+    "The tested commit differs from the candidate commit or Qase environment attribution is missing."
+  ],
+  "boundaries": [
+    "Use disposable PostgreSQL and synthetic fixtures only.",
+    "Do not send automated test traffic to Replit, production, real providers, or shared databases.",
+    "GitHub Actions remains the merge authority; Qase records traceability and manual evidence.",
+    "Browser and physical-device execution remains manual until a separately approved automation phase."
+  ]
+}

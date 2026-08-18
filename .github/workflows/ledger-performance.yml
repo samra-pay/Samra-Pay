@@ -114,6 +114,7 @@ jobs:
     env:
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: SAMP
+      QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
       - name: Download performance evidence
@@ -134,7 +135,8 @@ jobs:
         uses: qase-tms/gh-actions/run-create@v1
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
-          title: Samra Pay ledger performance — ${{ github.ref_name }} @ ${{ github.sha }}
+          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
+          title: ${{ github.event_name == 'schedule' && 'Samra Pay weekly ledger performance' || 'Samra Pay ledger performance' }} — ${{ github.ref_name }} @ ${{ github.sha }}
           description: Required materialized balance read gate at 100k and 1M postings from GitHub Actions.
 
       - name: Upload performance result to Qase
