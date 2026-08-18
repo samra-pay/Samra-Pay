@@ -1,4 +1,10 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@workspace/samra-pay-ds/components/ui/toaster";
@@ -20,6 +26,7 @@ import {
   closeWorkforceSession,
   createWorkforceSession,
   loadWorkforceSession,
+  WorkforceSessionUnavailable,
   type WorkforceSession,
 } from "@/lib/workforce-auth";
 import {
@@ -123,20 +130,46 @@ function WorkforceGate({ children }: { children: ReactNode }) {
         },
   );
   const [loading, setLoading] = useState(IS_API);
+  const [sessionError, setSessionError] =
+    useState<WorkforceSessionUnavailable | null>(null);
+
+  const refreshSession = useCallback(async () => {
+    setLoading(true);
+    setSessionError(null);
+    try {
+      setSession(await loadWorkforceSession());
+    } catch (cause) {
+      setSession(null);
+      setSessionError(
+        cause instanceof WorkforceSessionUnavailable
+          ? cause
+          : new WorkforceSessionUnavailable(),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!IS_API) return;
-    void loadWorkforceSession()
-      .then(setSession)
-      .catch(() => setSession(null))
-      .finally(() => setLoading(false));
-  }, []);
+    void refreshSession();
+  }, [refreshSession]);
 
   if (loading) {
     return (
       <WorkforceStatus
         title="Verifying workforce session"
         detail="Checking employee access…"
+      />
+    );
+  }
+  if (sessionError) {
+    return (
+      <WorkforceStatus
+        title="Operations API unavailable"
+        detail={`${sessionError.message} No mock employee or financial data was loaded.`}
+        actionLabel="Retry connection"
+        onAction={() => void refreshSession()}
       />
     );
   }
@@ -256,12 +289,31 @@ function WorkforceLogin({
   );
 }
 
-function WorkforceStatus({ title, detail }: { title: string; detail: string }) {
+function WorkforceStatus({
+  title,
+  detail,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  detail: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
   return (
     <main className="dark min-h-screen bg-background text-foreground grid place-items-center p-6">
       <section className="max-w-lg rounded-lg border border-border bg-card p-6">
         <h1 className="text-xl font-semibold">{title}</h1>
         <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
+        {actionLabel && onAction ? (
+          <button
+            type="button"
+            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+            onClick={onAction}
+          >
+            {actionLabel}
+          </button>
+        ) : null}
       </section>
     </main>
   );

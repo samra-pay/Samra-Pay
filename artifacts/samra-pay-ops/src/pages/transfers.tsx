@@ -15,7 +15,7 @@ import { Separator } from '@workspace/samra-pay-ds/components/ui/separator';
 import { Search, AlertCircle } from 'lucide-react';
 import type { Transfer, TimelineEvent } from '@/lib/types';
 import { cn } from '@workspace/samra-pay-ds/lib/utils';
-import { chronologicalTimeline, filterTransfers } from '@/lib/ops-selectors';
+import { chronologicalTimeline, filterTransfers, providerRecoveryGuidance } from '@/lib/ops-selectors';
 import { useWorkforceRole } from '@/lib/workforce-access';
 
 const TIMELINE_CATEGORY_CONFIG = {
@@ -96,6 +96,7 @@ export default function TransfersPage() {
   });
 
   const selectedTransfer = IS_MOCK ? selectedTransferSummary : (transferDetailQuery.data ?? selectedTransferSummary);
+  const recoveryGuidance = selectedTransfer ? providerRecoveryGuidance(selectedTransfer) : null;
 
   // Auto-open from URL param
   useEffect(() => {
@@ -360,9 +361,21 @@ export default function TransfersPage() {
 
                 <Separator />
 
-                <div>
-                  <ReadOnlyAction label="Requires audited operations command" />
-                </div>
+                {recoveryGuidance ? (
+                  <section
+                    className="rounded-lg border border-border bg-muted/30 p-4"
+                    role="status"
+                    aria-live="polite"
+                    data-testid={`provider-recovery-${recoveryGuidance.state}`}
+                  >
+                    <p className="text-sm font-semibold text-foreground">{recoveryGuidance.title}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">{recoveryGuidance.detail}</p>
+                  </section>
+                ) : (
+                  <div>
+                    <ReadOnlyAction label="Requires audited operations command" />
+                  </div>
+                )}
               </div>
             </>
           )}

@@ -1,6 +1,12 @@
 import type { MoneyFlow, TimelineEvent, Transfer, TransferStatus } from './types';
 import type { DataMode } from './data-mode';
 
+export type ProviderRecoveryGuidance = Readonly<{
+  state: 'in_progress' | 'completed' | 'review_required';
+  title: string;
+  detail: string;
+}>;
+
 export function filterTransfers(
   transfers: Transfer[],
   search: string,
@@ -29,6 +35,37 @@ export function chronologicalTimeline(events: TimelineEvent[]): TimelineEvent[] 
 
 export function isProviderEvidence(event: TimelineEvent): boolean {
   return event.category === 'provider_evidence';
+}
+
+export function providerRecoveryGuidance(
+  transfer: Transfer,
+): ProviderRecoveryGuidance | null {
+  if (transfer.payoutState !== 'failed') return null;
+
+  if (transfer.status === 'refunded' && transfer.fundingState === 'refunded') {
+    return {
+      state: 'completed',
+      title: 'Automatic refund completed',
+      detail:
+        'The payout failed and the original debit was refunded. Do not retry this transfer; a new payout attempt could duplicate financial effects.',
+    };
+  }
+
+  if (transfer.status === 'pending') {
+    return {
+      state: 'in_progress',
+      title: 'Automatic refund in progress',
+      detail:
+        'The payout failed. Samra Pay is recovering the original debit through the controlled refund path. Manual payout retry is disabled while recovery is active.',
+    };
+  }
+
+  return {
+    state: 'review_required',
+    title: 'Provider failure requires review',
+    detail:
+      'The payout failed without a confirmed refund outcome. Review the immutable timeline and reconciliation evidence; do not initiate another payout from this portal.',
+  };
 }
 
 export function relatedFixtureTransfers(
