@@ -87,11 +87,13 @@ acceptance evidence.
 Do not add more ledger-foundation behavior by default. The next controlled work
 sequence is:
 
-1. run the manual Qase operations-portal plan against the current Replit
-   synthetic environment;
-2. record defects without changing financial invariants to accommodate the UI;
-3. decide whether to authorize a production-readiness phase covering identity,
+1. import and run the version-controlled Qase portable-client smoke catalog
+   against synthetic customer web, iOS, and Android surfaces;
+2. run the Qase operations-portal smoke plan against the current synthetic
+   browser environment;
+3. record defects without changing financial invariants to accommodate any UI;
+4. decide whether to authorize a production-readiness phase covering identity,
    secrets, database operations, observability, backup/restore, and provider
    contracts;
-4. connect real providers only after that phase and the legal corridor gates
+5. connect real providers only after that phase and the legal corridor gates
    pass.

@@ -15,6 +15,10 @@ on:
         description: Qase project code
         required: false
         default: SAMP
+      qase_environment:
+        description: Qase environment slug
+        required: false
+        default: github-ci-postgres
       qase_run_id:
         description: Existing Qase automated run ID
         required: false
@@ -64,6 +68,9 @@ jobs:
 
       - name: Verify generated contracts
         run: pnpm --filter @workspace/api-spec run codegen:check
+
+      - name: Validate Qase governance contract
+        run: pnpm run test:qase-contract
 
       - name: Typecheck workspace
         run: pnpm run typecheck
@@ -276,6 +283,7 @@ jobs:
       QASE_API_BASE_URL: ${{ inputs.qase_api_base_url || 'https://api.qase.io' }}
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ inputs.qase_project_code || 'SAMP' }}
+      QASE_TESTOPS_ENVIRONMENT: ${{ inputs.qase_environment || 'github-ci-postgres' }}
       QASE_TESTOPS_RUN_ID: ${{ inputs.qase_run_id }}
       QASE_TESTOPS_RUN_COMPLETE: ${{ inputs.qase_run_complete || 'true' }}
 
@@ -322,6 +330,7 @@ jobs:
         uses: qase-tms/gh-actions/run-create@v1
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
+          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
           title: Samra Pay automated acceptance — ${{ github.ref_name }} @ ${{ github.sha }}
           description: PostgreSQL durability and HTTP-to-ledger acceptance results from GitHub Actions.
 
@@ -511,6 +520,7 @@ jobs:
           steps.qase-run.outputs.available == 'true' &&
           steps.qase-upload-persistence.outcome == 'success' &&
           steps.qase-upload-http.outcome == 'success' &&
+          steps.qase-upload-process-restart.outcome == 'success' &&
           steps.qase-upload-ledger-journals.outcome == 'success' &&
           steps.qase-upload-ledger-sweeps.outcome == 'success' &&
           steps.qase-upload-ledger-reconciliation.outcome == 'success' &&

@@ -8,6 +8,7 @@
     "typecheck:libs": "tsc --build && pnpm -r --filter \"./lib/**\" --if-present run typecheck",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --filter \"!@workspace/samra-pay-commercial\" --if-present run typecheck",
     "test": "pnpm -r --filter \"!@workspace/samra-pay-commercial\" --if-present run test",
+    "test:qase-contract": "pnpm --filter @workspace/scripts run validate-qase-contract",
     "test:gcp-platform": "node --test deploy/gcp/*.test.mjs",
     "commercial:typecheck": "pnpm --filter @workspace/samra-pay-commercial run typecheck",
     "commercial:build": "pnpm --filter @workspace/samra-pay-commercial run build",

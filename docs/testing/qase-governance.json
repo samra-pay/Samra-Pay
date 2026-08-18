@@ -1,0 +1,207 @@
+{
+  "project": "SAMP",
+  "capturedAt": "2026-08-18",
+  "sourceCommit": "81e18074a2d0004648f9b4a63fc9e57c889e4810",
+  "repositorySnapshot": {
+    "cases": 114,
+    "suites": 29
+  },
+  "portableClientSuites": [
+    {
+      "id": 26,
+      "title": "12 Portable Client Smoke",
+      "parentId": null
+    },
+    {
+      "id": 27,
+      "title": "12.01 Customer Web API Truth",
+      "parentId": 26
+    },
+    {
+      "id": 28,
+      "title": "12.02 Mobile API Truth",
+      "parentId": 26
+    },
+    {
+      "id": 29,
+      "title": "12.03 Cross-Surface Recovery",
+      "parentId": 26
+    }
+  ],
+  "environments": [
+    {
+      "title": "GitHub CI — Disposable PostgreSQL",
+      "slug": "github-ci-postgres",
+      "purpose": "Automated acceptance against isolated PostgreSQL 16 with synthetic data"
+    },
+    {
+      "title": "Replit Development",
+      "slug": "replit-development",
+      "purpose": "Manual synthetic browser validation only"
+    }
+  ],
+  "configurations": {
+    "Validation Surface": [
+      "PostgreSQL API",
+      "Operations Portal — Chrome Desktop",
+      "Customer Web — Chrome Desktop",
+      "Mobile — iOS",
+      "Mobile — Android"
+    ],
+    "Workforce Role": [
+      "Administrator",
+      "Customer Support Agent",
+      "Compliance",
+      "Auditor"
+    ]
+  },
+  "plans": [
+    {
+      "id": 1,
+      "title": "Backend & Operations Acceptance v1",
+      "caseCount": 33,
+      "use": "Baseline manual backend and operations acceptance"
+    },
+    {
+      "id": 2,
+      "title": "P0 — Critical Financial Controls",
+      "caseCount": 22,
+      "use": "Required for any ledger, money, idempotency, refund, reversal, or reconciliation change"
+    },
+    {
+      "id": 3,
+      "title": "P1 — Operations Portal Smoke",
+      "caseCount": 18,
+      "use": "Required for workforce, portal, case-management, audit, or reconciliation UI changes"
+    },
+    {
+      "id": 4,
+      "title": "P2 — Full Backend Regression",
+      "caseCount": 89,
+      "use": "Required before a release candidate or broad platform cutover"
+    },
+    {
+      "id": 5,
+      "title": "P1 — Customer Web & Mobile Smoke",
+      "caseCount": 15,
+      "use": "Required for customer web, mobile, portable API configuration, recovery, or cross-surface changes"
+    }
+  ],
+  "manualCatalogs": [
+    {
+      "path": "docs/testing/qase-portable-client-smoke.csv",
+      "caseCount": 15,
+      "targetPlan": "P1 — Customer Web & Mobile Smoke",
+      "qaseCaseRange": "SAMP-101 through SAMP-115",
+      "status": "imported",
+      "tags": ["portable-client", "manual", "smoke"]
+    }
+  ],
+  "automatedReports": [
+    {
+      "id": "persistence",
+      "source": "artifacts/api-server/test/postgres.test.ts",
+      "report": "postgres-persistence.xml",
+      "uploadStepId": "qase-upload-persistence",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "http",
+      "source": "artifacts/api-server/test/postgres-http.test.ts",
+      "report": "postgres-http.xml",
+      "uploadStepId": "qase-upload-http",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "process-restart",
+      "source": "artifacts/api-server/test/process-startup-recovery.test.mjs",
+      "report": "postgres-process-restart.xml",
+      "uploadStepId": "qase-upload-process-restart",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-journals",
+      "source": "artifacts/api-server/test/ledger-journal-assurance.test.ts",
+      "report": "ledger-journal-assurance.xml",
+      "uploadStepId": "qase-upload-ledger-journals",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-sweeps",
+      "source": "artifacts/api-server/test/ledger-sweeps.test.ts",
+      "report": "ledger-sweeps.xml",
+      "uploadStepId": "qase-upload-ledger-sweeps",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-reconciliation",
+      "source": "artifacts/api-server/test/ledger-reconciliation-controls.test.ts",
+      "report": "ledger-reconciliation-controls.xml",
+      "uploadStepId": "qase-upload-ledger-reconciliation",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-account-resolution",
+      "source": "artifacts/api-server/test/ledger-account-resolution.test.ts",
+      "report": "ledger-account-resolution.xml",
+      "uploadStepId": "qase-upload-ledger-account-resolution",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-balances",
+      "source": "artifacts/api-server/test/ledger-balance-computation.test.ts",
+      "report": "ledger-balance-computation.xml",
+      "uploadStepId": "qase-upload-ledger-balances",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-currency-precision",
+      "source": "artifacts/api-server/test/ledger-currency-precision.test.ts",
+      "report": "ledger-currency-precision.xml",
+      "uploadStepId": "qase-upload-ledger-currency-precision",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-idempotency",
+      "source": "artifacts/api-server/test/ledger-idempotency.test.ts",
+      "report": "ledger-idempotency.xml",
+      "uploadStepId": "qase-upload-ledger-idempotency",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-holds",
+      "source": "artifacts/api-server/test/ledger-holds-lifecycle.test.ts",
+      "report": "ledger-holds-lifecycle.xml",
+      "uploadStepId": "qase-upload-ledger-holds",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-reversals",
+      "source": "artifacts/api-server/test/ledger-reversals-refunds.test.ts",
+      "report": "ledger-reversals-refunds.xml",
+      "uploadStepId": "qase-upload-ledger-reversals",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-audit",
+      "source": "artifacts/api-server/test/ledger-immutability-audit.test.ts",
+      "report": "ledger-immutability-audit.xml",
+      "uploadStepId": "qase-upload-ledger-audit",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-concurrency",
+      "source": "artifacts/api-server/test/ledger-concurrency-atomicity.test.ts",
+      "report": "ledger-concurrency-atomicity.xml",
+      "uploadStepId": "qase-upload-ledger-concurrency",
+      "requiredForCompletion": true
+    },
+    {
+      "id": "ledger-materialized",
+      "source": "artifacts/api-server/test/ledger-materialized-balances.test.ts",
+      "report": "ledger-materialized-balances.xml",
+      "uploadStepId": "qase-upload-ledger-materialized",
+      "requiredForCompletion": true
+    }
+  ]
+}
