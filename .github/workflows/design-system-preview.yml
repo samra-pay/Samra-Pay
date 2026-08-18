@@ -1,0 +1,87 @@
+name: Design System Preview
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "artifacts/samra-pay-ds/**"
+      - "deploy/gcp/Dockerfile.design-system"
+      - ".github/workflows/design-system-preview.yml"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "artifacts/samra-pay-ds/**"
+      - "deploy/gcp/Dockerfile.design-system"
+      - ".github/workflows/design-system-preview.yml"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: design-system-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-preview:
+    name: Build governed design preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Enforce design source boundary
+        run: node artifacts/samra-pay-ds/scripts/check-source-boundary.mjs
+
+      - name: Verify token drift
+        run: pnpm --filter @workspace/samra-pay-ds run tokens:check
+
+      - name: Run design-system tests
+        run: pnpm --filter @workspace/samra-pay-ds run test
+
+      - name: Typecheck design system
+        run: pnpm --filter @workspace/samra-pay-ds run typecheck
+
+      - name: Build reviewable preview
+        run: pnpm --filter @workspace/samra-pay-ds run build
+        env:
+          PORT: "4173"
+          BASE_PATH: "/"
+
+      - name: Record preview provenance
+        env:
+          PREVIEW_COMMIT: ${{ github.sha }}
+          PREVIEW_REF: ${{ github.ref }}
+        run: |
+          node -e 'const fs = require("node:fs"); fs.writeFileSync("artifacts/samra-pay-ds/dist/preview-metadata.json", JSON.stringify({ commit: process.env.PREVIEW_COMMIT, ref: process.env.PREVIEW_REF }, null, 2) + "\n")'
+
+      - name: Upload design-system preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: samra-design-system-preview-${{ github.sha }}
+          path: artifacts/samra-pay-ds/dist
+          if-no-files-found: error
+          retention-days: 14

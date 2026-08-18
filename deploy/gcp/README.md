@@ -7,22 +7,27 @@ until a separately approved cutover.
 
 ## Bounded target architecture
 
-| Workload               | Google Cloud target      | Purpose                                                          |
-| ---------------------- | ------------------------ | ---------------------------------------------------------------- |
-| `samra-api`            | Cloud Run service        | Samra API and controlled synthetic worker                        |
-| `samra-customer-web`   | Cloud Run service        | Existing customer web UI plus same-origin `/api` proxy           |
-| `samra-operations-web` | Cloud Run service        | Existing Operations Portal plus same-origin `/api` proxy         |
-| `samra-migrations`     | Cloud Run job            | Reviewed, one-off forward database migrations                    |
-| PostgreSQL             | Cloud SQL for PostgreSQL | Durable staging and later production persistence                 |
-| Container images       | Artifact Registry        | Immutable, commit-addressed release images                       |
-| Build pipeline         | Cloud Build              | Tests and image construction from the GitHub source              |
-| Secrets                | Secret Manager           | `DATABASE_URL` and future credentials; never image layers or Git |
+| Workload                      | Google Cloud target      | Purpose                                                          |
+| ----------------------------- | ------------------------ | ---------------------------------------------------------------- |
+| `samra-api`                   | Cloud Run service        | Samra API and controlled synthetic worker                        |
+| `samra-customer-web`          | Cloud Run service        | Existing customer web UI plus same-origin `/api` proxy           |
+| `samra-operations-web`        | Cloud Run service        | Existing Operations Portal plus same-origin `/api` proxy         |
+| `samra-design-system-preview` | Cloud Run service        | Governed, commit-addressed design review browser                 |
+| `samra-migrations`            | Cloud Run job            | Reviewed, one-off forward database migrations                    |
+| PostgreSQL                    | Cloud SQL for PostgreSQL | Durable staging and later production persistence                 |
+| Container images              | Artifact Registry        | Immutable, commit-addressed release images                       |
+| Build pipeline                | Cloud Build              | Tests and image construction from the GitHub source              |
+| Secrets                       | Secret Manager           | `DATABASE_URL` and future credentials; never image layers or Git |
 
 The customer and Operations Portal containers preserve the existing browser
 interfaces. Their small Node server serves the compiled SPA and proxies `/api`
 to `SAMRA_API_ORIGIN`. This keeps browser cookies first-party and provides an
 explicit HTTP 502 response when the API is unavailable; it never substitutes
 mock financial data.
+
+The design-system preview container uses the same versioned source and gates as
+the GitHub preview artifact. It provides an independent browser-based design
+review surface without making Replit or compiled ZIP exports authoritative.
 
 The mobile UI remains an Expo application. It is not moved into Cloud Run. A
 later, separately tested mobile configuration must point the existing generated
@@ -42,7 +47,7 @@ remain during transition, but it is not part of the backend hosting contract.
 ## Build contract
 
 `cloudbuild.yaml` runs the platform contract tests and repository typecheck,
-then builds four images. It only builds and publishes images. Deployment is a
+then builds five images. It only builds and publishes images. Deployment is a
 separate approval gate.
 
 Required Cloud Build substitutions:
@@ -115,12 +120,14 @@ database, secrets, and services. Staging data must remain synthetic.
 
 ## Manual testing surfaces
 
-The Google Cloud staging environment preserves three test surfaces:
+The Google Cloud staging environment preserves four test surfaces:
 
-1. Customer web URL: browser-based remittance and account-flow testing.
-2. Operations Portal URL: CS investigation, audit, ledger, reconciliation, and
+1. Design System Preview URL: component, pattern, applied-screen, responsive,
+   accessibility, and content review.
+2. Customer web URL: browser-based remittance and account-flow testing.
+3. Operations Portal URL: CS investigation, audit, ledger, reconciliation, and
    controlled-failure testing.
-3. Expo mobile preview/build: mobile UI and flow testing against the staging API
+4. Expo mobile preview/build: mobile UI and flow testing against the staging API
    after the mobile API-origin configuration is completed.
 
 The existing Qase project remains the manual pass/fail record. A staging release

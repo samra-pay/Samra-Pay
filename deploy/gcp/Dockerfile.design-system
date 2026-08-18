@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1.7
+FROM node:24-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV BASE_PATH=/
+
+WORKDIR /workspace
+RUN corepack enable
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN node artifacts/samra-pay-ds/scripts/check-source-boundary.mjs
+RUN pnpm --filter @workspace/samra-pay-ds run test
+RUN pnpm --filter @workspace/samra-pay-ds run build
+
+FROM node:24-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --chown=node:node deploy/gcp/static-server.mjs ./static-server.mjs
+COPY --from=build --chown=node:node /workspace/artifacts/samra-pay-ds/dist ./public
+
+USER node
+CMD ["node", "./static-server.mjs"]
