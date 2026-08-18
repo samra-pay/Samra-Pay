@@ -113,6 +113,12 @@ retained with JSON/JUnit summaries for 30 days. This proves container runtime
 portability; it does not prove Google Cloud provisioning, IAM, networking,
 deployment, or production security.
 
+The review-only staging runtime contract is part of the same platform suite. It
+fails if service exposure becomes unauthenticated, browser workloads gain
+database or secret access, identities collapse onto defaults, migration
+execution becomes concurrent or retrying, image identity floats, or the
+Operations Portal is promoted before its workforce-security blockers close.
+
 ## Next testing slices
 
 The daily PostgreSQL job now publishes nine separately identifiable synthetic

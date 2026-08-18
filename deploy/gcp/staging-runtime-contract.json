@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "status": "review-only",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "deploymentAuthorized": false,
+  "imageContract": {
+    "registry": "REGION-docker.pkg.dev/PROJECT_ID/samra-staging",
+    "tag": "FULL_GIT_SHA",
+    "immutableTagsRequired": true,
+    "digestRecordedAfterBuild": true
+  },
+  "identities": {
+    "build": "samra-cloud-build-staging@PROJECT_ID.iam.gserviceaccount.com",
+    "deployer": "samra-deployer-staging@PROJECT_ID.iam.gserviceaccount.com",
+    "api": "samra-api-staging@PROJECT_ID.iam.gserviceaccount.com",
+    "customerWeb": "samra-customer-web-staging@PROJECT_ID.iam.gserviceaccount.com",
+    "operationsWeb": "samra-operations-web-staging@PROJECT_ID.iam.gserviceaccount.com",
+    "designSystem": "samra-design-system-staging@PROJECT_ID.iam.gserviceaccount.com",
+    "migrations": "samra-migrations-staging@PROJECT_ID.iam.gserviceaccount.com"
+  },
+  "identityCapabilities": {
+    "api": ["cloud-sql-client", "database-secret-accessor"],
+    "migrations": ["cloud-sql-client", "database-secret-accessor"],
+    "customerWeb": [],
+    "operationsWeb": [],
+    "designSystem": []
+  },
+  "database": {
+    "engine": "postgresql-16",
+    "instanceConnectionName": "PROJECT_ID:REGION:samra-staging-postgres",
+    "database": "samra_staging",
+    "privateIpRequired": true,
+    "publicIpAllowed": false,
+    "backupsRequired": true,
+    "pointInTimeRecoveryRequired": true,
+    "automaticMigrationAllowed": false,
+    "seedPolicy": "manual-idempotent-synthetic-only",
+    "secretReference": "projects/PROJECT_ID/secrets/samra-staging-database-url/versions/latest"
+  },
+  "services": {
+    "samra-api": {
+      "image": "samra-api:FULL_GIT_SHA",
+      "serviceAccount": "api",
+      "ingress": "internal-and-cloud-load-balancing",
+      "authentication": "required",
+      "defaultUrlDisabled": true,
+      "minInstances": 0,
+      "maxInstances": 2,
+      "concurrency": 10,
+      "databaseAccess": true,
+      "secretAccess": ["database-url"],
+      "environment": {
+        "NODE_ENV": "production",
+        "SAMRA_BACKEND_MODE": "demo",
+        "SAMRA_PROVIDER_MODE": "fake",
+        "SAMRA_PERSISTENCE_MODE": "postgres",
+        "SAMRA_RUN_WORKER": "true",
+        "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false"
+      },
+      "startupProbe": "/api/readyz",
+      "livenessProbe": "/api/healthz"
+    },
+    "samra-customer-web": {
+      "image": "samra-customer-web:FULL_GIT_SHA",
+      "serviceAccount": "customerWeb",
+      "ingress": "internal-and-cloud-load-balancing",
+      "authentication": "required",
+      "defaultUrlDisabled": true,
+      "minInstances": 0,
+      "maxInstances": 2,
+      "concurrency": 20,
+      "databaseAccess": false,
+      "secretAccess": [],
+      "requiredRuntimeEnvironment": ["SAMRA_API_ORIGIN"]
+    },
+    "samra-operations-web": {
+      "image": "samra-operations-web:FULL_GIT_SHA",
+      "serviceAccount": "operationsWeb",
+      "ingress": "internal-and-cloud-load-balancing",
+      "authentication": "required",
+      "defaultUrlDisabled": true,
+      "minInstances": 0,
+      "maxInstances": 1,
+      "concurrency": 10,
+      "databaseAccess": false,
+      "secretAccess": [],
+      "requiredRuntimeEnvironment": ["SAMRA_API_ORIGIN"],
+      "deploymentBlockedOn": [
+        "workforce authentication and authorization",
+        "staff access review and revocation process",
+        "operations API production-security promotion"
+      ]
+    },
+    "samra-design-system-preview": {
+      "image": "samra-design-system-preview:FULL_GIT_SHA",
+      "serviceAccount": "designSystem",
+      "ingress": "internal-and-cloud-load-balancing",
+      "authentication": "required",
+      "defaultUrlDisabled": true,
+      "minInstances": 0,
+      "maxInstances": 1,
+      "concurrency": 20,
+      "databaseAccess": false,
+      "secretAccess": []
+    }
+  },
+  "migrationJob": {
+    "name": "samra-migrations",
+    "image": "samra-migrations:FULL_GIT_SHA",
+    "serviceAccount": "migrations",
+    "tasks": 1,
+    "parallelism": 1,
+    "maxRetries": 0,
+    "timeoutSeconds": 600,
+    "manualExecutionOnly": true,
+    "databaseAccess": true,
+    "secretAccess": ["database-url"]
+  },
+  "releaseOrder": [
+    "verify immutable image digests and release evidence",
+    "verify backup and point-in-time recovery state",
+    "execute reviewed migration job once",
+    "deploy API revision with zero traffic",
+    "pass API readiness, restart, ledger, reconciliation, and audit gates",
+    "promote API traffic",
+    "deploy authenticated customer web and design preview",
+    "deploy operations portal only after its blockers are closed",
+    "run Qase staging regression",
+    "retain Replit only as a bounded rollback surface"
+  ],
+  "approvalGates": [
+    "approved staging project, billing owner, and region",
+    "immutable Artifact Registry repository",
+    "least-privilege build, deploy, runtime, and migration identities",
+    "private Cloud SQL with backups and point-in-time recovery",
+    "Secret Manager database reference with no plaintext credential",
+    "approved load balancer and identity-aware access policy",
+    "service-to-service authentication for API proxy calls",
+    "logging, alerts, rollback owner, and cost budget",
+    "critical Qase regression with no unresolved severity-one or severity-two defect"
+  ],
+  "forbidden": [
+    "plaintext secrets",
+    "default service accounts",
+    "floating image tags",
+    "automatic migrations",
+    "public unauthenticated services",
+    "real providers",
+    "customer data",
+    "production claims",
+    "Replit runtime dependency"
+  ]
+}
