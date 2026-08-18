@@ -9,6 +9,7 @@ import {
   createReleaseGateJunit,
   normalizeCandidateSha,
   readContract,
+  splitReleaseEvidenceInvocation,
   verifyManifest,
   writeManifestAndHash,
   type ReleaseIdentity,
@@ -21,7 +22,9 @@ const contractPath = resolve(
 );
 
 async function main(): Promise<void> {
-  const [command, ...rawArguments] = process.argv.slice(2);
+  const { command, rawArguments } = splitReleaseEvidenceInvocation(
+    process.argv.slice(2),
+  );
   const argumentsByName = parseArguments(rawArguments);
   const contract = await readContract(contractPath);
 

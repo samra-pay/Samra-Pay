@@ -172,6 +172,7 @@ jobs:
         run: pnpm --filter @workspace/api-server run test:ledger-performance:junit
 
       - name: Build stable Qase release gate payload
+        id: qase_payload
         if: ${{ !cancelled() }}
         env:
           RELEASE_GATE_RESULTS: >-
@@ -183,7 +184,7 @@ jobs:
 
       - name: Create Qase release-candidate run
         id: qase_create
-        if: ${{ !cancelled() }}
+        if: steps.qase_payload.outcome == 'success' && !cancelled()
         continue-on-error: true
         uses: qase-tms/gh-actions/run-create@v1
         with:
@@ -205,7 +206,7 @@ jobs:
 
       - name: Complete Qase release-candidate run
         id: qase_complete
-        if: steps.qase_upload.outcome == 'success' && !cancelled()
+        if: steps.qase_create.outputs.id != '' && !cancelled()
         continue-on-error: true
         uses: qase-tms/gh-actions/run-complete@v1
         with:

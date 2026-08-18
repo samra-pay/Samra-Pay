@@ -73,6 +73,17 @@ const ALLOWED_GATE_RESULTS = new Set([
   "missing",
 ]);
 
+export function splitReleaseEvidenceInvocation(
+  values: readonly string[],
+): Readonly<{ command: string | undefined; rawArguments: readonly string[] }> {
+  const normalized = values[0] === "--" ? values.slice(1) : [...values];
+  const [command, ...rawArguments] = normalized;
+  return Object.freeze({
+    command,
+    rawArguments: Object.freeze(rawArguments),
+  });
+}
+
 export function normalizeCandidateSha(value: string): string {
   const normalized = value.trim().toLowerCase();
   if (!SHA_PATTERN.test(normalized)) {

@@ -201,6 +201,9 @@ Qase creation, upload, and completion are required release gates. An ordinary
 Qase outage remains non-blocking for pull-request CI, but it blocks release-
 candidate certification because the required traceability record is missing.
 The candidate artifact is still uploaded first and records the failed Qase gate.
+Qase run creation starts only after the stable gate payload exists. Once a run
+is created, the workflow closes it even when result upload fails, preventing an
+orphaned in-progress run while preserving the failed upload gate.
 The full contract is [`release-evidence-contract.json`](release-evidence-contract.json).
 
 ## Manual scope

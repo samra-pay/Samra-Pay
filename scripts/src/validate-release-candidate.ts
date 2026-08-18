@@ -85,6 +85,8 @@ export function validateReleaseCandidateContract(
     "git show-ref --verify refs/remotes/origin/main",
     "release-evidence -- identity",
     "release-evidence -- gate-junit",
+    "id: qase_payload",
+    "if: steps.qase_payload.outcome == 'success' && !cancelled()",
     "release-evidence -- manifest",
     "release-evidence -- verify --require-passing",
     "uses: actions/upload-artifact@v4",
@@ -121,6 +123,24 @@ export function validateReleaseCandidateContract(
   }
   if (workflow.includes("replit") || workflow.includes("worf.replit")) {
     throw new Error("Release workflow must not depend on Replit.");
+  }
+  const completeQaseIndex = workflow.indexOf(
+    "name: Complete Qase release-candidate run",
+  );
+  const recordQaseIndex = workflow.indexOf(
+    "name: Record Qase release identity",
+  );
+  const completeQaseStep = workflow.slice(completeQaseIndex, recordQaseIndex);
+  if (
+    completeQaseIndex < 0 ||
+    recordQaseIndex <= completeQaseIndex ||
+    !completeQaseStep.includes(
+      "if: steps.qase_create.outputs.id != '' && !cancelled()",
+    )
+  ) {
+    throw new Error(
+      "Release workflow must close every created Qase run even when upload fails.",
+    );
   }
   const uploadIndex = workflow.indexOf(
     "name: Preserve immutable release evidence",
