@@ -674,10 +674,10 @@ async function loginWorkforce(
     body: JSON.stringify({ loginName, password }),
   });
   const body = await response.json();
-  assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(response.status, 201, JSON.stringify(body));
   const cookie = response.headers.get("set-cookie")?.split(";", 1)[0];
   assert.ok(cookie);
-  return { cookie };
+  return { Cookie: cookie };
 }
 
 function objectResponse(
