@@ -28,6 +28,9 @@ server. Mock mode clears the API base URL. API mode without a valid origin fails
 at startup and never falls back to local financial fixtures.
 
 This configuration makes iOS, Android, Expo web, Replit preview, and a future
-Google Cloud staging API use the same generated client boundary. It does not by
-itself cut existing mock screens over to the API; each screen still requires its
-own acceptance-tested migration.
+Google Cloud staging API use the same generated client boundary. The remittance
+screen is the first acceptance-tested mobile cutover: API mode uses server
+accounts, beneficiaries, quotes, idempotent transfer commands, backend status
+polling, cancellation, and restart recovery. Mock mode still renders the
+original remittance demo. Balance and activity screens remain mock-backed until
+their own migrations pass.

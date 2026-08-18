@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { ApiRemittanceScreen } from '@/components/ApiRemittanceScreen';
+import { useMobileDataMode } from '@/lib/samra-runtime';
 import {
   Animated,
   Platform,
@@ -42,6 +44,11 @@ function getTodayLabel() {
 }
 
 export default function RemittanceScreen() {
+  const dataMode = useMobileDataMode();
+  return dataMode === 'api' ? <ApiRemittanceScreen /> : <LegacyRemittanceScreen />;
+}
+
+function LegacyRemittanceScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { addTransfer } = useTransfers();
