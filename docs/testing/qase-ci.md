@@ -187,6 +187,22 @@ drops its own database inside the disposable PostgreSQL service, upgrades a
 seeded migration-`0007` snapshot to current, and proves current migration and
 seed replay are idempotent. The four JUnit files are retained for 90 days.
 
+## Release-candidate reporting
+
+The manual `Immutable release candidate` workflow creates one Qase run for the
+exact candidate SHA and uploads `release-gates.xml`. Its stable cases summarize
+candidate identity, full workspace quality, commercial isolation, migrations,
+PostgreSQL/ledger controls, HTTP and restart behavior, weekly resilience, and
+the million-posting performance gate. The detailed JUnit files remain in the
+same GitHub release artifact and are individually SHA-256 hashed by the release
+manifest.
+
+Qase creation, upload, and completion are required release gates. An ordinary
+Qase outage remains non-blocking for pull-request CI, but it blocks release-
+candidate certification because the required traceability record is missing.
+The candidate artifact is still uploaded first and records the failed Qase gate.
+The full contract is [`release-evidence-contract.json`](release-evidence-contract.json).
+
 ## Manual scope
 
 Use P0 for financial-control changes, P1 Operations Portal Smoke for workforce

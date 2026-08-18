@@ -1,0 +1,271 @@
+name: Immutable release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact 40-character commit SHA already contained in GitHub main
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-candidate-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+jobs:
+  release-assurance:
+    name: Immutable release-candidate evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_release
+          POSTGRES_PASSWORD: samra_release
+          POSTGRES_DB: samra_release
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_release -d samra_release"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://samra_release:samra_release@127.0.0.1:5432/samra_release
+      WEEKLY_CONCURRENCY_ROUNDS: "24"
+      WEEKLY_RANDOM_STEPS: "96"
+      WEEKLY_RANDOM_SEED: "23063"
+      WEEKLY_FAULT_ROUNDS: "8"
+      LEDGER_PERF_SMALL_POSTINGS: "100000"
+      LEDGER_PERF_LARGE_POSTINGS: "1000000"
+      LEDGER_PERF_SAMPLES: "40"
+      LEDGER_PERF_RESULTS_PATH: test-results/ledger-performance-characterization.json
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+      QASE_TESTOPS_PROJECT: SAMP
+      QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
+
+    steps:
+      - name: Check out the exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Reject a floating or non-main candidate before execution
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          test "${#CANDIDATE_SHA}" -eq 40
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git show-ref --verify refs/remotes/origin/main
+          git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare release evidence directories
+        run: mkdir -p artifacts/api-server/test-results artifacts/release-candidate
+
+      - name: Record immutable candidate identity
+        id: identity
+        run: >-
+          pnpm --filter @workspace/scripts run release-evidence -- identity
+          --candidate-sha "${{ inputs.candidate_sha }}"
+          --output artifacts/release-candidate/release-candidate-identity.json
+
+      - name: Run full Linux workspace quality
+        id: quality
+        continue-on-error: true
+        env:
+          PORT: "4173"
+          BASE_PATH: "/"
+          EXPO_PUBLIC_DOMAIN: "ci.invalid"
+          EXPO_PUBLIC_SAMRA_DATA_MODE: "api"
+          EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.ci.invalid"
+        run: |
+          pnpm --filter @workspace/api-spec run codegen:check
+          pnpm run test:qase-contract
+          pnpm run test:testing-cadence
+          pnpm run test:release-contract
+          pnpm run typecheck
+          pnpm run test
+          pnpm run test:gcp-platform
+          pnpm -r --filter "!@workspace/samra-pay-commercial" --if-present run build
+
+      - name: Run isolated commercial release build
+        id: commercial
+        continue-on-error: true
+        env:
+          PORT: "4173"
+          BASE_PATH: "/"
+        run: |
+          pnpm run commercial:typecheck
+          pnpm run commercial:build
+
+      - name: Apply migrations and prove repeatable seed
+        id: migrations
+        continue-on-error: true
+        run: |
+          pnpm --filter @workspace/db run test:migrate
+          pnpm --filter @workspace/db run test:seed
+          pnpm --filter @workspace/db run test:seed
+
+      - name: Run PostgreSQL persistence and ledger release suite
+        id: postgres_persistence
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          pnpm --filter @workspace/api-server run test:postgres:junit
+          pnpm --filter @workspace/api-server run test:ledger-journals:junit
+          pnpm --filter @workspace/api-server run test:ledger-account-resolution:junit
+          pnpm --filter @workspace/api-server run test:ledger-currency-precision:junit
+          pnpm --filter @workspace/api-server run test:ledger-balances:junit
+          pnpm --filter @workspace/api-server run test:ledger-idempotency:junit
+          pnpm --filter @workspace/api-server run test:ledger-holds:junit
+          pnpm --filter @workspace/api-server run test:ledger-reversals:junit
+          pnpm --filter @workspace/api-server run test:ledger-audit:junit
+          pnpm --filter @workspace/api-server run test:ledger-concurrency:junit
+          pnpm --filter @workspace/api-server run test:ledger-materialized:junit
+          pnpm --filter @workspace/api-server run test:ledger-sweeps:junit
+          pnpm --filter @workspace/api-server run test:ledger-reconciliation:junit
+
+      - name: Run HTTP, daily journey, and process-restart release suite
+        id: postgres_http
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          pnpm --filter @workspace/api-server run build
+          pnpm --filter @workspace/api-server run test:postgres-http:junit
+          pnpm --filter @workspace/api-server run test:daily-synthetic:junit
+          pnpm --filter @workspace/api-server run test:process-restart:junit
+
+      - name: Run weekly backend resilience release suite
+        id: resilience
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          pnpm --filter @workspace/api-server run test:weekly-concurrency:junit
+          pnpm --filter @workspace/api-server run test:weekly-randomized:junit
+          pnpm --filter @workspace/api-server run test:weekly-faults:junit
+          pnpm --filter @workspace/api-server run test:weekly-migrations:junit
+
+      - name: Run million-posting materialized balance gate
+        id: performance
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: pnpm --filter @workspace/api-server run test:ledger-performance:junit
+
+      - name: Build stable Qase release gate payload
+        if: ${{ !cancelled() }}
+        env:
+          RELEASE_GATE_RESULTS: >-
+            {"identity":"success","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}"}
+        run: >-
+          pnpm --filter @workspace/scripts run release-evidence -- gate-junit
+          --identity artifacts/release-candidate/release-candidate-identity.json
+          --output artifacts/release-candidate/release-gates.xml
+
+      - name: Create Qase release-candidate run
+        id: qase_create
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: qase-tms/gh-actions/run-create@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
+          title: Samra Pay ${{ steps.identity.outputs.release_id }} — ${{ steps.identity.outputs.candidate_sha }}
+          description: Exact-SHA release evidence from GitHub Actions using disposable PostgreSQL 16 and synthetic data.
+
+      - name: Upload release gates to Qase
+        id: qase_upload
+        if: steps.qase_create.outputs.id != '' && !cancelled()
+        continue-on-error: true
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase_create.outputs.id }}
+          format: junit
+          path: artifacts/release-candidate/release-gates.xml
+
+      - name: Complete Qase release-candidate run
+        id: qase_complete
+        if: steps.qase_upload.outcome == 'success' && !cancelled()
+        continue-on-error: true
+        uses: qase-tms/gh-actions/run-complete@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase_create.outputs.id }}
+
+      - name: Record Qase release identity
+        if: steps.qase_create.outputs.id != '' && !cancelled()
+        run: >-
+          pnpm --filter @workspace/scripts run release-evidence -- qase-metadata
+          --run-id "${{ steps.qase_create.outputs.id }}"
+          --output artifacts/release-candidate/qase-run.json
+
+      - name: Build content-addressed release evidence manifest
+        if: always()
+        env:
+          RELEASE_GATE_RESULTS: >-
+            {"identity":"${{ steps.identity.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}","qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
+        run: >-
+          pnpm --filter @workspace/scripts run release-evidence -- manifest
+          --identity artifacts/release-candidate/release-candidate-identity.json
+          --qase artifacts/release-candidate/qase-run.json
+
+      - name: Preserve immutable release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samra-${{ steps.identity.outputs.release_id }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/release-candidate/release-candidate-identity.json
+            artifacts/release-candidate/release-gates.xml
+            artifacts/release-candidate/qase-run.json
+            artifacts/release-candidate/release-evidence-manifest.json
+            artifacts/release-candidate/release-evidence-manifest.sha256
+            artifacts/api-server/test-results/postgres-persistence.xml
+            artifacts/api-server/test-results/postgres-http.xml
+            artifacts/api-server/test-results/daily-synthetic-journeys.xml
+            artifacts/api-server/test-results/postgres-process-restart.xml
+            artifacts/api-server/test-results/ledger-journal-assurance.xml
+            artifacts/api-server/test-results/ledger-account-resolution.xml
+            artifacts/api-server/test-results/ledger-currency-precision.xml
+            artifacts/api-server/test-results/ledger-balance-computation.xml
+            artifacts/api-server/test-results/ledger-idempotency.xml
+            artifacts/api-server/test-results/ledger-holds-lifecycle.xml
+            artifacts/api-server/test-results/ledger-reversals-refunds.xml
+            artifacts/api-server/test-results/ledger-immutability-audit.xml
+            artifacts/api-server/test-results/ledger-concurrency-atomicity.xml
+            artifacts/api-server/test-results/ledger-materialized-balances.xml
+            artifacts/api-server/test-results/ledger-sweeps.xml
+            artifacts/api-server/test-results/ledger-reconciliation-controls.xml
+            artifacts/api-server/test-results/weekly-concurrency-soak.xml
+            artifacts/api-server/test-results/weekly-randomized-ledger.xml
+            artifacts/api-server/test-results/weekly-fault-injection.xml
+            artifacts/api-server/test-results/weekly-migration-compatibility.xml
+            artifacts/api-server/test-results/ledger-performance-characterization.xml
+            artifacts/api-server/test-results/ledger-performance-characterization.json
+          if-no-files-found: warn
+          retention-days: 365
+
+      - name: Enforce release stop conditions
+        if: always()
+        run: >-
+          pnpm --filter @workspace/scripts run release-evidence -- verify --require-passing

@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "workflow": ".github/workflows/release-candidate.yml",
+  "manifest": "artifacts/release-candidate/release-evidence-manifest.json",
+  "manifestHash": "artifacts/release-candidate/release-evidence-manifest.sha256",
+  "retentionDays": 365,
+  "qaseEnvironment": "github-ci-postgres",
+  "requiredGates": [
+    {
+      "id": "identity",
+      "title": "Candidate SHA identity and main ancestry",
+      "includeInQase": true
+    },
+    {
+      "id": "quality",
+      "title": "Linux workspace quality",
+      "includeInQase": true
+    },
+    {
+      "id": "commercial",
+      "title": "Commercial package isolation",
+      "includeInQase": true
+    },
+    {
+      "id": "migrations",
+      "title": "Current migration and repeatable seed",
+      "includeInQase": true
+    },
+    {
+      "id": "postgres_persistence",
+      "title": "PostgreSQL persistence and ledger controls",
+      "includeInQase": true
+    },
+    {
+      "id": "postgres_http",
+      "title": "HTTP, daily journey, and process restart",
+      "includeInQase": true
+    },
+    {
+      "id": "resilience",
+      "title": "Weekly backend resilience controls",
+      "includeInQase": true
+    },
+    {
+      "id": "performance",
+      "title": "Million-posting materialized balance performance",
+      "includeInQase": true
+    },
+    {
+      "id": "qase_create",
+      "title": "Qase release run creation",
+      "includeInQase": false
+    },
+    {
+      "id": "qase_upload",
+      "title": "Qase release gate upload",
+      "includeInQase": false
+    },
+    {
+      "id": "qase_complete",
+      "title": "Qase release run completion",
+      "includeInQase": false
+    }
+  ],
+  "requiredEvidenceFiles": [
+    "artifacts/release-candidate/release-candidate-identity.json",
+    "artifacts/release-candidate/release-gates.xml",
+    "artifacts/release-candidate/qase-run.json",
+    "artifacts/api-server/test-results/postgres-persistence.xml",
+    "artifacts/api-server/test-results/postgres-http.xml",
+    "artifacts/api-server/test-results/daily-synthetic-journeys.xml",
+    "artifacts/api-server/test-results/postgres-process-restart.xml",
+    "artifacts/api-server/test-results/ledger-journal-assurance.xml",
+    "artifacts/api-server/test-results/ledger-account-resolution.xml",
+    "artifacts/api-server/test-results/ledger-currency-precision.xml",
+    "artifacts/api-server/test-results/ledger-balance-computation.xml",
+    "artifacts/api-server/test-results/ledger-idempotency.xml",
+    "artifacts/api-server/test-results/ledger-holds-lifecycle.xml",
+    "artifacts/api-server/test-results/ledger-reversals-refunds.xml",
+    "artifacts/api-server/test-results/ledger-immutability-audit.xml",
+    "artifacts/api-server/test-results/ledger-concurrency-atomicity.xml",
+    "artifacts/api-server/test-results/ledger-materialized-balances.xml",
+    "artifacts/api-server/test-results/ledger-sweeps.xml",
+    "artifacts/api-server/test-results/ledger-reconciliation-controls.xml",
+    "artifacts/api-server/test-results/weekly-concurrency-soak.xml",
+    "artifacts/api-server/test-results/weekly-randomized-ledger.xml",
+    "artifacts/api-server/test-results/weekly-fault-injection.xml",
+    "artifacts/api-server/test-results/weekly-migration-compatibility.xml",
+    "artifacts/api-server/test-results/ledger-performance-characterization.xml",
+    "artifacts/api-server/test-results/ledger-performance-characterization.json"
+  ],
+  "boundaries": [
+    "The candidate must be an exact 40-character commit contained in GitHub main.",
+    "Use disposable PostgreSQL 16 and synthetic fixtures only.",
+    "Do not access Replit, deployments, shared databases, real providers, production secrets, customer data, or live rails.",
+    "A failed or missing gate remains failed after evidence upload; manual review cannot override it."
+  ]
+}
