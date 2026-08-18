@@ -107,6 +107,26 @@ runtime, migration, or deployment identity.
 
 ## Staging runtime contract
 
+`staging-runtime-contract.json` is the reviewable control plane for the future
+staging environment. It is intentionally marked `deploymentAuthorized: false`.
+It separates build, deploy, API, browser, design-preview, and migration
+identities; reserves Cloud SQL and database-secret access for the API and
+migration job only; and requires private, authenticated service ingress through
+an approved load balancer. All images remain full-SHA-addressed.
+
+The Operations Portal is explicitly blocked until workforce authentication,
+staff access lifecycle controls, and production-security promotion of the
+operations API are complete. The API keeps
+`SAMRA_INTERNAL_OPERATIONS_ENABLED=false` in the meantime. This avoids turning
+synthetic header-based access into a false employee security boundary.
+
+The contract also locks the migration job to one task, serial execution, zero
+automatic retries, a ten-minute timeout, and manual execution before an API
+revision receives traffic. Its automated tests reject public unauthenticated
+services, default service accounts, browser access to database secrets,
+floating image tags, automatic migrations, live-provider values, and plaintext
+credentials.
+
 The API service requires Cloud Run's injected `PORT` plus these explicit
 values:
 
