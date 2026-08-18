@@ -70,20 +70,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
   }
 
   async getCustomerBalance(accountRef: string): Promise<DurableAccountBalance> {
-    const result = await this.#context.query().query<{
-      natural_balance_minor: string;
-      active_holds_minor: string;
-      available_minor: string;
-    }>(balanceSql, [accountRef]);
-    const row = result.rows[0];
-    if (!row) {
-      throw new DomainError("NOT_FOUND", "The source account was not found.");
-    }
-    return Object.freeze({
-      naturalBalanceMinor: BigInt(row.natural_balance_minor),
-      activeHoldsMinor: BigInt(row.active_holds_minor),
-      availableMinor: BigInt(row.available_minor),
-    });
+    return readCustomerBalance(this.#context.query(), accountRef);
   }
 
   async reserve(input: {
@@ -131,7 +118,10 @@ export class PostgresLedgerControl implements LedgerControlPort {
       const replay = await this.findHoldId(input.transferId);
       if (replay) return { holdId: replay };
 
-      const balance = await this.getCustomerBalance(input.accountId);
+      // Pass the already locked transaction client explicitly. This makes it
+      // impossible for the balance read to drift onto another pooled
+      // connection while the account lock is held.
+      const balance = await readCustomerBalance(query, input.accountId);
       if (balance.availableMinor < input.amountMinor) {
         throw new DomainError(
           "INSUFFICIENT_FUNDS",
@@ -481,6 +471,26 @@ const balanceSql = `
   LEFT JOIN samra_core.ledger_journals j ON j.id = p.journal_id AND j.state IN ('posted','reversed')
   WHERE pa.external_ref = $1
   GROUP BY la.id`;
+
+async function readCustomerBalance(
+  query: Queryable,
+  accountRef: string,
+): Promise<DurableAccountBalance> {
+  const result = await query.query<{
+    natural_balance_minor: string;
+    active_holds_minor: string;
+    available_minor: string;
+  }>(balanceSql, [accountRef]);
+  const row = result.rows[0];
+  if (!row) {
+    throw new DomainError("NOT_FOUND", "The source account was not found.");
+  }
+  return Object.freeze({
+    naturalBalanceMinor: BigInt(row.natural_balance_minor),
+    activeHoldsMinor: BigInt(row.active_holds_minor),
+    availableMinor: BigInt(row.available_minor),
+  });
+}
 
 async function postJournal(
   query: Queryable,

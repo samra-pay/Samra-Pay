@@ -24,6 +24,8 @@
     "test:ledger-reversals:junit": "node test/run-with-junit.mjs test-results/ledger-reversals-refunds.xml '11.07 Ledger - Reversals and Refunds' test/ledger-reversals-refunds.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-audit": "NODE_ENV=test node --import tsx --test test/ledger-immutability-audit.test.ts",
     "test:ledger-audit:junit": "node test/run-with-junit.mjs test-results/ledger-immutability-audit.xml '11.09 Ledger - Immutability and Audit' test/ledger-immutability-audit.test.ts '11 Claude Ledger Assurance'",
+    "test:ledger-concurrency": "NODE_ENV=test node --import tsx --test test/ledger-concurrency-atomicity.test.ts",
+    "test:ledger-concurrency:junit": "node test/run-with-junit.mjs test-results/ledger-concurrency-atomicity.xml '11.11 Ledger - Concurrency and Atomicity' test/ledger-concurrency-atomicity.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-balances": "NODE_ENV=test node --import tsx --test test/ledger-balance-computation.test.ts",
     "test:ledger-balances:junit": "node test/run-with-junit.mjs test-results/ledger-balance-computation.xml '11.08 Ledger - Balance Computation' test/ledger-balance-computation.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-sweeps": "NODE_ENV=test node --import tsx --test test/ledger-sweeps.test.ts",
