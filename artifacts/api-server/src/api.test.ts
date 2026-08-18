@@ -34,6 +34,9 @@ test("health remains available while disabled mode returns a stable 503 problem"
     const health = await request(origin, "/api/healthz");
     assert.equal(health.status, 200);
     assert.deepEqual(health.body, { status: "ok" });
+    const readiness = await request(origin, "/api/readyz");
+    assert.equal(readiness.status, 200);
+    assert.deepEqual(readiness.body, { status: "ready" });
 
     const unavailable = await request(origin, "/api/v1/me");
     assert.equal(unavailable.status, 503);
@@ -46,6 +49,22 @@ test("health remains available while disabled mode returns a stable 503 problem"
     );
     assert.equal(hiddenDevRoute.status, 404);
     assert.equal(hiddenDevRoute.body["code"], "NOT_FOUND");
+  });
+});
+
+test("readiness fails closed without exposing persistence errors", async () => {
+  const runtime = new DemoRuntime({
+    readiness: async () => {
+      throw new Error("postgresql://sensitive-host/internal-detail");
+    },
+  });
+  await withServer(demoConfig, runtime, async (origin) => {
+    const health = await request(origin, "/api/healthz");
+    assert.equal(health.status, 200);
+    const readiness = await request(origin, "/api/readyz");
+    assert.equal(readiness.status, 503);
+    assert.deepEqual(readiness.body, { status: "not_ready" });
+    assert.doesNotMatch(JSON.stringify(readiness.body), /sensitive-host/);
   });
 });
 

@@ -152,6 +152,7 @@ export type DemoRuntimeDependencies = Readonly<{
   workforceAuthStore?: PostgresWorkforceAuthStore;
   operationsCaseStore?: PostgresOperationsCaseStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
+  readiness?: () => Promise<void>;
   close?: () => Promise<void>;
 }>;
 
@@ -173,6 +174,7 @@ export class DemoRuntime {
   readonly #nextBeneficiaryId: () => string;
   readonly #nextReconciliationId?: () => string;
   readonly #publishOutbox: (event: ClaimedOutboxEvent) => Promise<void>;
+  readonly #readiness: () => Promise<void>;
   readonly #workerId = `demo-worker-${randomUUID()}`;
   readonly #close?: () => Promise<void>;
   #closePromise?: Promise<void>;
@@ -196,6 +198,7 @@ export class DemoRuntime {
     this.#nextReconciliationId = dependencies.nextReconciliationId;
     this.operationsStore = dependencies.operationsStore;
     this.#publishOutbox = dependencies.publishOutbox ?? (async () => undefined);
+    this.#readiness = dependencies.readiness ?? (async () => undefined);
     this.#close = dependencies.close;
     this.service = new RemittanceService({
       repository: this.repository,
@@ -210,6 +213,10 @@ export class DemoRuntime {
   async close(): Promise<void> {
     this.#closePromise ??= this.#close?.() ?? Promise.resolve();
     await this.#closePromise;
+  }
+
+  async checkReadiness(): Promise<void> {
+    await this.#readiness();
   }
 
   assertAccount(actorId: string, accountId: string): void {

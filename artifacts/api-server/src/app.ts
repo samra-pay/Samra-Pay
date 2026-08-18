@@ -52,6 +52,9 @@ export function createApp(
       config.workerIntervalMilliseconds,
     );
   }
+  if (runtime) {
+    app.locals["demoRuntime"] = runtime;
+  }
   app.use((_req, _res, next) =>
     next(new DomainError("NOT_FOUND", "The route was not found.")),
   );

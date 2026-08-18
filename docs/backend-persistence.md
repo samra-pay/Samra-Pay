@@ -12,6 +12,17 @@ DATABASE_URL=postgresql://...
 Only fake providers are supported. Durable mode does not enable deployment,
 shared databases, Replit changes, or real provider traffic.
 
+`GET /api/healthz` is process liveness and never queries PostgreSQL.
+`GET /api/readyz` is traffic readiness. In PostgreSQL mode it verifies database
+connectivity and the minimum migrated runtime schema without writing, migrating,
+or seeding. It returns only `ready` or `not_ready`; database details are not
+included in the response. A platform should remove an instance from traffic
+when readiness is `503` while continuing to use liveness for process restarts.
+
+The compiled API handles `SIGTERM` and `SIGINT` by stopping the synthetic
+worker, draining HTTP connections, closing the PostgreSQL pool, and exiting
+successfully. A bounded forced connection close prevents indefinite shutdown.
+
 ## Migrations and seeds
 
 - Application startup never runs migrations or seeds.
@@ -46,3 +57,7 @@ exact ledger balances, refund reversals, reconciliation durability, and the
 absence of duplicate provider commands or reversal journals. The ledger suite
 also proves projection concurrency, rollback, restart durability, drift
 detection, controlled rebuild, and exact reconciliation to source truth.
+The HTTP gate also launches the compiled API as a separate production-mode
+process, creates a held transfer, terminates it with `SIGTERM`, starts a new
+process, and proves readiness, transfer recovery, exact balances, and an
+idempotent replay with the original transfer identifier.

@@ -6,6 +6,7 @@ import {
   PostgresWorkforceAuthStore,
   PostgresOperationsCaseStore,
   RandomIdGenerator,
+  assertPostgresRuntimeReady,
   createDatabase,
 } from "@workspace/db";
 import { randomUUID } from "node:crypto";
@@ -33,6 +34,7 @@ export function createConfiguredDemoRuntime(
     operationsCaseStore: new PostgresOperationsCaseStore(context),
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
+    readiness: () => assertPostgresRuntimeReady(connection.pool),
     close: () => connection.pool.end(),
   });
 }

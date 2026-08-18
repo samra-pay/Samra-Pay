@@ -92,6 +92,12 @@ internal operations to non-production mode. Authentication and authorization
 must be promoted deliberately before an Operations Portal is exposed beyond a
 controlled staging audience.
 
+Configure Cloud Run startup/readiness checks against `/api/readyz` and
+liveness against `/api/healthz`. Readiness verifies connectivity and the
+required migrated schema but never runs migrations or seeds. Cloud Run's
+`SIGTERM` initiates a bounded graceful drain of the HTTP server, synthetic
+worker, and PostgreSQL pool before the instance exits.
+
 Each web service requires:
 
 ```text

@@ -41,6 +41,10 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
     const first = await startServer();
     const concurrent = await startServer();
     running.push(first, concurrent);
+    assert.deepEqual(
+      objectBody(await apiRequest(first.origin, "/api/readyz"), 200),
+      { status: "ready" },
+    );
 
     const workforce = first.runtime.workforceAuthStore!;
     await Promise.all([
@@ -629,6 +633,10 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
 
     const restarted = await startServer();
     running.push(restarted);
+    assert.deepEqual(
+      objectBody(await apiRequest(restarted.origin, "/api/readyz"), 200),
+      { status: "ready" },
+    );
     const recovered = objectBody(
       await apiRequest(
         restarted.origin,

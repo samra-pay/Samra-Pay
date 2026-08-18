@@ -23,12 +23,15 @@
 The API can start and serve liveness without `DATABASE_URL`. With the default
 `SAMRA_BACKEND_MODE=disabled`, application routes report unavailable. Explicit
 `demo` mode uses the process-local synthetic ledger and does not require a
-database. PostgreSQL migrations are prepared but the database repository is
-not wired into the running API yet.
+database. Explicit `SAMRA_PERSISTENCE_MODE=postgres` uses the durable
+PostgreSQL repositories already wired into the running API and requires
+`DATABASE_URL` plus separately applied migrations and synthetic seed data.
+`/api/readyz` verifies connectivity and required schema state without mutating
+the database.
 
 ## Deliberate API preview mode
 
-Use all four values together for a branch-only Replit preview:
+Use all four values together for a process-local branch-only Replit preview:
 
 ```text
 SAMRA_BACKEND_MODE=demo
@@ -41,6 +44,11 @@ The worker advances deterministic happy-path provider events while the web
 screen polls the server. This mode is synthetic and process-local; restarting
 the API resets its data. Remove the values or set the backend/data modes back
 to `disabled`/`mock` to restore the existing default experience.
+
+A separately approved durable preview must additionally set
+`SAMRA_PERSISTENCE_MODE=postgres` and provide an isolated `DATABASE_URL` after
+manual migrations and seed. It must not point at a shared or production
+database.
 
 ## Gates
 
