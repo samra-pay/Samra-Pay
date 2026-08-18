@@ -132,12 +132,21 @@ jobs:
       - name: Run PostgreSQL acceptance tests
         run: pnpm --filter @workspace/api-server run test:postgres:junit
 
+      - name: Run ledger journal assurance tests
+        run: pnpm --filter @workspace/api-server run test:ledger-journals:junit
+
+      - name: Run global ledger invariant sweeps
+        run: pnpm --filter @workspace/api-server run test:ledger-sweeps:junit
+
       - name: Preserve PostgreSQL acceptance results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: postgres-persistence-junit
-          path: artifacts/api-server/test-results/postgres-persistence.xml
+          path: |
+            artifacts/api-server/test-results/postgres-persistence.xml
+            artifacts/api-server/test-results/ledger-journal-assurance.xml
+            artifacts/api-server/test-results/ledger-sweeps.xml
           if-no-files-found: error
           retention-days: 14
 
@@ -236,6 +245,8 @@ jobs:
         run: |
           for report in \
             test-results/postgres-persistence.xml \
+            test-results/ledger-journal-assurance.xml \
+            test-results/ledger-sweeps.xml \
             test-results/postgres-http.xml
           do
             test -s "$report"
@@ -290,12 +301,36 @@ jobs:
           format: junit
           path: test-results/postgres-http.xml
 
+      - name: Upload ledger journal assurance results to Qase
+        id: qase-upload-ledger-journals
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-journal-assurance.xml
+
+      - name: Upload global ledger sweep results to Qase
+        id: qase-upload-ledger-sweeps
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-sweeps.xml
+
       - name: Complete Qase run
         if: >-
           always() &&
           steps.qase-run.outputs.available == 'true' &&
           steps.qase-upload-persistence.outcome == 'success' &&
           steps.qase-upload-http.outcome == 'success' &&
+          steps.qase-upload-ledger-journals.outcome == 'success' &&
+          steps.qase-upload-ledger-sweeps.outcome == 'success' &&
           (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-complete@v1
