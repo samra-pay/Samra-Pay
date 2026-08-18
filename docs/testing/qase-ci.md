@@ -20,6 +20,7 @@ used by the reporting job.
 | Ledger concurrency/atomicity  | `artifacts/api-server/test/ledger-concurrency-atomicity.test.ts`        | `ledger-concurrency-atomicity.xml`        |
 | Ledger performance            | `artifacts/api-server/test/ledger-performance-characterization.test.ts` | `ledger-performance-characterization.xml` |
 | Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`                       | `ledger-sweeps.xml`                       |
+| Reconciliation controls       | `artifacts/api-server/test/ledger-reconciliation-controls.test.ts`      | `ledger-reconciliation-controls.xml`      |
 | HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`                       | `postgres-http.xml`                       |
 
 Qase identifies the automated cases by their stable Node test names in the JUnit
@@ -85,6 +86,7 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-87   | CLAUDE-LED-034 mid-loop posting rollback            |
 | SAMP-88   | CLAUDE-LED-035 pre-post connection-loss rollback    |
 | SAMP-89   | CLAUDE-LED-043 balance-read scale characterization  |
+| SAMP-90   | CLAUDE-LED-052 controlled reconciliation resolution |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An

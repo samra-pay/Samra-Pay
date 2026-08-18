@@ -95,6 +95,13 @@ try {
       "credit",
       null,
     ],
+    [
+      "asset_reconciliation_suspense_usd",
+      "Reconciliation suspense asset",
+      "asset",
+      "debit",
+      null,
+    ],
   ] as const;
   for (const ledgerAccount of accounts) {
     await client.query(
@@ -105,6 +112,11 @@ try {
       [...ledgerAccount],
     );
   }
+  await client.query(
+    `UPDATE samra_core.ledger_accounts
+     SET allow_negative_available = true
+     WHERE code = 'asset_reconciliation_suspense_usd'`,
+  );
   const existing = await client.query<{ id: string }>(
     `SELECT id FROM samra_core.ledger_journals
      WHERE business_event_type = 'demo_seed' AND business_event_id = 'opening_balance_001'`,

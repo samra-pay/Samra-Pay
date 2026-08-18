@@ -1,3 +1,5 @@
+import { DomainError } from "@workspace/remittance";
+import { PostgresLedgerJournalWriter } from "./postgres-ledger";
 import type { PostgresPersistenceContext } from "./postgres-persistence";
 
 const ACTIONABLE_TRANSFER_SQL = `
@@ -87,9 +89,29 @@ export type OperationsReconciliationException = Readonly<{
   state: string;
   summary: string;
   assignedTo: string | null;
+  resolutionNote: string | null;
+  resolvedBy: string | null;
+  resolutionJournalId: string | null;
+  resolvedAt: string | null;
   openedAt: string;
   updatedAt: string;
 }>;
+
+type OperationsReconciliationExceptionRow = {
+  id: string;
+  run_id: string;
+  transfer_ref: string | null;
+  exception_code: string;
+  state: string;
+  summary: string;
+  assigned_to: string | null;
+  resolution_note: string | null;
+  resolved_by: string | null;
+  resolution_journal_id: string | null;
+  resolved_at: Date | null;
+  opened_at: Date;
+  updated_at: Date;
+};
 
 export type OperationsAuditEvent = Readonly<{
   id: string;
@@ -106,9 +128,11 @@ export type OperationsAuditEvent = Readonly<{
 
 export class PostgresOperationsStore {
   readonly #context: PostgresPersistenceContext;
+  readonly #journals: PostgresLedgerJournalWriter;
 
   constructor(context: PostgresPersistenceContext) {
     this.#context = context;
+    this.#journals = new PostgresLedgerJournalWriter(context);
   }
 
   async claimWorkflowBatch(
@@ -641,7 +665,9 @@ export class PostgresOperationsStore {
         this.listAuditEvents({ entityId: transferId, limit: 200 }),
         this.#context.query().query(
           `SELECT e.id, r.external_ref AS run_id, e.exception_code, e.state,
-                  e.summary, e.assigned_to, e.opened_at, e.updated_at
+                  e.summary, e.assigned_to, e.resolution_note, e.resolved_by,
+                  e.resolution_journal_id, e.resolved_at,
+                  e.opened_at, e.updated_at
            FROM samra_core.reconciliation_exceptions e
            JOIN samra_core.reconciliation_items i ON i.id = e.item_id
            JOIN samra_core.reconciliation_runs r ON r.id = i.run_id
@@ -684,46 +710,248 @@ export class PostgresOperationsStore {
     });
   }
 
+  async resolveReconciliationException(
+    input: Readonly<{
+      exceptionId: string;
+      operatorId: string;
+      reason: string;
+      idempotencyKey: string;
+    }>,
+  ): Promise<OperationsReconciliationException> {
+    const reason = input.reason.trim();
+    const operatorId = input.operatorId.trim();
+    const idempotencyKey = input.idempotencyKey.trim();
+    if (reason.length < 20) {
+      throw new DomainError(
+        "INVALID_ARGUMENT",
+        "A reconciliation resolution reason of at least 20 characters is required.",
+      );
+    }
+    if (!operatorId) {
+      throw new DomainError(
+        "INVALID_ARGUMENT",
+        "A reconciliation resolution requires an operator identity.",
+      );
+    }
+    if (idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+      throw new DomainError(
+        "INVALID_ARGUMENT",
+        "A reconciliation resolution idempotency key must contain 8 to 128 characters.",
+      );
+    }
+    return this.#context.run(async () => {
+      const query = this.#context.query();
+      const result = await query.query<
+        OperationsReconciliationExceptionRow & {
+          internal_currency: string | null;
+          provider_currency: string | null;
+          internal_amount_minor: string | null;
+          provider_amount_minor: string | null;
+          transfer_internal_id: string | null;
+          resolution_idempotency_key: string | null;
+        }
+      >(
+        `SELECT e.id, r.external_ref AS run_id, t.external_ref AS transfer_ref,
+                e.exception_code, e.state, e.summary, e.assigned_to,
+                e.resolution_note, e.resolved_by, e.resolution_journal_id,
+                e.resolution_idempotency_key, e.resolved_at,
+                e.opened_at, e.updated_at,
+                i.internal_currency, i.provider_currency,
+                i.internal_amount_minor, i.provider_amount_minor,
+                i.internal_resource_id AS transfer_internal_id
+         FROM samra_core.reconciliation_exceptions e
+         JOIN samra_core.reconciliation_items i ON i.id = e.item_id
+         JOIN samra_core.reconciliation_runs r ON r.id = i.run_id
+         LEFT JOIN samra_core.remittance_transfers t
+           ON t.id = i.internal_resource_id
+         WHERE e.id = $1
+         FOR UPDATE OF e`,
+        [input.exceptionId],
+      );
+      const record = result.rows[0];
+      if (!record) {
+        throw new DomainError(
+          "NOT_FOUND",
+          "The reconciliation exception was not found.",
+          { exceptionId: input.exceptionId },
+        );
+      }
+      if (record.state === "resolved") {
+        if (
+          record.resolved_by === operatorId &&
+          record.resolution_note === reason &&
+          record.resolution_idempotency_key === idempotencyKey &&
+          record.resolution_journal_id
+        ) {
+          return mapReconciliationException(record);
+        }
+        throw new DomainError(
+          "CONFLICT",
+          "The reconciliation exception was already resolved with different evidence.",
+          { exceptionId: input.exceptionId },
+        );
+      }
+      if (!["open", "in_review"].includes(record.state)) {
+        throw new DomainError(
+          "CONFLICT",
+          "Only an open reconciliation exception can be resolved.",
+          { exceptionId: input.exceptionId, state: record.state },
+        );
+      }
+      if (
+        record.exception_code !== "amount_mismatch" ||
+        record.internal_currency !== "USD" ||
+        record.provider_currency !== "USD" ||
+        record.internal_amount_minor === null ||
+        record.provider_amount_minor === null
+      ) {
+        throw new DomainError(
+          "CONFLICT",
+          "This reconciliation exception does not support a financial resolution journal.",
+          { exceptionId: input.exceptionId, code: record.exception_code },
+        );
+      }
+
+      const internalAmount = BigInt(record.internal_amount_minor);
+      const providerAmount = BigInt(record.provider_amount_minor);
+      if (internalAmount === providerAmount) {
+        throw new DomainError(
+          "CONFLICT",
+          "The reconciliation exception has no financial difference to resolve.",
+          { exceptionId: input.exceptionId },
+        );
+      }
+      const difference =
+        providerAmount > internalAmount
+          ? providerAmount - internalAmount
+          : internalAmount - providerAmount;
+      const postings =
+        providerAmount > internalAmount
+          ? ([
+              ["asset_reconciliation_suspense_usd", "debit", difference],
+              ["control_rain_usd", "credit", difference],
+            ] as const)
+          : ([
+              ["control_rain_usd", "debit", difference],
+              ["asset_reconciliation_suspense_usd", "credit", difference],
+            ] as const);
+      const journalId = await this.#journals.post({
+        eventType: "reconciliation_exception_resolution",
+        eventId: input.exceptionId,
+        description: "Resolve reconciliation amount mismatch through suspense",
+        postings,
+        metadata: {
+          exceptionId: input.exceptionId,
+          reconciliationRunId: record.run_id,
+          transferId: record.transfer_ref ?? "unlinked",
+          internalAmountMinor: internalAmount.toString(),
+          providerAmountMinor: providerAmount.toString(),
+          operatorId,
+          reason,
+          idempotencyKey,
+        },
+        auditActor: { actorType: "operator", actorId: operatorId },
+      });
+      const resolvedAt = new Date();
+      const updated = await query.query<OperationsReconciliationExceptionRow>(
+        `UPDATE samra_core.reconciliation_exceptions
+         SET state = 'resolved', resolution_note = $2, assigned_to = $3,
+             resolved_by = $3, resolution_journal_id = $4,
+             resolution_idempotency_key = $5, resolved_at = $6, updated_at = $6
+         WHERE id = $1 AND state IN ('open','in_review')
+         RETURNING id, $7::text AS run_id, $8::text AS transfer_ref,
+                   exception_code, state, summary, assigned_to,
+                   resolution_note, resolved_by, resolution_journal_id,
+                   resolved_at, opened_at, updated_at`,
+        [
+          input.exceptionId,
+          reason,
+          operatorId,
+          journalId,
+          idempotencyKey,
+          resolvedAt,
+          record.run_id,
+          record.transfer_ref,
+        ],
+      );
+      if (!updated.rows[0]) {
+        throw new DomainError(
+          "CONFLICT",
+          "The reconciliation exception could not transition to resolved.",
+          { exceptionId: input.exceptionId },
+        );
+      }
+      await query.query(
+        `INSERT INTO samra_core.reconciliation_exception_events
+         (exception_id, sequence, from_state, to_state, actor_type, actor_id,
+          decision, reason, resolving_journal_id, idempotency_key, metadata,
+          occurred_at)
+         VALUES ($1,1,$2,'resolved','operator',$3,'resolved_with_journal',$4,
+                 $5,$6,$7::jsonb,$8)`,
+        [
+          input.exceptionId,
+          record.state,
+          operatorId,
+          reason,
+          journalId,
+          idempotencyKey,
+          JSON.stringify({
+            internalAmountMinor: internalAmount.toString(),
+            providerAmountMinor: providerAmount.toString(),
+            differenceMinor: difference.toString(),
+            currency: "USD",
+          }),
+          resolvedAt,
+        ],
+      );
+      if (record.transfer_internal_id) {
+        await query.query(
+          `UPDATE samra_core.remittance_transfers
+           SET reconciliation_state = 'resolved', version = version + 1,
+               updated_at = $2
+           WHERE id = $1 AND reconciliation_state = 'exception'`,
+          [record.transfer_internal_id, resolvedAt],
+        );
+      }
+      await this.recordAudit({
+        eventKey: `operator:${operatorId}:reconciliation_exception_resolved:${input.exceptionId}:${idempotencyKey}`,
+        actorType: "operator",
+        actorId: operatorId,
+        action: "reconciliation_exception_resolved_with_journal",
+        entityType: "reconciliation_exception",
+        entityId: input.exceptionId,
+        correlationId: record.transfer_ref ?? record.run_id,
+        metadata: {
+          reason,
+          journalId,
+          differenceMinor: difference.toString(),
+          currency: "USD",
+        },
+        occurredAt: resolvedAt,
+      });
+      return mapReconciliationException(updated.rows[0]);
+    });
+  }
+
   async listReconciliationExceptions(
     limit: number,
   ): Promise<readonly OperationsReconciliationException[]> {
-    const result = await this.#context.query().query<{
-      id: string;
-      run_id: string;
-      transfer_ref: string | null;
-      exception_code: string;
-      state: string;
-      summary: string;
-      assigned_to: string | null;
-      opened_at: Date;
-      updated_at: Date;
-    }>(
-      `SELECT e.id, r.external_ref AS run_id, t.external_ref AS transfer_ref,
+    const result = await this.#context
+      .query()
+      .query<OperationsReconciliationExceptionRow>(
+        `SELECT e.id, r.external_ref AS run_id, t.external_ref AS transfer_ref,
               e.exception_code, e.state, e.summary, e.assigned_to,
-              e.opened_at, e.updated_at
+              e.resolution_note, e.resolved_by, e.resolution_journal_id,
+              e.resolved_at, e.opened_at, e.updated_at
        FROM samra_core.reconciliation_exceptions e
        JOIN samra_core.reconciliation_items i ON i.id = e.item_id
        JOIN samra_core.reconciliation_runs r ON r.id = i.run_id
        LEFT JOIN samra_core.remittance_transfers t ON t.id = i.internal_resource_id
        ORDER BY CASE WHEN e.state IN ('open','in_review') THEN 0 ELSE 1 END,
                 e.opened_at DESC LIMIT $1`,
-      [limit],
-    );
-    return Object.freeze(
-      result.rows.map((row) =>
-        Object.freeze({
-          id: row.id,
-          runId: row.run_id,
-          transferId: row.transfer_ref,
-          code: row.exception_code,
-          state: row.state,
-          summary: row.summary,
-          assignedTo: row.assigned_to,
-          openedAt: row.opened_at.toISOString(),
-          updatedAt: row.updated_at.toISOString(),
-        }),
-      ),
-    );
+        [limit],
+      );
+    return Object.freeze(result.rows.map(mapReconciliationException));
   }
 
   async listAuditEvents(
@@ -810,6 +1038,26 @@ function mapTransferListItem(row: {
     workflowAttempts: row.attempt_count,
     workflowLastError: row.last_error,
     createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  });
+}
+
+function mapReconciliationException(
+  row: OperationsReconciliationExceptionRow,
+): OperationsReconciliationException {
+  return Object.freeze({
+    id: row.id,
+    runId: row.run_id,
+    transferId: row.transfer_ref,
+    code: row.exception_code,
+    state: row.state,
+    summary: row.summary,
+    assignedTo: row.assigned_to,
+    resolutionNote: row.resolution_note,
+    resolvedBy: row.resolved_by,
+    resolutionJournalId: row.resolution_journal_id,
+    resolvedAt: row.resolved_at?.toISOString() ?? null,
+    openedAt: row.opened_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   });
 }

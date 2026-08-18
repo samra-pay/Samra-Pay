@@ -162,6 +162,9 @@ jobs:
       - name: Run global ledger invariant sweeps
         run: pnpm --filter @workspace/api-server run test:ledger-sweeps:junit
 
+      - name: Run reconciliation resolution control tests
+        run: pnpm --filter @workspace/api-server run test:ledger-reconciliation:junit
+
       - name: Preserve PostgreSQL acceptance results
         if: always()
         uses: actions/upload-artifact@v4
@@ -179,6 +182,7 @@ jobs:
             artifacts/api-server/test-results/ledger-immutability-audit.xml
             artifacts/api-server/test-results/ledger-concurrency-atomicity.xml
             artifacts/api-server/test-results/ledger-sweeps.xml
+            artifacts/api-server/test-results/ledger-reconciliation-controls.xml
           if-no-files-found: error
           retention-days: 14
 
@@ -287,6 +291,7 @@ jobs:
             test-results/ledger-immutability-audit.xml \
             test-results/ledger-concurrency-atomicity.xml \
             test-results/ledger-sweeps.xml \
+            test-results/ledger-reconciliation-controls.xml \
             test-results/postgres-http.xml
           do
             test -s "$report"
@@ -362,6 +367,17 @@ jobs:
           id: ${{ steps.qase-run.outputs.id }}
           format: junit
           path: test-results/ledger-sweeps.xml
+
+      - name: Upload reconciliation resolution results to Qase
+        id: qase-upload-ledger-reconciliation
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-reconciliation-controls.xml
 
       - name: Upload ledger account resolution results to Qase
         id: qase-upload-ledger-account-resolution
@@ -459,6 +475,7 @@ jobs:
           steps.qase-upload-http.outcome == 'success' &&
           steps.qase-upload-ledger-journals.outcome == 'success' &&
           steps.qase-upload-ledger-sweeps.outcome == 'success' &&
+          steps.qase-upload-ledger-reconciliation.outcome == 'success' &&
           steps.qase-upload-ledger-account-resolution.outcome == 'success' &&
           steps.qase-upload-ledger-balances.outcome == 'success' &&
           steps.qase-upload-ledger-currency-precision.outcome == 'success' &&

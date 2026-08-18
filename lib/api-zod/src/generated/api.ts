@@ -1780,12 +1780,60 @@ export const ListOperationsReconciliationExceptionsResponseItem = zod.object({
   state: zod.string(),
   summary: zod.string(),
   assignedTo: zod.union([zod.string(), zod.null()]),
+  resolutionNote: zod.union([zod.string(), zod.null()]),
+  resolvedBy: zod.union([zod.string(), zod.null()]),
+  resolutionJournalId: zod.union([zod.string(), zod.null()]),
+  resolvedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
   openedAt: zod.string().datetime({ offset: true }),
   updatedAt: zod.string().datetime({ offset: true }),
 });
 export const ListOperationsReconciliationExceptionsResponse = zod.array(
   ListOperationsReconciliationExceptionsResponseItem,
 );
+
+/**
+ * PostgreSQL only. Restricted to administrators. The derived correction journal, exception transition, transfer reconciliation state, immutable resolution history, and operator audit share one atomic transaction. No direct balance or posting edit is exposed.
+ * @summary Resolve an amount mismatch through a balanced suspense journal
+ */
+export const ResolveOperationsReconciliationExceptionParams = zod.object({
+  exceptionId: zod.coerce.string(),
+});
+
+export const resolveOperationsReconciliationExceptionHeaderIdempotencyKeyMin = 8;
+export const resolveOperationsReconciliationExceptionHeaderIdempotencyKeyMax = 128;
+
+export const ResolveOperationsReconciliationExceptionHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(resolveOperationsReconciliationExceptionHeaderIdempotencyKeyMin)
+    .max(resolveOperationsReconciliationExceptionHeaderIdempotencyKeyMax),
+});
+
+export const resolveOperationsReconciliationExceptionBodyReasonMin = 20;
+export const resolveOperationsReconciliationExceptionBodyReasonMax = 500;
+
+export const ResolveOperationsReconciliationExceptionBody = zod.object({
+  reason: zod
+    .string()
+    .min(resolveOperationsReconciliationExceptionBodyReasonMin)
+    .max(resolveOperationsReconciliationExceptionBodyReasonMax),
+});
+
+export const ResolveOperationsReconciliationExceptionResponse = zod.object({
+  id: zod.string(),
+  runId: zod.string(),
+  transferId: zod.union([zod.string(), zod.null()]),
+  code: zod.string(),
+  state: zod.string(),
+  summary: zod.string(),
+  assignedTo: zod.union([zod.string(), zod.null()]),
+  resolutionNote: zod.union([zod.string(), zod.null()]),
+  resolvedBy: zod.union([zod.string(), zod.null()]),
+  resolutionJournalId: zod.union([zod.string(), zod.null()]),
+  resolvedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  openedAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+});
 
 /**
  * @summary List immutable synthetic audit events

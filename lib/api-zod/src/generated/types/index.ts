@@ -98,6 +98,7 @@ export * from "./remittanceQuote";
 export * from "./remittanceQuoteDeliveryMethod";
 export * from "./remittanceQuoteFundingMethod";
 export * from "./remittanceQuoteStatus";
+export * from "./resolveOperationsReconciliationExceptionRequest";
 export * from "./runReconciliationRequest";
 export * from "./selectScenarioRequest";
 export * from "./transfer";

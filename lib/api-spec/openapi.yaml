@@ -623,6 +623,36 @@ paths:
         "401": { $ref: "#/components/responses/UnauthorizedProblem" }
         "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
+  /v1/internal/operations/reconciliation/exceptions/{exceptionId}/resolve:
+    post:
+      operationId: resolveOperationsReconciliationException
+      tags: [operations]
+      summary: Resolve an amount mismatch through a balanced suspense journal
+      description: PostgreSQL only. Restricted to administrators. The derived correction journal, exception transition, transfer reconciliation state, immutable resolution history, and operator audit share one atomic transaction. No direct balance or posting edit is exposed.
+      security:
+        - WorkforceSession: []
+      parameters:
+        - $ref: "#/components/parameters/ReconciliationExceptionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveOperationsReconciliationExceptionRequest"
+      responses:
+        "200":
+          description: Resolved exception with durable journal evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsReconciliationException"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "404": { $ref: "#/components/responses/NotFoundProblem" }
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+
   /v1/internal/operations/audit-events:
     get:
       operationId: listOperationsAuditEvents
@@ -823,6 +853,12 @@ components:
       required: true
       schema:
         type: string
+    ReconciliationExceptionId:
+      name: exceptionId
+      in: path
+      required: true
+      schema:
+        type: string
   responses:
     ValidationProblem:
       description: Request validation failed
@@ -875,6 +911,16 @@ components:
         reason:
           type: string
           minLength: 8
+          maxLength: 500
+      required: [reason]
+
+    ResolveOperationsReconciliationExceptionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 20
           maxLength: 500
       required: [reason]
 
@@ -1703,6 +1749,14 @@ components:
         summary: { type: string }
         assignedTo:
           anyOf: [{ type: string }, { type: "null" }]
+        resolutionNote:
+          anyOf: [{ type: string }, { type: "null" }]
+        resolvedBy:
+          anyOf: [{ type: string }, { type: "null" }]
+        resolutionJournalId:
+          anyOf: [{ type: string }, { type: "null" }]
+        resolvedAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
         openedAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
       required:
@@ -1714,6 +1768,10 @@ components:
           state,
           summary,
           assignedTo,
+          resolutionNote,
+          resolvedBy,
+          resolutionJournalId,
+          resolvedAt,
           openedAt,
           updatedAt,
         ]
