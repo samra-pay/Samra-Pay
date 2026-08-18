@@ -90,69 +90,78 @@ export class PostgresLedgerControl implements LedgerControlPort {
     currency: "USD";
     idempotencyKey: string;
   }): Promise<{ holdId: string }> {
-    if (
-      input.amountMinor !==
-      input.principalAmountMinor + input.feeAmountMinor
-    ) {
-      throw new DomainError(
-        "INVALID_ARGUMENT",
-        "Transfer debit must equal principal plus fee.",
-      );
-    }
-    const query = this.#context.query();
-    const existing = await this.findHoldId(input.transferId);
-    if (existing) return { holdId: existing };
+    return this.#context.run(async () => {
+      if (
+        input.amountMinor !==
+        input.principalAmountMinor + input.feeAmountMinor
+      ) {
+        throw new DomainError(
+          "INVALID_ARGUMENT",
+          "Transfer debit must equal principal plus fee.",
+        );
+      }
+      const query = this.#context.query();
+      const existing = await this.findHoldId(input.transferId);
+      if (existing) return { holdId: existing };
 
-    const account = await query.query<{
-      ledger_id: string;
-      product_id: string;
-    }>(
-      `SELECT la.id AS ledger_id, pa.id AS product_id
-       FROM samra_core.ledger_accounts la
-       JOIN samra_core.product_accounts pa ON pa.id = la.product_account_id
-       WHERE pa.external_ref = $1 AND la.currency = $2 AND la.state = 'active'
-       FOR UPDATE OF la`,
-      [input.accountId, input.currency],
-    );
-    if (!account.rows[0]) {
-      throw new DomainError("NOT_FOUND", "The source account was not found.");
-    }
-    const balance = await this.getCustomerBalance(input.accountId);
-    if (balance.availableMinor < input.amountMinor) {
-      throw new DomainError(
-        "INSUFFICIENT_FUNDS",
-        "The account has insufficient available funds.",
+      const account = await query.query<{
+        ledger_id: string;
+        product_id: string;
+      }>(
+        `SELECT la.id AS ledger_id, pa.id AS product_id
+         FROM samra_core.ledger_accounts la
+         JOIN samra_core.product_accounts pa ON pa.id = la.product_account_id
+         WHERE pa.external_ref = $1 AND la.currency = $2 AND la.state = 'active'
+         FOR UPDATE OF la`,
+        [input.accountId, input.currency],
       );
-    }
-    const inserted = await query.query<{ id: string }>(
-      `INSERT INTO samra_core.ledger_holds (
-         business_event_type, business_event_id, product_account_id,
-         ledger_account_id, currency, amount_minor, state, metadata
-       ) VALUES ('remittance_transfer',$1,$2,$3,$4,$5,'active',$6::jsonb)
-       ON CONFLICT (business_event_type, business_event_id) DO UPDATE
-         SET business_event_id = EXCLUDED.business_event_id
-       RETURNING id`,
-      [
-        input.transferId,
-        account.rows[0].product_id,
-        account.rows[0].ledger_id,
-        input.currency,
-        input.amountMinor.toString(),
-        JSON.stringify({
-          principalAmountMinor: input.principalAmountMinor.toString(),
-          feeAmountMinor: input.feeAmountMinor.toString(),
-          idempotencyKey: input.idempotencyKey,
-        }),
-      ],
-    );
-    const holdId = inserted.rows[0]!.id;
-    await query.query(
-      `INSERT INTO samra_core.ledger_hold_events (hold_id, event_type, reason)
-       VALUES ($1,'created','remittance_reserved')
-       ON CONFLICT DO NOTHING`,
-      [holdId],
-    );
-    return { holdId };
+      if (!account.rows[0]) {
+        throw new DomainError("NOT_FOUND", "The source account was not found.");
+      }
+
+      // The account lock serializes balance checks and hold creation. Re-check
+      // the business event after waiting so an idempotent retry does not fail
+      // an available-balance check against its own committed hold.
+      const replay = await this.findHoldId(input.transferId);
+      if (replay) return { holdId: replay };
+
+      const balance = await this.getCustomerBalance(input.accountId);
+      if (balance.availableMinor < input.amountMinor) {
+        throw new DomainError(
+          "INSUFFICIENT_FUNDS",
+          "The account has insufficient available funds.",
+        );
+      }
+      const inserted = await query.query<{ id: string }>(
+        `INSERT INTO samra_core.ledger_holds (
+           business_event_type, business_event_id, product_account_id,
+           ledger_account_id, currency, amount_minor, state, metadata
+         ) VALUES ('remittance_transfer',$1,$2,$3,$4,$5,'active',$6::jsonb)
+         ON CONFLICT (business_event_type, business_event_id) DO UPDATE
+           SET business_event_id = EXCLUDED.business_event_id
+         RETURNING id`,
+        [
+          input.transferId,
+          account.rows[0].product_id,
+          account.rows[0].ledger_id,
+          input.currency,
+          input.amountMinor.toString(),
+          JSON.stringify({
+            principalAmountMinor: input.principalAmountMinor.toString(),
+            feeAmountMinor: input.feeAmountMinor.toString(),
+            idempotencyKey: input.idempotencyKey,
+          }),
+        ],
+      );
+      const holdId = inserted.rows[0]!.id;
+      await query.query(
+        `INSERT INTO samra_core.ledger_hold_events (hold_id, event_type, reason)
+         VALUES ($1,'created','remittance_reserved')
+         ON CONFLICT DO NOTHING`,
+        [holdId],
+      );
+      return { holdId };
+    });
   }
 
   async capture(input: {
@@ -160,41 +169,62 @@ export class PostgresLedgerControl implements LedgerControlPort {
     holdId: string;
     idempotencyKey: string;
   }): Promise<void> {
-    const record = await this.#holdRecord(input.transferId, input.holdId);
-    const journalId = await this.#journals.post({
-      eventType: "remittance_capture",
-      eventId: input.transferId,
-      description: "Capture remittance principal and deferred fee",
-      postings: [
-        ["demo_usd_account_001", "debit", record.principal + record.fee],
-        ["clearing_remittance_principal_usd", "credit", record.principal],
-        ...(record.fee > 0n
-          ? [
-              [
-                "liability_deferred_remittance_fee_usd",
-                "credit",
-                record.fee,
-              ] as const,
-            ]
-          : []),
-      ],
-      metadata: {
-        transferId: input.transferId,
-        idempotencyKey: input.idempotencyKey,
-      },
+    await this.#context.run(async () => {
+      const record = await this.#holdRecord(
+        input.transferId,
+        input.holdId,
+        true,
+      );
+      if (record.state === "captured") return;
+      if (record.state !== "active") {
+        throw new DomainError(
+          "CONFLICT",
+          "Only an active hold can be captured.",
+          { holdId: input.holdId, holdState: record.state },
+        );
+      }
+      const journalId = await this.#journals.post({
+        eventType: "remittance_capture",
+        eventId: input.transferId,
+        description: "Capture remittance principal and deferred fee",
+        postings: [
+          [record.accountCode, "debit", record.principal + record.fee],
+          ["clearing_remittance_principal_usd", "credit", record.principal],
+          ...(record.fee > 0n
+            ? [
+                [
+                  "liability_deferred_remittance_fee_usd",
+                  "credit",
+                  record.fee,
+                ] as const,
+              ]
+            : []),
+        ],
+        metadata: {
+          transferId: input.transferId,
+          idempotencyKey: input.idempotencyKey,
+        },
+      });
+      const captured = await this.#context.query().query(
+        `UPDATE samra_core.ledger_holds
+         SET state = 'captured', terminal_at = now(), updated_at = now()
+         WHERE id = $1 AND state = 'active'`,
+        [input.holdId],
+      );
+      if (captured.rowCount !== 1) {
+        throw new DomainError(
+          "CONFLICT",
+          "The hold could not transition from active to captured.",
+          { holdId: input.holdId },
+        );
+      }
+      await saveHoldEvent(
+        this.#context.query(),
+        input.holdId,
+        "captured",
+        journalId,
+      );
     });
-    await this.#context.query().query(
-      `UPDATE samra_core.ledger_holds
-       SET state = 'captured', terminal_at = COALESCE(terminal_at, now()), updated_at = now()
-       WHERE id = $1 AND state = 'active'`,
-      [input.holdId],
-    );
-    await saveHoldEvent(
-      this.#context.query(),
-      input.holdId,
-      "captured",
-      journalId,
-    );
   }
 
   async release(input: {
@@ -202,20 +232,41 @@ export class PostgresLedgerControl implements LedgerControlPort {
     holdId: string;
     idempotencyKey: string;
   }): Promise<void> {
-    await this.#holdRecord(input.transferId, input.holdId);
-    await this.#context.query().query(
-      `UPDATE samra_core.ledger_holds
-       SET state = 'released', terminal_at = COALESCE(terminal_at, now()), updated_at = now()
-       WHERE id = $1 AND state = 'active'`,
-      [input.holdId],
-    );
-    await saveHoldEvent(
-      this.#context.query(),
-      input.holdId,
-      "released",
-      null,
-      input.idempotencyKey,
-    );
+    await this.#context.run(async () => {
+      const record = await this.#holdRecord(
+        input.transferId,
+        input.holdId,
+        true,
+      );
+      if (record.state === "released") return;
+      if (record.state !== "active") {
+        throw new DomainError(
+          "CONFLICT",
+          "Only an active hold can be released.",
+          { holdId: input.holdId, holdState: record.state },
+        );
+      }
+      const released = await this.#context.query().query(
+        `UPDATE samra_core.ledger_holds
+         SET state = 'released', terminal_at = now(), updated_at = now()
+         WHERE id = $1 AND state = 'active'`,
+        [input.holdId],
+      );
+      if (released.rowCount !== 1) {
+        throw new DomainError(
+          "CONFLICT",
+          "The hold could not transition from active to released.",
+          { holdId: input.holdId },
+        );
+      }
+      await saveHoldEvent(
+        this.#context.query(),
+        input.holdId,
+        "released",
+        null,
+        input.idempotencyKey,
+      );
+    });
   }
 
   async settlePrincipal(input: {
@@ -307,17 +358,22 @@ export class PostgresLedgerControl implements LedgerControlPort {
     }
   }
 
-  async #holdRecord(transferId: string, holdId?: string) {
+  async #holdRecord(transferId: string, holdId?: string, lock = false) {
     const result = await this.#context.query().query<{
       id: string;
       principal: string;
       fee: string;
+      state: "active" | "captured" | "released";
+      account_code: string;
     }>(
-      `SELECT id, metadata->>'principalAmountMinor' AS principal,
-              metadata->>'feeAmountMinor' AS fee
-       FROM samra_core.ledger_holds
-       WHERE business_event_type = 'remittance_transfer'
-         AND business_event_id = $1 AND ($2::uuid IS NULL OR id = $2)`,
+      `SELECT h.id, h.metadata->>'principalAmountMinor' AS principal,
+              h.metadata->>'feeAmountMinor' AS fee, h.state,
+              a.code AS account_code
+       FROM samra_core.ledger_holds h
+       JOIN samra_core.ledger_accounts a ON a.id = h.ledger_account_id
+       WHERE h.business_event_type = 'remittance_transfer'
+         AND h.business_event_id = $1 AND ($2::uuid IS NULL OR h.id = $2)
+       ${lock ? "FOR UPDATE OF h" : ""}`,
       [transferId, holdId ?? null],
     );
     const row = result.rows[0];
@@ -331,6 +387,8 @@ export class PostgresLedgerControl implements LedgerControlPort {
       id: row.id,
       principal: BigInt(row.principal),
       fee: BigInt(row.fee),
+      state: row.state,
+      accountCode: row.account_code,
     };
   }
 }
