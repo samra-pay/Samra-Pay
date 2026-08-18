@@ -1,0 +1,226 @@
+name: Weekly backend resilience
+
+on:
+  workflow_dispatch:
+    inputs:
+      concurrency_rounds:
+        description: Concurrent reserve and terminal-race rounds
+        required: false
+        default: "24"
+      randomized_steps:
+        description: Deterministic model-based ledger steps
+        required: false
+        default: "96"
+      randomized_seed:
+        description: Reproducible unsigned 32-bit sequence seed
+        required: false
+        default: "23063"
+      fault_rounds:
+        description: Controlled rollback and connection-fault rounds
+        required: false
+        default: "8"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/backend-resilience.yml"
+      - "artifacts/api-server/package.json"
+      - "artifacts/api-server/test/weekly-*.ts"
+      - "docs/testing/**"
+      - "scripts/src/validate-testing-cadence*"
+  schedule:
+    - cron: "43 7 * * 6"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-resilience-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resilience:
+    name: PostgreSQL weekly backend resilience gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_resilience
+          POSTGRES_PASSWORD: samra_resilience
+          POSTGRES_DB: samra_resilience
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_resilience -d samra_resilience"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://samra_resilience:samra_resilience@127.0.0.1:5432/samra_resilience
+      WEEKLY_CONCURRENCY_ROUNDS: ${{ inputs.concurrency_rounds || '24' }}
+      WEEKLY_RANDOM_STEPS: ${{ inputs.randomized_steps || '96' }}
+      WEEKLY_RANDOM_SEED: ${{ inputs.randomized_seed || '23063' }}
+      WEEKLY_FAULT_ROUNDS: ${{ inputs.fault_rounds || '8' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply current migrations
+        run: pnpm --filter @workspace/db run test:migrate
+
+      - name: Seed synthetic accounts twice
+        run: |
+          pnpm --filter @workspace/db run test:seed
+          pnpm --filter @workspace/db run test:seed
+
+      - name: Prepare evidence directory
+        run: mkdir -p artifacts/api-server/test-results
+
+      - name: Run bounded concurrency soak
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @workspace/api-server run test:weekly-concurrency:junit
+
+      - name: Run seeded randomized ledger model
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @workspace/api-server run test:weekly-randomized:junit
+
+      - name: Run controlled fault injection
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @workspace/api-server run test:weekly-faults:junit
+
+      - name: Run prior-schema migration compatibility
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @workspace/api-server run test:weekly-migrations:junit
+
+      - name: Preserve weekly resilience evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-backend-resilience-junit
+          path: |
+            artifacts/api-server/test-results/weekly-concurrency-soak.xml
+            artifacts/api-server/test-results/weekly-randomized-ledger.xml
+            artifacts/api-server/test-results/weekly-fault-injection.xml
+            artifacts/api-server/test-results/weekly-migration-compatibility.xml
+          if-no-files-found: error
+          retention-days: 90
+
+  qase-report:
+    name: Qase weekly backend resilience report
+    needs: resilience
+    if: >-
+      always() &&
+      needs.resilience.result != 'cancelled' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+      QASE_TESTOPS_PROJECT: SAMP
+      QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
+
+    steps:
+      - name: Download weekly resilience evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: weekly-backend-resilience-junit
+          path: test-results
+
+      - name: Validate weekly resilience JUnit payloads
+        run: |
+          for report in \
+            test-results/weekly-concurrency-soak.xml \
+            test-results/weekly-randomized-ledger.xml \
+            test-results/weekly-fault-injection.xml \
+            test-results/weekly-migration-compatibility.xml
+          do
+            test -s "$report"
+            grep -q '<testsuite ' "$report"
+            grep -q '<testcase ' "$report"
+          done
+
+      - name: Create Qase weekly resilience run
+        id: qase-run-create
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/run-create@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
+          title: Samra Pay weekly backend resilience — ${{ github.ref_name }} @ ${{ github.sha }}
+          description: Bounded concurrency soak, seeded ledger model, controlled fault injection, and migration compatibility against disposable PostgreSQL 16.
+
+      - name: Upload concurrency result to Qase
+        id: qase-upload-concurrency
+        if: steps.qase-run-create.outputs.id != ''
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}
+          format: junit
+          path: test-results/weekly-concurrency-soak.xml
+
+      - name: Upload randomized ledger result to Qase
+        id: qase-upload-randomized
+        if: steps.qase-run-create.outputs.id != ''
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}
+          format: junit
+          path: test-results/weekly-randomized-ledger.xml
+
+      - name: Upload fault-injection result to Qase
+        id: qase-upload-faults
+        if: steps.qase-run-create.outputs.id != ''
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}
+          format: junit
+          path: test-results/weekly-fault-injection.xml
+
+      - name: Upload migration-compatibility result to Qase
+        id: qase-upload-migrations
+        if: steps.qase-run-create.outputs.id != ''
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}
+          format: junit
+          path: test-results/weekly-migration-compatibility.xml
+
+      - name: Complete Qase weekly resilience run
+        if: >-
+          always() &&
+          steps.qase-run-create.outputs.id != '' &&
+          steps.qase-upload-concurrency.outcome == 'success' &&
+          steps.qase-upload-randomized.outcome == 'success' &&
+          steps.qase-upload-faults.outcome == 'success' &&
+          steps.qase-upload-migrations.outcome == 'success'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/run-complete@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}

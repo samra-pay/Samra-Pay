@@ -40,6 +40,10 @@
     "test:postgres-http:junit": "node test/run-with-junit.mjs test-results/postgres-http.xml 'HTTP to PostgreSQL acceptance' test/postgres-http.test.ts",
     "test:daily-synthetic": "NODE_ENV=test node --import tsx --test test/daily-synthetic-journeys.test.ts",
     "test:daily-synthetic:junit": "node test/run-with-junit.mjs test-results/daily-synthetic-journeys.xml 'Daily synthetic PostgreSQL journeys' test/daily-synthetic-journeys.test.ts",
+    "test:weekly-concurrency:junit": "node test/run-with-junit.mjs test-results/weekly-concurrency-soak.xml 'Weekly concurrency soak' test/weekly-concurrency-soak.test.ts 'Weekly Backend Resilience'",
+    "test:weekly-randomized:junit": "node test/run-with-junit.mjs test-results/weekly-randomized-ledger.xml 'Seeded randomized ledger sequences' test/weekly-randomized-ledger.test.ts 'Weekly Backend Resilience'",
+    "test:weekly-faults:junit": "node test/run-with-junit.mjs test-results/weekly-fault-injection.xml 'Controlled fault injection' test/weekly-fault-injection.test.ts 'Weekly Backend Resilience'",
+    "test:weekly-migrations:junit": "node test/run-with-junit.mjs test-results/weekly-migration-compatibility.xml 'Migration compatibility' test/weekly-migration-compatibility.test.ts 'Weekly Backend Resilience'",
     "test:process-restart": "node --test test/process-startup-recovery.test.mjs",
     "test:process-restart:junit": "node test/run-with-junit.mjs test-results/postgres-process-restart.xml 'Compiled PostgreSQL process restart' test/process-startup-recovery.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"

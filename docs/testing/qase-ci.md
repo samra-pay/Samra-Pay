@@ -25,6 +25,10 @@ used by the reporting job.
 | Reconciliation controls       | `artifacts/api-server/test/ledger-reconciliation-controls.test.ts`      | `ledger-reconciliation-controls.xml`      |
 | HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`                       | `postgres-http.xml`                       |
 | Daily synthetic journeys      | `artifacts/api-server/test/daily-synthetic-journeys.test.ts`            | `daily-synthetic-journeys.xml`            |
+| Weekly concurrency soak       | `artifacts/api-server/test/weekly-concurrency-soak.test.ts`             | `weekly-concurrency-soak.xml`             |
+| Seeded randomized ledger      | `artifacts/api-server/test/weekly-randomized-ledger.test.ts`            | `weekly-randomized-ledger.xml`            |
+| Controlled fault injection    | `artifacts/api-server/test/weekly-fault-injection.test.ts`              | `weekly-fault-injection.xml`              |
+| Migration compatibility       | `artifacts/api-server/test/weekly-migration-compatibility.test.ts`      | `weekly-migration-compatibility.xml`      |
 
 Qase identifies the automated cases by their stable Node test names in the JUnit
 files. Renaming a test changes its automation identity and must be treated as a
@@ -46,7 +50,9 @@ manual synthetic browser validation.
 The same governed CI workflow runs from `main` every day at `06:17 UTC` and
 names the resulting Qase record `Samra Pay daily backend acceptance`. The
 weekly ledger-performance workflow also uses `github-ci-postgres`; performance
-evidence must not appear as an unclassified Qase run. The complete product-stack
+evidence must not appear as an unclassified Qase run. The Saturday weekly
+backend-resilience workflow uses the same synthetic environment and publishes
+four additional JUnit payloads in one separately titled Qase run. The complete product-stack
 cadence and stop conditions are defined in
 [`testing-cadence.json`](testing-cadence.json) and explained in
 [`testing-strategy.md`](testing-strategy.md).
@@ -172,6 +178,14 @@ days. Ordinary pull requests that do not affect the ledger balance path do not
 pay the one-million-posting runtime cost.
 The measured baseline and resulting materialization gate are recorded in
 [`ledger-performance-baseline.md`](ledger-performance-baseline.md).
+
+The weekly backend-resilience gate is intentionally separate from the fast CI
+lane. It runs at `07:43 UTC` every Saturday and on manual dispatch. Its default
+inputs are 24 concurrency rounds, 96 deterministic ledger steps using seed
+`23063`, and eight controlled fault rounds. The migration test creates and
+drops its own database inside the disposable PostgreSQL service, upgrades a
+seeded migration-`0007` snapshot to current, and proves current migration and
+seed replay are idempotent. The four JUnit files are retained for 90 days.
 
 ## Manual scope
 

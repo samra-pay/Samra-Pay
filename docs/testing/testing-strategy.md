@@ -21,13 +21,14 @@ that the workflows still implement that contract.
 
 ## Active automated cadences
 
-| Cadence          | Trigger                      | Purpose                                                                                                | Target runtime |
-| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ | -------------: |
-| Pull request     | Every pull request to `main` | Prevent an unsafe change from entering `main`                                                          |     20 minutes |
-| Main             | Every push to `main`         | Prove the actual merge commit                                                                          |     20 minutes |
-| Daily            | `06:17 UTC` every day        | Detect time-dependent, dependency, build, restart, and cross-package regressions                       |     30 minutes |
-| Weekly ledger    | `06:17 UTC` every Sunday     | Enforce the 100,000/1,000,000-posting materialized-balance performance gate                            |     45 minutes |
-| Release dispatch | Manual GitHub dispatch       | Produce backend evidence for a named candidate; full release certification is a later controlled phase |     30 minutes |
+| Cadence           | Trigger                      | Purpose                                                                                                    | Target runtime |
+| ----------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------: |
+| Pull request      | Every pull request to `main` | Prevent an unsafe change from entering `main`                                                              |     20 minutes |
+| Main              | Every push to `main`         | Prove the actual merge commit                                                                              |     20 minutes |
+| Daily             | `06:17 UTC` every day        | Detect time-dependent, dependency, build, restart, and cross-package regressions                           |     30 minutes |
+| Weekly ledger     | `06:17 UTC` every Sunday     | Enforce the 100,000/1,000,000-posting materialized-balance performance gate                                |     45 minutes |
+| Weekly resilience | `07:43 UTC` every Saturday   | Soak concurrency, replay seeded ledger sequences, inject controlled failures, and rehearse schema upgrades |     45 minutes |
+| Release dispatch  | Manual GitHub dispatch       | Produce backend evidence for a named candidate; full release certification is a later controlled phase     |     30 minutes |
 
 The schedules deliberately avoid the start of the hour, when hosted workflow
 queues are more likely to be delayed. Scheduled runs execute only from the
@@ -87,10 +88,11 @@ The daily PostgreSQL job now publishes nine separately identifiable synthetic
 journeys for completion, provider rejection, timeout retry, cancellation,
 payout-failure refund, settlement reversal, restart/idempotency,
 reconciliation resolution, and cross-journey ledger/audit sweeps. Each result
-is independently visible in GitHub artifacts and Qase.
+is independently visible in GitHub artifacts and Qase. The weekly resilience
+lane adds six stable controls without sending traffic to any deployed surface:
+one concurrency soak, one reproducible model-based sequence, three controlled
+fault boundaries, and one upgrade from migration `0007` to the current schema.
 
-1. Add weekly concurrency soak, randomized ledger sequences, migration
-   compatibility, and fault injection.
-2. Add an immutable release-candidate workflow and evidence manifest.
-3. Decide separately whether browser and device automation provides enough
+1. Add an immutable release-candidate workflow and evidence manifest.
+2. Decide separately whether browser and device automation provides enough
    value to introduce and maintain it.
