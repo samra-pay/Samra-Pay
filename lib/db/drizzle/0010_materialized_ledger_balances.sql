@@ -143,6 +143,210 @@ CREATE TRIGGER "ledger_accounts_initialize_balance"
 AFTER INSERT ON "samra_core"."ledger_accounts"
 FOR EACH ROW EXECUTE FUNCTION "samra_core"."initialize_ledger_account_balance"();
 --> statement-breakpoint
+CREATE OR REPLACE FUNCTION "samra_core"."guard_ledger_journal_mutation"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  posting_count integer;
+  account_count integer;
+  debit_total numeric;
+  credit_total numeric;
+  account_record record;
+  current_balance numeric;
+  journal_delta numeric;
+  active_holds numeric;
+  original_state "samra_core"."ledger_journal_state";
+  original_currency "samra_core"."currency_code";
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW."state" <> 'draft' OR NEW."posted_at" IS NOT NULL THEN
+      RAISE EXCEPTION 'ledger journals must be created in draft state'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD."state" <> 'draft' THEN
+      RAISE EXCEPTION 'posted ledger journal % is immutable', OLD."id"
+        USING ERRCODE = '55000';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF OLD."state" = 'reversed' THEN
+    RAISE EXCEPTION 'reversed ledger journal % is immutable', OLD."id"
+      USING ERRCODE = '55000';
+  END IF;
+
+  IF OLD."state" = 'posted' THEN
+    IF NEW."state" <> 'reversed'
+      OR NEW."id" IS DISTINCT FROM OLD."id"
+      OR NEW."business_event_type" IS DISTINCT FROM OLD."business_event_type"
+      OR NEW."business_event_id" IS DISTINCT FROM OLD."business_event_id"
+      OR NEW."currency" IS DISTINCT FROM OLD."currency"
+      OR NEW."description" IS DISTINCT FROM OLD."description"
+      OR NEW."reverses_journal_id" IS DISTINCT FROM OLD."reverses_journal_id"
+      OR NEW."metadata" IS DISTINCT FROM OLD."metadata"
+      OR NEW."created_at" IS DISTINCT FROM OLD."created_at"
+      OR NEW."posted_at" IS DISTINCT FROM OLD."posted_at"
+      OR NOT EXISTS (
+        SELECT 1
+        FROM "samra_core"."ledger_journals" AS reversal
+        WHERE reversal."reverses_journal_id" = OLD."id"
+          AND reversal."state" = 'posted'
+      ) THEN
+      RAISE EXCEPTION 'posted ledger journal % can only be marked reversed by its posted reversal journal', OLD."id"
+        USING ERRCODE = '55000';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW."state" = 'draft' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW."state" <> 'posted' THEN
+    RAISE EXCEPTION 'draft journal % may only transition to posted', NEW."id"
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NEW."id" IS DISTINCT FROM OLD."id"
+    OR NEW."business_event_type" IS DISTINCT FROM OLD."business_event_type"
+    OR NEW."business_event_id" IS DISTINCT FROM OLD."business_event_id"
+    OR NEW."currency" IS DISTINCT FROM OLD."currency"
+    OR NEW."description" IS DISTINCT FROM OLD."description"
+    OR NEW."reverses_journal_id" IS DISTINCT FROM OLD."reverses_journal_id"
+    OR NEW."metadata" IS DISTINCT FROM OLD."metadata"
+    OR NEW."created_at" IS DISTINCT FROM OLD."created_at" THEN
+    RAISE EXCEPTION 'journal % content and posting transition must be separate updates', NEW."id"
+      USING ERRCODE = '55000';
+  END IF;
+
+  NEW."posted_at" := COALESCE(NEW."posted_at", now());
+
+  SELECT count(*), count(DISTINCT posting."account_id"),
+         COALESCE(sum(posting."amount_minor")
+           FILTER (WHERE posting."side" = 'debit'), 0),
+         COALESCE(sum(posting."amount_minor")
+           FILTER (WHERE posting."side" = 'credit'), 0)
+  INTO posting_count, account_count, debit_total, credit_total
+  FROM "samra_core"."ledger_postings" AS posting
+  WHERE posting."journal_id" = NEW."id";
+
+  IF posting_count < 2 OR account_count < 2 OR debit_total <> credit_total THEN
+    RAISE EXCEPTION 'journal % must contain balanced debit and credit postings across at least two accounts', NEW."id"
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM "samra_core"."ledger_postings" AS posting
+    JOIN "samra_core"."ledger_accounts" AS account
+      ON account."id" = posting."account_id"
+    WHERE posting."journal_id" = NEW."id"
+      AND (account."currency" <> NEW."currency" OR account."state" <> 'active')
+  ) THEN
+    RAISE EXCEPTION 'journal % contains an inactive or cross-currency account', NEW."id"
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NEW."reverses_journal_id" IS NOT NULL THEN
+    SELECT original."state", original."currency"
+    INTO original_state, original_currency
+    FROM "samra_core"."ledger_journals" AS original
+    WHERE original."id" = NEW."reverses_journal_id"
+    FOR UPDATE;
+
+    IF NOT FOUND OR original_state <> 'posted'
+      OR original_currency <> NEW."currency" THEN
+      RAISE EXCEPTION 'journal % can only reverse a posted journal in the same currency', NEW."id"
+        USING ERRCODE = '23514';
+    END IF;
+
+    IF EXISTS (
+      WITH original AS (
+        SELECT posting."account_id", posting."side",
+               sum(posting."amount_minor") AS amount_minor
+        FROM "samra_core"."ledger_postings" AS posting
+        WHERE posting."journal_id" = NEW."reverses_journal_id"
+        GROUP BY posting."account_id", posting."side"
+      ), reversal AS (
+        SELECT posting."account_id",
+               CASE posting."side"
+                 WHEN 'debit' THEN 'credit'::"samra_core"."ledger_entry_side"
+                 ELSE 'debit'::"samra_core"."ledger_entry_side"
+               END AS original_side,
+               sum(posting."amount_minor") AS amount_minor
+        FROM "samra_core"."ledger_postings" AS posting
+        WHERE posting."journal_id" = NEW."id"
+        GROUP BY posting."account_id", posting."side"
+      )
+      SELECT 1
+      FROM original
+      FULL OUTER JOIN reversal
+        ON reversal."account_id" = original."account_id"
+       AND reversal."original_side" = original."side"
+      WHERE original."amount_minor" IS DISTINCT FROM reversal."amount_minor"
+    ) THEN
+      RAISE EXCEPTION 'journal % is not an exact reversal of journal %', NEW."id", NEW."reverses_journal_id"
+        USING ERRCODE = '23514';
+    END IF;
+  END IF;
+
+  -- NO KEY UPDATE serializes balance-changing work without conflicting with
+  -- the KEY SHARE locks already acquired by posting foreign-key checks.
+  FOR account_record IN
+    SELECT account."id", account."normal_side",
+           account."allow_negative_available"
+    FROM "samra_core"."ledger_accounts" AS account
+    JOIN (
+      SELECT DISTINCT posting."account_id"
+      FROM "samra_core"."ledger_postings" AS posting
+      WHERE posting."journal_id" = NEW."id"
+    ) AS touched ON touched."account_id" = account."id"
+    ORDER BY account."id"
+    FOR NO KEY UPDATE OF account
+  LOOP
+    IF NOT account_record."allow_negative_available" THEN
+      SELECT COALESCE(sum(
+        CASE WHEN posting."side" = account_record."normal_side"
+          THEN posting."amount_minor" ELSE -posting."amount_minor" END
+      ), 0)
+      INTO current_balance
+      FROM "samra_core"."ledger_postings" AS posting
+      JOIN "samra_core"."ledger_journals" AS journal
+        ON journal."id" = posting."journal_id"
+      WHERE posting."account_id" = account_record."id"
+        AND journal."state" IN ('posted', 'reversed');
+
+      SELECT COALESCE(sum(
+        CASE WHEN posting."side" = account_record."normal_side"
+          THEN posting."amount_minor" ELSE -posting."amount_minor" END
+      ), 0)
+      INTO journal_delta
+      FROM "samra_core"."ledger_postings" AS posting
+      WHERE posting."journal_id" = NEW."id"
+        AND posting."account_id" = account_record."id";
+
+      SELECT COALESCE(sum(hold."amount_minor"), 0)
+      INTO active_holds
+      FROM "samra_core"."ledger_holds" AS hold
+      WHERE hold."ledger_account_id" = account_record."id"
+        AND hold."state" = 'active';
+
+      IF current_balance + journal_delta - active_holds < 0 THEN
+        RAISE EXCEPTION 'posting journal % would make available balance negative for account %', NEW."id", account_record."id"
+          USING ERRCODE = '23514';
+      END IF;
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
 CREATE FUNCTION "samra_core"."lock_posted_journal_accounts_in_order"()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -164,7 +368,7 @@ BEGIN
       PERFORM 1
       FROM "samra_core"."ledger_accounts" AS account
       WHERE account."id" = locked_account_id
-      FOR UPDATE;
+      FOR NO KEY UPDATE;
     END LOOP;
   END IF;
   RETURN NEW;
