@@ -20,6 +20,8 @@
     "test:ledger-idempotency:junit": "node test/run-with-junit.mjs test-results/ledger-idempotency.xml '11.04 Ledger - Idempotency' test/ledger-idempotency.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-holds": "NODE_ENV=test node --import tsx --test test/ledger-holds-lifecycle.test.ts",
     "test:ledger-holds:junit": "node test/run-with-junit.mjs test-results/ledger-holds-lifecycle.xml '11.05 Ledger - Holds Lifecycle' test/ledger-holds-lifecycle.test.ts '11 Claude Ledger Assurance'",
+    "test:ledger-reversals": "NODE_ENV=test node --import tsx --test test/ledger-reversals-refunds.test.ts",
+    "test:ledger-reversals:junit": "node test/run-with-junit.mjs test-results/ledger-reversals-refunds.xml '11.07 Ledger - Reversals and Refunds' test/ledger-reversals-refunds.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-balances": "NODE_ENV=test node --import tsx --test test/ledger-balance-computation.test.ts",
     "test:ledger-balances:junit": "node test/run-with-junit.mjs test-results/ledger-balance-computation.xml '11.08 Ledger - Balance Computation' test/ledger-balance-computation.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-sweeps": "NODE_ENV=test node --import tsx --test test/ledger-sweeps.test.ts",

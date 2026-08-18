@@ -15,6 +15,7 @@ used by the reporting job.
 | Ledger balance computation    | `artifacts/api-server/test/ledger-balance-computation.test.ts` | `ledger-balance-computation.xml` |
 | Ledger idempotency            | `artifacts/api-server/test/ledger-idempotency.test.ts`         | `ledger-idempotency.xml`         |
 | Ledger holds lifecycle        | `artifacts/api-server/test/ledger-holds-lifecycle.test.ts`     | `ledger-holds-lifecycle.xml`     |
+| Ledger reversals and refunds  | `artifacts/api-server/test/ledger-reversals-refunds.test.ts`   | `ledger-reversals-refunds.xml`   |
 | Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`              | `ledger-sweeps.xml`              |
 | HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`              | `postgres-http.xml`              |
 
@@ -67,6 +68,10 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-73   | CLAUDE-LED-028 idempotent double capture           |
 | SAMP-74   | CLAUDE-LED-030 available-balance reserve boundary  |
 | SAMP-75   | CLAUDE-LED-029 released-hold capture rejection     |
+| SAMP-76   | CLAUDE-LED-036 exact mirrored reversal             |
+| SAMP-77   | CLAUDE-LED-038 original journal remains unchanged  |
+| SAMP-78   | CLAUDE-LED-037 idempotent reversal                 |
+| SAMP-79   | CLAUDE-LED-039 concurrent reversal claim           |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An

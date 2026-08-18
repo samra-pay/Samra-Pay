@@ -332,30 +332,39 @@ export class PostgresLedgerControl implements LedgerControlPort {
     currency: "USD";
     idempotencyKey: string;
   }): Promise<void> {
-    const record = await this.#holdRecord(input.transferId);
-    if (input.amountMinor !== record.principal + record.fee) {
-      throw new DomainError(
-        "CONFLICT",
-        "Refund amount does not match the original debit.",
+    await this.#context.run(async () => {
+      const record = await this.#holdRecord(input.transferId);
+      if (input.amountMinor !== record.principal + record.fee) {
+        throw new DomainError(
+          "CONFLICT",
+          "Refund amount does not match the original debit.",
+        );
+      }
+      const originals = await this.#context.query().query<{ id: string }>(
+        `SELECT id FROM samra_core.ledger_journals
+         WHERE business_event_id = $1
+           AND business_event_type IN ('remittance_capture','remittance_settlement','remittance_fee_recognition')
+         ORDER BY CASE business_event_type
+           WHEN 'remittance_fee_recognition' THEN 1
+           WHEN 'remittance_settlement' THEN 2 ELSE 3 END`,
+        [input.transferId],
       );
-    }
-    const originals = await this.#context.query().query<{ id: string }>(
-      `SELECT id FROM samra_core.ledger_journals
-       WHERE business_event_id = $1
-         AND business_event_type IN ('remittance_capture','remittance_settlement','remittance_fee_recognition')
-       ORDER BY CASE business_event_type
-         WHEN 'remittance_fee_recognition' THEN 1
-         WHEN 'remittance_settlement' THEN 2 ELSE 3 END`,
-      [input.transferId],
-    );
-    for (const original of originals.rows) {
-      await reverseJournal(
-        this.#context.query(),
-        original.id,
-        input.transferId,
-        input.idempotencyKey,
-      );
-    }
+      if (originals.rows.length === 0) {
+        throw new DomainError(
+          "CONFLICT",
+          "The transfer has no posted ledger movement to refund.",
+          { transferId: input.transferId },
+        );
+      }
+      for (const original of originals.rows) {
+        await reverseJournal(
+          this.#context.query(),
+          original.id,
+          input.transferId,
+          input.idempotencyKey,
+        );
+      }
+    });
   }
 
   async #holdRecord(transferId: string, holdId?: string, lock = false) {
@@ -601,12 +610,7 @@ async function reverseJournal(
   originalId: string,
   transferId: string,
   idempotencyKey: string,
-): Promise<void> {
-  const existing = await query.query(
-    `SELECT id FROM samra_core.ledger_journals WHERE reverses_journal_id = $1`,
-    [originalId],
-  );
-  if (existing.rows[0]) return;
+): Promise<string> {
   const journal = await query.query<{ id: string }>(
     `INSERT INTO samra_core.ledger_journals
      (business_event_type, business_event_id, currency, state, description,
@@ -614,10 +618,26 @@ async function reverseJournal(
      SELECT 'remittance_refund_reversal', $2::text || ':' || id::text, currency, 'draft',
             'Refund reversal for transfer ' || $2::text, id,
             jsonb_build_object('transferId',$2::text,'idempotencyKey',$3::text)
-     FROM samra_core.ledger_journals WHERE id = $1::uuid RETURNING id`,
+     FROM samra_core.ledger_journals
+     WHERE id = $1::uuid AND state IN ('posted','reversed')
+     ON CONFLICT DO NOTHING
+     RETURNING id`,
     [originalId, transferId, idempotencyKey],
   );
-  const reversalId = journal.rows[0]!.id;
+  const reversalId = journal.rows[0]?.id;
+  if (!reversalId) {
+    const replay = await query.query<{ id: string }>(
+      `SELECT id FROM samra_core.ledger_journals
+       WHERE reverses_journal_id = $1`,
+      [originalId],
+    );
+    if (replay.rows[0]) return replay.rows[0].id;
+    throw new DomainError(
+      "CONFLICT",
+      "The original posted journal could not be reversed.",
+      { originalJournalId: originalId },
+    );
+  }
   await query.query(
     `INSERT INTO samra_core.ledger_postings
      (journal_id, account_id, sequence, side, amount_minor, memo)
@@ -633,6 +653,7 @@ async function reverseJournal(
      WHERE id = $1`,
     [reversalId],
   );
+  return reversalId;
 }
 
 async function saveHoldEvent(
