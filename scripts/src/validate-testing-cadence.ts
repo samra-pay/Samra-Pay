@@ -156,6 +156,7 @@ export function validateTestingCadence(
     "main",
     "daily",
     "weekly-ledger",
+    "weekly-resilience",
     "release",
   ]) {
     if (!cadenceIds.has(requiredCadence)) {

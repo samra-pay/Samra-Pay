@@ -40,6 +40,16 @@ const performanceWorkflow = [
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
 ].join("\n");
 
+const resilienceWorkflow = [
+  "on:",
+  "  schedule:",
+  '    - cron: "43 7 * * 6"',
+  "jobs:",
+  "  resilience:",
+  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
+  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+].join("\n");
+
 const policy: TestingCadencePolicy = {
   version: 1,
   authority: {
@@ -104,6 +114,15 @@ const policy: TestingCadencePolicy = {
       qaseEnvironment: "github-ci-postgres",
     },
     {
+      id: "weekly-resilience",
+      workflow: ".github/workflows/backend-resilience.yml",
+      trigger: "schedule",
+      cron: "43 7 * * 6",
+      maximumMinutes: 45,
+      requiredJobs: ["resilience"],
+      qaseEnvironment: "github-ci-postgres",
+    },
+    {
       id: "release",
       workflow: ".github/workflows/ci.yml",
       trigger: "workflow_dispatch",
@@ -117,7 +136,14 @@ const policy: TestingCadencePolicy = {
       id: "financial-core",
       risk: "P0",
       paths: ["lib/ledger/**"],
-      cadences: ["pull-request", "main", "daily", "weekly-ledger", "release"],
+      cadences: [
+        "pull-request",
+        "main",
+        "daily",
+        "weekly-ledger",
+        "weekly-resilience",
+        "release",
+      ],
     },
     {
       id: "customer-web",
@@ -139,6 +165,7 @@ const policy: TestingCadencePolicy = {
 const workflows = {
   ".github/workflows/ci.yml": workflow,
   ".github/workflows/ledger-performance.yml": performanceWorkflow,
+  ".github/workflows/backend-resilience.yml": resilienceWorkflow,
 };
 
 const documentation = [
