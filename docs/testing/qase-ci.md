@@ -6,12 +6,15 @@ used by the reporting job.
 
 ## Automated scope
 
-| GitHub gate                   | Source                                                       | Qase result source             |
-| ----------------------------- | ------------------------------------------------------------ | ------------------------------ |
-| PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                 | `postgres-persistence.xml`     |
-| Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts` | `ledger-journal-assurance.xml` |
-| Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`            | `ledger-sweeps.xml`            |
-| HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`            | `postgres-http.xml`            |
+| GitHub gate                   | Source                                                         | Qase result source               |
+| ----------------------------- | -------------------------------------------------------------- | -------------------------------- |
+| PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                   | `postgres-persistence.xml`       |
+| Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts`   | `ledger-journal-assurance.xml`   |
+| Ledger account resolution     | `artifacts/api-server/test/ledger-account-resolution.test.ts`  | `ledger-account-resolution.xml`  |
+| Ledger balance computation    | `artifacts/api-server/test/ledger-balance-computation.test.ts` | `ledger-balance-computation.xml` |
+| Ledger idempotency            | `artifacts/api-server/test/ledger-idempotency.test.ts`         | `ledger-idempotency.xml`         |
+| Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`              | `ledger-sweeps.xml`              |
+| HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`              | `postgres-http.xml`              |
 
 Qase identifies the automated cases by their stable Node test names in the JUnit
 files. Renaming a test changes its automation identity and must be treated as a
@@ -23,19 +26,30 @@ exact case title plus suite path instead of creating a duplicate automated case.
 
 ## Claude ledger coverage activated
 
-| Qase case | Automated invariant                               |
-| --------- | ------------------------------------------------- |
-| SAMP-39   | CLAUDE-LED-050 structural journal sweep           |
-| SAMP-40   | CLAUDE-LED-048 per-journal balance sweep          |
-| SAMP-41   | CLAUDE-LED-049 global trial balance               |
-| SAMP-42   | CLAUDE-LED-051 hold integrity sweep               |
-| SAMP-43   | CLAUDE-LED-002 unresolvable account rollback      |
-| SAMP-44   | CLAUDE-LED-006 single-leg rejection               |
-| SAMP-45   | CLAUDE-LED-003 unequal debit/credit rejection     |
-| SAMP-46   | CLAUDE-LED-005 empty journal rejection            |
-| SAMP-47   | CLAUDE-LED-010 mid-loop resolution rollback       |
-| SAMP-48   | CLAUDE-LED-004 independent database balance guard |
-| SAMP-49   | CLAUDE-LED-001 balanced two-leg baseline          |
+| Qase case | Automated invariant                                |
+| --------- | -------------------------------------------------- |
+| SAMP-39   | CLAUDE-LED-050 structural journal sweep            |
+| SAMP-40   | CLAUDE-LED-048 per-journal balance sweep           |
+| SAMP-41   | CLAUDE-LED-049 global trial balance                |
+| SAMP-42   | CLAUDE-LED-051 hold integrity sweep                |
+| SAMP-43   | CLAUDE-LED-002 unresolvable account rollback       |
+| SAMP-44   | CLAUDE-LED-006 single-leg rejection                |
+| SAMP-45   | CLAUDE-LED-003 unequal debit/credit rejection      |
+| SAMP-46   | CLAUDE-LED-005 empty journal rejection             |
+| SAMP-47   | CLAUDE-LED-010 mid-loop resolution rollback        |
+| SAMP-48   | CLAUDE-LED-004 independent database balance guard  |
+| SAMP-49   | CLAUDE-LED-001 balanced two-leg baseline           |
+| SAMP-50   | CLAUDE-LED-009 contiguous multi-leg posting        |
+| SAMP-51   | CLAUDE-LED-011 exact account-code resolution       |
+| SAMP-52   | CLAUDE-LED-040 normal-side balance aggregation     |
+| SAMP-53   | CLAUDE-LED-041 posted-only balance truth           |
+| SAMP-54   | CLAUDE-LED-042 posted, held, and available balance |
+| SAMP-55   | CLAUDE-LED-020 business-event replay idempotency   |
+
+The LED-020 implementation also rejects reuse of the same business-event identity
+with changed description, metadata, account, side, ordering, or amount. An
+idempotent replay can return the original journal only when the complete journal
+command is identical.
 
 ## Run behavior
 

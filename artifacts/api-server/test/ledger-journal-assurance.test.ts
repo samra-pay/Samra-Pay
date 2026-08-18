@@ -179,6 +179,56 @@ test("CLAUDE-LED-001 Balanced two-leg journal posts and both legs persist", asyn
   await assertNoEventResidue(eventId);
 });
 
+test("CLAUDE-LED-009 Multi-leg journal posts all legs with contiguous sequence", async () => {
+  const eventId = assuranceEventId("multi-leg-baseline");
+  const rollback = new RollbackAfterAssurance();
+
+  await assert.rejects(
+    context.run(async () => {
+      const journalId = await journals.post(
+        command(eventId, [
+          ["demo_usd_account_001", "debit", 10_000n],
+          ["demo_usd_account_001", "debit", 300n],
+          ["clearing_remittance_principal_usd", "credit", 10_000n],
+          ["liability_deferred_remittance_fee_usd", "credit", 300n],
+        ]),
+      );
+      const result = await context.query().query<{
+        sequence: number;
+        side: "debit" | "credit";
+        amount_minor: string;
+      }>(
+        `SELECT sequence, side, amount_minor::text AS amount_minor
+         FROM samra_core.ledger_postings
+         WHERE journal_id = $1
+         ORDER BY sequence`,
+        [journalId],
+      );
+
+      assert.deepEqual(
+        result.rows.map(({ sequence }) => sequence),
+        [1, 2, 3, 4],
+      );
+      assert.equal(
+        result.rows
+          .filter(({ side }) => side === "debit")
+          .reduce((total, row) => total + BigInt(row.amount_minor), 0n),
+        10_300n,
+      );
+      assert.equal(
+        result.rows
+          .filter(({ side }) => side === "credit")
+          .reduce((total, row) => total + BigInt(row.amount_minor), 0n),
+        10_300n,
+      );
+      throw rollback;
+    }),
+    (error) => error === rollback,
+  );
+
+  await assertNoEventResidue(eventId);
+});
+
 function command(
   eventId: string,
   postings: DurableJournalCommand["postings"],

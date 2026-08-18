@@ -135,6 +135,15 @@ jobs:
       - name: Run ledger journal assurance tests
         run: pnpm --filter @workspace/api-server run test:ledger-journals:junit
 
+      - name: Run ledger account resolution tests
+        run: pnpm --filter @workspace/api-server run test:ledger-account-resolution:junit
+
+      - name: Run ledger balance computation tests
+        run: pnpm --filter @workspace/api-server run test:ledger-balances:junit
+
+      - name: Run ledger idempotency tests
+        run: pnpm --filter @workspace/api-server run test:ledger-idempotency:junit
+
       - name: Run global ledger invariant sweeps
         run: pnpm --filter @workspace/api-server run test:ledger-sweeps:junit
 
@@ -146,6 +155,9 @@ jobs:
           path: |
             artifacts/api-server/test-results/postgres-persistence.xml
             artifacts/api-server/test-results/ledger-journal-assurance.xml
+            artifacts/api-server/test-results/ledger-account-resolution.xml
+            artifacts/api-server/test-results/ledger-balance-computation.xml
+            artifacts/api-server/test-results/ledger-idempotency.xml
             artifacts/api-server/test-results/ledger-sweeps.xml
           if-no-files-found: error
           retention-days: 14
@@ -246,6 +258,9 @@ jobs:
           for report in \
             test-results/postgres-persistence.xml \
             test-results/ledger-journal-assurance.xml \
+            test-results/ledger-account-resolution.xml \
+            test-results/ledger-balance-computation.xml \
+            test-results/ledger-idempotency.xml \
             test-results/ledger-sweeps.xml \
             test-results/postgres-http.xml
           do
@@ -323,6 +338,39 @@ jobs:
           format: junit
           path: test-results/ledger-sweeps.xml
 
+      - name: Upload ledger account resolution results to Qase
+        id: qase-upload-ledger-account-resolution
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-account-resolution.xml
+
+      - name: Upload ledger balance computation results to Qase
+        id: qase-upload-ledger-balances
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-balance-computation.xml
+
+      - name: Upload ledger idempotency results to Qase
+        id: qase-upload-ledger-idempotency
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-idempotency.xml
+
       - name: Complete Qase run
         if: >-
           always() &&
@@ -331,6 +379,9 @@ jobs:
           steps.qase-upload-http.outcome == 'success' &&
           steps.qase-upload-ledger-journals.outcome == 'success' &&
           steps.qase-upload-ledger-sweeps.outcome == 'success' &&
+          steps.qase-upload-ledger-account-resolution.outcome == 'success' &&
+          steps.qase-upload-ledger-balances.outcome == 'success' &&
+          steps.qase-upload-ledger-idempotency.outcome == 'success' &&
           (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-complete@v1

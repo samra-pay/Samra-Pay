@@ -359,20 +359,59 @@ async function postJournal(
   query: Queryable,
   input: DurableJournalCommand,
 ): Promise<string> {
-  const existing = await query.query<{ id: string; state: string }>(
-    `SELECT id, state FROM samra_core.ledger_journals
+  const existing = await query.query<{
+    id: string;
+    state: string;
+    description: string;
+    metadata: Record<string, string>;
+  }>(
+    `SELECT id, state, description, metadata
+     FROM samra_core.ledger_journals
      WHERE business_event_type = $1 AND business_event_id = $2`,
     [input.eventType, input.eventId],
   );
-  if (existing.rows[0]) {
-    if (!["posted", "reversed"].includes(existing.rows[0].state)) {
+  const existingJournal = existing.rows[0];
+  if (existingJournal) {
+    if (!["posted", "reversed"].includes(existingJournal.state)) {
       throw new DomainError(
         "CONFLICT",
         "The ledger business event already has an incomplete journal.",
         { eventType: input.eventType, eventId: input.eventId },
       );
     }
-    return existing.rows[0].id;
+    const existingPostings = await query.query<{
+      account_code: string;
+      side: "debit" | "credit";
+      amount_minor: string;
+    }>(
+      `SELECT a.code AS account_code, p.side, p.amount_minor::text AS amount_minor
+       FROM samra_core.ledger_postings p
+       JOIN samra_core.ledger_accounts a ON a.id = p.account_id
+       WHERE p.journal_id = $1
+       ORDER BY p.sequence`,
+      [existingJournal.id],
+    );
+    if (
+      existingJournal.description !== input.description ||
+      !sameStringRecord(existingJournal.metadata, input.metadata) ||
+      existingPostings.rows.length !== input.postings.length ||
+      existingPostings.rows.some((posting, index) => {
+        const expected = input.postings[index];
+        return (
+          !expected ||
+          posting.account_code !== expected[0] ||
+          posting.side !== expected[1] ||
+          BigInt(posting.amount_minor) !== expected[2]
+        );
+      })
+    ) {
+      throw new DomainError(
+        "CONFLICT",
+        "The ledger business event was already used with a different journal command.",
+        { eventType: input.eventType, eventId: input.eventId },
+      );
+    }
+    return existingJournal.id;
   }
   const journal = await query.query<{ id: string }>(
     `INSERT INTO samra_core.ledger_journals
@@ -416,6 +455,21 @@ async function postJournal(
     );
   }
   return journalId;
+}
+
+function sameStringRecord(
+  left: Readonly<Record<string, string>>,
+  right: Readonly<Record<string, string>>,
+): boolean {
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) =>
+        key === rightKeys[index] && left[key] === right[rightKeys[index]!],
+    )
+  );
 }
 
 function validateJournalCommand(input: DurableJournalCommand): void {
