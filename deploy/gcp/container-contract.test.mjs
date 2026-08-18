@@ -145,3 +145,17 @@ test("initializes auditable failure evidence before image builds", async () => {
       workflow.indexOf("Build API image"),
   );
 });
+
+test("keeps the design source boundary portable without copying Git metadata", async () => {
+  const boundary = await readFile(
+    "artifacts/samra-pay-ds/scripts/check-source-boundary.mjs",
+    "utf8",
+  );
+  const dockerfile = await readFile(
+    "deploy/gcp/Dockerfile.design-system",
+    "utf8",
+  );
+  assert.match(boundary, /boundaryMode = "filesystem"/);
+  assert.match(boundary, /await listPackageFiles\(designRoot\)/);
+  assert.doesNotMatch(dockerfile, /apt-get.*git|COPY\s+\.git/i);
+});
