@@ -12,7 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Feather } from '@expo/vector-icons';
+import { ApiUnavailableScreen } from '@/components/ApiUnavailableScreen';
 import { BankCard } from '@/components/BankCard';
+import { useMobileDataMode } from '@/lib/samra-runtime';
 import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import { CARDS, CARD_TRANSACTIONS, DEMO_DISCLAIMER, formatUsd } from '@/lib/mock-data';
@@ -24,6 +26,18 @@ function formatCardNumber(n: string) {
 }
 
 export default function CardsScreen() {
+  const dataMode = useMobileDataMode();
+  return dataMode === 'api' ? (
+    <ApiUnavailableScreen
+      title="Cards"
+      detail="Card accounts, card balances, and card transactions do not yet have a connected backend source."
+    />
+  ) : (
+    <LegacyMockCardsScreen />
+  );
+}
+
+function LegacyMockCardsScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
