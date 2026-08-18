@@ -49,6 +49,10 @@ import {
   ListOperationsAuditEventsResponse,
   ListOperationsReconciliationExceptionsQueryParams,
   ListOperationsReconciliationExceptionsResponse,
+  ResolveOperationsReconciliationExceptionBody,
+  ResolveOperationsReconciliationExceptionHeader,
+  ResolveOperationsReconciliationExceptionParams,
+  ResolveOperationsReconciliationExceptionResponse,
   ListOperationsTransfersQueryParams,
   ListOperationsTransfersResponse,
   AddOperationsCaseNoteBody,
@@ -99,6 +103,7 @@ type OperationsPermission =
   | "transfers:read"
   | "transfers:manage"
   | "reconciliation:read"
+  | "reconciliation:resolve"
   | "audit:read"
   | "cases:read"
   | "cases:work"
@@ -136,6 +141,7 @@ const ROLE_PERMISSIONS: Readonly<
     "transfers:read",
     "transfers:manage",
     "reconciliation:read",
+    "reconciliation:resolve",
     "audit:read",
     "cases:read",
     "cases:work",
@@ -806,6 +812,40 @@ export function createV1Router(
         );
         res.json(
           ListOperationsReconciliationExceptionsResponse.parse(exceptions),
+        );
+      }),
+    );
+
+    router.post(
+      "/internal/operations/reconciliation/exceptions/:exceptionId/resolve",
+      asyncRoute(async (req, res) => {
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "reconciliation:resolve",
+        );
+        const params = parseSchema(
+          ResolveOperationsReconciliationExceptionParams,
+          req.params,
+        );
+        const header = parseSchema(
+          ResolveOperationsReconciliationExceptionHeader,
+          { "Idempotency-Key": req.header("Idempotency-Key") },
+        );
+        const body = parseSchema(
+          ResolveOperationsReconciliationExceptionBody,
+          req.body,
+        );
+        res.json(
+          ResolveOperationsReconciliationExceptionResponse.parse(
+            await operations.resolveReconciliationException({
+              exceptionId: params.exceptionId,
+              operatorId: operator.externalRef,
+              reason: body.reason,
+              idempotencyKey: header["Idempotency-Key"],
+            }),
+          ),
         );
       }),
     );

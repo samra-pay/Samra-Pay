@@ -13,6 +13,14 @@ export interface CancelOperationsTransferRequest {
   reason: string;
 }
 
+export interface ResolveOperationsReconciliationExceptionRequest {
+  /**
+   * @minLength 20
+   * @maxLength 500
+   */
+  reason: string;
+}
+
 export interface WorkforceLoginRequest {
   /**
    * @minLength 1
@@ -682,6 +690,10 @@ export interface OperationsReconciliationException {
   state: string;
   summary: string;
   assignedTo: string | null;
+  resolutionNote: string | null;
+  resolvedBy: string | null;
+  resolutionJournalId: string | null;
+  resolvedAt: string | null;
   openedAt: string;
   updatedAt: string;
 }

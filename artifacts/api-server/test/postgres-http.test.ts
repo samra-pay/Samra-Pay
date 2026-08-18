@@ -714,6 +714,11 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
 
     const afterRestart = await startServer();
     running.push(afterRestart);
+    const rotatedComplianceHeaders = await loginWorkforce(
+      afterRestart.origin,
+      "compliance@samra.test",
+      "rotated-compliance-password-2026",
+    );
     const durableTransfer = objectBody(
       await apiRequest(
         afterRestart.origin,
@@ -751,8 +756,74 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       ),
       200,
     );
-    assert.ok(
-      exceptions.some((exception) => exception["transferId"] === transferId),
+    const reconciliationException = exceptions.find(
+      (exception) => exception["transferId"] === transferId,
+    );
+    assert.ok(reconciliationException);
+    const reconciliationExceptionId = String(reconciliationException["id"]);
+    const resolutionReason =
+      "Provider settlement evidence confirmed the synthetic amount variance.";
+    const forbiddenResolution = await apiRequest(
+      afterRestart.origin,
+      `/api/v1/internal/operations/reconciliation/exceptions/${reconciliationExceptionId}/resolve`,
+      {
+        method: "POST",
+        headers: {
+          ...rotatedComplianceHeaders,
+          "Idempotency-Key": "http-reconciliation-resolution",
+        },
+        body: { reason: resolutionReason },
+      },
+    );
+    assert.equal(forbiddenResolution.status, 403);
+    const resolvedException = objectBody(
+      await apiRequest(
+        afterRestart.origin,
+        `/api/v1/internal/operations/reconciliation/exceptions/${reconciliationExceptionId}/resolve`,
+        {
+          method: "POST",
+          headers: {
+            ...operationsHeaders,
+            "Idempotency-Key": "http-reconciliation-resolution",
+          },
+          body: { reason: resolutionReason },
+        },
+      ),
+      200,
+    );
+    assert.equal(resolvedException["state"], "resolved");
+    assert.equal(resolvedException["resolvedBy"], "demo_admin_001");
+    assert.equal(resolvedException["resolutionNote"], resolutionReason);
+    assert.equal(typeof resolvedException["resolutionJournalId"], "string");
+    const replayedResolution = objectBody(
+      await apiRequest(
+        afterRestart.origin,
+        `/api/v1/internal/operations/reconciliation/exceptions/${reconciliationExceptionId}/resolve`,
+        {
+          method: "POST",
+          headers: {
+            ...operationsHeaders,
+            "Idempotency-Key": "http-reconciliation-resolution",
+          },
+          body: { reason: resolutionReason },
+        },
+      ),
+      200,
+    );
+    assert.deepEqual(replayedResolution, resolvedException);
+    const resolvedExceptions = arrayBody(
+      await apiRequest(
+        afterRestart.origin,
+        "/api/v1/internal/operations/reconciliation/exceptions",
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.deepEqual(
+      resolvedExceptions.find(
+        (exception) => exception["id"] === reconciliationExceptionId,
+      ),
+      resolvedException,
     );
     const auditEvents = arrayBody(
       await apiRequest(

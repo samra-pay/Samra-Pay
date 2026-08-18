@@ -14,6 +14,10 @@ export interface OperationsReconciliationException {
   state: string;
   summary: string;
   assignedTo: string | null;
+  resolutionNote: string | null;
+  resolvedBy: string | null;
+  resolutionJournalId: string | null;
+  resolvedAt: string | null;
   openedAt: string;
   updatedAt: string;
 }

@@ -50,6 +50,7 @@ import type {
   ReconciliationRun,
   RemittanceOptions,
   RemittanceQuote,
+  ResolveOperationsReconciliationExceptionRequest,
   RunReconciliationRequest,
   SelectScenarioRequest,
   Transfer,
@@ -2586,6 +2587,140 @@ export function useListOperationsReconciliationExceptions<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getResolveOperationsReconciliationExceptionUrl = (
+  exceptionId: string,
+) => {
+  return `/api/v1/internal/operations/reconciliation/exceptions/${exceptionId}/resolve`;
+};
+
+/**
+ * PostgreSQL only. Restricted to administrators. The derived correction journal, exception transition, transfer reconciliation state, immutable resolution history, and operator audit share one atomic transaction. No direct balance or posting edit is exposed.
+ * @summary Resolve an amount mismatch through a balanced suspense journal
+ */
+export const resolveOperationsReconciliationException = async (
+  exceptionId: string,
+  resolveOperationsReconciliationExceptionRequest: ResolveOperationsReconciliationExceptionRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsReconciliationException> => {
+  return customFetch<OperationsReconciliationException>(
+    getResolveOperationsReconciliationExceptionUrl(exceptionId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(resolveOperationsReconciliationExceptionRequest),
+    },
+  );
+};
+
+export const getResolveOperationsReconciliationExceptionMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveOperationsReconciliationException>>,
+    TError,
+    {
+      exceptionId: string;
+      data: BodyType<ResolveOperationsReconciliationExceptionRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveOperationsReconciliationException>>,
+  TError,
+  {
+    exceptionId: string;
+    data: BodyType<ResolveOperationsReconciliationExceptionRequest>;
+  },
+  TContext
+> => {
+  const mutationKey = ["resolveOperationsReconciliationException"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveOperationsReconciliationException>>,
+    {
+      exceptionId: string;
+      data: BodyType<ResolveOperationsReconciliationExceptionRequest>;
+    }
+  > = (props) => {
+    const { exceptionId, data } = props ?? {};
+
+    return resolveOperationsReconciliationException(
+      exceptionId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveOperationsReconciliationExceptionMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof resolveOperationsReconciliationException>>
+  >;
+export type ResolveOperationsReconciliationExceptionMutationBody =
+  BodyType<ResolveOperationsReconciliationExceptionRequest>;
+export type ResolveOperationsReconciliationExceptionMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary Resolve an amount mismatch through a balanced suspense journal
+ */
+export const useResolveOperationsReconciliationException = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveOperationsReconciliationException>>,
+    TError,
+    {
+      exceptionId: string;
+      data: BodyType<ResolveOperationsReconciliationExceptionRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resolveOperationsReconciliationException>>,
+  TError,
+  {
+    exceptionId: string;
+    data: BodyType<ResolveOperationsReconciliationExceptionRequest>;
+  },
+  TContext
+> => {
+  return useMutation(
+    getResolveOperationsReconciliationExceptionMutationOptions(options),
+  );
+};
 
 export const getListOperationsAuditEventsUrl = (
   params?: ListOperationsAuditEventsParams,

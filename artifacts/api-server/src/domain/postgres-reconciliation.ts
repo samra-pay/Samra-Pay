@@ -1,4 +1,5 @@
 import type { PostgresPersistenceContext } from "@workspace/db";
+import { DomainError } from "@workspace/remittance";
 import type {
   DemoReconciliationRun,
   ReconciliationStore,
@@ -40,8 +41,7 @@ export class PostgresReconciliationStore implements ReconciliationStore {
            internal_resource_id, internal_currency, provider_currency,
            internal_amount_minor, provider_amount_minor, details
          ) VALUES ($1,$2,$3,'remittance_transfer',$4,$5,$6,$7,$8,$9::jsonb)
-         ON CONFLICT (run_id, match_key) DO UPDATE SET
-           details = EXCLUDED.details
+         ON CONFLICT (run_id, match_key) DO NOTHING
          RETURNING id`,
         [
           runId,
@@ -55,6 +55,17 @@ export class PostgresReconciliationStore implements ReconciliationStore {
           JSON.stringify({ classification: item.classification }),
         ],
       );
+      const itemId =
+        insertedItem.rows[0]?.id ??
+        (await resolveReconciliationItemReplay(query, {
+          runId,
+          matchKey: item.matchKey,
+          classification: toDatabaseClassification(item.classification),
+          internalCurrency: item.internalAmount?.currency ?? null,
+          providerCurrency: item.externalAmount?.currency ?? null,
+          internalAmountMinor: item.internalAmount?.minorUnits ?? null,
+          providerAmountMinor: item.externalAmount?.minorUnits ?? null,
+        }));
       if (item.classification !== "matched") {
         const exceptionCode = toDatabaseClassification(item.classification);
         await query.query(
@@ -63,7 +74,7 @@ export class PostgresReconciliationStore implements ReconciliationStore {
            VALUES ($1,$2,'open',$3,$4,$4)
            ON CONFLICT (item_id, exception_code) DO NOTHING`,
           [
-            insertedItem.rows[0]!.id,
+            itemId,
             exceptionCode,
             reconciliationSummary(item.classification, item.matchKey),
             run.completedAt,
@@ -214,4 +225,48 @@ function fromDatabaseClassification(
   if (classification === "currency_mismatch") return "currency_mismatch";
   if (classification === "matched") return "matched";
   return "status_mismatch";
+}
+
+async function resolveReconciliationItemReplay(
+  query: ReturnType<PostgresPersistenceContext["query"]>,
+  expected: Readonly<{
+    runId: string;
+    matchKey: string;
+    classification: string;
+    internalCurrency: string | null;
+    providerCurrency: string | null;
+    internalAmountMinor: string | null;
+    providerAmountMinor: string | null;
+  }>,
+): Promise<string> {
+  const replay = await query.query<{
+    id: string;
+    result: string;
+    internal_currency: string | null;
+    provider_currency: string | null;
+    internal_amount_minor: string | null;
+    provider_amount_minor: string | null;
+  }>(
+    `SELECT id, result, internal_currency, provider_currency,
+            internal_amount_minor::text, provider_amount_minor::text
+     FROM samra_core.reconciliation_items
+     WHERE run_id = $1 AND match_key = $2`,
+    [expected.runId, expected.matchKey],
+  );
+  const existing = replay.rows[0];
+  if (
+    !existing ||
+    existing.result !== expected.classification ||
+    existing.internal_currency !== expected.internalCurrency ||
+    existing.provider_currency !== expected.providerCurrency ||
+    existing.internal_amount_minor !== expected.internalAmountMinor ||
+    existing.provider_amount_minor !== expected.providerAmountMinor
+  ) {
+    throw new DomainError(
+      "CONFLICT",
+      "The reconciliation item already exists with different evidence.",
+      { matchKey: expected.matchKey },
+    );
+  }
+  return existing.id;
 }

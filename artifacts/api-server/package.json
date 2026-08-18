@@ -28,6 +28,8 @@
     "test:ledger-concurrency:junit": "node test/run-with-junit.mjs test-results/ledger-concurrency-atomicity.xml '11.11 Ledger - Concurrency and Atomicity' test/ledger-concurrency-atomicity.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-performance": "NODE_ENV=test node --import tsx --test test/ledger-performance-characterization.test.ts",
     "test:ledger-performance:junit": "node test/run-with-junit.mjs test-results/ledger-performance-characterization.xml '11.08 Ledger - Balance Computation' test/ledger-performance-characterization.test.ts '11 Claude Ledger Assurance'",
+    "test:ledger-reconciliation": "NODE_ENV=test node --import tsx --test test/ledger-reconciliation-controls.test.ts",
+    "test:ledger-reconciliation:junit": "node test/run-with-junit.mjs test-results/ledger-reconciliation-controls.xml '11.10 Ledger - Trial Balance Sweeps' test/ledger-reconciliation-controls.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-balances": "NODE_ENV=test node --import tsx --test test/ledger-balance-computation.test.ts",
     "test:ledger-balances:junit": "node test/run-with-junit.mjs test-results/ledger-balance-computation.xml '11.08 Ledger - Balance Computation' test/ledger-balance-computation.test.ts '11 Claude Ledger Assurance'",
     "test:ledger-sweeps": "NODE_ENV=test node --import tsx --test test/ledger-sweeps.test.ts",
