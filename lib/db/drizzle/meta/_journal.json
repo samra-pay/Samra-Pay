@@ -57,6 +57,13 @@
       "when": 1786990463590,
       "tag": "0007_tidy_silverclaw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787001600000,
+      "tag": "0008_quote_snapshot_immutability",
+      "breakpoints": true
     }
   ]
 }

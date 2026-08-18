@@ -14,6 +14,12 @@ The server calculates and stores an immutable quote snapshot containing:
 The frontend may validate form shape, but it never supplies fee, final total,
 exchange rate or destination amount as truth.
 
+PostgreSQL permits quote lifecycle changes to `state` and `accepted_at`, but a
+database trigger rejects changes to the persisted quote identity, parties,
+currencies, amounts, rational rate, pricing version, delivery terms, expiration
+or creation timestamp. A transfer therefore continues to resolve the exact
+economic snapshot it consumed.
+
 ## State dimensions
 
 Transfer:
