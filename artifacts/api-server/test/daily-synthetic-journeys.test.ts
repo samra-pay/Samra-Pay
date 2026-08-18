@@ -308,6 +308,15 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
     );
     const before = await getBalance(first.origin);
     const journey = await createJourney(first.origin, "reconciliation", "1700");
+    await advanceThrough(first.origin, journey.id, "happy_path", [
+      "in_transit",
+      "payout_pending",
+      "completed",
+    ]);
+    assert.deepEqual(await getBalance(first.origin), {
+      book: before.book - journey.debitMinor,
+      available: before.available - journey.debitMinor,
+    });
     const mismatch = await objectResponse(
       first.origin,
       "/api/v1/dev/reconciliation/runs",
@@ -379,21 +388,12 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
     assert.equal(typeof resolved["resolutionJournalId"], "string");
     assert.deepEqual(replayed, resolved);
 
-    const cancelled = objectBody(
-      await apiRequest(
-        restarted.origin,
-        `/api/v1/remittance/transfers/${journey.id}/cancel`,
-        {
-          method: "POST",
-          headers: {
-            "Idempotency-Key": "daily-reconciliation-transfer-cleanup",
-          },
-        },
-      ),
-      200,
-    );
-    assert.equal(cancelled["status"], "cancelled");
+    await advanceThrough(restarted.origin, journey.id, "settlement_refund", [
+      "refund_pending",
+      "refunded",
+    ]);
     assert.deepEqual(await getBalance(restarted.origin), before);
+    await assertJournalEvidence(journey.id, 3, 3);
   } finally {
     await Promise.allSettled(
       [first, restarted]
