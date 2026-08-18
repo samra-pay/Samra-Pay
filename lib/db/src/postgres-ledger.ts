@@ -193,6 +193,23 @@ export class PostgresLedgerControl implements LedgerControlPort {
           { holdId: input.holdId, holdState: record.state },
         );
       }
+      // Retire the locked hold before posting the matching debit. Otherwise
+      // the database available-balance guard counts both the active hold and
+      // the capture debit during this transaction. The transaction boundary
+      // makes this safe: a journal failure rolls the hold back to active.
+      const captured = await this.#context.query().query(
+        `UPDATE samra_core.ledger_holds
+         SET state = 'captured', terminal_at = now(), updated_at = now()
+         WHERE id = $1 AND state = 'active'`,
+        [input.holdId],
+      );
+      if (captured.rowCount !== 1) {
+        throw new DomainError(
+          "CONFLICT",
+          "The hold could not transition from active to captured.",
+          { holdId: input.holdId },
+        );
+      }
       const journalId = await this.#journals.post({
         eventType: "remittance_capture",
         eventId: input.transferId,
@@ -216,19 +233,6 @@ export class PostgresLedgerControl implements LedgerControlPort {
         },
         auditActor: auditActor(input.auditActor),
       });
-      const captured = await this.#context.query().query(
-        `UPDATE samra_core.ledger_holds
-         SET state = 'captured', terminal_at = now(), updated_at = now()
-         WHERE id = $1 AND state = 'active'`,
-        [input.holdId],
-      );
-      if (captured.rowCount !== 1) {
-        throw new DomainError(
-          "CONFLICT",
-          "The hold could not transition from active to captured.",
-          { holdId: input.holdId },
-        );
-      }
       await saveHoldEvent(
         this.#context.query(),
         input.holdId,

@@ -111,6 +111,29 @@ test("CLAUDE-LED-031 Concurrent reserves cannot oversubscribe an account", async
 });
 
 test("CLAUDE-LED-033 Concurrent capture and release resolve to one terminal state", async () => {
+  // A capture must be able to consume an account whose entire balance is held.
+  // This directly guards against double-counting the active hold and its debit.
+  const exactFixture = await prepareFundedAccount(
+    "exact-balance-capture",
+    controlContext,
+  );
+  const exactLedger = new PostgresLedgerControl(controlContext);
+  const exactTransferId = `exact-balance-capture:${randomUUID()}`;
+  const exactHold = await exactLedger.reserve({
+    ...reserveCommand(exactFixture, exactTransferId),
+    transferId: exactTransferId,
+  });
+  await exactLedger.capture({
+    transferId: exactTransferId,
+    holdId: exactHold.holdId,
+    idempotencyKey: `${exactTransferId}:capture`,
+  });
+  assert.deepEqual(await exactLedger.getCustomerBalance(exactFixture.accountRef), {
+    naturalBalanceMinor: 0n,
+    activeHoldsMinor: 0n,
+    availableMinor: 0n,
+  });
+
   const fixture = await prepareFundedAccount("terminal-race", controlContext);
   const setupLedger = new PostgresLedgerControl(controlContext);
   const transferId = `terminal-race:${randomUUID()}`;
