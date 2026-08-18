@@ -85,14 +85,10 @@
     },
     {
       "id": "release",
-      "workflow": ".github/workflows/ci.yml",
+      "workflow": ".github/workflows/release-candidate.yml",
       "trigger": "workflow_dispatch",
-      "maximumMinutes": 30,
-      "requiredJobs": [
-        "linux-quality",
-        "postgres-persistence",
-        "postgres-http"
-      ],
+      "maximumMinutes": 90,
+      "requiredJobs": ["release-assurance"],
       "qaseEnvironment": "github-ci-postgres"
     }
   ],

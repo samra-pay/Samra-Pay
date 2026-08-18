@@ -26,6 +26,7 @@ const workflow = [
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
   "pnpm run test:testing-cadence",
+  "pnpm run test:release-contract",
   "pnpm run test:gcp-platform",
   "Samra Pay daily backend acceptance",
 ].join("\n");
@@ -46,6 +47,15 @@ const resilienceWorkflow = [
   '    - cron: "43 7 * * 6"',
   "jobs:",
   "  resilience:",
+  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
+  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+].join("\n");
+
+const releaseWorkflow = [
+  "on:",
+  "  workflow_dispatch:",
+  "jobs:",
+  "  release-assurance:",
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
 ].join("\n");
@@ -124,10 +134,10 @@ const policy: TestingCadencePolicy = {
     },
     {
       id: "release",
-      workflow: ".github/workflows/ci.yml",
+      workflow: ".github/workflows/release-candidate.yml",
       trigger: "workflow_dispatch",
-      maximumMinutes: 30,
-      requiredJobs: ["linux-quality"],
+      maximumMinutes: 90,
+      requiredJobs: ["release-assurance"],
       qaseEnvironment: "github-ci-postgres",
     },
   ],
@@ -166,6 +176,7 @@ const workflows = {
   ".github/workflows/ci.yml": workflow,
   ".github/workflows/ledger-performance.yml": performanceWorkflow,
   ".github/workflows/backend-resilience.yml": resilienceWorkflow,
+  ".github/workflows/release-candidate.yml": releaseWorkflow,
 };
 
 const documentation = [

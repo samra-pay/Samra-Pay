@@ -28,7 +28,7 @@ that the workflows still implement that contract.
 | Daily             | `06:17 UTC` every day        | Detect time-dependent, dependency, build, restart, and cross-package regressions                           |     30 minutes |
 | Weekly ledger     | `06:17 UTC` every Sunday     | Enforce the 100,000/1,000,000-posting materialized-balance performance gate                                |     45 minutes |
 | Weekly resilience | `07:43 UTC` every Saturday   | Soak concurrency, replay seeded ledger sequences, inject controlled failures, and rehearse schema upgrades |     45 minutes |
-| Release dispatch  | Manual GitHub dispatch       | Produce backend evidence for a named candidate; full release certification is a later controlled phase     |     30 minutes |
+| Release candidate | Manual exact-SHA dispatch    | Retest one immutable `main` commit, report Qase gates, and retain a content-addressed evidence manifest    |     90 minutes |
 
 The schedules deliberately avoid the start of the hour, when hosted workflow
 queues are more likely to be delayed. Scheduled runs execute only from the
@@ -54,6 +54,8 @@ default branch. A workflow change is therefore not active until it is merged.
 - Replit remains a manual synthetic preview environment. GitHub automation must
   not depend on it.
 - Run titles identify cadence, branch, and exact commit.
+- Release candidates are identified as `rc-<first 12 SHA characters>` and can
+  only be dispatched with a full commit already contained in GitHub `main`.
 - A Qase run is completed only after every governed JUnit upload succeeds.
 - Manual plans never override a failed automated P0 control.
 - Scheduled manual runs require a named owner. A schedule that only creates an
@@ -82,6 +84,21 @@ Stop the merge or release when any of the following is true:
 - This cadence phase does not authorize GCP deployment, production identity,
   secrets infrastructure, live payments, or provider connectivity.
 
+## Immutable release-candidate evidence
+
+[`release-evidence-contract.json`](release-evidence-contract.json) defines the
+required gates, files, retention, Qase attribution, and controlled boundaries.
+The manual workflow checks out the exact 40-character candidate SHA with no
+persisted Git credentials, verifies it is contained in GitHub `main`, and runs
+quality, commercial, migration, PostgreSQL, HTTP/restart, resilience, and
+million-posting performance gates against one disposable PostgreSQL 16 service.
+
+Every required JUnit and performance result is SHA-256 hashed into
+`release-evidence-manifest.json`. GitHub retains the manifest, its independent
+hash record, Qase run identity, and raw evidence for 365 days. The workflow
+uploads evidence before enforcing stop conditions, so a failed candidate leaves
+an auditable failed record and cannot be converted into a pass by omission.
+
 ## Next testing slices
 
 The daily PostgreSQL job now publishes nine separately identifiable synthetic
@@ -93,6 +110,5 @@ lane adds six stable controls without sending traffic to any deployed surface:
 one concurrency soak, one reproducible model-based sequence, three controlled
 fault boundaries, and one upgrade from migration `0007` to the current schema.
 
-1. Add an immutable release-candidate workflow and evidence manifest.
-2. Decide separately whether browser and device automation provides enough
+1. Decide separately whether browser and device automation provides enough
    value to introduce and maintain it.

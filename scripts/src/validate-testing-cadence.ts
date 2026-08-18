@@ -217,6 +217,7 @@ export function validateTestingCadence(
   const ciWorkflow = workflows[".github/workflows/ci.yml"]!;
   for (const requiredControl of [
     "pnpm run test:testing-cadence",
+    "pnpm run test:release-contract",
     "pnpm run test:gcp-platform",
     "Samra Pay daily backend acceptance",
     "if: github.event_name == 'schedule' || inputs.run_commercial == 'true'",

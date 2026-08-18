@@ -8,6 +8,8 @@
     "audit-expo-types": "tsx ./src/audit-expo-types.ts",
     "validate-qase-contract": "tsx ./src/validate-qase-contract.ts",
     "validate-testing-cadence": "tsx ./src/validate-testing-cadence.ts",
+    "validate-release-candidate": "tsx ./src/validate-release-candidate.ts",
+    "release-evidence": "tsx ./src/release-evidence-cli.ts",
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

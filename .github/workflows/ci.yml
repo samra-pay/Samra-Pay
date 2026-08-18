@@ -81,6 +81,9 @@ jobs:
       - name: Validate testing cadence contract
         run: pnpm run test:testing-cadence
 
+      - name: Validate immutable release-candidate contract
+        run: pnpm run test:release-contract
+
       - name: Typecheck workspace
         run: pnpm run typecheck
 

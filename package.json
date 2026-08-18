@@ -10,6 +10,7 @@
     "test": "pnpm -r --filter \"!@workspace/samra-pay-commercial\" --if-present run test",
     "test:qase-contract": "pnpm --filter @workspace/scripts run validate-qase-contract",
     "test:testing-cadence": "pnpm --filter @workspace/scripts run validate-testing-cadence",
+    "test:release-contract": "pnpm --filter @workspace/scripts run validate-release-candidate",
     "test:gcp-platform": "node --test deploy/gcp/*.test.mjs",
     "commercial:typecheck": "pnpm --filter @workspace/samra-pay-commercial run typecheck",
     "commercial:build": "pnpm --filter @workspace/samra-pay-commercial run build",
