@@ -11,6 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
+import { ApiUnavailableScreen } from '@/components/ApiUnavailableScreen';
+import { useMobileDataMode } from '@/lib/samra-runtime';
 import { useColors } from '@workspace/samra-pay-ds/hooks/use-colors';
 import { nativeTheme } from '@workspace/samra-pay-ds/lib/native-theme';
 import {
@@ -23,6 +25,18 @@ import {
 } from '@/lib/mock-data';
 
 export default function RewardsScreen() {
+  const dataMode = useMobileDataMode();
+  return dataMode === 'api' ? (
+    <ApiUnavailableScreen
+      title="Rewards"
+      detail="Rewards balances, earning activity, and redemptions do not yet have a connected backend source."
+    />
+  ) : (
+    <LegacyMockRewardsScreen />
+  );
+}
+
+function LegacyMockRewardsScreen() {
   const colors = useColors('dark');
   const insets = useSafeAreaInsets();
 

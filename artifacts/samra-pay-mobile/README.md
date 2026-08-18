@@ -32,5 +32,12 @@ Google Cloud staging API use the same generated client boundary. The remittance
 screen is the first acceptance-tested mobile cutover: API mode uses server
 accounts, beneficiaries, quotes, idempotent transfer commands, backend status
 polling, cancellation, and restart recovery. Mock mode still renders the
-original remittance demo. Balance and activity screens remain mock-backed until
-their own migrations pass.
+original remittance demo.
+
+The mobile Home screen is also cut over in API mode. It renders the backend
+customer, ledger-derived book and available balances, and ledger activity. A
+transfer status change invalidates those financial queries so completion,
+failure, cancellation, and refund effects do not remain stale. Cards and
+rewards show an explicit unavailable state in API mode until their own backend
+sources exist. None of these API-mode screens fall back to mobile fixtures when
+the API is unavailable.

@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import {
   createContext,
+  useEffect,
   useContext,
   type PropsWithChildren,
   type ReactElement,
@@ -127,29 +128,6 @@ const TERMINAL_TRANSFER_STATES = new Set<TransferStatus>([
   "cancelled",
 ]);
 
-export function useTransfer(id: string) {
-  const source = useSamraDataSource();
-  return useQuery({
-    ...queryDefaults(samraQueryKeys.transfer(id)),
-    queryFn: () => source.getTransfer(id),
-    enabled: id.length > 0,
-    refetchInterval(query) {
-      const transfer = query.state.data;
-      if (!transfer || TERMINAL_TRANSFER_STATES.has(transfer.status))
-        return false;
-      return 1_500;
-    },
-  });
-}
-
-export function useCreateQuote() {
-  const source = useSamraDataSource();
-  return useMutation({
-    mutationFn: (input: CreateQuoteInput) => source.createQuote(input),
-    retry: false,
-  });
-}
-
 async function invalidateFinancialQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ): Promise<void> {
@@ -160,6 +138,37 @@ async function invalidateFinancialQueries(
       queryKey: ["samra", "remittance", "transfers"],
     }),
   ]);
+}
+
+export function useTransfer(id: string) {
+  const source = useSamraDataSource();
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    ...queryDefaults(samraQueryKeys.transfer(id)),
+    queryFn: () => source.getTransfer(id),
+    enabled: id.length > 0,
+    refetchInterval(query) {
+      const transfer = query.state.data;
+      if (!transfer || TERMINAL_TRANSFER_STATES.has(transfer.status))
+        return false;
+      return 1_500;
+    },
+  });
+
+  useEffect(() => {
+    if (!query.data) return;
+    void invalidateFinancialQueries(queryClient);
+  }, [query.data?.id, query.data?.status, query.data?.updatedAt, queryClient]);
+
+  return query;
+}
+
+export function useCreateQuote() {
+  const source = useSamraDataSource();
+  return useMutation({
+    mutationFn: (input: CreateQuoteInput) => source.createQuote(input),
+    retry: false,
+  });
 }
 
 export function useCreateTransfer() {
