@@ -248,12 +248,19 @@ test("CLAUDE-LED-035 Connection loss before posting leaves no partial posted jou
        WHERE code = 'clearing_remittance_principal_usd'`,
       [journal.rows[0]!.id],
     );
+    // Keep an explicit command in flight so the forced disconnect is observed
+    // as an awaited rejection rather than an asynchronous client error.
+    const interruptedCommand = client.query(`SELECT pg_sleep(30)`);
     const terminated = await controlConnection.pool.query<{
       terminated: boolean;
     }>(`SELECT pg_terminate_backend($1) AS terminated`, [
       backend.rows[0]!.backend_pid,
     ]);
     assert.equal(terminated.rows[0]!.terminated, true);
+    await assert.rejects(
+      interruptedCommand,
+      /terminating connection due to administrator command/,
+    );
   } finally {
     client.release(true);
   }
