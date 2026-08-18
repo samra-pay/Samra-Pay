@@ -56,11 +56,21 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-63   | CLAUDE-LED-017 large-value precision round-trip    |
 | SAMP-64   | CLAUDE-LED-018 deterministic rational FX snapshot  |
 | SAMP-65   | CLAUDE-LED-019 balanced zero-fee capture           |
+| SAMP-66   | CLAUDE-LED-024 distinct business events            |
+| SAMP-67   | CLAUDE-LED-023 idempotent hold events              |
+| SAMP-68   | CLAUDE-LED-022 committed-response-loss retry       |
+| SAMP-69   | CLAUDE-LED-021 concurrent journal replay           |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An
 idempotent replay can return the original journal only when the complete journal
 command is identical.
+
+Journal creation uses the business-event unique index as an atomic claim. A
+concurrent losing caller waits for the winning transaction, validates the full
+persisted command and returns the winning journal instead of surfacing a raw
+unique-constraint error. Hold-event replay uses an atomic conflict-safe insert
+for the same reason.
 
 ## Run behavior
 

@@ -87,10 +87,13 @@ Credit  Remittance fee revenue                    300
 - one journal currency;
 - every account matches the journal currency;
 - total debits equal total credits;
-- logical source is unique;
+- logical source is unique and claimed atomically under concurrent retries;
+- an exact business-event replay returns its original journal, while a changed
+  command is rejected and a distinct event remains distinct;
 - a journal can reverse one journal and an original can be reversed once;
 - reversal lines exactly exchange debit and credit;
 - holds exist only on spendable accounts;
 - active holds transition once to captured, released or expired;
+- each hold lifecycle event is append-only and unique per hold and event type;
 - balance check and hold mutation lock the affected account in PostgreSQL;
 - an enforced account cannot have negative available balance.
