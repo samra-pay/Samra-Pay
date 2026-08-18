@@ -54,5 +54,20 @@ The full JSON execution plans and JUnit result are retained for 90 days in
 6. Concurrency, rollback, hold lifecycle, restart, drift, rebuild, and audit
    behavior are enforced in PostgreSQL acceptance tests.
 
-The first post-materialization GitHub measurement will be added here after the
-new gate runs on the Linux/PostgreSQL CI environment.
+## Materialized-path evidence
+
+The required gate passed on GitHub-hosted Ubuntu with Node.js 24.19.0 and
+PostgreSQL 16.15. The read plan uses the product-account index, ledger-account
+index, and the materialized-balance primary key; it does not scan journal or
+posting history.
+
+| Postings on account | p50     | p99     | Mean    |
+| ------------------- | ------- | ------- | ------- |
+| 100,000             | 0.563ms | 0.837ms | 0.585ms |
+| 1,000,000           | 0.561ms | 0.815ms | 0.583ms |
+
+The 10x history increase produced 0.974x p99 growth, demonstrating that the
+application read path is independent of posting-history size. The one-million
+posting result is 96.7% below the 25ms gate. Full JSON plans and JUnit evidence
+are retained for 90 days in
+[GitHub Actions run 32099638658](https://github.com/haileleuld87/Samra-Pay/actions/runs/32099638658).

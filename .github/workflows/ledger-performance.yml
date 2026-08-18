@@ -103,7 +103,7 @@ jobs:
           retention-days: 90
 
   qase-report:
-    name: Qase ledger performance report
+    name: Qase materialized balance performance report
     needs: performance
     if: >-
       always() &&
