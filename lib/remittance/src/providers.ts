@@ -50,6 +50,11 @@ export interface ChapaPort {
   }): Promise<ProviderResourceLink>;
 }
 
+export type AuditActor = Readonly<{
+  actorType: "system" | "customer" | "operator" | "provider";
+  actorId: string;
+}>;
+
 export interface LedgerControlPort {
   findHoldId(transferId: string): Promise<string | undefined>;
   reserve(input: {
@@ -60,34 +65,40 @@ export interface LedgerControlPort {
     feeAmountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<{ holdId: string }>;
   capture(input: {
     transferId: string;
     holdId: string;
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void>;
   release(input: {
     transferId: string;
     holdId: string;
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void>;
   settlePrincipal(input: {
     transferId: string;
     amountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void>;
   recognizeFee(input: {
     transferId: string;
     amountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void>;
   refund(input: {
     transferId: string;
     amountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void>;
 }
 

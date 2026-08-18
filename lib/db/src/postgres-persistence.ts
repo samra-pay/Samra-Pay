@@ -6,6 +6,7 @@ import {
   money,
   rational,
   type FakeScenario,
+  type AuditActor,
   type InboxDisposition,
   type InboxRecord,
   type OutboxMessage,
@@ -158,7 +159,13 @@ export class PostgresRemittanceRepository implements RemittanceRepository {
     }
   }
 
-  async saveTransfer(transfer: RemittanceTransfer): Promise<void> {
+  async saveTransfer(
+    transfer: RemittanceTransfer,
+    auditActor: AuditActor = {
+      actorType: "system",
+      actorId: "postgres-persistence",
+    },
+  ): Promise<void> {
     const query = this.#context.query();
     const refs = await resolveRefs(query, transfer.quote);
     const quoteId = await resolveInternalId(
@@ -267,6 +274,26 @@ export class PostgresRemittanceRepository implements RemittanceRepository {
 
     for (const status of transfer.statusHistory) {
       await saveStatus(query, internalId, status);
+      await query.query(
+        `INSERT INTO samra_core.audit_events
+         (event_key, actor_type, actor_id, action, entity_type, entity_id,
+          correlation_id, metadata, occurred_at)
+         VALUES ($1,$2,$3,'transfer_status_changed','remittance_transfer',$4,$4,$5::jsonb,$6)
+         ON CONFLICT (event_key) DO NOTHING`,
+        [
+          `transfer:${transfer.id}:status:${status.sequence}`,
+          auditActor.actorType,
+          auditActor.actorId,
+          transfer.id,
+          JSON.stringify({
+            sequence: status.sequence,
+            from: status.from,
+            to: status.to,
+            reason: status.reason,
+          }),
+          status.occurredAt,
+        ],
+      );
     }
     for (const link of transfer.providerLinks) {
       await saveProviderLink(query, internalId, link);
@@ -274,11 +301,12 @@ export class PostgresRemittanceRepository implements RemittanceRepository {
     await query.query(
       `INSERT INTO samra_core.audit_events
        (event_key, actor_type, actor_id, action, entity_type, entity_id, correlation_id, metadata, occurred_at)
-       VALUES ($1,'customer',$2,'transfer_state_saved','remittance_transfer',$3,$3,$4::jsonb,$5)
+       VALUES ($1,$2,$3,'transfer_state_saved','remittance_transfer',$4,$4,$5::jsonb,$6)
        ON CONFLICT (event_key) DO NOTHING`,
       [
         `transfer:${transfer.id}:version:${transfer.version}`,
-        transfer.actorId,
+        auditActor.actorType,
+        auditActor.actorId,
         transfer.id,
         JSON.stringify({
           state: transfer.state,
@@ -469,6 +497,26 @@ export class PostgresRemittanceRepository implements RemittanceRepository {
           record.event.occurredAt,
           record.recordedAt,
           state === "processed" ? record.recordedAt : null,
+        ],
+      );
+      await query.query(
+        `INSERT INTO samra_core.audit_events
+         (event_key, actor_type, actor_id, action, entity_type, entity_id,
+          correlation_id, metadata, occurred_at)
+         VALUES ($1,'provider',$2,'provider_event_recorded',
+                 'remittance_transfer',$3,$3,$4::jsonb,$5)
+         ON CONFLICT (event_key) DO NOTHING`,
+        [
+          `provider:${record.event.provider.toLowerCase()}:${record.event.providerEventId}:${state}`,
+          record.event.provider.toLowerCase(),
+          record.event.transferId,
+          JSON.stringify({
+            provider: record.event.provider,
+            providerEventId: record.event.providerEventId,
+            eventType: record.event.kind,
+            disposition: record.disposition,
+          }),
+          record.recordedAt,
         ],
       );
     }

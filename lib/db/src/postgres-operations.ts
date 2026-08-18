@@ -594,7 +594,8 @@ export class PostgresOperationsStore {
       last_error: string | null;
       created_at: Date;
       updated_at: Date;
-    }>(`SELECT t.external_ref AS transfer_ref, c.external_ref AS customer_ref,
+    }>(
+      `SELECT t.external_ref AS transfer_ref, c.external_ref AS customer_ref,
               b.display_name AS beneficiary_display, t.state, t.funding_state,
               t.payout_state, t.reconciliation_state, t.source_currency,
               t.source_amount_minor, t.fee_amount_minor, t.total_debit_minor,
@@ -605,7 +606,9 @@ export class PostgresOperationsStore {
        JOIN samra_core.customers c ON c.id = t.customer_id
        JOIN samra_core.beneficiaries b ON b.id = t.beneficiary_id
        LEFT JOIN samra_core.remittance_workflow_work w ON w.transfer_id = t.id
-      WHERE t.id = $1`, [internalId]);
+      WHERE t.id = $1`,
+      [internalId],
+    );
     const transferRow = transferResult.rows[0];
     const [history, providerLinks, providerEvents, outbox, audit, exceptions] =
       await Promise.all([
@@ -745,7 +748,7 @@ export class PostgresOperationsStore {
       `SELECT id, event_key, actor_type, actor_id, action, entity_type,
               entity_id, correlation_id, metadata, occurred_at
        FROM samra_core.audit_events
-       WHERE ($1::text IS NULL OR entity_id = $1)
+       WHERE ($1::text IS NULL OR entity_id = $1 OR correlation_id = $1)
          AND ($2::text IS NULL OR actor_id = $2)
        ORDER BY occurred_at DESC, id DESC LIMIT $3`,
       [input.entityId ?? null, input.actorId ?? null, input.limit],

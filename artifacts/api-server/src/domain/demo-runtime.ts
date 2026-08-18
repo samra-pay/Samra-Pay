@@ -507,6 +507,7 @@ export class DemoRuntime {
         DEMO_ACTOR.id,
         transfer.id,
         this.providers.getScenario(transfer.id),
+        { actorType: "system", actorId: this.#workerId },
       );
     }
     return pending.length;
@@ -581,6 +582,7 @@ export class DemoRuntime {
         claim.actorId,
         claim.transferId,
         scenario,
+        { actorType: "system", actorId: this.#workerId },
       );
       const progressed = after.version > before.version;
       const actionable = isWorkerActionable(after.state, scenario);

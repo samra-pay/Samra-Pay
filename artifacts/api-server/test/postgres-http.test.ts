@@ -332,6 +332,70 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       403,
     );
 
+    const operatorCancelQuote = objectBody(
+      await createQuote(first.origin, "1000", "beneficiary_bank_001", "bank"),
+      201,
+    );
+    const operatorCancelTransfer = objectBody(
+      await createTransfer(
+        first.origin,
+        String(operatorCancelQuote["id"]),
+        "http-operator-cancel-create",
+      ),
+      201,
+    );
+    const operatorCancelId = String(operatorCancelTransfer["id"]);
+    const cancelRequest = {
+      method: "POST",
+      headers: {
+        ...supportHeaders,
+        "Idempotency-Key": "http-operator-cancel-action",
+      },
+      body: { reason: "Customer verified cancellation before capture." },
+    } as const;
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          `/api/v1/internal/operations/transfers/${operatorCancelId}/cancel`,
+          cancelRequest,
+        )
+      ).status,
+      403,
+    );
+    const cancelledByOperator = objectBody(
+      await apiRequest(
+        first.origin,
+        `/api/v1/internal/operations/transfers/${operatorCancelId}/cancel`,
+        {
+          ...cancelRequest,
+          headers: {
+            ...operationsHeaders,
+            "Idempotency-Key": "http-operator-cancel-action",
+          },
+        },
+      ),
+      200,
+    );
+    assert.equal(
+      (cancelledByOperator["transfer"] as JsonObject)["status"],
+      "cancelled",
+    );
+    assert.equal(
+      (cancelledByOperator["transfer"] as JsonObject)["fundingStatus"],
+      "released",
+    );
+    const cancellationAudit = cancelledByOperator["audit"] as JsonObject[];
+    assert.ok(
+      cancellationAudit.some(
+        (event) =>
+          event["actorType"] === "operator" &&
+          event["actorId"] === "demo_admin_001" &&
+          event["action"] === "ledger_hold_released",
+      ),
+    );
+    assertAccount(await getAccount(first.origin), "425000", "414700");
+
     const caseInput = {
       transferId,
       title: "Recipient has not received completed transfer",
