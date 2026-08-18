@@ -29,10 +29,10 @@ The design-system preview container uses the same versioned source and gates as
 the GitHub preview artifact. It provides an independent browser-based design
 review surface without making Replit or compiled ZIP exports authoritative.
 
-The mobile UI remains an Expo application. It is not moved into Cloud Run. A
-later, separately tested mobile configuration must point the existing generated
-client at the Cloud Run API URL. Replit-specific Expo preview convenience may
-remain during transition, but it is not part of the backend hosting contract.
+The mobile UI remains an Expo application. It is not moved into Cloud Run. Its
+generated client accepts one validated `EXPO_PUBLIC_SAMRA_API_ORIGIN` for iOS,
+Android, and Expo web. Replit-specific Expo preview convenience may remain during
+transition, but it is not part of the backend hosting contract.
 
 ## What this foundation does not do
 
@@ -98,6 +98,16 @@ Each web service requires:
 SAMRA_API_ORIGIN=https://<samra-api-cloud-run-host>
 ```
 
+A controlled mobile staging bundle requires:
+
+```text
+EXPO_PUBLIC_SAMRA_DATA_MODE=api
+EXPO_PUBLIC_SAMRA_API_ORIGIN=https://<samra-api-cloud-run-host>
+```
+
+These values are public bundle configuration, not secrets. The mobile build
+rejects credentials, paths, queries, fragments, and non-loopback HTTP origins.
+
 Do not set `PORT`; Cloud Run injects it. Do not place `DATABASE_URL` in a build
 argument, image, repository file, or ordinary environment-variable manifest.
 
@@ -127,8 +137,8 @@ The Google Cloud staging environment preserves four test surfaces:
 2. Customer web URL: browser-based remittance and account-flow testing.
 3. Operations Portal URL: CS investigation, audit, ledger, reconciliation, and
    controlled-failure testing.
-4. Expo mobile preview/build: mobile UI and flow testing against the staging API
-   after the mobile API-origin configuration is completed.
+4. Expo mobile preview/build: mobile UI and flow testing against the validated
+   staging API origin as screen-level cutovers are completed.
 
 The existing Qase project remains the manual pass/fail record. A staging release
 cannot advance on visual inspection alone.
