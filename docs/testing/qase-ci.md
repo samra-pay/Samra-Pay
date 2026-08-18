@@ -24,6 +24,7 @@ used by the reporting job.
 | Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`                       | `ledger-sweeps.xml`                       |
 | Reconciliation controls       | `artifacts/api-server/test/ledger-reconciliation-controls.test.ts`      | `ledger-reconciliation-controls.xml`      |
 | HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`                       | `postgres-http.xml`                       |
+| Daily synthetic journeys      | `artifacts/api-server/test/daily-synthetic-journeys.test.ts`            | `daily-synthetic-journeys.xml`            |
 
 Qase identifies the automated cases by their stable Node test names in the JUnit
 files. Renaming a test changes its automation identity and must be treated as a
@@ -157,7 +158,7 @@ for the same reason.
   outage is non-blocking for ordinary GitHub-triggered CI, but Qase-triggered runs
   fail if their reporting contract fails.
 - JUnit payloads must contain a non-empty standard test suite before a Qase run is
-  updated. A run is completed only after all 15 required result uploads succeed.
+  updated. A run is completed only after all 16 required result uploads succeed.
 - Pull requests from forks do not receive the repository token and skip the Qase
   reporting job.
 - JUnit artifacts are retained in GitHub for 14 days as independent evidence.

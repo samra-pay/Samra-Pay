@@ -83,10 +83,14 @@ Stop the merge or release when any of the following is true:
 
 ## Next testing slices
 
-1. Add daily synthetic HTTP journeys for transfer completion, failure, retry,
-   cancellation, refund, reversal, restart, and reconciliation.
-2. Add weekly concurrency soak, randomized ledger sequences, migration
+The daily PostgreSQL job now publishes nine separately identifiable synthetic
+journeys for completion, provider rejection, timeout retry, cancellation,
+payout-failure refund, settlement reversal, restart/idempotency,
+reconciliation resolution, and cross-journey ledger/audit sweeps. Each result
+is independently visible in GitHub artifacts and Qase.
+
+1. Add weekly concurrency soak, randomized ledger sequences, migration
    compatibility, and fault injection.
-3. Add an immutable release-candidate workflow and evidence manifest.
-4. Decide separately whether browser and device automation provides enough
+2. Add an immutable release-candidate workflow and evidence manifest.
+3. Decide separately whether browser and device automation provides enough
    value to introduce and maintain it.

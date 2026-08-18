@@ -38,6 +38,8 @@
     "test:ledger-sweeps:junit": "node test/run-with-junit.mjs test-results/ledger-sweeps.xml '11.10 Ledger - Trial Balance Sweeps' test/ledger-sweeps.test.ts '11 Claude Ledger Assurance'",
     "test:postgres-http": "NODE_ENV=test node --import tsx --test test/postgres-http.test.ts",
     "test:postgres-http:junit": "node test/run-with-junit.mjs test-results/postgres-http.xml 'HTTP to PostgreSQL acceptance' test/postgres-http.test.ts",
+    "test:daily-synthetic": "NODE_ENV=test node --import tsx --test test/daily-synthetic-journeys.test.ts",
+    "test:daily-synthetic:junit": "node test/run-with-junit.mjs test-results/daily-synthetic-journeys.xml 'Daily synthetic PostgreSQL journeys' test/daily-synthetic-journeys.test.ts",
     "test:process-restart": "node --test test/process-startup-recovery.test.mjs",
     "test:process-restart:junit": "node test/run-with-junit.mjs test-results/postgres-process-restart.xml 'Compiled PostgreSQL process restart' test/process-startup-recovery.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"

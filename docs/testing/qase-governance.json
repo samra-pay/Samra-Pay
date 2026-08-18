@@ -113,6 +113,13 @@
       "requiredForCompletion": true
     },
     {
+      "id": "daily-synthetic",
+      "source": "artifacts/api-server/test/daily-synthetic-journeys.test.ts",
+      "report": "daily-synthetic-journeys.xml",
+      "uploadStepId": "qase-upload-daily-synthetic",
+      "requiredForCompletion": true
+    },
+    {
       "id": "process-restart",
       "source": "artifacts/api-server/test/process-startup-recovery.test.mjs",
       "report": "postgres-process-restart.xml",
