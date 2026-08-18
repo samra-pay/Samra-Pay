@@ -36,6 +36,12 @@ test("accepts the Cloud Run port and an HTTPS API origin", () => {
   assert.equal(config.port, 8080);
   assert.equal(config.apiOrigin.href, "https://api.example.test/");
   assert.equal(config.publicDirectory, "/srv/public");
+
+  const loopback = loadServerConfig({
+    PORT: "8080",
+    SAMRA_API_ORIGIN: "http://127.0.0.1:18080",
+  });
+  assert.equal(loopback.apiOrigin.href, "http://127.0.0.1:18080/");
 });
 
 test("fails closed for invalid ports and API protocols", () => {
@@ -44,6 +50,14 @@ test("fails closed for invalid ports and API protocols", () => {
     () =>
       loadServerConfig({ PORT: "8080", SAMRA_API_ORIGIN: "file:///tmp/api" }),
     /http or https/,
+  );
+  assert.throws(
+    () =>
+      loadServerConfig({
+        PORT: "8080",
+        SAMRA_API_ORIGIN: "http://api.example.test",
+      }),
+    /must use https unless it targets loopback/,
   );
 });
 

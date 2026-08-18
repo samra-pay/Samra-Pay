@@ -25,6 +25,9 @@ to `SAMRA_API_ORIGIN`. This keeps browser cookies first-party and provides an
 explicit HTTP 502 response when the API is unavailable; it never substitutes
 mock financial data.
 
+`SAMRA_API_ORIGIN` must use HTTPS. Plain HTTP is accepted only for loopback
+container testing and local development.
+
 The design-system preview container uses the same versioned source and gates as
 the GitHub preview artifact. It provides an independent browser-based design
 review surface without making Replit or compiled ZIP exports authoritative.
@@ -49,6 +52,19 @@ transition, but it is not part of the backend hosting contract.
 `cloudbuild.yaml` runs the platform contract tests and repository typecheck,
 then builds five images. It only builds and publishes images. Deployment is a
 separate approval gate.
+
+GitHub's `Container portability` workflow independently builds the same five
+images from the exact GitHub commit without pushing them. It runs the migration
+image against disposable PostgreSQL 16, starts the API with production-shaped
+fake-provider/PostgreSQL configuration, and probes API health/readiness. It
+then starts the customer, Operations Portal, and design-system containers,
+proves SPA routes and same-origin API proxying, and confirms that the synthetic
+operations API stays disabled in the production-mode API image. Runtime logs
+and probe responses plus JSON/JUnit summaries are retained for 30 days.
+
+The portability gate runs on relevant pull requests and `main` changes, every
+Monday to catch base-image drift, and on manual dispatch. It creates no cloud
+resource, pushes no image, uses no credential, and does not access Replit.
 
 Required Cloud Build substitutions:
 

@@ -1,0 +1,118 @@
+name: Container portability
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".dockerignore"
+      - ".github/workflows/container-portability.yml"
+      - "artifacts/api-server/**"
+      - "artifacts/samra-pay/**"
+      - "artifacts/samra-pay-ds/**"
+      - "artifacts/samra-pay-ops/**"
+      - "deploy/gcp/**"
+      - "lib/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".dockerignore"
+      - ".github/workflows/container-portability.yml"
+      - "artifacts/api-server/**"
+      - "artifacts/samra-pay/**"
+      - "artifacts/samra-pay-ds/**"
+      - "artifacts/samra-pay-ops/**"
+      - "deploy/gcp/**"
+      - "lib/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  schedule:
+    - cron: "31 8 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-portability-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  container-portability:
+    name: Google Cloud container portability gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_container
+          POSTGRES_PASSWORD: samra_container
+          POSTGRES_DB: samra_container
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_container -d samra_container"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://samra_container:samra_container@127.0.0.1:5432/samra_container
+      SAMRA_CONTAINER_IMAGE_TAG: ${{ github.sha }}
+      SAMRA_CONTAINER_SMOKE_ARTIFACTS: artifacts/container-smoke
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate container portability contract
+        run: node --test deploy/gcp/*.test.mjs
+
+      - name: Build API image
+        run: >-
+          docker build --file deploy/gcp/Dockerfile.api
+          --tag "samra-api:${SAMRA_CONTAINER_IMAGE_TAG}" .
+
+      - name: Build customer web image
+        run: >-
+          docker build --file deploy/gcp/Dockerfile.customer-web
+          --tag "samra-customer-web:${SAMRA_CONTAINER_IMAGE_TAG}" .
+
+      - name: Build operations web image
+        run: >-
+          docker build --file deploy/gcp/Dockerfile.operations-web
+          --tag "samra-operations-web:${SAMRA_CONTAINER_IMAGE_TAG}" .
+
+      - name: Build design-system preview image
+        run: >-
+          docker build --file deploy/gcp/Dockerfile.design-system
+          --tag "samra-design-system-preview:${SAMRA_CONTAINER_IMAGE_TAG}" .
+
+      - name: Build migration image
+        run: >-
+          docker build --file deploy/gcp/Dockerfile.migrate
+          --tag "samra-migrations:${SAMRA_CONTAINER_IMAGE_TAG}" .
+
+      - name: Run migration and container runtime smoke
+        run: bash deploy/gcp/smoke-containers.sh
+
+      - name: Preserve container runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-portability-${{ github.sha }}
+          path: artifacts/container-smoke
+          if-no-files-found: error
+          retention-days: 30

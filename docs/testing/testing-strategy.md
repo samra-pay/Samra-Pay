@@ -101,6 +101,18 @@ hash record, Qase run identity, and raw evidence for 365 days. The workflow
 uploads evidence before enforcing stop conditions, so a failed candidate leaves
 an auditable failed record and cannot be converted into a pass by omission.
 
+## Container portability cadence
+
+The `Container portability` workflow builds the five Google Cloud-targeted
+images without publishing or deploying them. It runs on relevant pull requests
+and `main` changes, weekly for base-image drift, and by manual dispatch. Against
+disposable PostgreSQL 16 it executes the migration image, API health/readiness,
+customer and Operations Portal SPA/API proxy routes, the production operations-
+API denial, and the design-system review surface. Logs and probe responses are
+retained with JSON/JUnit summaries for 30 days. This proves container runtime
+portability; it does not prove Google Cloud provisioning, IAM, networking,
+deployment, or production security.
+
 ## Next testing slices
 
 The daily PostgreSQL job now publishes nine separately identifiable synthetic
