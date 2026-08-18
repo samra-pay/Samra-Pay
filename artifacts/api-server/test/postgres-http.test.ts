@@ -714,6 +714,11 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
 
     const afterRestart = await startServer();
     running.push(afterRestart);
+    const rotatedComplianceHeaders = await loginWorkforce(
+      afterRestart.origin,
+      "compliance@samra.test",
+      "rotated-compliance-password-2026",
+    );
     const durableTransfer = objectBody(
       await apiRequest(
         afterRestart.origin,
@@ -764,7 +769,7 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       {
         method: "POST",
         headers: {
-          ...complianceHeaders,
+          ...rotatedComplianceHeaders,
           "Idempotency-Key": "http-reconciliation-resolution",
         },
         body: { reason: resolutionReason },
