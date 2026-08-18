@@ -143,6 +143,38 @@ CREATE TRIGGER "ledger_accounts_initialize_balance"
 AFTER INSERT ON "samra_core"."ledger_accounts"
 FOR EACH ROW EXECUTE FUNCTION "samra_core"."initialize_ledger_account_balance"();
 --> statement-breakpoint
+CREATE FUNCTION "samra_core"."lock_posted_journal_accounts_in_order"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  locked_account_id uuid;
+BEGIN
+  IF OLD."state" = 'draft' AND NEW."state" = 'posted' THEN
+    -- Lock one account row at a time in canonical UUID order. A single
+    -- SELECT ... ORDER BY ... FOR UPDATE can still acquire locks in a plan-
+    -- dependent order around joins. The explicit loop prevents cycles when
+    -- distinct journals post against overlapping account sets.
+    FOR locked_account_id IN
+      SELECT DISTINCT posting."account_id"
+      FROM "samra_core"."ledger_postings" AS posting
+      WHERE posting."journal_id" = NEW."id"
+      ORDER BY posting."account_id"
+    LOOP
+      PERFORM 1
+      FROM "samra_core"."ledger_accounts" AS account
+      WHERE account."id" = locked_account_id
+      FOR UPDATE;
+    END LOOP;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER "ledger_journals_00_lock_accounts_in_order"
+BEFORE UPDATE OF "state" ON "samra_core"."ledger_journals"
+FOR EACH ROW EXECUTE FUNCTION "samra_core"."lock_posted_journal_accounts_in_order"();
+--> statement-breakpoint
 CREATE FUNCTION "samra_core"."apply_posted_journal_to_balance"()
 RETURNS trigger
 LANGUAGE plpgsql
