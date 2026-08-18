@@ -33,10 +33,11 @@ The web cutover implements one API adapter and one hard boundary:
   timeout error.
 
 The route choice is fixed at the application boundary. A single workflow never
-mixes local financial state and ledger-backed state. Mobile now has a validated,
+mixes local financial state and ledger-backed state. Mobile has a validated,
 portable API-origin boundary that initializes the generated client before any
-screen can issue a request. Screen-level mobile API cutover remains future work,
-not a current capability.
+screen can issue a request. The mobile remittance screen now uses that boundary
+in API mode; mobile balance and activity remain legacy demos until their own
+cutovers pass.
 
 ## API conventions
 
@@ -58,7 +59,7 @@ not a current capability.
 4. Replace web overview identity, balance and activity in API mode.
 5. Keep unsupported financial previews explicitly unavailable in API mode.
 6. Stabilize the contract.
-7. Enable mobile remittance.
+7. Enable mobile remittance. **Complete.**
 8. Replace mobile balance and activity.
 9. Remove only the mocks whose API replacements have passed.
 
