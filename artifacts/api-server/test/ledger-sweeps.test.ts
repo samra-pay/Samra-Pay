@@ -115,3 +115,20 @@ test("CLAUDE-LED-051 Hold sweep detects over-held accounts and incomplete termin
     incomplete_terminal_holds: "0",
   });
 });
+
+test("Materialized balance sweep matches journal and active-hold truth", async () => {
+  const result = await connection.pool.query<{ count: string }>(
+    `SELECT count(*)::text AS count
+     FROM samra_core.ledger_account_balance_truth truth
+     FULL OUTER JOIN samra_core.ledger_account_balances projection
+       ON projection.account_id = truth.account_id
+     WHERE projection.account_id IS NULL OR truth.account_id IS NULL
+       OR projection.currency IS DISTINCT FROM truth.currency
+       OR projection.natural_balance_minor IS DISTINCT FROM truth.natural_balance_minor
+       OR projection.active_holds_minor IS DISTINCT FROM truth.active_holds_minor
+       OR projection.available_balance_minor IS DISTINCT FROM truth.available_balance_minor
+       OR projection.applied_posting_count IS DISTINCT FROM truth.applied_posting_count
+       OR projection.active_hold_count IS DISTINCT FROM truth.active_hold_count`,
+  );
+  assert.equal(result.rows[0]!.count, "0");
+});

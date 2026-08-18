@@ -129,6 +129,84 @@ export const ledgerPostings = samraCore.table(
   ],
 );
 
+export const ledgerAccountBalances = samraCore.table(
+  "ledger_account_balances",
+  {
+    accountId: uuid("account_id")
+      .primaryKey()
+      .references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+    currency: currencyCodeEnum("currency").notNull(),
+    naturalBalanceMinor: bigint("natural_balance_minor", { mode: "bigint" })
+      .notNull()
+      .default(0n),
+    activeHoldsMinor: bigint("active_holds_minor", { mode: "bigint" })
+      .notNull()
+      .default(0n),
+    availableBalanceMinor: bigint("available_balance_minor", {
+      mode: "bigint",
+    })
+      .notNull()
+      .default(0n),
+    appliedPostingCount: bigint("applied_posting_count", { mode: "bigint" })
+      .notNull()
+      .default(0n),
+    activeHoldCount: bigint("active_hold_count", { mode: "bigint" })
+      .notNull()
+      .default(0n),
+    version: bigint("version", { mode: "bigint" }).notNull().default(0n),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("ledger_account_balances_updated_idx").on(table.updatedAt),
+    check(
+      "ledger_account_balances_available_chk",
+      sql`${table.availableBalanceMinor} = ${table.naturalBalanceMinor} - ${table.activeHoldsMinor}`,
+    ),
+    check(
+      "ledger_account_balances_counts_chk",
+      sql`${table.appliedPostingCount} >= 0 and ${table.activeHoldCount} >= 0 and ${table.activeHoldsMinor} >= 0 and ${table.version} >= 0`,
+    ),
+  ],
+);
+
+export const ledgerBalanceRebuildCommands = samraCore.table(
+  "ledger_balance_rebuild_commands",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    commandRef: text("command_ref").notNull(),
+    actorId: text("actor_id").notNull(),
+    reason: text("reason").notNull(),
+    state: text("state").notNull().default("requested"),
+    driftedAccountCount: integer("drifted_account_count"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    requestedAt: timestamp("requested_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("ledger_balance_rebuild_commands_ref_uidx").on(
+      table.commandRef,
+    ),
+    index("ledger_balance_rebuild_commands_requested_idx").on(
+      table.requestedAt,
+    ),
+    check(
+      "ledger_balance_rebuild_commands_reason_chk",
+      sql`length(trim(${table.reason})) >= 20`,
+    ),
+    check(
+      "ledger_balance_rebuild_commands_state_chk",
+      sql`(${table.state} = 'requested' and ${table.completedAt} is null and ${table.driftedAccountCount} is null) or (${table.state} = 'completed' and ${table.completedAt} is not null and ${table.driftedAccountCount} >= 0)`,
+    ),
+  ],
+);
+
 export const ledgerHolds = samraCore.table(
   "ledger_holds",
   {
@@ -251,6 +329,12 @@ export type LedgerJournal = typeof ledgerJournals.$inferSelect;
 export type NewLedgerJournal = typeof ledgerJournals.$inferInsert;
 export type LedgerPosting = typeof ledgerPostings.$inferSelect;
 export type NewLedgerPosting = typeof ledgerPostings.$inferInsert;
+export type LedgerAccountBalance = typeof ledgerAccountBalances.$inferSelect;
+export type NewLedgerAccountBalance = typeof ledgerAccountBalances.$inferInsert;
+export type LedgerBalanceRebuildCommand =
+  typeof ledgerBalanceRebuildCommands.$inferSelect;
+export type NewLedgerBalanceRebuildCommand =
+  typeof ledgerBalanceRebuildCommands.$inferInsert;
 export type LedgerHold = typeof ledgerHolds.$inferSelect;
 export type NewLedgerHold = typeof ledgerHolds.$inferInsert;
 export type LedgerHoldEvent = typeof ledgerHoldEvents.$inferSelect;

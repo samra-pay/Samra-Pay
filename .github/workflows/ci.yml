@@ -159,6 +159,9 @@ jobs:
       - name: Run ledger concurrency and atomicity tests
         run: pnpm --filter @workspace/api-server run test:ledger-concurrency:junit
 
+      - name: Run materialized ledger balance tests
+        run: pnpm --filter @workspace/api-server run test:ledger-materialized:junit
+
       - name: Run global ledger invariant sweeps
         run: pnpm --filter @workspace/api-server run test:ledger-sweeps:junit
 
@@ -181,6 +184,7 @@ jobs:
             artifacts/api-server/test-results/ledger-reversals-refunds.xml
             artifacts/api-server/test-results/ledger-immutability-audit.xml
             artifacts/api-server/test-results/ledger-concurrency-atomicity.xml
+            artifacts/api-server/test-results/ledger-materialized-balances.xml
             artifacts/api-server/test-results/ledger-sweeps.xml
             artifacts/api-server/test-results/ledger-reconciliation-controls.xml
           if-no-files-found: error
@@ -290,6 +294,7 @@ jobs:
             test-results/ledger-reversals-refunds.xml \
             test-results/ledger-immutability-audit.xml \
             test-results/ledger-concurrency-atomicity.xml \
+            test-results/ledger-materialized-balances.xml \
             test-results/ledger-sweeps.xml \
             test-results/ledger-reconciliation-controls.xml \
             test-results/postgres-http.xml
@@ -467,6 +472,17 @@ jobs:
           format: junit
           path: test-results/ledger-concurrency-atomicity.xml
 
+      - name: Upload materialized ledger balance results to Qase
+        id: qase-upload-ledger-materialized
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/ledger-materialized-balances.xml
+
       - name: Complete Qase run
         if: >-
           always() &&
@@ -484,6 +500,7 @@ jobs:
           steps.qase-upload-ledger-reversals.outcome == 'success' &&
           steps.qase-upload-ledger-audit.outcome == 'success' &&
           steps.qase-upload-ledger-concurrency.outcome == 'success' &&
+          steps.qase-upload-ledger-materialized.outcome == 'success' &&
           (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-complete@v1
