@@ -34,6 +34,17 @@ accounts, beneficiaries, quotes, idempotent transfer commands, backend status
 polling, cancellation, and restart recovery. Mock mode still renders the
 original remittance demo.
 
+Restart recovery is backend-authoritative. The app stores the server quote,
+the transfer id when known, and idempotency keys needed to safely resume an
+interrupted command. If the app closes after the submission key is durable but
+before the transfer response is saved, the next launch automatically replays
+the same command with the same key and recovers the original backend transfer.
+An interrupted user-authorized cancellation is resumed under the same rule
+while the backend transfer remains cancellable.
+Once a transfer id exists, the app fetches status and financial effects from
+the API. Corrupt local recovery data is discarded, and no local balance or
+client-generated transfer becomes financial truth.
+
 The mobile Home screen is also cut over in API mode. It renders the backend
 customer, ledger-derived book and available balances, and ledger activity. A
 transfer status change invalidates those financial queries so completion,

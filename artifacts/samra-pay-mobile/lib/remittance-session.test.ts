@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RemittanceQuote } from "@workspace/samra-client";
+import type { RemittanceQuote, Transfer } from "@workspace/samra-client";
 
 import {
   clearRemittanceSession,
@@ -10,6 +10,8 @@ import {
   persistCreatedTransfer,
   prepareCancelSubmission,
   prepareTransferSubmission,
+  resumePreparedCancellation,
+  resumePreparedTransfer,
   sanitizeUsdInput,
   usdInputToMinorUnits,
   type AsyncKeyValueStorage,
@@ -42,6 +44,17 @@ const quote: RemittanceQuote = {
   fundingMethod: "samra_balance",
   deliveryMethod: "bank",
   estimatedDelivery: "Within minutes",
+};
+
+const transfer: Transfer = {
+  id: "transfer_1",
+  status: "submitted",
+  recipientDisplay: "Abebe Bekele",
+  quoteSnapshot: { ...quote, status: "consumed" },
+  createdAt: "2026-08-18T12:00:00.000Z",
+  updatedAt: "2026-08-18T12:00:00.000Z",
+  failureCode: null,
+  timeline: [],
 };
 
 describe("mobile remittance session", () => {
@@ -82,6 +95,95 @@ describe("mobile remittance session", () => {
     });
   });
 
+  it("automatically resumes the prepared command with the original key after restart", async () => {
+    const storage = new MemoryStorage();
+    const key = await prepareTransferSubmission(
+      quote,
+      storage,
+      () => "restart-key",
+    );
+    const restartedSession = await loadRemittanceSession(storage);
+    expect(restartedSession).not.toBeNull();
+
+    const calls: Array<{ quoteId: string; idempotencyKey: string }> = [];
+    const recovered = await resumePreparedTransfer(
+      restartedSession!,
+      async (input, idempotencyKey) => {
+        calls.push({ quoteId: input.quoteId, idempotencyKey });
+        return transfer;
+      },
+      storage,
+    );
+
+    expect(recovered).toEqual(transfer);
+    expect(calls).toEqual([{ quoteId: quote.id, idempotencyKey: key }]);
+    expect(await loadRemittanceSession(storage)).toMatchObject({
+      transferId: transfer.id,
+      transferIdempotencyKey: key,
+    });
+  });
+
+  it("recovers a lost create response without creating a second logical transfer", async () => {
+    const storage = new MemoryStorage();
+    const key = await prepareTransferSubmission(
+      quote,
+      storage,
+      () => "lost-response",
+    );
+    const backendTransfers = new Map<string, Transfer>();
+    let attempts = 0;
+    const backendCreate = async (
+      _input: Readonly<{ quoteId: string }>,
+      idempotencyKey: string,
+    ) => {
+      attempts += 1;
+      const existing = backendTransfers.get(idempotencyKey);
+      if (existing) return existing;
+      backendTransfers.set(idempotencyKey, transfer);
+      throw new Error("Connection closed after backend commit");
+    };
+
+    await expect(
+      resumePreparedTransfer(
+        (await loadRemittanceSession(storage))!,
+        backendCreate,
+        storage,
+      ),
+    ).rejects.toThrow("Connection closed after backend commit");
+    expect((await loadRemittanceSession(storage))?.transferId).toBeUndefined();
+    expect(
+      (await loadRemittanceSession(storage))?.transferIdempotencyKey,
+    ).toBe(key);
+
+    const recovered = await resumePreparedTransfer(
+      (await loadRemittanceSession(storage))!,
+      backendCreate,
+      storage,
+    );
+    expect(recovered?.id).toBe(transfer.id);
+    expect(attempts).toBe(2);
+    expect(backendTransfers.size).toBe(1);
+    expect((await loadRemittanceSession(storage))?.transferId).toBe(
+      transfer.id,
+    );
+  });
+
+  it("does not replay creation after a transfer id is durable", async () => {
+    const storage = new MemoryStorage();
+    await persistCreatedTransfer(quote, transfer.id, storage);
+    let calls = 0;
+    const recovered = await resumePreparedTransfer(
+      (await loadRemittanceSession(storage))!,
+      async () => {
+        calls += 1;
+        return transfer;
+      },
+      storage,
+    );
+    expect(recovered).toBeNull();
+    expect(calls).toBe(0);
+  });
+
   it("reuses a persisted cancellation key", async () => {
     const storage = new MemoryStorage();
     await persistCreatedTransfer(quote, "transfer_1", storage);
@@ -102,10 +204,55 @@ describe("mobile remittance session", () => {
     expect(replay).toBe(first);
   });
 
+  it("automatically resumes a user-authorized cancellation with the original key", async () => {
+    const storage = new MemoryStorage();
+    await persistCreatedTransfer(quote, transfer.id, storage);
+    const prepared = await loadRemittanceSession(storage);
+    const key = await prepareCancelSubmission(
+      prepared!,
+      storage,
+      () => "restart-cancel",
+    );
+    const restarted = await loadRemittanceSession(storage);
+    const cancelled = { ...transfer, status: "cancelled" as const };
+    const calls: Array<{ transferId: string; idempotencyKey: string }> = [];
+
+    const recovered = await resumePreparedCancellation(
+      restarted!,
+      transfer.status,
+      async (transferId, idempotencyKey) => {
+        calls.push({ transferId, idempotencyKey });
+        return cancelled;
+      },
+    );
+
+    expect(recovered?.status).toBe("cancelled");
+    expect(calls).toEqual([{ transferId: transfer.id, idempotencyKey: key }]);
+  });
+
+  it("does not replay cancellation after backend status is terminal", async () => {
+    const storage = new MemoryStorage();
+    await persistCreatedTransfer(quote, transfer.id, storage);
+    const prepared = await loadRemittanceSession(storage);
+    await prepareCancelSubmission(prepared!, storage, () => "terminal-cancel");
+    let calls = 0;
+    const recovered = await resumePreparedCancellation(
+      (await loadRemittanceSession(storage))!,
+      "cancelled",
+      async () => {
+        calls += 1;
+        return { ...transfer, status: "cancelled" };
+      },
+    );
+    expect(recovered).toBeNull();
+    expect(calls).toBe(0);
+  });
+
   it("rejects corrupt session data and clears active recovery state", async () => {
     const storage = new MemoryStorage();
     storage.values.set("samra.mobile.remittance.session.v1", "{bad json");
     expect(await loadRemittanceSession(storage)).toBeNull();
+    expect(storage.values).toHaveLength(0);
     await persistActiveQuote(quote, storage);
     await clearRemittanceSession(storage);
     expect(await loadRemittanceSession(storage)).toBeNull();

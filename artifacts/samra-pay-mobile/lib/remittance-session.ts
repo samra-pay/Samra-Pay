@@ -1,5 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { RemittanceQuote, TransferStatus } from "@workspace/samra-client";
+import type {
+  RemittanceQuote,
+  Transfer,
+  TransferStatus,
+} from "@workspace/samra-client";
 
 export interface AsyncKeyValueStorage {
   getItem(key: string): Promise<string | null>;
@@ -16,6 +20,10 @@ export type MobileRemittanceSession = Readonly<{
 }>;
 
 const SESSION_KEY = "samra.mobile.remittance.session.v1";
+
+function isNonEmptyIdentifier(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 128;
+}
 
 function isMoney(value: unknown, currency: "USD" | "ETB"): boolean {
   if (!value || typeof value !== "object") return false;
@@ -54,11 +62,11 @@ function isSession(value: unknown): value is MobileRemittanceSession {
     session.version === 1 &&
     isQuote(session.quote) &&
     (session.transferId === undefined ||
-      typeof session.transferId === "string") &&
+      isNonEmptyIdentifier(session.transferId)) &&
     (session.transferIdempotencyKey === undefined ||
-      typeof session.transferIdempotencyKey === "string") &&
+      isNonEmptyIdentifier(session.transferIdempotencyKey)) &&
     (session.cancelIdempotencyKey === undefined ||
-      typeof session.cancelIdempotencyKey === "string")
+      isNonEmptyIdentifier(session.cancelIdempotencyKey))
   );
 }
 
@@ -79,10 +87,12 @@ export async function loadRemittanceSession(
   if (!raw) return null;
   try {
     const parsed: unknown = JSON.parse(raw);
-    return isSession(parsed) ? parsed : null;
+    if (isSession(parsed)) return parsed;
   } catch {
-    return null;
+    // Invalid local recovery data must not survive another app launch.
   }
+  await storage.removeItem(SESSION_KEY);
+  return null;
 }
 
 async function saveSession(
@@ -134,6 +144,59 @@ export async function persistCreatedTransfer(
     },
     storage,
   );
+}
+
+export type RecoveryTransferCreator = (
+  input: Readonly<{ quoteId: string }>,
+  idempotencyKey: string,
+) => Promise<Transfer>;
+
+/**
+ * Closes the crash window after an idempotency key is durable but before the
+ * created transfer id is durable. The backend command is replayed with the
+ * exact same key, so recovery can only return the original transfer or create
+ * it once. Local storage remains a recovery locator, never financial truth.
+ */
+export async function resumePreparedTransfer(
+  session: MobileRemittanceSession,
+  createTransfer: RecoveryTransferCreator,
+  storage: AsyncKeyValueStorage = AsyncStorage,
+): Promise<Transfer | null> {
+  if (session.transferId || !session.transferIdempotencyKey) return null;
+
+  const transfer = await createTransfer(
+    { quoteId: session.quote.id },
+    session.transferIdempotencyKey,
+  );
+  await persistCreatedTransfer(session.quote, transfer.id, storage);
+  return transfer;
+}
+
+export const CANCELLABLE_TRANSFER_STATUSES = new Set<TransferStatus>([
+  "created",
+  "funds_reserved",
+  "submitted",
+]);
+
+export type RecoveryCancellationCreator = (
+  transferId: string,
+  idempotencyKey: string,
+) => Promise<Transfer>;
+
+/** Replays a user-authorized cancellation that was interrupted by app exit. */
+export async function resumePreparedCancellation(
+  session: MobileRemittanceSession,
+  transferStatus: TransferStatus,
+  cancelTransfer: RecoveryCancellationCreator,
+): Promise<Transfer | null> {
+  if (
+    !session.transferId ||
+    !session.cancelIdempotencyKey ||
+    !CANCELLABLE_TRANSFER_STATUSES.has(transferStatus)
+  ) {
+    return null;
+  }
+  return cancelTransfer(session.transferId, session.cancelIdempotencyKey);
 }
 
 export async function prepareCancelSubmission(
