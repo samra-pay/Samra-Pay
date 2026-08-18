@@ -45,6 +45,12 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-53   | CLAUDE-LED-041 posted-only balance truth           |
 | SAMP-54   | CLAUDE-LED-042 posted, held, and available balance |
 | SAMP-55   | CLAUDE-LED-020 business-event replay idempotency   |
+| SAMP-56   | CLAUDE-LED-007 database zero-amount rejection      |
+| SAMP-57   | CLAUDE-LED-008 database negative-amount rejection  |
+| SAMP-58   | CLAUDE-LED-012 nonexistent account reference       |
+| SAMP-59   | CLAUDE-LED-013 orphan posting rejection            |
+| SAMP-60   | CLAUDE-LED-014 posted-account delete restriction   |
+| SAMP-61   | CLAUDE-LED-015 unique account-code enforcement     |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An
