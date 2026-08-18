@@ -89,6 +89,13 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-89   | CLAUDE-LED-043 balance-read scale characterization  |
 | SAMP-90   | CLAUDE-LED-052 controlled reconciliation resolution |
 
+Two post-import automated controls extend the original 52-case Claude ledger
+set. Qase links them by their stable case titles and suite path:
+
+- Materialized ledger balances remain journal-derived under concurrency,
+  rollback, restart, drift, and rebuild.
+- Materialized balance sweep matches journal and active-hold truth.
+
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An
 idempotent replay can return the original journal only when the complete journal

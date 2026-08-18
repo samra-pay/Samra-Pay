@@ -6,13 +6,17 @@ The ledger is double-entry, append-only and single-currency per journal.
 PostgreSQL `bigint` and TypeScript `bigint` store minor units. JSON APIs
 serialize those values as strings.
 
-Balances are derived from postings:
+Accounting balances are derived from postings:
 
 - debit-normal account: debits minus credits;
 - credit-normal account: credits minus debits;
 - available customer balance: natural posted balance minus active holds.
 
-There is no mutable balance column in v0.
+The application reads those values from a transactionally maintained materialized
+projection. The projection is mutable only through database triggers attached to
+journal posting, hold transitions, and controlled rebuild commands. Direct edits
+and deletes are rejected. Posted journals, postings, and active holds remain the
+rebuildable source of truth.
 
 ## Initial chart of accounts
 
@@ -97,3 +101,11 @@ Credit  Remittance fee revenue                    300
 - each hold lifecycle event is append-only and unique per hold and event type;
 - balance check and hold mutation lock the affected account in PostgreSQL;
 - an enforced account cannot have negative available balance.
+- overlapping journal writers acquire account locks in canonical order using a
+  lock strength compatible with posting foreign-key protection;
+- the materialized natural, held, available, posting-count, and hold-count
+  values must match journal-and-hold truth;
+- every drift sweep and rebuild records actor-attributed immutable audit
+  evidence;
+- a rebuild command is idempotent by command reference and rejects changed
+  operator evidence.
