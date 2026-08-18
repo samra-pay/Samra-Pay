@@ -1,0 +1,15 @@
+.git
+.github
+.replit
+.cache
+.turbo
+**/node_modules
+**/dist
+**/test-results
+**/coverage
+attached_assets
+work
+*.log
+.env
+.env.*
+!.env.example

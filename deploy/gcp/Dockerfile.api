@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1.7
+FROM node:24-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+WORKDIR /workspace
+
+RUN corepack enable
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @workspace/api-server run build
+
+FROM node:24-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=build --chown=node:node /workspace/artifacts/api-server/dist ./dist
+
+USER node
+CMD ["node", "--enable-source-maps", "./dist/index.mjs"]

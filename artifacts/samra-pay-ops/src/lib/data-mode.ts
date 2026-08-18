@@ -29,6 +29,8 @@ export function parseApiOrigin(raw: string | undefined, mode: DataMode): string 
     return null;
   }
 
+  if (raw === 'same-origin') return '';
+
   const value = raw.replace(/\/+$/, '');
   const parsed = new URL(value);
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

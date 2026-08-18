@@ -1,0 +1,59 @@
+substitutions:
+  _IMAGE_TAG: manual
+  _REGION: us-east1
+  _REPOSITORY: samra-staging
+
+steps:
+  - id: platform-contract-tests
+    name: node:24-bookworm-slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        corepack enable
+        pnpm install --frozen-lockfile
+        pnpm run test:gcp-platform
+        pnpm run typecheck
+
+  - id: build-api
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=deploy/gcp/Dockerfile.api
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-api:${_IMAGE_TAG}
+      - .
+
+  - id: build-customer-web
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=deploy/gcp/Dockerfile.customer-web
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-customer-web:${_IMAGE_TAG}
+      - .
+
+  - id: build-operations-web
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=deploy/gcp/Dockerfile.operations-web
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-operations-web:${_IMAGE_TAG}
+      - .
+
+  - id: build-migrations
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=deploy/gcp/Dockerfile.migrate
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-migrations:${_IMAGE_TAG}
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-api:${_IMAGE_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-customer-web:${_IMAGE_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-operations-web:${_IMAGE_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/samra-migrations:${_IMAGE_TAG}
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 2400s
