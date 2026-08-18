@@ -6,20 +6,21 @@ used by the reporting job.
 
 ## Automated scope
 
-| GitHub gate                   | Source                                                           | Qase result source                 |
-| ----------------------------- | ---------------------------------------------------------------- | ---------------------------------- |
-| PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                     | `postgres-persistence.xml`         |
-| Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts`     | `ledger-journal-assurance.xml`     |
-| Ledger account resolution     | `artifacts/api-server/test/ledger-account-resolution.test.ts`    | `ledger-account-resolution.xml`    |
-| Ledger currency and precision | `artifacts/api-server/test/ledger-currency-precision.test.ts`    | `ledger-currency-precision.xml`    |
-| Ledger balance computation    | `artifacts/api-server/test/ledger-balance-computation.test.ts`   | `ledger-balance-computation.xml`   |
-| Ledger idempotency            | `artifacts/api-server/test/ledger-idempotency.test.ts`           | `ledger-idempotency.xml`           |
-| Ledger holds lifecycle        | `artifacts/api-server/test/ledger-holds-lifecycle.test.ts`       | `ledger-holds-lifecycle.xml`       |
-| Ledger reversals and refunds  | `artifacts/api-server/test/ledger-reversals-refunds.test.ts`     | `ledger-reversals-refunds.xml`     |
-| Ledger immutability and audit | `artifacts/api-server/test/ledger-immutability-audit.test.ts`    | `ledger-immutability-audit.xml`    |
-| Ledger concurrency/atomicity  | `artifacts/api-server/test/ledger-concurrency-atomicity.test.ts` | `ledger-concurrency-atomicity.xml` |
-| Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`                | `ledger-sweeps.xml`                |
-| HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`                | `postgres-http.xml`                |
+| GitHub gate                   | Source                                                                  | Qase result source                        |
+| ----------------------------- | ----------------------------------------------------------------------- | ----------------------------------------- |
+| PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                            | `postgres-persistence.xml`                |
+| Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts`            | `ledger-journal-assurance.xml`            |
+| Ledger account resolution     | `artifacts/api-server/test/ledger-account-resolution.test.ts`           | `ledger-account-resolution.xml`           |
+| Ledger currency and precision | `artifacts/api-server/test/ledger-currency-precision.test.ts`           | `ledger-currency-precision.xml`           |
+| Ledger balance computation    | `artifacts/api-server/test/ledger-balance-computation.test.ts`          | `ledger-balance-computation.xml`          |
+| Ledger idempotency            | `artifacts/api-server/test/ledger-idempotency.test.ts`                  | `ledger-idempotency.xml`                  |
+| Ledger holds lifecycle        | `artifacts/api-server/test/ledger-holds-lifecycle.test.ts`              | `ledger-holds-lifecycle.xml`              |
+| Ledger reversals and refunds  | `artifacts/api-server/test/ledger-reversals-refunds.test.ts`            | `ledger-reversals-refunds.xml`            |
+| Ledger immutability and audit | `artifacts/api-server/test/ledger-immutability-audit.test.ts`           | `ledger-immutability-audit.xml`           |
+| Ledger concurrency/atomicity  | `artifacts/api-server/test/ledger-concurrency-atomicity.test.ts`        | `ledger-concurrency-atomicity.xml`        |
+| Ledger performance            | `artifacts/api-server/test/ledger-performance-characterization.test.ts` | `ledger-performance-characterization.xml` |
+| Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`                       | `ledger-sweeps.xml`                       |
+| HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`                       | `postgres-http.xml`                       |
 
 Qase identifies the automated cases by their stable Node test names in the JUnit
 files. Renaming a test changes its automation identity and must be treated as a
@@ -83,6 +84,7 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-86   | CLAUDE-LED-033 capture/release terminal race        |
 | SAMP-87   | CLAUDE-LED-034 mid-loop posting rollback            |
 | SAMP-88   | CLAUDE-LED-035 pre-post connection-loss rollback    |
+| SAMP-89   | CLAUDE-LED-043 balance-read scale characterization  |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An
@@ -109,6 +111,13 @@ for the same reason.
 - Pull requests from forks do not receive the repository token and skip the Qase
   reporting job.
 - JUnit artifacts are retained in GitHub for 14 days as independent evidence.
+
+The ledger performance case runs in its own workflow when balance-related code
+changes, on manual dispatch, and weekly. It is informational rather than a
+product pass/fail threshold: the workflow records p50, p99, PostgreSQL execution
+plans, observed growth, and a 25% regression-warning margin. Its JSON and JUnit
+evidence are retained for 90 days. Ordinary pull requests that do not affect the
+ledger balance path do not pay the one-million-posting runtime cost.
 
 ## Manual scope
 

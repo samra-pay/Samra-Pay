@@ -1,0 +1,160 @@
+name: Ledger performance characterization
+
+on:
+  workflow_dispatch:
+    inputs:
+      small_postings:
+        description: First scale measured against one account
+        required: false
+        default: "100000"
+      large_postings:
+        description: Second scale measured against one account
+        required: false
+        default: "1000000"
+      samples:
+        description: Timed balance reads at each scale
+        required: false
+        default: "40"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ledger-performance.yml"
+      - "artifacts/api-server/package.json"
+      - "artifacts/api-server/test/ledger-performance-characterization.test.ts"
+      - "lib/db/drizzle/**"
+      - "lib/db/src/postgres-ledger.ts"
+  schedule:
+    - cron: "17 6 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ledger-performance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance:
+    name: PostgreSQL ledger performance characterization
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: samra_performance
+          POSTGRES_PASSWORD: samra_performance
+          POSTGRES_DB: samra_performance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_performance -d samra_performance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://samra_performance:samra_performance@127.0.0.1:5432/samra_performance
+      LEDGER_PERF_SMALL_POSTINGS: ${{ inputs.small_postings || '100000' }}
+      LEDGER_PERF_LARGE_POSTINGS: ${{ inputs.large_postings || '1000000' }}
+      LEDGER_PERF_SAMPLES: ${{ inputs.samples || '40' }}
+      LEDGER_PERF_RESULTS_PATH: test-results/ledger-performance-characterization.json
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply explicit test migrations
+        run: pnpm --filter @workspace/db run test:migrate
+
+      - name: Seed synthetic chart of accounts
+        run: pnpm --filter @workspace/db run test:seed
+
+      - name: Prepare results directory
+        run: mkdir -p artifacts/api-server/test-results
+
+      - name: Characterize balance reads at scale
+        run: pnpm --filter @workspace/api-server run test:ledger-performance:junit
+
+      - name: Preserve performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledger-performance-characterization
+          path: |
+            artifacts/api-server/test-results/ledger-performance-characterization.xml
+            artifacts/api-server/test-results/ledger-performance-characterization.json
+          if-no-files-found: error
+          retention-days: 90
+
+  qase-report:
+    name: Qase ledger performance report
+    needs: performance
+    if: >-
+      always() &&
+      needs.performance.result != 'cancelled' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+      QASE_TESTOPS_PROJECT: SAMP
+
+    steps:
+      - name: Download performance evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ledger-performance-characterization
+          path: test-results
+
+      - name: Validate performance JUnit payload
+        run: |
+          test -s test-results/ledger-performance-characterization.xml
+          grep -q '<testsuite ' test-results/ledger-performance-characterization.xml
+          grep -q '<testcase ' test-results/ledger-performance-characterization.xml
+
+      - name: Create Qase performance run
+        id: qase-run-create
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/run-create@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          title: Samra Pay ledger performance — ${{ github.ref_name }} @ ${{ github.sha }}
+          description: Informational 100k and 1M posting balance-read characterization from GitHub Actions.
+
+      - name: Upload performance result to Qase
+        id: qase-upload
+        if: steps.qase-run-create.outputs.id != ''
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}
+          format: junit
+          path: test-results/ledger-performance-characterization.xml
+
+      - name: Complete Qase performance run
+        if: >-
+          always() &&
+          steps.qase-run-create.outputs.id != '' &&
+          steps.qase-upload.outcome == 'success'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/run-complete@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run-create.outputs.id }}
