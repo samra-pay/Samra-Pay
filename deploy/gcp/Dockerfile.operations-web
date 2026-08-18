@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1.7
+FROM node:24-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV BASE_PATH=/
+ARG VITE_SAMRA_OPS_DATA_MODE=api
+ARG VITE_SAMRA_OPERATIONS_ENABLED=true
+ARG VITE_SAMRA_API_ORIGIN=same-origin
+ENV VITE_SAMRA_OPS_DATA_MODE=$VITE_SAMRA_OPS_DATA_MODE
+ENV VITE_SAMRA_OPERATIONS_ENABLED=$VITE_SAMRA_OPERATIONS_ENABLED
+ENV VITE_SAMRA_API_ORIGIN=$VITE_SAMRA_API_ORIGIN
+
+WORKDIR /workspace
+RUN corepack enable
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @workspace/samra-pay-ops run build
+
+FROM node:24-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --chown=node:node deploy/gcp/static-server.mjs ./static-server.mjs
+COPY --from=build --chown=node:node /workspace/artifacts/samra-pay-ops/dist/public ./public
+
+USER node
+CMD ["node", "./static-server.mjs"]
