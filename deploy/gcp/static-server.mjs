@@ -50,6 +50,14 @@ export function loadServerConfig(environment = process.env) {
   if (apiOrigin && !["http:", "https:"].includes(apiOrigin.protocol)) {
     throw new Error("SAMRA_API_ORIGIN must use http or https.");
   }
+  if (
+    apiOrigin?.protocol === "http:" &&
+    !["127.0.0.1", "[::1]", "localhost"].includes(apiOrigin.hostname)
+  ) {
+    throw new Error(
+      "SAMRA_API_ORIGIN must use https unless it targets loopback testing.",
+    );
+  }
 
   return Object.freeze({
     apiOrigin,

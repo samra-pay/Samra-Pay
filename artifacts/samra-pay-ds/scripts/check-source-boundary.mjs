@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,22 +7,46 @@ const designRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const repositoryRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], {
-  cwd: designRoot,
-  encoding: "utf8",
-}).trim();
-const designRelative = path
-  .relative(repositoryRoot, designRoot)
-  .replaceAll("\\", "/");
-const tracked = execFileSync("git", ["ls-files", "--", designRelative], {
-  cwd: repositoryRoot,
-  encoding: "utf8",
-})
-  .split("\n")
-  .filter(Boolean)
-  .map((file) => path.posix.relative(designRelative, file));
 
-const prohibited = tracked.filter((file) => {
+async function listPackageFiles(directory, root = directory) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.name === "node_modules") {
+      continue;
+    }
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listPackageFiles(entryPath, root)));
+    } else {
+      files.push(path.relative(root, entryPath).replaceAll("\\", "/"));
+    }
+  }
+  return files;
+}
+
+let boundaryMode = "git";
+let inspectedFiles;
+try {
+  const repositoryRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+    cwd: designRoot,
+    encoding: "utf8",
+  }).trim();
+  const designRelative = path
+    .relative(repositoryRoot, designRoot)
+    .replaceAll("\\", "/");
+  inspectedFiles = execFileSync("git", ["ls-files", "--", designRelative], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  })
+    .split("\n")
+    .filter(Boolean)
+    .map((file) => path.posix.relative(designRelative, file));
+} catch {
+  boundaryMode = "filesystem";
+  inspectedFiles = await listPackageFiles(designRoot);
+}
+
+const prohibited = inspectedFiles.filter((file) => {
   const normalized = file.toLowerCase();
   return (
     normalized.endsWith(".tsbuildinfo") ||
@@ -78,7 +102,8 @@ for (const [key, target] of explicitExports) {
 console.log(
   JSON.stringify({
     event: "design_source_boundary_verified",
+    boundaryMode,
     explicitExports: explicitExports.length,
-    trackedFiles: tracked.length,
+    inspectedFiles: inspectedFiles.length,
   }),
 );

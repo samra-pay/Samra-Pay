@@ -3,7 +3,6 @@ FROM node:24-bookworm-slim AS build
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-ENV NODE_ENV=production
 ENV PORT=8080
 ENV BASE_PATH=/
 ARG VITE_SAMRA_DATA_MODE=api
