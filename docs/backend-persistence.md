@@ -28,10 +28,21 @@ shared databases, Replit changes, or real provider traffic.
 
 PostgreSQL transactions own quote consumption, transfer state, holds, journals,
 provider links and events, idempotency records, outbox messages, audit events,
-and reconciliation results. Balance responses are derived from posted ledger
-entries less active holds. Client state is never accepted as financial truth.
+and reconciliation results. Balance responses use a transactionally maintained
+projection of posted ledger entries less active holds. Immutable journals,
+postings, and hold state remain financial truth; the projection is never an
+independent accounting source. Client state is never accepted as financial
+truth.
+
+The database updates the projection in the same transaction as journal posting
+and hold transitions. Direct projection updates and deletes are rejected.
+Actor-attributed drift sweeps compare every projected account with journal and
+hold truth, and a reasoned, idempotent rebuild command can restore the full
+projection atomically while preserving immutable audit evidence.
 
 The persistence gate runs against an ephemeral PostgreSQL 16 service and proves
 atomic rollback, cross-runtime idempotency and concurrency, restart recovery,
 exact ledger balances, refund reversals, reconciliation durability, and the
-absence of duplicate provider commands or reversal journals.
+absence of duplicate provider commands or reversal journals. The ledger suite
+also proves projection concurrency, rollback, restart durability, drift
+detection, controlled rebuild, and exact reconciliation to source truth.
