@@ -12,7 +12,61 @@ export type DurableAccountBalance = Readonly<{
   availableMinor: bigint;
 }>;
 
+export type LedgerBalanceDrift = Readonly<{
+  accountId: string;
+  accountCode: string;
+  currency: string;
+  projectedNaturalMinor: string | null;
+  actualNaturalMinor: string;
+  projectedActiveHoldsMinor: string | null;
+  actualActiveHoldsMinor: string;
+  projectedAvailableMinor: string | null;
+  actualAvailableMinor: string;
+  projectedPostingCount: string | null;
+  actualPostingCount: string;
+  projectedActiveHoldCount: string | null;
+  actualActiveHoldCount: string;
+}>;
+
+export type LedgerBalanceRebuildResult = Readonly<{
+  id: string;
+  commandRef: string;
+  actorId: string;
+  reason: string;
+  state: "completed";
+  driftedAccountCount: number;
+  requestedAt: string;
+  completedAt: string;
+}>;
+
 type Queryable = Pick<pg.Pool | pg.PoolClient, "query">;
+
+type LedgerBalanceDriftRow = {
+  account_id: string;
+  account_code: string;
+  currency: string;
+  projected_natural_minor: string | null;
+  actual_natural_minor: string;
+  projected_active_holds_minor: string | null;
+  actual_active_holds_minor: string;
+  projected_available_minor: string | null;
+  actual_available_minor: string;
+  projected_posting_count: string | null;
+  actual_posting_count: string;
+  projected_active_hold_count: string | null;
+  actual_active_hold_count: string;
+};
+
+type LedgerBalanceRebuildRow = {
+  id: string;
+  command_ref: string;
+  actor_id: string;
+  reason: string;
+  state: string;
+  drifted_account_count: number | null;
+  requested_at: Date;
+  completed_at: Date | null;
+};
 
 export type DurableJournalPosting = readonly [
   accountCode: string,
@@ -456,25 +510,197 @@ export class PostgresLedgerControl implements LedgerControlPort {
   }
 }
 
+/**
+ * Operational controls for the rebuildable balance projection.
+ *
+ * Journals and holds remain the source of truth. Every drift sweep records an
+ * immutable audit event, while a rebuild is executed by a database trigger so
+ * projection correction and its operator evidence commit atomically.
+ */
+export class PostgresLedgerBalanceProjection {
+  readonly #context: PostgresPersistenceContext;
+
+  constructor(context: PostgresPersistenceContext) {
+    this.#context = context;
+  }
+
+  async verify(
+    input: Readonly<{
+      sweepRef: string;
+      actorType: "system" | "operator";
+      actorId: string;
+    }>,
+  ): Promise<readonly LedgerBalanceDrift[]> {
+    const sweepRef = requiredText(input.sweepRef, "Balance sweep reference");
+    const actorId = requiredText(input.actorId, "Balance sweep actor");
+    return this.#context.run(async () => {
+      const query = this.#context.query();
+      const result = await query.query<LedgerBalanceDriftRow>(
+        ledgerBalanceDriftSql,
+      );
+      const drift = result.rows.map(mapLedgerBalanceDrift);
+      const metadata = {
+        driftedAccountCount: drift.length,
+        accountCodes: drift.slice(0, 20).map((entry) => entry.accountCode),
+      };
+      const eventKey = `ledger:balance-sweep:${sweepRef}`;
+      const inserted = await query.query(
+        `INSERT INTO samra_core.audit_events
+         (event_key, actor_type, actor_id, action, entity_type, entity_id,
+          correlation_id, metadata)
+         VALUES ($1,$2,$3,$4,'ledger_balance_projection',$5,$5,$6::jsonb)
+         ON CONFLICT (event_key) DO NOTHING`,
+        [
+          eventKey,
+          input.actorType,
+          actorId,
+          drift.length === 0
+            ? "ledger_balance_projection_verified"
+            : "ledger_balance_projection_drift_detected",
+          sweepRef,
+          JSON.stringify(metadata),
+        ],
+      );
+      if (inserted.rowCount === 0) {
+        const replay = await query.query<{
+          actor_type: string;
+          actor_id: string | null;
+          action: string;
+          metadata: { driftedAccountCount?: number };
+        }>(
+          `SELECT actor_type, actor_id, action, metadata
+           FROM samra_core.audit_events WHERE event_key = $1`,
+          [eventKey],
+        );
+        const expectedAction =
+          drift.length === 0
+            ? "ledger_balance_projection_verified"
+            : "ledger_balance_projection_drift_detected";
+        const existing = replay.rows[0];
+        if (
+          !existing ||
+          existing.actor_type !== input.actorType ||
+          existing.actor_id !== actorId ||
+          existing.action !== expectedAction ||
+          existing.metadata.driftedAccountCount !== drift.length
+        ) {
+          throw new DomainError(
+            "CONFLICT",
+            "The balance sweep reference was already used with different evidence.",
+            { sweepRef },
+          );
+        }
+      }
+      return Object.freeze(drift);
+    });
+  }
+
+  async rebuild(
+    input: Readonly<{
+      commandRef: string;
+      operatorId: string;
+      reason: string;
+    }>,
+  ): Promise<LedgerBalanceRebuildResult> {
+    const commandRef = requiredText(
+      input.commandRef,
+      "Balance rebuild command reference",
+    );
+    const operatorId = requiredText(
+      input.operatorId,
+      "Balance rebuild operator",
+    );
+    const reason = input.reason.trim();
+    if (reason.length < 20) {
+      throw new DomainError(
+        "INVALID_ARGUMENT",
+        "A balance rebuild reason of at least 20 characters is required.",
+      );
+    }
+    return this.#context.run(async () => {
+      const query = this.#context.query();
+      const inserted = await query.query(
+        `INSERT INTO samra_core.ledger_balance_rebuild_commands
+         (command_ref, actor_id, reason)
+         VALUES ($1,$2,$3)
+         ON CONFLICT (command_ref) DO NOTHING`,
+        [commandRef, operatorId, reason],
+      );
+      const result = await query.query<LedgerBalanceRebuildRow>(
+        `SELECT id, command_ref, actor_id, reason, state,
+                drifted_account_count, requested_at, completed_at
+         FROM samra_core.ledger_balance_rebuild_commands
+         WHERE command_ref = $1`,
+        [commandRef],
+      );
+      const command = result.rows[0];
+      if (!command) {
+        throw new DomainError(
+          "CONFLICT",
+          "The balance rebuild command could not be recovered.",
+          { commandRef },
+        );
+      }
+      if (
+        inserted.rowCount === 0 &&
+        (command.actor_id !== operatorId || command.reason !== reason)
+      ) {
+        throw new DomainError(
+          "CONFLICT",
+          "The balance rebuild reference was already used with different evidence.",
+          { commandRef },
+        );
+      }
+      if (
+        command.state !== "completed" ||
+        command.drifted_account_count === null ||
+        command.completed_at === null
+      ) {
+        throw new DomainError(
+          "CONFLICT",
+          "The balance rebuild did not complete atomically.",
+          { commandRef },
+        );
+      }
+      return mapLedgerBalanceRebuild(command);
+    });
+  }
+}
+
 export const ledgerCustomerBalanceSql = `
   SELECT
-    COALESCE(SUM(CASE WHEN j.id IS NULL THEN 0
-      WHEN p.side = la.normal_side THEN p.amount_minor ELSE -p.amount_minor END), 0)::text
-      AS natural_balance_minor,
-    COALESCE((SELECT SUM(h.amount_minor) FROM samra_core.ledger_holds h
-      WHERE h.ledger_account_id = la.id AND h.state = 'active'), 0)::text
-      AS active_holds_minor,
-    (COALESCE(SUM(CASE WHEN j.id IS NULL THEN 0
-      WHEN p.side = la.normal_side THEN p.amount_minor ELSE -p.amount_minor END), 0)
-      - COALESCE((SELECT SUM(h.amount_minor) FROM samra_core.ledger_holds h
-        WHERE h.ledger_account_id = la.id AND h.state = 'active'), 0))::text
-      AS available_minor
+    balance.natural_balance_minor::text AS natural_balance_minor,
+    balance.active_holds_minor::text AS active_holds_minor,
+    balance.available_balance_minor::text AS available_minor
   FROM samra_core.ledger_accounts la
   JOIN samra_core.product_accounts pa ON pa.id = la.product_account_id
-  LEFT JOIN samra_core.ledger_postings p ON p.account_id = la.id
-  LEFT JOIN samra_core.ledger_journals j ON j.id = p.journal_id AND j.state IN ('posted','reversed')
-  WHERE pa.external_ref = $1
-  GROUP BY la.id`;
+  JOIN samra_core.ledger_account_balances balance ON balance.account_id = la.id
+  WHERE pa.external_ref = $1`;
+
+export const ledgerBalanceDriftSql = `
+  SELECT truth.account_id, account.code AS account_code, truth.currency::text,
+         projection.natural_balance_minor::text AS projected_natural_minor,
+         truth.natural_balance_minor::text AS actual_natural_minor,
+         projection.active_holds_minor::text AS projected_active_holds_minor,
+         truth.active_holds_minor::text AS actual_active_holds_minor,
+         projection.available_balance_minor::text AS projected_available_minor,
+         truth.available_balance_minor::text AS actual_available_minor,
+         projection.applied_posting_count::text AS projected_posting_count,
+         truth.applied_posting_count::text AS actual_posting_count,
+         projection.active_hold_count::text AS projected_active_hold_count,
+         truth.active_hold_count::text AS actual_active_hold_count
+  FROM samra_core.ledger_account_balance_truth truth
+  JOIN samra_core.ledger_accounts account ON account.id = truth.account_id
+  LEFT JOIN samra_core.ledger_account_balances projection
+    ON projection.account_id = truth.account_id
+  WHERE projection.account_id IS NULL
+     OR projection.currency IS DISTINCT FROM truth.currency
+     OR projection.natural_balance_minor IS DISTINCT FROM truth.natural_balance_minor
+     OR projection.active_holds_minor IS DISTINCT FROM truth.active_holds_minor
+     OR projection.available_balance_minor IS DISTINCT FROM truth.available_balance_minor
+     OR projection.applied_posting_count IS DISTINCT FROM truth.applied_posting_count
+     OR projection.active_hold_count IS DISTINCT FROM truth.active_hold_count
+  ORDER BY account.code`;
 
 async function readCustomerBalance(
   query: Queryable,
@@ -792,4 +1018,45 @@ async function recordLedgerAudit(
       JSON.stringify(input.metadata),
     ],
   );
+}
+
+function requiredText(value: string, label: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new DomainError("INVALID_ARGUMENT", `${label} is required.`);
+  }
+  return normalized;
+}
+
+function mapLedgerBalanceDrift(row: LedgerBalanceDriftRow): LedgerBalanceDrift {
+  return Object.freeze({
+    accountId: row.account_id,
+    accountCode: row.account_code,
+    currency: row.currency,
+    projectedNaturalMinor: row.projected_natural_minor,
+    actualNaturalMinor: row.actual_natural_minor,
+    projectedActiveHoldsMinor: row.projected_active_holds_minor,
+    actualActiveHoldsMinor: row.actual_active_holds_minor,
+    projectedAvailableMinor: row.projected_available_minor,
+    actualAvailableMinor: row.actual_available_minor,
+    projectedPostingCount: row.projected_posting_count,
+    actualPostingCount: row.actual_posting_count,
+    projectedActiveHoldCount: row.projected_active_hold_count,
+    actualActiveHoldCount: row.actual_active_hold_count,
+  });
+}
+
+function mapLedgerBalanceRebuild(
+  row: LedgerBalanceRebuildRow,
+): LedgerBalanceRebuildResult {
+  return Object.freeze({
+    id: row.id,
+    commandRef: row.command_ref,
+    actorId: row.actor_id,
+    reason: row.reason,
+    state: "completed",
+    driftedAccountCount: row.drifted_account_count!,
+    requestedAt: row.requested_at.toISOString(),
+    completedAt: row.completed_at!.toISOString(),
+  });
 }

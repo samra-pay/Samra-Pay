@@ -6,6 +6,7 @@ import { performance } from "node:perf_hooks";
 import test from "node:test";
 import {
   PostgresLedgerControl,
+  PostgresLedgerBalanceProjection,
   PostgresPersistenceContext,
   createDatabase,
   ledgerCustomerBalanceSql,
@@ -57,6 +58,7 @@ test("CLAUDE-LED-043 Balance read latency is characterised at scale", async () =
   const opened = createDatabase({ connectionString, poolConfig: { max: 1 } });
   const context = new PostgresPersistenceContext(opened.pool);
   const ledger = new PostgresLedgerControl(context);
+  const projection = new PostgresLedgerBalanceProjection(context);
   const fixtureId = randomUUID();
   const eventType = `ledger_performance_${fixtureId.replaceAll("-", "")}`;
   const accountRef = `ledger-performance:${fixtureId}`;
@@ -108,6 +110,12 @@ test("CLAUDE-LED-043 Balance read latency is characterised at scale", async () =
           first: 1,
           last: smallPostingCount,
         });
+        await projection.rebuild({
+          commandRef: `performance:${fixtureId}:100k`,
+          operatorId: "performance-assurance",
+          reason:
+            "Rebuild the synthetic projection after the 100k fixture load.",
+        });
         scales.push(
           await characterizeScale(
             client,
@@ -125,6 +133,12 @@ test("CLAUDE-LED-043 Balance read latency is characterised at scale", async () =
           controlAccountId: controlAccount.rows[0]!.id,
           first: smallPostingCount + 1,
           last: largePostingCount,
+        });
+        await projection.rebuild({
+          commandRef: `performance:${fixtureId}:1m`,
+          operatorId: "performance-assurance",
+          reason:
+            "Rebuild the synthetic projection after the one-million fixture load.",
         });
         scales.push(
           await characterizeScale(
@@ -145,7 +159,7 @@ test("CLAUDE-LED-043 Balance read latency is characterised at scale", async () =
           postgresVersion: (
             await client.query<{ version: string }>("SELECT version()")
           ).rows[0]!.version,
-          outcome: "characterization_only",
+          outcome: "materialized_projection_pass",
           scales,
           growth: {
             postingMultiplier: round(postingGrowth),
@@ -153,10 +167,22 @@ test("CLAUDE-LED-043 Balance read latency is characterised at scale", async () =
             linearityRatio: round(p99Growth / postingGrowth),
           },
           suggestedRegressionWarning: {
-            basis: "125% of this run's one-million-posting p99",
-            p99Ms: round(scales[1]!.p99Ms * 1.25),
+            basis: "25ms absolute p99 ceiling at one million postings",
+            p99Ms: 25,
           },
         };
+        assert.ok(
+          scales[1]!.p99Ms <= 25,
+          `One-million-posting materialized balance p99 ${scales[1]!.p99Ms}ms exceeded 25ms.`,
+        );
+        assert.deepEqual(
+          await projection.verify({
+            sweepRef: `performance:${fixtureId}:drift`,
+            actorType: "system",
+            actorId: "performance-assurance",
+          }),
+          [],
+        );
         throw rollbackSignal;
       });
     } catch (error) {

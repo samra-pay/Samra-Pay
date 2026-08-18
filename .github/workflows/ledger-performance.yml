@@ -1,4 +1,4 @@
-name: Ledger performance characterization
+name: Ledger materialized balance performance gate
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   performance:
-    name: PostgreSQL ledger performance characterization
+    name: PostgreSQL materialized balance performance gate
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
@@ -88,7 +88,7 @@ jobs:
       - name: Prepare results directory
         run: mkdir -p artifacts/api-server/test-results
 
-      - name: Characterize balance reads at scale
+      - name: Enforce materialized balance read threshold at scale
         run: pnpm --filter @workspace/api-server run test:ledger-performance:junit
 
       - name: Preserve performance evidence
@@ -103,7 +103,7 @@ jobs:
           retention-days: 90
 
   qase-report:
-    name: Qase ledger performance report
+    name: Qase materialized balance performance report
     needs: performance
     if: >-
       always() &&
@@ -135,7 +135,7 @@ jobs:
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           title: Samra Pay ledger performance — ${{ github.ref_name }} @ ${{ github.sha }}
-          description: Informational 100k and 1M posting balance-read characterization from GitHub Actions.
+          description: Required materialized balance read gate at 100k and 1M postings from GitHub Actions.
 
       - name: Upload performance result to Qase
         id: qase-upload

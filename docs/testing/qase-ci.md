@@ -19,6 +19,7 @@ used by the reporting job.
 | Ledger immutability and audit | `artifacts/api-server/test/ledger-immutability-audit.test.ts`           | `ledger-immutability-audit.xml`           |
 | Ledger concurrency/atomicity  | `artifacts/api-server/test/ledger-concurrency-atomicity.test.ts`        | `ledger-concurrency-atomicity.xml`        |
 | Ledger performance            | `artifacts/api-server/test/ledger-performance-characterization.test.ts` | `ledger-performance-characterization.xml` |
+| Materialized ledger balances  | `artifacts/api-server/test/ledger-materialized-balances.test.ts`        | `ledger-materialized-balances.xml`        |
 | Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`                       | `ledger-sweeps.xml`                       |
 | Reconciliation controls       | `artifacts/api-server/test/ledger-reconciliation-controls.test.ts`      | `ledger-reconciliation-controls.xml`      |
 | HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`                       | `postgres-http.xml`                       |
@@ -115,11 +116,12 @@ for the same reason.
 - JUnit artifacts are retained in GitHub for 14 days as independent evidence.
 
 The ledger performance case runs in its own workflow when balance-related code
-changes, on manual dispatch, and weekly. It is informational rather than a
-product pass/fail threshold: the workflow records p50, p99, PostgreSQL execution
-plans, observed growth, and a 25% regression-warning margin. Its JSON and JUnit
-evidence are retained for 90 days. Ordinary pull requests that do not affect the
-ledger balance path do not pay the one-million-posting runtime cost.
+changes, on manual dispatch, and weekly. It is a required product gate: the
+materialized read path must remain at or below 25ms p99 with one million
+postings on the account. The workflow also records p50, PostgreSQL execution
+plans, and observed growth. Its JSON and JUnit evidence are retained for 90
+days. Ordinary pull requests that do not affect the ledger balance path do not
+pay the one-million-posting runtime cost.
 The measured baseline and resulting materialization gate are recorded in
 [`ledger-performance-baseline.md`](ledger-performance-baseline.md).
 

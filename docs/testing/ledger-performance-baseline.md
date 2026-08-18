@@ -2,11 +2,9 @@
 
 ## Decision
 
-The current aggregate-on-read query remains the correctness reference for the
-synthetic and pre-production system. It is not acceptable as the production
-balance-read path at scale. A transactionally maintained materialized balance
-must be implemented and reconciled to journal truth before production launch or
-before any account can approach 100,000 postings, whichever comes first.
+The aggregate-on-read query is retained only as reconciliation truth. The
+transactionally maintained materialized balance is now the application read
+path and must pass a 25ms p99 gate at one million postings.
 
 The materialized projection must never replace the immutable journals as the
 accounting source of truth. It must be rebuildable, drift-detectable, and updated
@@ -34,25 +32,42 @@ The full JSON execution plans and JUnit result are retained for 90 days in
 
 ## Thresholds
 
-- Product gate: materialized balances are required before production launch or
-  100,000 postings on an account.
-- Characterization regression warning: 3,824.921ms p99 at one million postings,
-  equal to 125% of this baseline. This is an engineering drift alarm, not a
-  customer-facing service-level objective.
+- Product gate: materialized balance reads must remain at or below 25ms p99 at
+  one million postings on a single account.
+- Projection gate: every measured account must match the journal-and-hold truth
+  before and after the scale run.
 - Correctness gate: every measured response must equal the journal-derived
   natural, held, and available balance at both scales.
 - Cleanup gate: the characterization must leave no synthetic journal, posting,
   account, product, or hold data after completion.
 
-## Required materialized-balance controls
+## Implemented materialized-balance controls
 
-1. Update the projection atomically with the journal state transition.
-2. Preserve journals and postings as immutable accounting truth.
-3. Reject negative available balances independently at the database boundary.
-4. Rebuild the projection deterministically from posted journals and active
-   holds.
-5. Run a scheduled drift sweep that compares projection and journal truth.
-6. Record every rebuild, drift finding, and correction in the immutable audit
-   trail.
-7. Prove concurrency, idempotency, crash rollback, restart durability, and
-   reconciliation before enabling the projection as the read path.
+1. Journal posting and hold transitions update the projection in the same
+   database transaction.
+2. Immutable journals and postings remain the accounting source of truth.
+3. Direct projection edits and deletes are rejected by database triggers.
+4. A controlled, actor-attributed command deterministically rebuilds every
+   balance from posted journals and active holds.
+5. Drift sweeps compare the projection with journal-and-hold truth and record
+   immutable evidence.
+6. Concurrency, rollback, hold lifecycle, restart, drift, rebuild, and audit
+   behavior are enforced in PostgreSQL acceptance tests.
+
+## Materialized-path evidence
+
+The required gate passed on GitHub-hosted Ubuntu with Node.js 24.19.0 and
+PostgreSQL 16.15. The read plan uses the product-account index, ledger-account
+index, and the materialized-balance primary key; it does not scan journal or
+posting history.
+
+| Postings on account | p50     | p99     | Mean    |
+| ------------------- | ------- | ------- | ------- |
+| 100,000             | 0.563ms | 0.837ms | 0.585ms |
+| 1,000,000           | 0.561ms | 0.815ms | 0.583ms |
+
+The 10x history increase produced 0.974x p99 growth, demonstrating that the
+application read path is independent of posting-history size. The one-million
+posting result is 96.7% below the 25ms gate. Full JSON plans and JUnit evidence
+are retained for 90 days in
+[GitHub Actions run 32099638658](https://github.com/haileleuld87/Samra-Pay/actions/runs/32099638658).
