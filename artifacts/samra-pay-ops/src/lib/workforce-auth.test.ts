@@ -3,6 +3,7 @@ import {
   closeWorkforceSession,
   createWorkforceSession,
   loadWorkforceSession,
+  WorkforceSessionUnavailable,
 } from "./workforce-auth";
 
 const session = {
@@ -56,5 +57,38 @@ describe("workforce session client", () => {
       vi.fn().mockResolvedValue(new Response(null, { status: 401 })),
     );
     await expect(loadWorkforceSession()).resolves.toBeNull();
+  });
+
+  it("distinguishes an unavailable API from an unauthenticated workforce session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({ detail: "Synthetic API is unavailable." }),
+              { status: 503 },
+            ),
+          ),
+        ),
+    );
+
+    await expect(loadWorkforceSession()).rejects.toMatchObject({
+      name: "WorkforceSessionUnavailable",
+      message: "Synthetic API is unavailable.",
+    });
+    await expect(loadWorkforceSession()).rejects.toBeInstanceOf(
+      WorkforceSessionUnavailable,
+    );
+  });
+
+  it("fails closed with explicit unavailable evidence when the API cannot be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
+
+    await expect(loadWorkforceSession()).rejects.toMatchObject({
+      name: "WorkforceSessionUnavailable",
+      message: "Could not reach the Samra Pay operations API.",
+    });
   });
 });

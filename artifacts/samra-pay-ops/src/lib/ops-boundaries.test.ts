@@ -8,6 +8,7 @@ import {
   filterTransfers,
   fixtureTransferLookup,
   isProviderEvidence,
+  providerRecoveryGuidance,
   relatedFixtureTransfers,
 } from './ops-selectors';
 
@@ -70,6 +71,26 @@ describe('read-only investigative data', () => {
     expect(ordered.map((event) => event.id)).toEqual(transfer.timeline.map((event) => event.id));
     expect(ordered.some(isProviderEvidence)).toBe(true);
     expect(ordered.some((event) => event.category === 'samra_canonical')).toBe(true);
+  });
+
+  it('blocks payout retry after failure and reports the controlled refund outcome', () => {
+    const refunded = TRANSFERS.find((transfer) => transfer.status === 'refunded');
+    expect(refunded).toBeDefined();
+    expect(providerRecoveryGuidance(refunded!)).toEqual({
+      state: 'completed',
+      title: 'Automatic refund completed',
+      detail: expect.stringContaining('Do not retry this transfer'),
+    });
+
+    expect(providerRecoveryGuidance({
+      ...refunded!,
+      status: 'pending',
+      fundingState: 'settled',
+    })).toEqual({
+      state: 'in_progress',
+      title: 'Automatic refund in progress',
+      detail: expect.stringContaining('Manual payout retry is disabled'),
+    });
   });
 
   it('contains every required synthetic terminal scenario and flow evidence fields', () => {

@@ -13,9 +13,31 @@ export type WorkforceSession = Readonly<{
 
 const SESSION_ENDPOINT = `${API_ORIGIN ?? ""}/api/v1/internal/auth/session`;
 
+export class WorkforceSessionUnavailable extends Error {
+  constructor(message = "The workforce service is unavailable.") {
+    super(message);
+    this.name = "WorkforceSessionUnavailable";
+  }
+}
+
 export async function loadWorkforceSession(): Promise<WorkforceSession | null> {
-  const response = await fetch(SESSION_ENDPOINT, { credentials: "include" });
+  let response: Response;
+  try {
+    response = await fetch(SESSION_ENDPOINT, { credentials: "include" });
+  } catch {
+    throw new WorkforceSessionUnavailable(
+      "Could not reach the Samra Pay operations API.",
+    );
+  }
   if (response.status === 401) return null;
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      detail?: string;
+    } | null;
+    throw new WorkforceSessionUnavailable(
+      body?.detail ?? `The workforce service returned HTTP ${response.status}.`,
+    );
+  }
   return parseSessionResponse(response);
 }
 
