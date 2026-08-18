@@ -6,14 +6,36 @@ used by the reporting job.
 
 ## Automated scope
 
-| GitHub gate                   | Source                                            | Qase result source         |
-| ----------------------------- | ------------------------------------------------- | -------------------------- |
-| PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`      | `postgres-persistence.xml` |
-| HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts` | `postgres-http.xml`        |
+| GitHub gate                   | Source                                                       | Qase result source             |
+| ----------------------------- | ------------------------------------------------------------ | ------------------------------ |
+| PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                 | `postgres-persistence.xml`     |
+| Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts` | `ledger-journal-assurance.xml` |
+| Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`            | `ledger-sweeps.xml`            |
+| HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`            | `postgres-http.xml`            |
 
 Qase identifies the automated cases by their stable Node test names in the JUnit
 files. Renaming a test changes its automation identity and must be treated as a
 test-case mapping change.
+
+The Claude ledger reports also preserve the exact Qase suite hierarchy in the
+JUnit `testsuites` and `testsuite` names. Qase therefore links each result by its
+exact case title plus suite path instead of creating a duplicate automated case.
+
+## Claude ledger coverage activated
+
+| Qase case | Automated invariant                               |
+| --------- | ------------------------------------------------- |
+| SAMP-39   | CLAUDE-LED-050 structural journal sweep           |
+| SAMP-40   | CLAUDE-LED-048 per-journal balance sweep          |
+| SAMP-41   | CLAUDE-LED-049 global trial balance               |
+| SAMP-42   | CLAUDE-LED-051 hold integrity sweep               |
+| SAMP-43   | CLAUDE-LED-002 unresolvable account rollback      |
+| SAMP-44   | CLAUDE-LED-006 single-leg rejection               |
+| SAMP-45   | CLAUDE-LED-003 unequal debit/credit rejection     |
+| SAMP-46   | CLAUDE-LED-005 empty journal rejection            |
+| SAMP-47   | CLAUDE-LED-010 mid-loop resolution rollback       |
+| SAMP-48   | CLAUDE-LED-004 independent database balance guard |
+| SAMP-49   | CLAUDE-LED-001 balanced two-leg baseline          |
 
 ## Run behavior
 

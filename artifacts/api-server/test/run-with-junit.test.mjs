@@ -25,3 +25,25 @@ test("rejects an empty Node JUnit report", () => {
     /contained no test cases/,
   );
 });
+
+test("preserves an explicit Qase parent and child suite hierarchy", () => {
+  const source = `<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testcase name="CLAUDE-LED-001" time="0.1" classname="test" />
+</testsuites>`;
+
+  const normalized = normalizeNodeJunit(
+    source,
+    "11.01 Ledger - Journal Integrity",
+    "11 Claude Ledger Assurance",
+  );
+
+  assert.match(
+    normalized,
+    /<testsuites name="11 Claude Ledger Assurance" tests="1"/,
+  );
+  assert.match(
+    normalized,
+    /<testsuite name="11.01 Ledger - Journal Integrity" tests="1"/,
+  );
+});

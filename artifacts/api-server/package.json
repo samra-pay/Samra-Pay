@@ -10,6 +10,10 @@
     "test": "NODE_ENV=test node --import tsx --test src/*.test.ts && node --test test/run-with-junit.test.mjs",
     "test:postgres": "NODE_ENV=test node --import tsx --test test/postgres.test.ts",
     "test:postgres:junit": "node test/run-with-junit.mjs test-results/postgres-persistence.xml 'PostgreSQL persistence' test/postgres.test.ts",
+    "test:ledger-journals": "NODE_ENV=test node --import tsx --test test/ledger-journal-assurance.test.ts",
+    "test:ledger-journals:junit": "node test/run-with-junit.mjs test-results/ledger-journal-assurance.xml '11.01 Ledger - Journal Integrity' test/ledger-journal-assurance.test.ts '11 Claude Ledger Assurance'",
+    "test:ledger-sweeps": "NODE_ENV=test node --import tsx --test test/ledger-sweeps.test.ts",
+    "test:ledger-sweeps:junit": "node test/run-with-junit.mjs test-results/ledger-sweeps.xml '11.10 Ledger - Trial Balance Sweeps' test/ledger-sweeps.test.ts '11 Claude Ledger Assurance'",
     "test:postgres-http": "NODE_ENV=test node --import tsx --test test/postgres-http.test.ts",
     "test:postgres-http:junit": "node test/run-with-junit.mjs test-results/postgres-http.xml 'HTTP to PostgreSQL acceptance' test/postgres-http.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

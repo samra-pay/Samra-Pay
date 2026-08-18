@@ -10,11 +10,49 @@ export type DurableAccountBalance = Readonly<{
 
 type Queryable = Pick<pg.Pool | pg.PoolClient, "query">;
 
-export class PostgresLedgerControl implements LedgerControlPort {
+export type DurableJournalPosting = readonly [
+  accountCode: string,
+  side: "debit" | "credit",
+  amountMinor: bigint,
+];
+
+export type DurableJournalCommand = Readonly<{
+  eventType: string;
+  eventId: string;
+  description: string;
+  postings: readonly DurableJournalPosting[];
+  metadata: Readonly<Record<string, string>>;
+}>;
+
+/**
+ * The single PostgreSQL write boundary for ordinary ledger journals.
+ *
+ * It rejects malformed commands before persistence, verifies that every
+ * account code resolves to one active same-currency account, and owns the
+ * transaction when the caller is not already inside a larger unit of work.
+ * Database triggers remain the independent final guard before a journal can
+ * transition from draft to posted.
+ */
+export class PostgresLedgerJournalWriter {
   readonly #context: PostgresPersistenceContext;
 
   constructor(context: PostgresPersistenceContext) {
     this.#context = context;
+  }
+
+  async post(input: DurableJournalCommand): Promise<string> {
+    validateJournalCommand(input);
+    return this.#context.run(() => postJournal(this.#context.query(), input));
+  }
+}
+
+export class PostgresLedgerControl implements LedgerControlPort {
+  readonly #context: PostgresPersistenceContext;
+  readonly #journals: PostgresLedgerJournalWriter;
+
+  constructor(context: PostgresPersistenceContext) {
+    this.#context = context;
+    this.#journals = new PostgresLedgerJournalWriter(context);
   }
 
   async findHoldId(transferId: string): Promise<string | undefined> {
@@ -123,7 +161,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     idempotencyKey: string;
   }): Promise<void> {
     const record = await this.#holdRecord(input.transferId, input.holdId);
-    const journalId = await postJournal(this.#context.query(), {
+    const journalId = await this.#journals.post({
       eventType: "remittance_capture",
       eventId: input.transferId,
       description: "Capture remittance principal and deferred fee",
@@ -193,7 +231,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
         "Settlement amount does not match captured principal.",
       );
     }
-    await postJournal(this.#context.query(), {
+    await this.#journals.post({
       eventType: "remittance_settlement",
       eventId: input.transferId,
       description: "Settle remittance principal from Rain control funds",
@@ -222,7 +260,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
       );
     }
     if (input.amountMinor === 0n) return;
-    await postJournal(this.#context.query(), {
+    await this.#journals.post({
       eventType: "remittance_fee_recognition",
       eventId: input.transferId,
       description: "Recognize remittance fee after successful payout",
@@ -317,28 +355,25 @@ const balanceSql = `
   WHERE pa.external_ref = $1
   GROUP BY la.id`;
 
-type Posting = readonly [
-  accountCode: string,
-  side: "debit" | "credit",
-  amount: bigint,
-];
-
 async function postJournal(
   query: Queryable,
-  input: {
-    eventType: string;
-    eventId: string;
-    description: string;
-    postings: readonly Posting[];
-    metadata: Record<string, string>;
-  },
+  input: DurableJournalCommand,
 ): Promise<string> {
-  const existing = await query.query<{ id: string }>(
-    `SELECT id FROM samra_core.ledger_journals
+  const existing = await query.query<{ id: string; state: string }>(
+    `SELECT id, state FROM samra_core.ledger_journals
      WHERE business_event_type = $1 AND business_event_id = $2`,
     [input.eventType, input.eventId],
   );
-  if (existing.rows[0]) return existing.rows[0].id;
+  if (existing.rows[0]) {
+    if (!["posted", "reversed"].includes(existing.rows[0].state)) {
+      throw new DomainError(
+        "CONFLICT",
+        "The ledger business event already has an incomplete journal.",
+        { eventType: input.eventType, eventId: input.eventId },
+      );
+    }
+    return existing.rows[0].id;
+  }
   const journal = await query.query<{ id: string }>(
     `INSERT INTO samra_core.ledger_journals
      (business_event_type, business_event_id, currency, state, description, metadata)
@@ -352,19 +387,85 @@ async function postJournal(
   );
   const journalId = journal.rows[0]!.id;
   for (const [index, posting] of input.postings.entries()) {
-    await query.query(
+    const inserted = await query.query(
       `INSERT INTO samra_core.ledger_postings
        (journal_id, account_id, sequence, side, amount_minor)
-       SELECT $1, id, $2, $3, $4 FROM samra_core.ledger_accounts WHERE code = $5`,
+       SELECT $1, id, $2, $3, $4
+       FROM samra_core.ledger_accounts
+       WHERE code = $5 AND currency = 'USD' AND state = 'active'`,
       [journalId, index + 1, posting[1], posting[2].toString(), posting[0]],
     );
+    if (inserted.rowCount !== 1) {
+      throw new DomainError(
+        "NOT_FOUND",
+        `Active USD ledger account ${posting[0]} was not found.`,
+        { accountCode: posting[0] },
+      );
+    }
   }
-  await query.query(
+  const posted = await query.query(
     `UPDATE samra_core.ledger_journals SET state = 'posted', posted_at = now()
-     WHERE id = $1`,
+     WHERE id = $1 AND state = 'draft'`,
     [journalId],
   );
+  if (posted.rowCount !== 1) {
+    throw new DomainError(
+      "CONFLICT",
+      "The ledger journal could not transition from draft to posted.",
+      { journalId },
+    );
+  }
   return journalId;
+}
+
+function validateJournalCommand(input: DurableJournalCommand): void {
+  if (
+    input.eventType.trim().length === 0 ||
+    input.eventId.trim().length === 0 ||
+    input.description.trim().length === 0
+  ) {
+    throw new DomainError(
+      "INVALID_ARGUMENT",
+      "Ledger event type, event ID, and description are required.",
+    );
+  }
+  if (input.postings.length < 2) {
+    throw new DomainError(
+      "INVALID_ARGUMENT",
+      "A ledger journal requires at least two postings.",
+    );
+  }
+
+  let debitTotal = 0n;
+  let creditTotal = 0n;
+  const accountCodes = new Set<string>();
+  for (const [accountCode, side, amountMinor] of input.postings) {
+    if (accountCode.trim().length === 0 || amountMinor <= 0n) {
+      throw new DomainError(
+        "INVALID_ARGUMENT",
+        "Every ledger posting requires an account code and a positive amount.",
+      );
+    }
+    accountCodes.add(accountCode);
+    if (side === "debit") debitTotal += amountMinor;
+    else creditTotal += amountMinor;
+  }
+  if (accountCodes.size < 2) {
+    throw new DomainError(
+      "INVALID_ARGUMENT",
+      "A ledger journal must affect at least two accounts.",
+    );
+  }
+  if (debitTotal !== creditTotal) {
+    throw new DomainError(
+      "INVALID_ARGUMENT",
+      "Ledger journal debits must equal credits.",
+      {
+        debitTotalMinor: debitTotal.toString(),
+        creditTotalMinor: creditTotal.toString(),
+      },
+    );
+  }
 }
 
 async function reverseJournal(

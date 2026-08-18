@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 
-export function normalizeNodeJunit(source, suiteName) {
+export function normalizeNodeJunit(source, suiteName, rootSuiteName) {
   const cases =
     source.match(/<testcase\b[^>]*\/>|<testcase\b[\s\S]*?<\/testcase>/g) ?? [];
   if (cases.length === 0) {
@@ -14,15 +14,14 @@ export function normalizeNodeJunit(source, suiteName) {
   const skipped = cases.filter((testCase) =>
     testCase.includes("<skipped"),
   ).length;
-  const escapedSuiteName = suiteName
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  const escapedSuiteName = escapeXml(suiteName);
+  const rootSuiteAttribute = rootSuiteName
+    ? ` name="${escapeXml(rootSuiteName)}"`
+    : "";
 
   return [
     '<?xml version="1.0" encoding="utf-8"?>',
-    `<testsuites tests="${cases.length}" failures="${failures}" skipped="${skipped}">`,
+    `<testsuites${rootSuiteAttribute} tests="${cases.length}" failures="${failures}" skipped="${skipped}">`,
     `\t<testsuite name="${escapedSuiteName}" tests="${cases.length}" failures="${failures}" skipped="${skipped}">`,
     ...cases.map((testCase) => `\t\t${testCase}`),
     "\t</testsuite>",
@@ -31,8 +30,17 @@ export function normalizeNodeJunit(source, suiteName) {
   ].join("\n");
 }
 
+function escapeXml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 function run() {
-  const [outputPath, suiteName, testFile] = process.argv.slice(2);
+  const [outputPath, suiteName, testFile, rootSuiteName] =
+    process.argv.slice(2);
   if (!outputPath || !suiteName || !testFile) {
     console.error(
       "Usage: node test/run-with-junit.mjs <output> <suite-name> <test-file>",
@@ -64,6 +72,7 @@ function run() {
     const normalized = normalizeNodeJunit(
       readFileSync(outputPath, "utf8"),
       suiteName,
+      rootSuiteName,
     );
     writeFileSync(outputPath, normalized, "utf8");
   } catch (error) {
