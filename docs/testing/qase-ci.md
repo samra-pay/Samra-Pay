@@ -11,6 +11,7 @@ used by the reporting job.
 | PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                   | `postgres-persistence.xml`       |
 | Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts`   | `ledger-journal-assurance.xml`   |
 | Ledger account resolution     | `artifacts/api-server/test/ledger-account-resolution.test.ts`  | `ledger-account-resolution.xml`  |
+| Ledger currency and precision | `artifacts/api-server/test/ledger-currency-precision.test.ts`  | `ledger-currency-precision.xml`  |
 | Ledger balance computation    | `artifacts/api-server/test/ledger-balance-computation.test.ts` | `ledger-balance-computation.xml` |
 | Ledger idempotency            | `artifacts/api-server/test/ledger-idempotency.test.ts`         | `ledger-idempotency.xml`         |
 | Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`              | `ledger-sweeps.xml`              |
@@ -51,6 +52,10 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-59   | CLAUDE-LED-013 orphan posting rejection            |
 | SAMP-60   | CLAUDE-LED-014 posted-account delete restriction   |
 | SAMP-61   | CLAUDE-LED-015 unique account-code enforcement     |
+| SAMP-62   | CLAUDE-LED-016 cross-currency journal rejection    |
+| SAMP-63   | CLAUDE-LED-017 large-value precision round-trip    |
+| SAMP-64   | CLAUDE-LED-018 deterministic rational FX snapshot  |
+| SAMP-65   | CLAUDE-LED-019 balanced zero-fee capture           |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An
