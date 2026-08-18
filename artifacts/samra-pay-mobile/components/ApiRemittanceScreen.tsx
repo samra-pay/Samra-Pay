@@ -30,6 +30,7 @@ import { useColors } from "@workspace/samra-pay-ds/hooks/use-colors";
 
 import {
   clearRemittanceSession,
+  CANCELLABLE_TRANSFER_STATUSES,
   formatMinorUnits,
   isTerminalTransferStatus,
   loadRemittanceSession,
@@ -37,18 +38,14 @@ import {
   persistCreatedTransfer,
   prepareCancelSubmission,
   prepareTransferSubmission,
+  resumePreparedCancellation,
+  resumePreparedTransfer,
   sanitizeUsdInput,
   usdInputToMinorUnits,
   type MobileRemittanceSession,
 } from "@/lib/remittance-session";
 
 type Screen = "restoring" | "details" | "review" | "status";
-
-const CANCELLABLE_STATUSES = new Set<TransferStatus>([
-  "created",
-  "funds_reserved",
-  "submitted",
-]);
 
 function messageForError(error: unknown): string {
   return error instanceof Error
@@ -312,7 +309,7 @@ function TransferStatusView({
         />
       ) : null}
 
-      {CANCELLABLE_STATUSES.has(transfer.status) ? (
+      {CANCELLABLE_TRANSFER_STATUSES.has(transfer.status) ? (
         <Pressable
           disabled={cancelling}
           onPress={onCancel}
@@ -358,6 +355,7 @@ export function ApiRemittanceScreen() {
   const [beneficiaryId, setBeneficiaryId] = useState("");
   const [storageError, setStorageError] = useState<unknown>(null);
   const submissionStarted = useRef(false);
+  const cancellationRecoveryStarted = useRef(false);
 
   const accountsQuery = useAccounts();
   const beneficiariesQuery = useBeneficiaries();
@@ -392,29 +390,75 @@ export function ApiRemittanceScreen() {
 
   useEffect(() => {
     let active = true;
-    loadRemittanceSession()
-      .then((restored) => {
+    async function restore() {
+      let restored: MobileRemittanceSession | null = null;
+      try {
+        restored = await loadRemittanceSession();
         if (!active) return;
         setSession(restored);
         setQuote(restored?.quote ?? null);
         setTransferId(restored?.transferId ?? "");
-        setScreen(
-          restored?.transferId
-            ? "status"
-            : restored?.quote
-              ? "review"
-              : "details",
-        );
-      })
-      .catch((error) => {
+
+        if (restored?.transferId) {
+          setScreen("status");
+          return;
+        }
+
+        if (restored?.transferIdempotencyKey) {
+          submissionStarted.current = true;
+          const recovered = await resumePreparedTransfer(
+            restored,
+            (input, idempotencyKey) =>
+              transferMutation.mutateAsync({ input, idempotencyKey }),
+          );
+          if (!active || !recovered) return;
+          const persisted = await loadRemittanceSession();
+          if (!active) return;
+          setSession(persisted);
+          setQuote(recovered.quoteSnapshot);
+          setTransferId(recovered.id);
+          setScreen("status");
+          return;
+        }
+
+        setScreen(restored?.quote ? "review" : "details");
+      } catch (error) {
         if (!active) return;
+        setSession(restored);
+        setQuote(restored?.quote ?? null);
+        setTransferId(restored?.transferId ?? "");
+        submissionStarted.current = false;
         setStorageError(error);
-        setScreen("details");
-      });
+        setScreen(restored?.quote ? "review" : "details");
+      }
+    }
+    void restore();
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      !session?.cancelIdempotencyKey ||
+      !transfer ||
+      cancellationRecoveryStarted.current
+    ) {
+      return;
+    }
+    if (!CANCELLABLE_TRANSFER_STATUSES.has(transfer.status)) return;
+
+    cancellationRecoveryStarted.current = true;
+    void resumePreparedCancellation(
+      session,
+      transfer.status,
+      (id, idempotencyKey) =>
+        cancelMutation.mutateAsync({ transferId: id, idempotencyKey }),
+    ).catch((error) => {
+      cancellationRecoveryStarted.current = false;
+      setStorageError(error);
+    });
+  }, [session?.cancelIdempotencyKey, transfer?.id, transfer?.status]);
 
   useEffect(() => {
     if (!beneficiaryId && beneficiaries.length > 0)
@@ -448,6 +492,7 @@ export function ApiRemittanceScreen() {
       setSession(nextSession);
       setQuote(serverQuote);
       submissionStarted.current = false;
+      cancellationRecoveryStarted.current = false;
       setScreen("review");
     } catch (error) {
       if (!quoteMutation.error) setStorageError(error);
@@ -477,7 +522,8 @@ export function ApiRemittanceScreen() {
   }
 
   async function cancelTransfer() {
-    if (!transfer || !session) return;
+    if (!transfer || !session || cancellationRecoveryStarted.current) return;
+    cancellationRecoveryStarted.current = true;
     setStorageError(null);
     try {
       const idempotencyKey = await prepareCancelSubmission(session);
@@ -487,6 +533,7 @@ export function ApiRemittanceScreen() {
         idempotencyKey,
       });
     } catch (error) {
+      cancellationRecoveryStarted.current = false;
       if (!cancelMutation.error) setStorageError(error);
     }
   }
@@ -500,6 +547,7 @@ export function ApiRemittanceScreen() {
       setAmount("100.00");
       setStorageError(null);
       submissionStarted.current = false;
+      cancellationRecoveryStarted.current = false;
       quoteMutation.reset();
       transferMutation.reset();
       cancelMutation.reset();
@@ -612,17 +660,11 @@ export function ApiRemittanceScreen() {
             }
           />
         ) : null}
-        {transferMutation.error ? (
+        {transferMutation.error ?? storageError ? (
           <ErrorNotice
-            error={transferMutation.error}
+            error={transferMutation.error ?? storageError}
             onRetry={() => void confirmTransfer()}
             retrying={transferMutation.isPending}
-          />
-        ) : null}
-        {storageError ? (
-          <ErrorNotice
-            error={storageError}
-            onRetry={() => void confirmTransfer()}
           />
         ) : null}
         <Pressable
