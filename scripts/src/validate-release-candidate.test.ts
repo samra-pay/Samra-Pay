@@ -58,6 +58,8 @@ const workflow = [
   "git show-ref --verify refs/remotes/origin/main",
   "release-evidence -- identity",
   "release-evidence -- gate-junit",
+  "id: qase_payload",
+  "if: steps.qase_payload.outcome == 'success' && !cancelled()",
   "release-evidence -- manifest",
   "release-evidence -- verify --require-passing",
   "uses: actions/upload-artifact@v4",
@@ -66,6 +68,9 @@ const workflow = [
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
   ...requiredGates.map(({ id }) => `id: ${id}`),
   ...requiredEvidenceFiles,
+  "name: Complete Qase release-candidate run",
+  "if: steps.qase_create.outputs.id != '' && !cancelled()",
+  "name: Record Qase release identity",
   "name: Preserve immutable release evidence",
   "name: Enforce release stop conditions",
 ].join("\n");
@@ -100,5 +105,18 @@ describe("validateReleaseCandidateContract", () => {
         { automatedReports: reports },
       ),
     ).toThrow(/preserved before stop conditions/);
+  });
+
+  it("rejects orphaned Qase runs when result upload fails", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        workflow.replace(
+          "if: steps.qase_create.outputs.id != '' && !cancelled()\nname: Record Qase release identity",
+          "if: steps.qase_upload.outcome == 'success' && !cancelled()\nname: Record Qase release identity",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/close every created Qase run/);
   });
 });

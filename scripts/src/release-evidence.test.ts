@@ -8,6 +8,7 @@ import {
   createReleaseEvidenceManifest,
   createReleaseGateJunit,
   normalizeCandidateSha,
+  splitReleaseEvidenceInvocation,
   verifyManifest,
   writeManifestAndHash,
   type ReleaseEvidenceContract,
@@ -45,6 +46,26 @@ const contract: ReleaseEvidenceContract = {
 };
 
 describe("release evidence", () => {
+  it("accepts the pnpm argument separator used by GitHub Actions", () => {
+    expect(
+      splitReleaseEvidenceInvocation([
+        "--",
+        "identity",
+        "--candidate-sha",
+        sha,
+      ]),
+    ).toEqual({
+      command: "identity",
+      rawArguments: ["--candidate-sha", sha],
+    });
+    expect(
+      splitReleaseEvidenceInvocation(["verify", "--require-passing"]),
+    ).toEqual({
+      command: "verify",
+      rawArguments: ["--require-passing"],
+    });
+  });
+
   it("requires an exact full commit SHA", () => {
     expect(normalizeCandidateSha(` ${sha.toUpperCase()} `)).toBe(sha);
     expect(() => normalizeCandidateSha(sha.slice(0, 12))).toThrow(/exactly 40/);
