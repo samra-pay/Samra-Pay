@@ -84,11 +84,19 @@ test("CLAUDE-LED-038 Reversal does not mutate the original journal", async () =>
       context,
       fixture.originalJournalId,
     );
+    assert.equal(
+      await readJournalState(context, fixture.originalJournalId),
+      "posted",
+    );
 
     await refund(ledger, fixture);
 
     const after = await readJournalSnapshot(context, fixture.originalJournalId);
     assert.deepEqual(after, before);
+    assert.equal(
+      await readJournalState(context, fixture.originalJournalId),
+      "reversed",
+    );
     assert.notEqual(
       await findReversalId(context, fixture.originalJournalId),
       fixture.originalJournalId,
@@ -299,7 +307,7 @@ async function readJournalSnapshot(
   journalId: string,
 ) {
   const journal = await targetContext.query().query(
-    `SELECT id::text, business_event_type, business_event_id, currency, state,
+    `SELECT id::text, business_event_type, business_event_id, currency,
             description, reverses_journal_id::text, metadata,
             created_at, posted_at
      FROM samra_core.ledger_journals WHERE id = $1`,
@@ -309,6 +317,19 @@ async function readJournalSnapshot(
     journal: journal.rows[0],
     postings: await readPostings(targetContext, journalId),
   };
+}
+
+async function readJournalState(
+  targetContext: PostgresPersistenceContext,
+  journalId: string,
+) {
+  const result = await targetContext
+    .query()
+    .query<{ state: string }>(
+      `SELECT state::text FROM samra_core.ledger_journals WHERE id = $1`,
+      [journalId],
+    );
+  return result.rows[0]!.state;
 }
 
 async function withinRollback(operation: () => Promise<void>): Promise<void> {
