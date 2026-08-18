@@ -456,7 +456,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
   }
 }
 
-const balanceSql = `
+export const ledgerCustomerBalanceSql = `
   SELECT
     COALESCE(SUM(CASE WHEN j.id IS NULL THEN 0
       WHEN p.side = la.normal_side THEN p.amount_minor ELSE -p.amount_minor END), 0)::text
@@ -484,7 +484,7 @@ async function readCustomerBalance(
     natural_balance_minor: string;
     active_holds_minor: string;
     available_minor: string;
-  }>(balanceSql, [accountRef]);
+  }>(ledgerCustomerBalanceSql, [accountRef]);
   const row = result.rows[0];
   if (!row) {
     throw new DomainError("NOT_FOUND", "The source account was not found.");
