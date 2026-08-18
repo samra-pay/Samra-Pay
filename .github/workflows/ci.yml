@@ -300,6 +300,9 @@ jobs:
       - name: Run HTTP-to-PostgreSQL acceptance test
         run: pnpm --filter @workspace/api-server run test:postgres-http:junit
 
+      - name: Run daily synthetic PostgreSQL journeys
+        run: pnpm --filter @workspace/api-server run test:daily-synthetic:junit
+
       - name: Run compiled process startup and restart test
         run: pnpm --filter @workspace/api-server run test:process-restart:junit
 
@@ -310,6 +313,7 @@ jobs:
           name: postgres-http-junit
           path: |
             artifacts/api-server/test-results/postgres-http.xml
+            artifacts/api-server/test-results/daily-synthetic-journeys.xml
             artifacts/api-server/test-results/postgres-process-restart.xml
           if-no-files-found: error
           retention-days: 14
@@ -362,6 +366,7 @@ jobs:
             test-results/ledger-sweeps.xml \
             test-results/ledger-reconciliation-controls.xml \
             test-results/postgres-http.xml \
+            test-results/daily-synthetic-journeys.xml \
             test-results/postgres-process-restart.xml
           do
             test -s "$report"
@@ -416,6 +421,17 @@ jobs:
           id: ${{ steps.qase-run.outputs.id }}
           format: junit
           path: test-results/postgres-http.xml
+
+      - name: Upload daily synthetic journey results to Qase
+        id: qase-upload-daily-synthetic
+        if: steps.qase-run.outputs.available == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase-run.outputs.id }}
+          format: junit
+          path: test-results/daily-synthetic-journeys.xml
 
       - name: Upload compiled process restart results to Qase
         id: qase-upload-process-restart
@@ -566,6 +582,7 @@ jobs:
           steps.qase-run.outputs.available == 'true' &&
           steps.qase-upload-persistence.outcome == 'success' &&
           steps.qase-upload-http.outcome == 'success' &&
+          steps.qase-upload-daily-synthetic.outcome == 'success' &&
           steps.qase-upload-process-restart.outcome == 'success' &&
           steps.qase-upload-ledger-journals.outcome == 'success' &&
           steps.qase-upload-ledger-sweeps.outcome == 'success' &&
