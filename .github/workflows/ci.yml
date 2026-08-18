@@ -77,6 +77,8 @@ jobs:
           PORT: "4173"
           BASE_PATH: "/"
           EXPO_PUBLIC_DOMAIN: "ci.invalid"
+          EXPO_PUBLIC_SAMRA_DATA_MODE: "api"
+          EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.ci.invalid"
 
   postgres-persistence:
     name: PostgreSQL persistence gate

@@ -7,11 +7,16 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { TransferProvider } from '@/context/TransferContext';
+import { initializeMobileRuntime } from '@/lib/runtime-config';
 import { tokens } from '@workspace/samra-pay-ds/tokens';
 import { useDesignSystemFonts } from '@workspace/samra-pay-ds/hooks/use-fonts';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+
+// Configure the generated API client before any provider or screen can issue a
+// request. Invalid API-mode builds fail explicitly during application startup.
+initializeMobileRuntime();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

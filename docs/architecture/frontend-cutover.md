@@ -33,8 +33,10 @@ The web cutover implements one API adapter and one hard boundary:
   timeout error.
 
 The route choice is fixed at the application boundary. A single workflow never
-mixes local financial state and ledger-backed state. The mobile API cutover
-remains future work, not a current capability.
+mixes local financial state and ledger-backed state. Mobile now has a validated,
+portable API-origin boundary that initializes the generated client before any
+screen can issue a request. Screen-level mobile API cutover remains future work,
+not a current capability.
 
 ## API conventions
 

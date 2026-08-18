@@ -81,7 +81,7 @@ Security hardening is deferred, but these controls are not security extras:
 | `VITE_SAMRA_OPS_DATA_MODE`          | `mock`, `api`        | `mock`     | Selects fixture or durable operations data        |
 | `VITE_SAMRA_API_ORIGIN`             | URL                  | unset      | Operations portal API origin                      |
 | `EXPO_PUBLIC_SAMRA_DATA_MODE`       | `mock`, `api`        | `mock`     | Mobile data source                                |
-| `EXPO_PUBLIC_API_ORIGIN`            | URL                  | unset      | Native mobile API origin                          |
+| `EXPO_PUBLIC_SAMRA_API_ORIGIN`      | HTTPS origin         | unset      | Portable native and Expo web API origin           |
 
 Unknown values fail clearly. API mode never silently falls back to mock data.
 The current web and mobile screens remain in mock mode until each API cutover
