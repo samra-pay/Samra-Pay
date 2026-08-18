@@ -356,6 +356,13 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
     );
     assert.ok(exception);
     const exceptionId = String(exception["id"]);
+    await advanceThrough(restarted.origin, journey.id, "settlement_refund", [
+      "refund_pending",
+      "refunded",
+    ]);
+    assert.deepEqual(await getBalance(restarted.origin), before);
+    await assertJournalEvidence(journey.id, 3, 3);
+
     const resolutionOptions = {
       method: "POST",
       headers: {
@@ -387,13 +394,6 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
     assert.equal(resolved["resolvedBy"], "daily_reconciliation_admin");
     assert.equal(typeof resolved["resolutionJournalId"], "string");
     assert.deepEqual(replayed, resolved);
-
-    await advanceThrough(restarted.origin, journey.id, "settlement_refund", [
-      "refund_pending",
-      "refunded",
-    ]);
-    assert.deepEqual(await getBalance(restarted.origin), before);
-    await assertJournalEvidence(journey.id, 3, 3);
   } finally {
     await Promise.allSettled(
       [first, restarted]
