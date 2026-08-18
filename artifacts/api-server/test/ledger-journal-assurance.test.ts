@@ -118,10 +118,10 @@ test("CLAUDE-LED-004 Database must reject an unbalanced journal independently of
       await context.query().query(
         `INSERT INTO samra_core.ledger_postings
          (journal_id, account_id, sequence, side, amount_minor)
-         SELECT $1, id, 1, 'debit'::samra_core.ledger_entry_side, 100
+         SELECT $1::uuid, id, 1, 'debit'::samra_core.ledger_entry_side, 100
          FROM samra_core.ledger_accounts WHERE code = 'control_rain_usd'
          UNION ALL
-         SELECT $1, id, 2, 'credit'::samra_core.ledger_entry_side, 99
+         SELECT $1::uuid, id, 2, 'credit'::samra_core.ledger_entry_side, 99
          FROM samra_core.ledger_accounts WHERE code = 'demo_usd_account_001'`,
         [journal.rows[0]!.id],
       );
