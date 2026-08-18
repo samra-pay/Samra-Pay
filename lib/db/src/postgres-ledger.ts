@@ -1,5 +1,9 @@
 import type pg from "pg";
-import { DomainError, type LedgerControlPort } from "@workspace/remittance";
+import {
+  DomainError,
+  type AuditActor,
+  type LedgerControlPort,
+} from "@workspace/remittance";
 import { PostgresPersistenceContext } from "./postgres-persistence";
 
 export type DurableAccountBalance = Readonly<{
@@ -22,6 +26,7 @@ export type DurableJournalCommand = Readonly<{
   description: string;
   postings: readonly DurableJournalPosting[];
   metadata: Readonly<Record<string, string>>;
+  auditActor?: AuditActor;
 }>;
 
 /**
@@ -89,6 +94,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     feeAmountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<{ holdId: string }> {
     return this.#context.run(async () => {
       if (
@@ -160,6 +166,19 @@ export class PostgresLedgerControl implements LedgerControlPort {
          ON CONFLICT DO NOTHING`,
         [holdId],
       );
+      await recordLedgerAudit(query, {
+        eventKey: `ledger:hold:${holdId}:reserved`,
+        actor: auditActor(input.auditActor),
+        action: "ledger_hold_reserved",
+        entityType: "ledger_hold",
+        entityId: holdId,
+        correlationId: input.transferId,
+        metadata: {
+          transferId: input.transferId,
+          amountMinor: input.amountMinor.toString(),
+          currency: input.currency,
+        },
+      });
       return { holdId };
     });
   }
@@ -168,6 +187,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     transferId: string;
     holdId: string;
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void> {
     await this.#context.run(async () => {
       const record = await this.#holdRecord(
@@ -204,6 +224,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
           transferId: input.transferId,
           idempotencyKey: input.idempotencyKey,
         },
+        auditActor: auditActor(input.auditActor),
       });
       const captured = await this.#context.query().query(
         `UPDATE samra_core.ledger_holds
@@ -224,6 +245,15 @@ export class PostgresLedgerControl implements LedgerControlPort {
         "captured",
         journalId,
       );
+      await recordLedgerAudit(this.#context.query(), {
+        eventKey: `ledger:hold:${input.holdId}:captured`,
+        actor: auditActor(input.auditActor),
+        action: "ledger_hold_captured",
+        entityType: "ledger_hold",
+        entityId: input.holdId,
+        correlationId: input.transferId,
+        metadata: { transferId: input.transferId, journalId },
+      });
     });
   }
 
@@ -231,6 +261,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     transferId: string;
     holdId: string;
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void> {
     await this.#context.run(async () => {
       const record = await this.#holdRecord(
@@ -266,6 +297,18 @@ export class PostgresLedgerControl implements LedgerControlPort {
         null,
         input.idempotencyKey,
       );
+      await recordLedgerAudit(this.#context.query(), {
+        eventKey: `ledger:hold:${input.holdId}:released`,
+        actor: auditActor(input.auditActor),
+        action: "ledger_hold_released",
+        entityType: "ledger_hold",
+        entityId: input.holdId,
+        correlationId: input.transferId,
+        metadata: {
+          transferId: input.transferId,
+          reason: input.idempotencyKey,
+        },
+      });
     });
   }
 
@@ -274,6 +317,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     amountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void> {
     const record = await this.#holdRecord(input.transferId);
     if (record.principal !== input.amountMinor) {
@@ -294,6 +338,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
         transferId: input.transferId,
         idempotencyKey: input.idempotencyKey,
       },
+      auditActor: auditActor(input.auditActor),
     });
   }
 
@@ -302,6 +347,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     amountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void> {
     const record = await this.#holdRecord(input.transferId);
     if (record.fee !== input.amountMinor) {
@@ -323,6 +369,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
         transferId: input.transferId,
         idempotencyKey: input.idempotencyKey,
       },
+      auditActor: auditActor(input.auditActor),
     });
   }
 
@@ -331,6 +378,7 @@ export class PostgresLedgerControl implements LedgerControlPort {
     amountMinor: bigint;
     currency: "USD";
     idempotencyKey: string;
+    auditActor?: AuditActor;
   }): Promise<void> {
     await this.#context.run(async () => {
       const record = await this.#holdRecord(input.transferId);
@@ -357,12 +405,24 @@ export class PostgresLedgerControl implements LedgerControlPort {
         );
       }
       for (const original of originals.rows) {
-        await reverseJournal(
+        const reversalId = await reverseJournal(
           this.#context.query(),
           original.id,
           input.transferId,
           input.idempotencyKey,
         );
+        await recordLedgerAudit(this.#context.query(), {
+          eventKey: `ledger:journal:${reversalId}:reversed`,
+          actor: auditActor(input.auditActor),
+          action: "ledger_journal_reversed",
+          entityType: "ledger_journal",
+          entityId: reversalId,
+          correlationId: input.transferId,
+          metadata: {
+            transferId: input.transferId,
+            originalJournalId: original.id,
+          },
+        });
       }
     });
   }
@@ -472,6 +532,18 @@ async function postJournal(
       { journalId },
     );
   }
+  await recordLedgerAudit(query, {
+    eventKey: `ledger:journal:${journalId}:posted`,
+    actor: auditActor(input.auditActor),
+    action: "ledger_journal_posted",
+    entityType: "ledger_journal",
+    entityId: journalId,
+    correlationId: input.metadata["transferId"] ?? input.eventId,
+    metadata: {
+      businessEventType: input.eventType,
+      businessEventId: input.eventId,
+    },
+  });
   return journalId;
 }
 
@@ -668,5 +740,42 @@ async function saveHoldEvent(
      (hold_id, event_type, journal_id, reason) VALUES ($1,$2,$3,$4)
      ON CONFLICT (hold_id, event_type) DO NOTHING`,
     [holdId, eventType, journalId, reason],
+  );
+}
+
+type LedgerAuditInput = Readonly<{
+  eventKey: string;
+  actor: AuditActor;
+  action: string;
+  entityType: string;
+  entityId: string;
+  correlationId: string;
+  metadata: Readonly<Record<string, string>>;
+}>;
+
+function auditActor(actor?: AuditActor): AuditActor {
+  return actor ?? { actorType: "system", actorId: "ledger-control" };
+}
+
+async function recordLedgerAudit(
+  query: Queryable,
+  input: LedgerAuditInput,
+): Promise<void> {
+  await query.query(
+    `INSERT INTO samra_core.audit_events
+     (event_key, actor_type, actor_id, action, entity_type, entity_id,
+      correlation_id, metadata)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)
+     ON CONFLICT (event_key) DO NOTHING`,
+    [
+      input.eventKey,
+      input.actor.actorType,
+      input.actor.actorId,
+      input.action,
+      input.entityType,
+      input.entityId,
+      input.correlationId,
+      JSON.stringify(input.metadata),
+    ],
   );
 }

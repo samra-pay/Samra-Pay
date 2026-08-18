@@ -28,6 +28,7 @@ export * from "./bankAccountDeliveryInputMethod";
 export * from "./beneficiary";
 export * from "./beneficiaryDeliveryDetails";
 export * from "./beneficiaryDeliveryInput";
+export * from "./cancelOperationsTransferRequest";
 export * from "./conflictProblemResponse";
 export * from "./createBeneficiaryRequest";
 export * from "./createOperationsCaseRequest";

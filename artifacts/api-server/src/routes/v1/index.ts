@@ -3,6 +3,10 @@ import {
   CancelRemittanceTransferHeader,
   CancelRemittanceTransferParams,
   CancelRemittanceTransferResponse,
+  CancelOperationsTransferBody,
+  CancelOperationsTransferHeader,
+  CancelOperationsTransferParams,
+  CancelOperationsTransferResponse,
   CreateWorkforceSessionBody,
   CreateWorkforceSessionResponse,
   CreateBeneficiaryBody,
@@ -93,6 +97,7 @@ type OperationsPermission =
   | "summary:read"
   | "customers:read"
   | "transfers:read"
+  | "transfers:manage"
   | "reconciliation:read"
   | "audit:read"
   | "cases:read"
@@ -113,6 +118,7 @@ const ROLE_PERMISSIONS: Readonly<
     "summary:read",
     "customers:read",
     "transfers:read",
+    "transfers:manage",
     "reconciliation:read",
     "cases:read",
     "cases:work",
@@ -128,6 +134,7 @@ const ROLE_PERMISSIONS: Readonly<
     "summary:read",
     "customers:read",
     "transfers:read",
+    "transfers:manage",
     "reconciliation:read",
     "audit:read",
     "cases:read",
@@ -706,19 +713,71 @@ export function createV1Router(
           "operations_transfer_detail",
           params.transferId,
         );
-        const value = detail as Record<string, unknown>;
         res.json(
-          GetOperationsTransferResponse.parse({
-            ...value,
-            transfer: redactOperationsTransfer(
-              serializeOperationsTransfer(
-                value["transfer"] as Parameters<
-                  typeof serializeOperationsTransfer
-                >[0],
-              ),
-              operator.role,
-            ),
-          }),
+          GetOperationsTransferResponse.parse(
+            serializeOperationsTransferDetail(detail, operator.role),
+          ),
+        );
+      }),
+    );
+
+    router.post(
+      "/internal/operations/transfers/:transferId/cancel",
+      asyncRoute(async (req, res) => {
+        const operator = await requireOperationsPermission(
+          req,
+          workforce,
+          operations,
+          "transfers:manage",
+        );
+        const params = parseSchema(CancelOperationsTransferParams, req.params);
+        const header = parseSchema(CancelOperationsTransferHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        const body = parseSchema(CancelOperationsTransferBody, req.body);
+        const before = await operations.getOperationsTransfer(
+          params.transferId,
+        );
+        if (!before) {
+          throw new DomainError("NOT_FOUND", "The transfer was not found.", {
+            transferId: params.transferId,
+          });
+        }
+        const beforeTransfer = before.transfer as { customerId: string };
+        await runtime.service.cancelTransfer({
+          actorId: beforeTransfer.customerId,
+          transferId: params.transferId,
+          idempotencyKey: `operator:${operator.externalRef}:${header["Idempotency-Key"]}`,
+          auditActor: {
+            actorType: "operator",
+            actorId: operator.externalRef,
+          },
+          auditReason: body.reason,
+        });
+        await operations.recordAudit({
+          eventKey: `operator:${operator.externalRef}:transfer_cancelled:${params.transferId}:${header["Idempotency-Key"]}`,
+          actorType: "operator",
+          actorId: operator.externalRef,
+          action: "operations_transfer_cancelled",
+          entityType: "remittance_transfer",
+          entityId: params.transferId,
+          correlationId: params.transferId,
+          metadata: {
+            reason: body.reason,
+            role: operator.role,
+            synthetic: true,
+          },
+        });
+        const after = await operations.getOperationsTransfer(params.transferId);
+        if (!after) {
+          throw new DomainError("NOT_FOUND", "The transfer was not found.", {
+            transferId: params.transferId,
+          });
+        }
+        res.json(
+          CancelOperationsTransferResponse.parse(
+            serializeOperationsTransferDetail(after, operator.role),
+          ),
         );
       }),
     );
@@ -1080,6 +1139,28 @@ function redactOperationsTransfer<T extends { beneficiaryDisplay: string }>(
 ): T {
   if (role !== "compliance_readonly") return transfer;
   return { ...transfer, beneficiaryDisplay: "Restricted recipient" };
+}
+
+function serializeOperationsTransferDetail(
+  detail: NonNullable<
+    Awaited<
+      ReturnType<
+        NonNullable<DemoRuntime["operationsStore"]>["getOperationsTransfer"]
+      >
+    >
+  >,
+  role: WorkforceRole,
+) {
+  const value = detail as Record<string, unknown>;
+  return {
+    ...value,
+    transfer: redactOperationsTransfer(
+      serializeOperationsTransfer(
+        value["transfer"] as Parameters<typeof serializeOperationsTransfer>[0],
+      ),
+      role,
+    ),
+  };
 }
 
 function serializeOperationsTransfer(

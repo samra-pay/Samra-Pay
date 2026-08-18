@@ -1,7 +1,7 @@
 import { DomainError } from "./errors";
 import type { InboxRecord, OutboxMessage } from "./events";
 import type { RemittanceQuote, RemittanceTransfer } from "./model";
-import type { FakeScenario } from "./providers";
+import type { AuditActor, FakeScenario } from "./providers";
 
 export interface RemittanceUnitOfWork {
   run<T>(operation: () => Promise<T>): Promise<T>;
@@ -18,7 +18,10 @@ export interface RemittanceRepository {
   getQuote(quoteId: string): Promise<RemittanceQuote | undefined>;
   isQuoteConsumed(quoteId: string): Promise<boolean>;
   markQuoteConsumed(quoteId: string, transferId: string): Promise<void>;
-  saveTransfer(transfer: RemittanceTransfer): Promise<void>;
+  saveTransfer(
+    transfer: RemittanceTransfer,
+    auditActor?: AuditActor,
+  ): Promise<void>;
   getTransfer(transferId: string): Promise<RemittanceTransfer | undefined>;
   listTransfers(actorId: string): Promise<readonly RemittanceTransfer[]>;
   findIdempotentTransfer(
@@ -89,7 +92,10 @@ export class InMemoryRemittanceRepository implements RemittanceRepository {
     this.#quoteConsumption.set(quoteId, transferId);
   }
 
-  async saveTransfer(transfer: RemittanceTransfer): Promise<void> {
+  async saveTransfer(
+    transfer: RemittanceTransfer,
+    _auditActor?: AuditActor,
+  ): Promise<void> {
     const existing = this.#transfers.get(transfer.id);
     if (existing && transfer.version < existing.version) {
       throw new DomainError(

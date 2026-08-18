@@ -21,6 +21,7 @@ import type {
   ActivityPage,
   AddOperationsCaseNoteRequest,
   Beneficiary,
+  CancelOperationsTransferRequest,
   ConflictProblemResponse,
   CreateBeneficiaryRequest,
   CreateOperationsCaseRequest,
@@ -2350,6 +2351,116 @@ export function useGetOperationsTransfer<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getCancelOperationsTransferUrl = (transferId: string) => {
+  return `/api/v1/internal/operations/transfers/${transferId}/cancel`;
+};
+
+/**
+ * Demo/PostgreSQL only. Restricted to operations analysts and administrators. The transfer cancellation, hold release, and operator audit records share one atomic transaction.
+ * @summary Cancel an eligible synthetic transfer and release its active hold
+ */
+export const cancelOperationsTransfer = async (
+  transferId: string,
+  cancelOperationsTransferRequest: CancelOperationsTransferRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OperationsTransferDetail> => {
+  return customFetch<OperationsTransferDetail>(
+    getCancelOperationsTransferUrl(transferId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(cancelOperationsTransferRequest),
+    },
+  );
+};
+
+export const getCancelOperationsTransferMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelOperationsTransfer>>,
+    TError,
+    { transferId: string; data: BodyType<CancelOperationsTransferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelOperationsTransfer>>,
+  TError,
+  { transferId: string; data: BodyType<CancelOperationsTransferRequest> },
+  TContext
+> => {
+  const mutationKey = ["cancelOperationsTransfer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelOperationsTransfer>>,
+    { transferId: string; data: BodyType<CancelOperationsTransferRequest> }
+  > = (props) => {
+    const { transferId, data } = props ?? {};
+
+    return cancelOperationsTransfer(transferId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelOperationsTransferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelOperationsTransfer>>
+>;
+export type CancelOperationsTransferMutationBody =
+  BodyType<CancelOperationsTransferRequest>;
+export type CancelOperationsTransferMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary Cancel an eligible synthetic transfer and release its active hold
+ */
+export const useCancelOperationsTransfer = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelOperationsTransfer>>,
+    TError,
+    { transferId: string; data: BodyType<CancelOperationsTransferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelOperationsTransfer>>,
+  TError,
+  { transferId: string; data: BodyType<CancelOperationsTransferRequest> },
+  TContext
+> => {
+  return useMutation(getCancelOperationsTransferMutationOptions(options));
+};
 
 export const getListOperationsReconciliationExceptionsUrl = (
   params?: ListOperationsReconciliationExceptionsParams,

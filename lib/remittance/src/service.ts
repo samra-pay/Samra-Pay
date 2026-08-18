@@ -7,6 +7,7 @@ import {
 } from "./events";
 import type { RemittanceQuote, RemittanceTransfer } from "./model";
 import type {
+  AuditActor,
   FakeScenario,
   FakeScenarioController,
   LedgerControlPort,
@@ -193,6 +194,7 @@ export class RemittanceService {
       feeAmountMinor: quote.feeAmount.amountMinor,
       currency: "USD",
       idempotencyKey: `${input.idempotencyKey}:reserve`,
+      auditActor: customerAuditActor(input.actorId),
     });
     this.#holdIds.set(transfer.id, hold.holdId);
     const rainLink = await this.#providers.rain.authorizeDebit({
@@ -227,7 +229,10 @@ export class RemittanceService {
       occurredAt: now,
     });
 
-    await this.#repository.saveTransfer(transfer);
+    await this.#repository.saveTransfer(
+      transfer,
+      customerAuditActor(input.actorId),
+    );
     await this.#repository.markQuoteConsumed(quote.id, transfer.id);
     await this.#repository.bindIdempotencyKey(
       input.actorId,
@@ -266,6 +271,8 @@ export class RemittanceService {
     actorId: string;
     transferId: string;
     idempotencyKey: string;
+    auditActor?: AuditActor;
+    auditReason?: string;
   }): Promise<RemittanceTransfer> {
     return this.#runExclusive(() =>
       this.#unitOfWork.run(() => this.#cancelTransfer(input)),
@@ -276,6 +283,8 @@ export class RemittanceService {
     actorId: string;
     transferId: string;
     idempotencyKey: string;
+    auditActor?: AuditActor;
+    auditReason?: string;
   }): Promise<RemittanceTransfer> {
     const idempotent = await this.#repository.findIdempotentCancellation(
       input.actorId,
@@ -325,6 +334,7 @@ export class RemittanceService {
         transferId: transfer.id,
         holdId,
         idempotencyKey: `${input.idempotencyKey}:release`,
+        auditActor: input.auditActor ?? customerAuditActor(input.actorId),
       });
       await this.#providers.rain.releaseAuthorization({
         transferId: transfer.id,
@@ -338,10 +348,16 @@ export class RemittanceService {
       transferState: "CANCELLED",
       fundingState:
         transfer.fundingState === "RESERVED" ? "RELEASED" : undefined,
-      reason: "CUSTOMER_CANCELLED",
+      reason:
+        input.auditActor?.actorType === "operator"
+          ? "OPERATOR_CANCELLED"
+          : "CUSTOMER_CANCELLED",
       occurredAt,
     });
-    await this.#repository.saveTransfer(transfer);
+    await this.#repository.saveTransfer(
+      transfer,
+      input.auditActor ?? customerAuditActor(input.actorId),
+    );
     await this.#repository.bindCancellationIdempotencyKey(
       input.actorId,
       input.idempotencyKey,
@@ -355,12 +371,18 @@ export class RemittanceService {
     event: ProviderEvent,
   ): Promise<ProviderIngestionResult> {
     return this.#runExclusive(() =>
-      this.#unitOfWork.run(() => this.#ingestProviderEvent(event)),
+      this.#unitOfWork.run(() =>
+        this.#ingestProviderEvent(event, {
+          actorType: "provider",
+          actorId: event.provider.toLowerCase(),
+        }),
+      ),
     );
   }
 
   async #ingestProviderEvent(
     event: ProviderEvent,
+    auditActor: AuditActor,
   ): Promise<ProviderIngestionResult> {
     let transfer = await this.#repository.getTransfer(event.transferId);
     assertDomain(transfer, "NOT_FOUND", "The transfer was not found.", {
@@ -388,11 +410,12 @@ export class RemittanceService {
       transfer = await this.#applyProcessedEventEffect(
         transfer,
         processedEvent,
+        auditActor,
       );
     }
 
     if (result.processedEvents.length > 0) {
-      await this.#repository.saveTransfer(transfer);
+      await this.#repository.saveTransfer(transfer, auditActor);
       await this.#writeOutbox(
         transfer,
         "TRANSFER_STATE_CHANGED",
@@ -411,10 +434,19 @@ export class RemittanceService {
     actorId: string,
     transferId: string,
     scenario: FakeScenario,
+    auditActor: AuditActor = {
+      actorType: "system",
+      actorId: "fake-provider-worker",
+    },
   ): Promise<RemittanceTransfer> {
     return this.#runExclusive(() =>
       this.#unitOfWork.run(() =>
-        this.#selectAndAdvanceFakeScenario(actorId, transferId, scenario),
+        this.#selectAndAdvanceFakeScenario(
+          actorId,
+          transferId,
+          scenario,
+          auditActor,
+        ),
       ),
     );
   }
@@ -423,6 +455,7 @@ export class RemittanceService {
     actorId: string,
     transferId: string,
     scenario: FakeScenario,
+    auditActor: AuditActor,
   ): Promise<RemittanceTransfer> {
     if (!this.#scenarioController) {
       throw new DomainError(
@@ -438,6 +471,7 @@ export class RemittanceService {
     if (scenario === "OUT_OF_ORDER_EVENT" && transfer.state === "SUBMITTED") {
       await this.#ingestProviderEvent(
         syntheticScenarioEvent(transfer, "CHAPA_PAID", occurredAt, scenario),
+        auditActor,
       );
     }
 
@@ -445,11 +479,11 @@ export class RemittanceService {
     if (!event) {
       return transfer;
     }
-    const result = await this.#ingestProviderEvent(event);
+    const result = await this.#ingestProviderEvent(event, auditActor);
     transfer = result.transfer;
 
     if (scenario === "DUPLICATE_EVENT") {
-      await this.#ingestProviderEvent(event);
+      await this.#ingestProviderEvent(event, auditActor);
     }
     return transfer;
   }
@@ -484,7 +518,7 @@ export class RemittanceService {
       reason: `RECONCILIATION_${outcome}`,
       occurredAt,
     });
-    await this.#repository.saveTransfer(transfer);
+    await this.#repository.saveTransfer(transfer, customerAuditActor(actorId));
     await this.#writeOutbox(transfer, "RECONCILIATION_CHANGED", occurredAt);
     return transfer;
   }
@@ -517,6 +551,7 @@ export class RemittanceService {
   async #applyProcessedEventEffect(
     transfer: RemittanceTransfer,
     event: ProviderEvent,
+    auditActor: AuditActor,
   ): Promise<RemittanceTransfer> {
     const holdId = await this.#holdIdFor(transfer.id);
     if (event.kind === "CALIZA_ACCEPTED" && holdId) {
@@ -524,6 +559,7 @@ export class RemittanceService {
         transferId: transfer.id,
         holdId,
         idempotencyKey: `${event.providerEventId}:capture`,
+        auditActor,
       });
     }
     if (event.kind === "CALIZA_REJECTED" && holdId) {
@@ -531,6 +567,7 @@ export class RemittanceService {
         transferId: transfer.id,
         holdId,
         idempotencyKey: `${event.providerEventId}:release`,
+        auditActor,
       });
       await this.#providers.rain.releaseAuthorization({
         transferId: transfer.id,
@@ -544,6 +581,7 @@ export class RemittanceService {
         amountMinor: transfer.quote.sourceAmount.amountMinor,
         currency: "USD",
         idempotencyKey: `${event.providerEventId}:settle-principal`,
+        auditActor,
       });
       const link = await this.#providers.chapa.submitPayout({
         transferId: transfer.id,
@@ -561,6 +599,7 @@ export class RemittanceService {
         amountMinor: transfer.quote.feeAmount.amountMinor,
         currency: "USD",
         idempotencyKey: `${event.providerEventId}:recognize-fee`,
+        auditActor,
       });
     }
     if (event.kind === "CHAPA_FAILED" || event.kind === "CHAPA_REVERSED") {
@@ -578,6 +617,7 @@ export class RemittanceService {
         amountMinor: transfer.quote.debitAmount.amountMinor,
         currency: "USD",
         idempotencyKey: `${event.providerEventId}:ledger-refund`,
+        auditActor,
       });
     }
     return transfer;
@@ -609,6 +649,10 @@ export class RemittanceService {
     }
     return durable;
   }
+}
+
+function customerAuditActor(actorId: string): AuditActor {
+  return Object.freeze({ actorType: "customer", actorId });
 }
 
 function syntheticScenarioEvent(

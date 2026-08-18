@@ -1584,6 +1584,180 @@ export const GetOperationsTransferResponse = zod.object({
 });
 
 /**
+ * Demo/PostgreSQL only. Restricted to operations analysts and administrators. The transfer cancellation, hold release, and operator audit records share one atomic transaction.
+ * @summary Cancel an eligible synthetic transfer and release its active hold
+ */
+export const CancelOperationsTransferParams = zod.object({
+  transferId: zod.coerce.string(),
+});
+
+export const cancelOperationsTransferHeaderIdempotencyKeyMin = 8;
+export const cancelOperationsTransferHeaderIdempotencyKeyMax = 128;
+
+export const CancelOperationsTransferHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(cancelOperationsTransferHeaderIdempotencyKeyMin)
+    .max(cancelOperationsTransferHeaderIdempotencyKeyMax),
+});
+
+export const cancelOperationsTransferBodyReasonMin = 8;
+export const cancelOperationsTransferBodyReasonMax = 500;
+
+export const CancelOperationsTransferBody = zod.object({
+  reason: zod
+    .string()
+    .min(cancelOperationsTransferBodyReasonMin)
+    .max(cancelOperationsTransferBodyReasonMax),
+});
+
+export const cancelOperationsTransferResponseTransferSourceAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const cancelOperationsTransferResponseTransferFeeAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const cancelOperationsTransferResponseTransferTotalDebitMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const cancelOperationsTransferResponseTransferDestinationAmountMinorUnitsRegExp =
+  new RegExp("^(0|[1-9][0-9]*)$");
+export const cancelOperationsTransferResponseTransferWorkflowAttemptsOneMin = 0;
+
+export const cancelOperationsTransferResponseProviderEventsItemAttemptCountMin = 0;
+
+export const cancelOperationsTransferResponseOutboxItemAttemptCountMin = 0;
+
+export const CancelOperationsTransferResponse = zod.object({
+  transfer: zod.object({
+    id: zod.string(),
+    customerId: zod.string(),
+    beneficiaryDisplay: zod.string(),
+    status: zod.string(),
+    fundingStatus: zod.string(),
+    payoutStatus: zod.string(),
+    reconciliationStatus: zod.string(),
+    sourceAmount: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            cancelOperationsTransferResponseTransferSourceAmountMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    feeAmount: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            cancelOperationsTransferResponseTransferFeeAmountMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    totalDebit: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            cancelOperationsTransferResponseTransferTotalDebitMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    destinationAmount: zod
+      .object({
+        currency: zod.enum(["USD", "ETB"]),
+        minorUnits: zod
+          .string()
+          .regex(
+            cancelOperationsTransferResponseTransferDestinationAmountMinorUnitsRegExp,
+          ),
+      })
+      .describe("Exact minor units serialized as a base-10 string."),
+    workflowState: zod.union([zod.string(), zod.null()]),
+    workflowAttempts: zod.union([
+      zod
+        .number()
+        .int()
+        .min(cancelOperationsTransferResponseTransferWorkflowAttemptsOneMin),
+      zod.null(),
+    ]),
+    workflowLastError: zod.union([zod.string(), zod.null()]),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+  }),
+  timeline: zod.array(
+    zod.object({
+      sequence: zod.number().int(),
+      fromState: zod.union([zod.string(), zod.null()]),
+      toState: zod.string(),
+      reason: zod.string(),
+      occurredAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  providerLinks: zod.array(
+    zod.object({
+      provider: zod.string(),
+      resourceType: zod.string(),
+      providerResourceId: zod.string(),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  providerEvents: zod.array(
+    zod.object({
+      provider: zod.string(),
+      providerEventId: zod.string(),
+      eventType: zod.string(),
+      state: zod.string(),
+      attemptCount: zod
+        .number()
+        .int()
+        .min(cancelOperationsTransferResponseProviderEventsItemAttemptCountMin),
+      lastError: zod.union([zod.string(), zod.null()]),
+      occurredAt: zod.string().datetime({ offset: true }),
+      receivedAt: zod.string().datetime({ offset: true }),
+      processedAt: zod.union([
+        zod.string().datetime({ offset: true }),
+        zod.null(),
+      ]),
+    }),
+  ),
+  outbox: zod.array(
+    zod.object({
+      eventKey: zod.string(),
+      eventType: zod.string(),
+      state: zod.string(),
+      attemptCount: zod
+        .number()
+        .int()
+        .min(cancelOperationsTransferResponseOutboxItemAttemptCountMin),
+      availableAt: zod.string().datetime({ offset: true }),
+      publishedAt: zod.union([
+        zod.string().datetime({ offset: true }),
+        zod.null(),
+      ]),
+      lastError: zod.union([zod.string(), zod.null()]),
+      createdAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  audit: zod.array(
+    zod.object({
+      id: zod.string(),
+      eventKey: zod.string(),
+      actorType: zod.string(),
+      actorId: zod.union([zod.string(), zod.null()]),
+      action: zod.string(),
+      entityType: zod.string(),
+      entityId: zod.string(),
+      correlationId: zod.union([zod.string(), zod.null()]),
+      metadata: zod.record(zod.string(), zod.unknown()),
+      occurredAt: zod.string().datetime({ offset: true }),
+    }),
+  ),
+  reconciliationExceptions: zod.array(zod.record(zod.string(), zod.unknown())),
+});
+
+/**
  * @summary List durable reconciliation exceptions
  */
 export const listOperationsReconciliationExceptionsQueryLimitDefault = 25;

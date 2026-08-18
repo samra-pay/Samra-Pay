@@ -5,6 +5,14 @@
  * Samra Pay synthetic architecture-foundation API
  * OpenAPI spec version: 0.2.0
  */
+export interface CancelOperationsTransferRequest {
+  /**
+   * @minLength 8
+   * @maxLength 500
+   */
+  reason: string;
+}
+
 export interface WorkforceLoginRequest {
   /**
    * @minLength 1

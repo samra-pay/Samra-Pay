@@ -564,6 +564,36 @@ paths:
         "401": { $ref: "#/components/responses/UnauthorizedProblem" }
         "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
+  /v1/internal/operations/transfers/{transferId}/cancel:
+    post:
+      operationId: cancelOperationsTransfer
+      tags: [operations]
+      summary: Cancel an eligible synthetic transfer and release its active hold
+      description: Demo/PostgreSQL only. Restricted to operations analysts and administrators. The transfer cancellation, hold release, and operator audit records share one atomic transaction.
+      security:
+        - WorkforceSession: []
+      parameters:
+        - $ref: "#/components/parameters/TransferId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelOperationsTransferRequest"
+      responses:
+        "200":
+          description: Cancelled transfer with its durable troubleshooting evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsTransferDetail"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "404": { $ref: "#/components/responses/NotFoundProblem" }
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+
   /v1/internal/operations/reconciliation/exceptions:
     get:
       operationId: listOperationsReconciliationExceptions
@@ -838,6 +868,16 @@ components:
             $ref: "#/components/schemas/ApiProblem"
 
   schemas:
+    CancelOperationsTransferRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+      required: [reason]
+
     WorkforceLoginRequest:
       type: object
       additionalProperties: false

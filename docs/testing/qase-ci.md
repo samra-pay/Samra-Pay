@@ -16,6 +16,7 @@ used by the reporting job.
 | Ledger idempotency            | `artifacts/api-server/test/ledger-idempotency.test.ts`         | `ledger-idempotency.xml`         |
 | Ledger holds lifecycle        | `artifacts/api-server/test/ledger-holds-lifecycle.test.ts`     | `ledger-holds-lifecycle.xml`     |
 | Ledger reversals and refunds  | `artifacts/api-server/test/ledger-reversals-refunds.test.ts`   | `ledger-reversals-refunds.xml`   |
+| Ledger immutability and audit | `artifacts/api-server/test/ledger-immutability-audit.test.ts`  | `ledger-immutability-audit.xml`  |
 | Global ledger sweeps          | `artifacts/api-server/test/ledger-sweeps.test.ts`              | `ledger-sweeps.xml`              |
 | HTTP-to-PostgreSQL acceptance | `artifacts/api-server/test/postgres-http.test.ts`              | `postgres-http.xml`              |
 
@@ -72,6 +73,10 @@ exact case title plus suite path instead of creating a duplicate automated case.
 | SAMP-77   | CLAUDE-LED-038 original journal remains unchanged  |
 | SAMP-78   | CLAUDE-LED-037 idempotent reversal                 |
 | SAMP-79   | CLAUDE-LED-039 concurrent reversal claim           |
+| SAMP-80   | CLAUDE-LED-044 posted ledger immutability          |
+| SAMP-81   | CLAUDE-LED-046 audit-event immutability            |
+| SAMP-82   | CLAUDE-LED-045 actor-attributed ledger mutations   |
+| SAMP-83   | CLAUDE-LED-047 audit-only transfer reconstruction  |
 
 The LED-020 implementation also rejects reuse of the same business-event identity
 with changed description, metadata, account, side, ordering, or amount. An
