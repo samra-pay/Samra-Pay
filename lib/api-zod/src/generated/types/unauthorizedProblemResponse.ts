@@ -8,6 +8,6 @@
 import type { ApiProblem } from "./apiProblem";
 
 /**
- * Workforce authentication is required or invalid
+ * Customer bearer or workforce authentication is required or invalid
  */
 export type UnauthorizedProblemResponse = ApiProblem;

@@ -1,6 +1,14 @@
 export type BackendMode = "disabled" | "demo";
 export type ProviderMode = "fake";
 export type PersistenceMode = "memory" | "postgres";
+export type CustomerAuthConfig =
+  | Readonly<{ mode: "disabled" }>
+  | Readonly<{
+      mode: "auth0";
+      issuerBaseUrl: string;
+      audience: string;
+      tokenSigningAlgorithm: "RS256";
+    }>;
 
 export type ApiRuntimeConfig = Readonly<{
   backendMode: BackendMode;
@@ -10,6 +18,7 @@ export type ApiRuntimeConfig = Readonly<{
   runWorker: boolean;
   workerIntervalMilliseconds: number;
   internalOperationsEnabled?: boolean;
+  customerAuth: CustomerAuthConfig;
 }>;
 
 export function loadApiRuntimeConfig(
@@ -36,6 +45,11 @@ export function loadApiRuntimeConfig(
       "SAMRA_INTERNAL_OPERATIONS_ENABLED requires non-production demo/fake mode with PostgreSQL persistence.",
     );
   }
+  const customerAuth = parseCustomerAuth(
+    environment,
+    backendMode,
+    persistenceMode,
+  );
   return Object.freeze({
     backendMode,
     providerMode,
@@ -44,7 +58,78 @@ export function loadApiRuntimeConfig(
     runWorker: parseBoolean(environment["SAMRA_RUN_WORKER"], false),
     workerIntervalMilliseconds: 1_000,
     internalOperationsEnabled: operationsRequested,
+    customerAuth,
   });
+}
+
+function parseCustomerAuth(
+  environment: NodeJS.ProcessEnv,
+  backendMode: BackendMode,
+  persistenceMode: PersistenceMode,
+): CustomerAuthConfig {
+  const mode = environment["SAMRA_CUSTOMER_AUTH_MODE"];
+  if (mode === undefined || mode === "disabled") {
+    return Object.freeze({ mode: "disabled" });
+  }
+  if (mode !== "auth0") {
+    throw new Error(
+      `SAMRA_CUSTOMER_AUTH_MODE must be "disabled" or "auth0"; received "${mode}".`,
+    );
+  }
+  if (backendMode !== "demo" || persistenceMode !== "postgres") {
+    throw new Error(
+      "SAMRA_CUSTOMER_AUTH_MODE=auth0 requires demo backend mode with PostgreSQL persistence until the production runtime is authorized.",
+    );
+  }
+
+  const issuerBaseUrl = normalizeAuth0Issuer(
+    requireEnvironmentValue(environment, "AUTH0_ISSUER_BASE_URL"),
+  );
+  const audience = requireEnvironmentValue(environment, "AUTH0_AUDIENCE");
+  if (audience.length > 512 || /\s/.test(audience)) {
+    throw new Error(
+      "AUTH0_AUDIENCE must be a non-empty exact API identifier without whitespace and no more than 512 characters.",
+    );
+  }
+  return Object.freeze({
+    mode: "auth0",
+    issuerBaseUrl,
+    audience,
+    tokenSigningAlgorithm: "RS256",
+  });
+}
+
+function requireEnvironmentValue(
+  environment: NodeJS.ProcessEnv,
+  name: string,
+): string {
+  const value = environment[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required when customer Auth0 mode is enabled.`);
+  }
+  return value;
+}
+
+function normalizeAuth0Issuer(value: string): string {
+  let issuer: URL;
+  try {
+    issuer = new URL(value);
+  } catch {
+    throw new Error("AUTH0_ISSUER_BASE_URL must be a valid HTTPS URL.");
+  }
+  if (
+    issuer.protocol !== "https:" ||
+    issuer.username ||
+    issuer.password ||
+    issuer.search ||
+    issuer.hash ||
+    (issuer.pathname !== "/" && issuer.pathname !== "")
+  ) {
+    throw new Error(
+      "AUTH0_ISSUER_BASE_URL must be an HTTPS origin without credentials, a path, query, or fragment.",
+    );
+  }
+  return `${issuer.origin}/`;
 }
 
 function parsePersistenceMode(value: string | undefined): PersistenceMode {

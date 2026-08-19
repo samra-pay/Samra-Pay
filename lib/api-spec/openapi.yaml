@@ -53,7 +53,9 @@ paths:
     get:
       operationId: getCurrentCustomer
       tags: [customer]
-      summary: Get the synthetic demo customer
+      summary: Get the current Samra Pay customer
+      security:
+        - CustomerBearer: []
       responses:
         "200":
           description: Current synthetic customer and runtime mode
@@ -61,6 +63,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CurrentCustomer"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -69,6 +75,8 @@ paths:
       operationId: listAccounts
       tags: [accounts]
       summary: List ledger-derived customer accounts
+      security:
+        - CustomerBearer: []
       responses:
         "200":
           description: Customer account summaries
@@ -78,6 +86,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AccountSummary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -86,6 +98,8 @@ paths:
       operationId: listActivity
       tags: [activity]
       summary: List ledger-derived customer activity
+      security:
+        - CustomerBearer: []
       parameters:
         - name: accountId
           in: query
@@ -109,6 +123,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActivityPage"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
         "503":
@@ -119,6 +137,8 @@ paths:
       operationId: listBeneficiaries
       tags: [beneficiaries]
       summary: List active beneficiaries owned by the current actor
+      security:
+        - CustomerBearer: []
       responses:
         "200":
           description: Active synthetic beneficiaries
@@ -128,12 +148,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Beneficiary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
     post:
       operationId: createBeneficiary
       tags: [beneficiaries]
       summary: Create a synthetic beneficiary for the current actor
+      security:
+        - CustomerBearer: []
       requestBody:
         required: true
         content:
@@ -147,6 +173,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Beneficiary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
         "503":
@@ -159,6 +189,8 @@ paths:
       operationId: getBeneficiary
       tags: [beneficiaries]
       summary: Get an active beneficiary owned by the current actor
+      security:
+        - CustomerBearer: []
       responses:
         "200":
           description: Beneficiary detail
@@ -166,6 +198,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Beneficiary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
         "503":
@@ -174,6 +210,8 @@ paths:
       operationId: updateBeneficiary
       tags: [beneficiaries]
       summary: Update an active beneficiary owned by the current actor
+      security:
+        - CustomerBearer: []
       requestBody:
         required: true
         content:
@@ -187,6 +225,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Beneficiary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
         "422":
@@ -197,9 +239,15 @@ paths:
       operationId: deleteBeneficiary
       tags: [beneficiaries]
       summary: Soft-delete an active beneficiary owned by the current actor
+      security:
+        - CustomerBearer: []
       responses:
         "204":
           description: Beneficiary soft-deleted
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
         "503":
@@ -210,6 +258,8 @@ paths:
       operationId: getRemittanceOptions
       tags: [remittance]
       summary: List supported synthetic remittance options
+      security:
+        - CustomerBearer: []
       responses:
         "200":
           description: Synthetic funding and delivery options
@@ -217,6 +267,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RemittanceOptions"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -225,6 +279,8 @@ paths:
       operationId: createRemittanceQuote
       tags: [remittance]
       summary: Create an immutable server-calculated quote
+      security:
+        - CustomerBearer: []
       requestBody:
         required: true
         content:
@@ -238,6 +294,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RemittanceQuote"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
         "503":
@@ -248,6 +308,8 @@ paths:
       operationId: listRemittanceTransfers
       tags: [remittance]
       summary: List customer remittance transfers
+      security:
+        - CustomerBearer: []
       parameters:
         - name: cursor
           in: query
@@ -267,6 +329,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TransferPage"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
         "503":
@@ -275,6 +341,8 @@ paths:
       operationId: createRemittanceTransfer
       tags: [remittance]
       summary: Reserve funds and create a synthetic transfer
+      security:
+        - CustomerBearer: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -290,6 +358,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transfer"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "409":
           $ref: "#/components/responses/ConflictProblem"
         "410":
@@ -306,6 +378,8 @@ paths:
       operationId: getRemittanceTransfer
       tags: [remittance]
       summary: Get a transfer and its normalized timeline
+      security:
+        - CustomerBearer: []
       responses:
         "200":
           description: Transfer detail
@@ -313,6 +387,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transfer"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
         "503":
@@ -325,6 +403,8 @@ paths:
       operationId: cancelRemittanceTransfer
       tags: [remittance]
       summary: Cancel a transfer before its non-cancellable boundary
+      security:
+        - CustomerBearer: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       responses:
@@ -334,6 +414,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transfer"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
         "409":
@@ -841,6 +925,11 @@ paths:
 
 components:
   securitySchemes:
+    CustomerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Auth0 RS256 access token for the configured Samra Pay API audience. ID tokens are not accepted.
     WorkforceSession:
       type: apiKey
       in: cookie
@@ -910,13 +999,13 @@ components:
           schema:
             $ref: "#/components/schemas/ApiProblem"
     UnauthorizedProblem:
-      description: Workforce authentication is required or invalid
+      description: Customer bearer or workforce authentication is required or invalid
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/ApiProblem"
     ForbiddenProblem:
-      description: The authenticated workforce role lacks permission
+      description: The authenticated customer identity is unbound or restricted, or the workforce role lacks permission
       content:
         application/problem+json:
           schema:

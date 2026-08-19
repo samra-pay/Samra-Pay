@@ -93,6 +93,7 @@ import {
   AuthorizationDeniedError,
   RequestValidationError,
 } from "../../lib/problem";
+import { createAuth0AccessTokenMiddleware } from "../../lib/customer-access-token";
 
 const WORKFORCE_SESSION_COOKIE = "samra_ops_session";
 const WORKFORCE_COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1_000;
@@ -180,8 +181,25 @@ type SafeParseSchema<T> = Readonly<{
 export function createV1Router(
   runtime: DemoRuntime,
   config: ApiRuntimeConfig,
+  dependencies: Readonly<{
+    customerAccessTokenMiddleware?: RequestHandler;
+  }> = {},
 ): Router {
   const router = Router();
+
+  if (config.customerAuth.mode === "auth0") {
+    if (runtime.customerAuthenticationMode !== "auth0") {
+      throw new Error(
+        "Auth0 customer mode requires an Auth0-backed customer actor resolver.",
+      );
+    }
+    router.use(
+      customerRouteAuthenticationBoundary(
+        dependencies.customerAccessTokenMiddleware ??
+          createAuth0AccessTokenMiddleware(config.customerAuth),
+      ),
+    );
+  }
 
   router.get(
     "/me",
@@ -453,7 +471,7 @@ export function createV1Router(
     router.post(
       "/dev/remittance/transfers/:transferId/scenario",
       asyncRoute(async (req, res) => {
-        const actor = await runtime.actorResolver.resolve(req);
+        const actor = DEMO_ACTOR;
         const params = parseSchema(
           SelectDemoTransferScenarioParams,
           req.params,
@@ -481,7 +499,7 @@ export function createV1Router(
     router.post(
       "/dev/reconciliation/runs",
       asyncRoute(async (req, res) => {
-        const actor = await runtime.actorResolver.resolve(req);
+        const actor = DEMO_ACTOR;
         const body = parseSchema(RunDemoReconciliationBody, req.body ?? {});
         const run = await runtime.runReconciliation(
           actor.id,
@@ -494,7 +512,6 @@ export function createV1Router(
     router.get(
       "/dev/reconciliation/runs/:runId",
       asyncRoute(async (req, res) => {
-        await runtime.actorResolver.resolve(req);
         const params = parseSchema(GetDemoReconciliationRunParams, req.params);
         res.json(
           GetDemoReconciliationRunResponse.parse(
@@ -1027,6 +1044,28 @@ export function createV1Router(
   }
 
   return router;
+}
+
+function customerRouteAuthenticationBoundary(
+  authenticate: RequestHandler,
+): RequestHandler {
+  return (request, response, next) => {
+    const originalPath = request.originalUrl.split("?", 1)[0] ?? "/";
+    const v1Prefix = "/api/v1";
+    const path = originalPath.startsWith(v1Prefix)
+      ? originalPath.slice(v1Prefix.length) || "/"
+      : originalPath;
+    if (
+      path === "/internal" ||
+      path.startsWith("/internal/") ||
+      path === "/dev" ||
+      path.startsWith("/dev/")
+    ) {
+      next();
+      return;
+    }
+    authenticate(request, response, next);
+  };
 }
 
 async function resolveWorkforceOperator(

@@ -6,6 +6,8 @@ import {
   PostgresPersistenceContext,
   PostgresRemittanceRepository,
   PostgresOperationsStore,
+  PostgresCustomerIdentityStore,
+  CustomerIdentityConflictError,
   RandomIdGenerator,
   createDatabase,
 } from "@workspace/db";
@@ -44,6 +46,144 @@ function createRuntime() {
 
 test.after(async () => {
   await Promise.all(connections.map((connection) => connection.pool.end()));
+});
+
+test("Auth0 identity bindings are durable, idempotent, conflict-safe, and auditable without copying the subject into audit evidence", async () => {
+  const first = createRuntime();
+  const second = createRuntime();
+  const issuer = `https://${randomUUID()}.samra-auth.test/`;
+  const subject = `auth0|${randomUUID()}`;
+  const firstStore = new PostgresCustomerIdentityStore(first.context);
+  const secondStore = new PostgresCustomerIdentityStore(second.context);
+
+  const concurrent = await Promise.all([
+    firstStore.bindAuth0Identity({
+      customerExternalRef: "demo_customer_001",
+      issuer,
+      subject,
+    }),
+    secondStore.bindAuth0Identity({
+      customerExternalRef: "demo_customer_001",
+      issuer,
+      subject,
+    }),
+  ]);
+  assert.deepEqual(concurrent.map((binding) => binding.created).sort(), [
+    false,
+    true,
+  ]);
+  assert.equal(concurrent[0]!.identityId, concurrent[1]!.identityId);
+
+  const resolved = await firstStore.resolveAuth0Identity({ issuer, subject });
+  assert.equal(resolved?.customerExternalRef, "demo_customer_001");
+  assert.equal(resolved?.customerDisplayName, "Samra Demo Customer");
+  assert.equal(resolved?.identityState, "active");
+  assert.equal(resolved?.customerState, "active");
+
+  await assert.rejects(
+    secondStore.bindAuth0Identity({
+      customerExternalRef: "demo_customer_002",
+      issuer,
+      subject,
+    }),
+    CustomerIdentityConflictError,
+  );
+
+  const contestedSubject = `auth0|${randomUUID()}`;
+  const contested = await Promise.allSettled([
+    firstStore.bindAuth0Identity({
+      customerExternalRef: "demo_customer_001",
+      issuer,
+      subject: contestedSubject,
+    }),
+    secondStore.bindAuth0Identity({
+      customerExternalRef: "demo_customer_002",
+      issuer,
+      subject: contestedSubject,
+    }),
+  ]);
+  assert.equal(
+    contested.filter((result) => result.status === "fulfilled").length,
+    1,
+  );
+  assert.equal(
+    contested.filter(
+      (result) =>
+        result.status === "rejected" &&
+        result.reason instanceof CustomerIdentityConflictError,
+    ).length,
+    1,
+  );
+  const contestedResolution = await firstStore.resolveAuth0Identity({
+    issuer,
+    subject: contestedSubject,
+  });
+  assert.ok(
+    contestedResolution?.customerExternalRef === "demo_customer_001" ||
+      contestedResolution?.customerExternalRef === "demo_customer_002",
+  );
+
+  const evidence = await first.connection.pool.query<{
+    binding_count: string;
+    audit_count: string;
+    audit_document: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text
+          FROM samra_core.customer_auth_identities
+         WHERE provider = 'auth0' AND issuer = $1 AND subject = $2)
+         AS binding_count,
+       count(*)::text AS audit_count,
+       COALESCE(string_agg(event_key || metadata::text, ''), '')
+         AS audit_document
+     FROM samra_core.audit_events
+     WHERE entity_type = 'customer_auth_identity'
+       AND entity_id = $3`,
+    [issuer, subject, concurrent[0]!.identityId],
+  );
+  assert.equal(evidence.rows[0]!.binding_count, "1");
+  assert.equal(evidence.rows[0]!.audit_count, "1");
+  assert.equal(evidence.rows[0]!.audit_document.includes(subject), false);
+
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_auth_identities
+          SET subject = $1
+        WHERE id = $2`,
+      [`auth0|${randomUUID()}`, concurrent[0]!.identityId],
+    ),
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `DELETE FROM samra_core.customer_auth_identities WHERE id = $1`,
+      [concurrent[0]!.identityId],
+    ),
+  );
+
+  await first.connection.pool.query(
+    `UPDATE samra_core.customer_auth_identities
+        SET state = 'revoked', revoked_at = now(), updated_at = now()
+      WHERE id = $1`,
+    [concurrent[0]!.identityId],
+  );
+  const revoked = await firstStore.resolveAuth0Identity({ issuer, subject });
+  assert.equal(revoked?.identityState, "revoked");
+  await assert.rejects(
+    firstStore.bindAuth0Identity({
+      customerExternalRef: "demo_customer_001",
+      issuer,
+      subject,
+    }),
+    CustomerIdentityConflictError,
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_auth_identities
+          SET state = 'active', revoked_at = NULL, updated_at = now()
+        WHERE id = $1`,
+      [concurrent[0]!.identityId],
+    ),
+  );
 });
 
 test("PostgreSQL is the durable source of truth across atomicity, concurrency, restart, ledger, refund, and reconciliation", async () => {

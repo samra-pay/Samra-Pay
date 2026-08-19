@@ -5,6 +5,7 @@ import {
   PostgresOperationsStore,
   PostgresWorkforceAuthStore,
   PostgresOperationsCaseStore,
+  PostgresCustomerIdentityStore,
   RandomIdGenerator,
   assertPostgresRuntimeReady,
   createDatabase,
@@ -14,6 +15,7 @@ import type { ApiRuntimeConfig } from "../config";
 import { DemoRuntime } from "./demo-runtime";
 import { PostgresReconciliationStore } from "./postgres-reconciliation";
 import { PostgresBeneficiaryStore } from "./postgres-beneficiary-store";
+import { Auth0CustomerActorResolver } from "./customer-auth";
 
 export function createConfiguredDemoRuntime(
   config: ApiRuntimeConfig,
@@ -23,6 +25,14 @@ export function createConfiguredDemoRuntime(
   }
   const connection = createDatabase();
   const context = new PostgresPersistenceContext(connection.pool);
+  const customerIdentityStore = new PostgresCustomerIdentityStore(context);
+  const customerActorResolver =
+    config.customerAuth.mode === "auth0"
+      ? new Auth0CustomerActorResolver(
+          customerIdentityStore,
+          config.customerAuth.issuerBaseUrl,
+        )
+      : undefined;
   return new DemoRuntime({
     repository: new PostgresRemittanceRepository(context),
     ledger: new PostgresLedgerControl(context),
@@ -32,6 +42,10 @@ export function createConfiguredDemoRuntime(
     operationsStore: new PostgresOperationsStore(context),
     workforceAuthStore: new PostgresWorkforceAuthStore(context),
     operationsCaseStore: new PostgresOperationsCaseStore(context),
+    actorResolver: customerActorResolver,
+    beneficiaryActorResolver: customerActorResolver,
+    customerAuthenticationMode:
+      config.customerAuth.mode === "auth0" ? "auth0" : "seeded-demo",
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
     readiness: () => assertPostgresRuntimeReady(connection.pool),

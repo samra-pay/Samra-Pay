@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
 import type { Server } from "node:http";
+import type { RequestHandler } from "express";
+import { UnauthorizedError } from "express-oauth2-jwt-bearer";
 import { createApp } from "./app";
 import type { ApiRuntimeConfig } from "./config";
 import {
@@ -10,6 +12,7 @@ import {
   type PublicTransferDemoScenario,
 } from "./domain/demo-runtime";
 import { DEMO_LEDGER_ACCOUNT_IDS } from "./domain/demo-ledger";
+import { Auth0CustomerActorResolver } from "./domain/customer-auth";
 
 const demoConfig: ApiRuntimeConfig = Object.freeze({
   backendMode: "demo",
@@ -17,6 +20,7 @@ const demoConfig: ApiRuntimeConfig = Object.freeze({
   devControlsEnabled: true,
   runWorker: false,
   workerIntervalMilliseconds: 5,
+  customerAuth: Object.freeze({ mode: "disabled" }),
 });
 
 const disabledConfig: ApiRuntimeConfig = Object.freeze({
@@ -25,6 +29,7 @@ const disabledConfig: ApiRuntimeConfig = Object.freeze({
   devControlsEnabled: false,
   runWorker: false,
   workerIntervalMilliseconds: 5,
+  customerAuth: Object.freeze({ mode: "disabled" }),
 });
 
 type JsonObject = Record<string, unknown>;
@@ -82,6 +87,135 @@ test("production-style demo mode does not mount dev controls", async () => {
       assert.equal(dev.status, 404);
       assert.equal(dev.body["code"], "NOT_FOUND");
     },
+  );
+});
+
+test("Auth0 mode protects customer routes, resolves the canonical customer, and leaves internal test controls on their separate trust boundary", async () => {
+  const issuer = "https://samra-test.us.auth0.com/";
+  const authConfig: ApiRuntimeConfig = Object.freeze({
+    ...demoConfig,
+    persistenceMode: "postgres",
+    customerAuth: Object.freeze({
+      mode: "auth0",
+      issuerBaseUrl: issuer,
+      audience: "https://api.samrapay.test",
+      tokenSigningAlgorithm: "RS256",
+    }),
+  });
+  const identities = {
+    async resolveAuth0Identity(input: { issuer: string; subject: string }) {
+      if (input.issuer !== issuer || input.subject === "auth0|unbound") {
+        return undefined;
+      }
+      return Object.freeze({
+        identityId: `identity-${input.subject}`,
+        identityState:
+          input.subject === "auth0|revoked"
+            ? ("revoked" as const)
+            : ("active" as const),
+        customerId: "00000000-0000-4000-8000-000000000001",
+        customerExternalRef: DEMO_ACTOR.id,
+        customerDisplayName: DEMO_ACTOR.displayName,
+        customerState:
+          input.subject === "auth0|suspended"
+            ? ("suspended" as const)
+            : input.subject === "auth0|closed"
+              ? ("closed" as const)
+              : ("active" as const),
+      });
+    },
+  };
+  const resolver = new Auth0CustomerActorResolver(identities, issuer);
+  const runtime = new DemoRuntime({
+    actorResolver: resolver,
+    beneficiaryActorResolver: resolver,
+    customerAuthenticationMode: "auth0",
+  });
+  const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
+    const authorization = req.header("authorization");
+    if (!authorization?.startsWith("Bearer test:")) {
+      next(new UnauthorizedError());
+      return;
+    }
+    const subject = authorization.slice("Bearer test:".length);
+    req.auth = {
+      header: { alg: "RS256" },
+      payload: {
+        iss: issuer,
+        sub: subject,
+        aud: "https://api.samrapay.test",
+        exp: Math.floor(Date.now() / 1_000) + 300,
+      },
+      token: authorization.slice("Bearer ".length),
+    };
+    next();
+  };
+
+  assert.throws(
+    () => createApp(authConfig, new DemoRuntime()),
+    /requires an Auth0-backed customer actor resolver/,
+  );
+  await withServer(authConfig, runtime, async (origin) => {
+    const missing = await request(origin, "/api/v1/me");
+    assert.equal(missing.status, 401);
+    assert.equal(missing.body["code"], "CUSTOMER_AUTHENTICATION_REQUIRED");
+    const malformed = await request(origin, "/api/v1/me", {
+      headers: { authorization: "Bearer not-a-jwt" },
+    });
+    assert.equal(malformed.status, 401);
+    assert.equal(malformed.body["code"], "CUSTOMER_AUTHENTICATION_REQUIRED");
+  });
+
+  await withServer(
+    authConfig,
+    runtime,
+    async (origin) => {
+      const missing = await request(origin, "/api/v1/me");
+      assert.equal(missing.status, 401);
+      assert.equal(missing.body["code"], "CUSTOMER_AUTHENTICATION_REQUIRED");
+      assert.equal(
+        missing.headers.get("www-authenticate"),
+        'Bearer realm="samra-api"',
+      );
+
+      const unbound = await request(origin, "/api/v1/me", {
+        headers: { authorization: "Bearer test:auth0|unbound" },
+      });
+      assert.equal(unbound.status, 403);
+      assert.equal(unbound.body["code"], "CUSTOMER_IDENTITY_UNBOUND");
+
+      const suspended = await request(origin, "/api/v1/me", {
+        headers: { authorization: "Bearer test:auth0|suspended" },
+      });
+      assert.equal(suspended.status, 403);
+      assert.equal(suspended.body["code"], "CUSTOMER_ACCESS_RESTRICTED");
+
+      for (const subject of ["auth0|closed", "auth0|revoked"]) {
+        const restricted = await request(origin, "/api/v1/me", {
+          headers: { authorization: `Bearer test:${subject}` },
+        });
+        assert.equal(restricted.status, 403);
+        assert.equal(restricted.body["code"], "CUSTOMER_ACCESS_RESTRICTED");
+      }
+
+      const currentCustomer = await request(origin, "/api/v1/me", {
+        headers: {
+          authorization: "Bearer test:auth0|active",
+          "x-demo-actor-id": "demo_customer_002",
+        },
+      });
+      assert.equal(currentCustomer.status, 200);
+      assert.equal(currentCustomer.body["id"], DEMO_ACTOR.id);
+      assert.equal(currentCustomer.body["displayName"], DEMO_ACTOR.displayName);
+
+      const devControl = await request(
+        origin,
+        "/api/v1/dev/reconciliation/runs",
+        { method: "POST", body: { scenario: "happy_path" } },
+      );
+      assert.equal(devControl.status, 201);
+    },
+    { customerAccessTokenMiddleware },
   );
 });
 
@@ -721,7 +855,7 @@ async function request(
     headers?: Readonly<Record<string, string>>;
     body?: unknown;
   }> = {},
-): Promise<Readonly<{ status: number; body: JsonObject }>> {
+): Promise<Readonly<{ status: number; body: JsonObject; headers: Headers }>> {
   const response = await fetch(`${origin}${path}`, {
     method: options.method,
     headers: {
@@ -738,6 +872,7 @@ async function request(
   return {
     status: response.status,
     body: responseBody ? (JSON.parse(responseBody) as JsonObject) : {},
+    headers: response.headers,
   };
 }
 
@@ -745,8 +880,9 @@ async function withServer(
   config: ApiRuntimeConfig,
   runtime: DemoRuntime | undefined,
   run: (origin: string) => Promise<void>,
+  dependencies: Parameters<typeof createApp>[2] = {},
 ): Promise<void> {
-  const app = createApp(config, runtime);
+  const app = createApp(config, runtime, dependencies);
   const server = await new Promise<Server>((resolve, reject) => {
     const candidate = app.listen(0, "127.0.0.1", (error?: Error) =>
       error ? reject(error) : resolve(candidate),

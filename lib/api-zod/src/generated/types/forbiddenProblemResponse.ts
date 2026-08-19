@@ -8,6 +8,6 @@
 import type { ApiProblem } from "./apiProblem";
 
 /**
- * The authenticated workforce role lacks permission
+ * The authenticated customer identity is unbound or restricted, or the workforce role lacks permission
  */
 export type ForbiddenProblemResponse = ApiProblem;

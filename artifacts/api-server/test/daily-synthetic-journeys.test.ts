@@ -29,6 +29,7 @@ const postgresConfig: ApiRuntimeConfig = Object.freeze({
   runWorker: false,
   workerIntervalMilliseconds: 5,
   internalOperationsEnabled: true,
+  customerAuth: Object.freeze({ mode: "disabled" }),
 });
 
 type JsonObject = Record<string, unknown>;

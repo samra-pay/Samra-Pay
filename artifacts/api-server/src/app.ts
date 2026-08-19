@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
@@ -14,6 +14,9 @@ import { DomainError } from "@workspace/remittance";
 export function createApp(
   config: ApiRuntimeConfig = loadApiRuntimeConfig(),
   demoRuntime?: DemoRuntime,
+  dependencies: Readonly<{
+    customerAccessTokenMiddleware?: RequestHandler;
+  }> = {},
 ): Express {
   const app: Express = express();
 
@@ -45,7 +48,7 @@ export function createApp(
     config.backendMode === "demo" && config.providerMode === "fake"
       ? (demoRuntime ?? createConfiguredDemoRuntime(config))
       : undefined;
-  app.use("/api", createApiRouter(config, runtime));
+  app.use("/api", createApiRouter(config, runtime, dependencies));
   if (runtime && config.runWorker) {
     app.locals["demoWorkerTimer"] = startDemoWorker(
       runtime,

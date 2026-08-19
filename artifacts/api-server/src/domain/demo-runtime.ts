@@ -154,11 +154,15 @@ export type DemoRuntimeDependencies = Readonly<{
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   readiness?: () => Promise<void>;
   close?: () => Promise<void>;
+  actorResolver?: ActorResolver<Request>;
+  beneficiaryActorResolver?: ActorResolver<Request>;
+  customerAuthenticationMode?: "seeded-demo" | "auth0";
 }>;
 
 export class DemoRuntime {
-  readonly actorResolver = new SeededActorResolver();
-  readonly beneficiaryActorResolver = new BeneficiaryActorResolver();
+  readonly actorResolver: ActorResolver<Request>;
+  readonly beneficiaryActorResolver: ActorResolver<Request>;
+  readonly customerAuthenticationMode: "seeded-demo" | "auth0";
   readonly repository: RemittanceRepository;
   readonly providers = new DeterministicFakeProviders();
   // Kept as the concrete demo adapter type for existing white-box demo tests.
@@ -181,6 +185,12 @@ export class DemoRuntime {
   #reconciliationSequence = 0;
 
   constructor(dependencies: DemoRuntimeDependencies = {}) {
+    this.actorResolver =
+      dependencies.actorResolver ?? new SeededActorResolver();
+    this.beneficiaryActorResolver =
+      dependencies.beneficiaryActorResolver ?? new BeneficiaryActorResolver();
+    this.customerAuthenticationMode =
+      dependencies.customerAuthenticationMode ?? "seeded-demo";
     this.repository =
       dependencies.repository ?? new InMemoryRemittanceRepository();
     this.ledger = (dependencies.ledger ??
