@@ -5,6 +5,53 @@ changing Replit or provisioning cloud resources. GitHub remains the source of
 truth. Replit can remain available as a temporary preview and rollback surface
 until a separately approved cutover.
 
+## Proposed foundation target
+
+`staging-foundation.json` records the first bounded Google Cloud target:
+
+- project `samra-pay-staging` under organization `614833350075`;
+- region `us-east4` (Northern Virginia);
+- synthetic staging data only;
+- a $50 monthly budget alert;
+- one immutable `samra-staging` Docker repository;
+- separate build, deploy, API, browser, design, and migration identities; and
+- Firebase added to the existing project without enabling Firebase Auth,
+  Firestore, Hosting, or registering a mobile app before its identifiers lock.
+
+Adding Firebase cannot be fully undone. It automatically creates a restricted
+browser API key and two provider-managed service-account patterns, adds the
+`firebase:enabled` label, and enables the provider-managed baseline APIs listed
+in `firebase.providerManagedEffects`. Those effects are distinct from the 14
+APIs and seven service accounts explicitly managed by Samra's bootstrap. The
+provider-managed baseline does not itself configure a Firebase app, Analytics,
+Firebase Authentication, Firestore database, or Hosting site.
+
+The plan is executable only through `bootstrap-staging-foundation.sh --apply`
+with the exact reviewed project, organization, region, operator domain, and an
+explicit authorization sentinel. Its default is `--plan`, which performs local
+validation and changes no cloud state. The apply phase assumes the project was
+created under the approved organization and billing was linked separately. It
+does not create either one.
+
+The bounded bootstrap enables only the approved Samra-managed APIs, project
+labels, the immutable image repository, seven keyless Samra service accounts,
+minimum IAM bindings, and empty database-secret metadata. Firebase's separate
+console linkage adds only the enumerated provider-managed baseline. Neither
+path creates a secret version, Cloud SQL instance, Cloud Run workload, load
+balancer, Firebase app registration, public endpoint, real-provider
+integration, or Replit change.
+
+Example review-only command:
+
+```sh
+SAMRA_GCP_OPERATOR_ACCOUNT="operator@davidhaile.com" \
+  bash deploy/gcp/bootstrap-staging-foundation.sh --plan
+```
+
+The apply command must not run until the permanent project ID, organization,
+billing, region, operator, budget alert, and foundation scope have been
+confirmed at the action boundary.
+
 ## Bounded target architecture
 
 | Workload                      | Google Cloud target      | Purpose                                                          |

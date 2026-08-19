@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "status": "review-only",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "project": {
+    "id": "samra-pay-staging",
+    "organizationId": "614833350075",
+    "region": "us-east4",
+    "billingRequired": true,
+    "budgetAlertUsd": 50
+  },
+  "firebase": {
+    "addToExistingProject": true,
+    "additionFullyReversible": false,
+    "googleAnalyticsEnabled": false,
+    "geminiInFirebaseEnabled": false,
+    "authenticationEnabled": false,
+    "firestoreEnabled": false,
+    "hostingEnabled": false,
+    "appRegistrationBlockedUntilIdentifiersAreLocked": true,
+    "providerManagedEffects": {
+      "firebaseEnabledLabel": true,
+      "browserApiKey": "auto-created-and-api-restricted",
+      "serviceAccountPatterns": [
+        "service-${PROJECT_NUMBER}@gcp-sa-firebase.iam.gserviceaccount.com",
+        "firebase-adminsdk-${RANDOM5}@${PROJECT_ID}.iam.gserviceaccount.com"
+      ],
+      "apis": [
+        "appengine.googleapis.com",
+        "pubsub.googleapis.com",
+        "cloudresourcemanager.googleapis.com",
+        "runtimeconfig.googleapis.com",
+        "testing.googleapis.com",
+        "fcm.googleapis.com",
+        "firebasedynamiclinks.googleapis.com",
+        "firebasehosting.googleapis.com",
+        "firebaseinstallations.googleapis.com",
+        "firebase.googleapis.com",
+        "firebaseremoteconfig.googleapis.com",
+        "firebaseremoteconfigrealtime.googleapis.com",
+        "firebaserules.googleapis.com",
+        "identitytoolkit.googleapis.com",
+        "securetoken.googleapis.com"
+      ]
+    }
+  },
+  "artifactRegistry": {
+    "repository": "samra-staging",
+    "format": "docker",
+    "immutableTags": true
+  },
+  "samraManagedApis": [
+    "artifactregistry.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "compute.googleapis.com",
+    "firebase.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
+    "servicenetworking.googleapis.com",
+    "serviceusage.googleapis.com",
+    "sqladmin.googleapis.com"
+  ],
+  "serviceAccounts": {
+    "build": "samra-cloud-build-staging",
+    "deployer": "samra-deployer-staging",
+    "api": "samra-api-staging",
+    "customerWeb": "samra-customer-web-staging",
+    "operationsWeb": "samra-operations-web-staging",
+    "designSystem": "samra-design-system-staging",
+    "migrations": "samra-migrations-staging"
+  },
+  "projectRoleBindings": {
+    "build": [
+      "roles/logging.logWriter",
+      "roles/serviceusage.serviceUsageConsumer"
+    ],
+    "deployer": ["roles/run.admin", "roles/serviceusage.serviceUsageConsumer"],
+    "api": ["roles/cloudsql.client"],
+    "migrations": ["roles/cloudsql.client"]
+  },
+  "resourceRoleBindings": {
+    "artifactRegistryWriter": "build",
+    "artifactRegistryReader": "deployer",
+    "databaseSecretAccessors": ["api", "migrations"],
+    "runtimeServiceAccountUser": "deployer"
+  },
+  "secret": {
+    "id": "samra-staging-database-url",
+    "replication": "regional",
+    "createVersion": false
+  },
+  "foundationCreates": [
+    "approved APIs",
+    "immutable Artifact Registry repository",
+    "dedicated service accounts",
+    "least-privilege IAM bindings",
+    "empty database secret metadata"
+  ],
+  "foundationDoesNotCreate": [
+    "Cloud SQL instance or database",
+    "Cloud Run service or job",
+    "load balancer or public endpoint",
+    "Firebase application registration",
+    "secret version or credential",
+    "service-account key",
+    "real provider integration",
+    "Replit change"
+  ]
+}
