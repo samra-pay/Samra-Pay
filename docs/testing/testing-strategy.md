@@ -40,9 +40,9 @@ default branch. A workflow change is therefore not active until it is merged.
 | --------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
 | PostgreSQL and ledger | Migrations, repeatable seed, double entry, precision, holds, idempotency, immutability, concurrency, reconciliation | Full repeat on a fresh disposable database plus restart    | Exact journal and audit sampling                                   |
 | API and remittance    | Unit, contract, HTTP-to-PostgreSQL, and compiled-process restart                                                    | Full repeat against synthetic PostgreSQL                   | Candidate-SHA failure and recovery review                          |
-| Customer web          | Unit/component tests, typecheck, production build, explicit API failure behavior                                    | Full repeat through workspace CI                           | Browser and quote-handoff smoke in Qase                            |
-| Mobile                | Unit/model tests, typecheck, portable API configuration, recovery, production bundle                                | Full repeat through workspace CI                           | iOS and Android device smoke in Qase                               |
-| Operations portal     | Unit/model tests, role restrictions, explicit unavailable states, production build                                  | Full repeat through workspace CI                           | Administrator, CS, compliance, and auditor workflows in Qase       |
+| Customer web          | Unit/component tests, typecheck, production build, explicit API failure behavior, raw/gzip artifact budgets         | Full repeat through workspace CI                           | Browser and quote-handoff smoke in Qase                            |
+| Mobile                | Unit/model tests, typecheck, portable API configuration, recovery, production bundle, raw/gzip artifact budgets     | Full repeat through workspace CI                           | iOS and Android device smoke in Qase                               |
+| Operations portal     | Unit/model tests, role restrictions, explicit unavailable states, production build, raw/gzip entry budget           | Full repeat through workspace CI                           | Administrator, CS, compliance, and auditor workflows in Qase       |
 | Design system         | Source boundary, token drift, contrast/accessibility tests, typecheck, preview build                                | Workspace build repeat                                     | Visual review across product surfaces                              |
 | GCP portability       | Docker and configuration contract tests                                                                             | Portability contract repeat                                | Deployment, migration, and rollback rehearsal only when authorized |
 | Commercial site       | Isolated typecheck and production build                                                                             | Separate daily job so it cannot weaken the financial gates | Visual review when included in a release                           |
@@ -73,6 +73,8 @@ Stop the merge or release when any of the following is true:
 5. An API outage silently exposes mock financial data.
 6. The tested commit differs from the candidate commit.
 7. Qase environment attribution or required evidence is missing.
+8. A governed customer, mobile, or operations artifact is missing, ambiguous,
+   or exceeds its approved raw or gzip budget.
 
 ## Controlled boundaries
 
@@ -83,6 +85,14 @@ Stop the merge or release when any of the following is true:
   until a separate automation phase is approved.
 - This cadence phase does not authorize GCP deployment, production identity,
   secrets infrastructure, live payments, or provider connectivity.
+
+[`experience-budgets.json`](experience-budgets.json) defines fail-closed raw
+and gzip ceilings for the customer web entry, isolated onboarding chunk, web
+styles, Operations Portal entry, and both mobile production bundles. The Linux
+quality gate writes a retained JSON result after the build. Release candidates
+include that report in the immutable SHA-256 evidence manifest. Budget changes
+require their own measured and reviewed pull request; a build cannot evade a
+limit by omitting or duplicating the expected artifact.
 
 ## Immutable release-candidate evidence
 

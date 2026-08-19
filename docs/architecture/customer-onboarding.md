@@ -200,6 +200,7 @@ The alpha experience also enforces these customer-facing boundaries:
   while activation and wallet provisioning remain disabled; only mock mode may
   continue into the synthetic dashboard.
 
-Crossmint remains blocked until artifact performance budgets, final manual
-keyboard/screen-reader/device evidence, and live identity configuration are
-approved.
+Raw and gzip performance budgets are enforced for the built customer web,
+onboarding, mobile, and operations artifacts. Crossmint remains blocked until
+final manual keyboard/screen-reader/device evidence and live identity
+configuration are approved.

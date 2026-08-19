@@ -66,6 +66,7 @@
     "artifacts/release-candidate/release-candidate-identity.json",
     "artifacts/release-candidate/release-gates.xml",
     "artifacts/release-candidate/qase-run.json",
+    "artifacts/release-candidate/experience-budget-report.json",
     "artifacts/api-server/test-results/postgres-persistence.xml",
     "artifacts/api-server/test-results/postgres-http.xml",
     "artifacts/api-server/test-results/daily-synthetic-journeys.xml",

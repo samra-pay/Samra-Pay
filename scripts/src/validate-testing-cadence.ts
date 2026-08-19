@@ -219,6 +219,8 @@ export function validateTestingCadence(
     "pnpm run test:testing-cadence",
     "pnpm run test:release-contract",
     "pnpm run test:gcp-platform",
+    "pnpm run test:experience-budgets",
+    "customer-experience-budgets",
     "Samra Pay daily backend acceptance",
     "if: github.event_name == 'schedule' || inputs.run_commercial == 'true'",
   ]) {
@@ -267,6 +269,16 @@ export function validateTestingCadence(
   if (policy.stopConditions.length < 6 || policy.boundaries.length < 4) {
     throw new Error(
       "Testing policy must preserve stop conditions and boundaries.",
+    );
+  }
+  if (
+    !policy.stopConditions.some(
+      (condition) =>
+        condition.includes("artifact") && condition.includes("raw or gzip"),
+    )
+  ) {
+    throw new Error(
+      "Testing policy must stop on experience budget regressions.",
     );
   }
   for (const requiredDocumentation of [

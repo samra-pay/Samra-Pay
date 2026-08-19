@@ -62,6 +62,7 @@ const workflow = [
   "git show-ref --verify refs/remotes/origin/main",
   "release-evidence -- identity",
   "release-evidence -- gate-junit",
+  "pnpm run test:experience-budgets",
   "id: qase_payload",
   "if: steps.qase_payload.outcome == 'success' && !cancelled()",
   "release-evidence -- manifest",
@@ -180,5 +181,15 @@ describe("validateReleaseCandidateContract", () => {
         { automatedReports: reports },
       ),
     ).toThrow(/migrated and seeded before its suite/);
+  });
+
+  it("rejects a release workflow that omits experience budgets", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        workflow.replace("pnpm run test:experience-budgets", ""),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/test:experience-budgets/);
   });
 });

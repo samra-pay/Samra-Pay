@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "budgets": [
+    {
+      "id": "customer-web-entry-javascript",
+      "surface": "customer-web",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^index-[A-Za-z0-9_-]+\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 1350000,
+      "maximumGzipBytes": 400000
+    },
+    {
+      "id": "customer-web-onboarding-javascript",
+      "surface": "customer-web",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^onboarding-[A-Za-z0-9_-]+\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 30000,
+      "maximumGzipBytes": 10000
+    },
+    {
+      "id": "customer-web-styles",
+      "surface": "customer-web",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^index-[A-Za-z0-9_-]+\\.css$",
+      "expectedMatches": 1,
+      "maximumBytes": 220000,
+      "maximumGzipBytes": 32000
+    },
+    {
+      "id": "operations-entry-javascript",
+      "surface": "operations-portal",
+      "directory": "artifacts/samra-pay-ops/dist/public/assets",
+      "match": "^index-[A-Za-z0-9_-]+\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 600000,
+      "maximumGzipBytes": 180000
+    },
+    {
+      "id": "mobile-ios-javascript",
+      "surface": "mobile",
+      "directory": "artifacts/samra-pay-mobile/static-build",
+      "match": "^[^/]+/_expo/static/js/ios/bundle\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 4000000,
+      "maximumGzipBytes": 1000000
+    },
+    {
+      "id": "mobile-android-javascript",
+      "surface": "mobile",
+      "directory": "artifacts/samra-pay-mobile/static-build",
+      "match": "^[^/]+/_expo/static/js/android/bundle\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 4000000,
+      "maximumGzipBytes": 1000000
+    }
+  ]
+}
