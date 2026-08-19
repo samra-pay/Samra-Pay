@@ -160,16 +160,52 @@ declare -A SERVICE_ACCOUNTS=(
   [migrations]="samra-migrations-staging"
 )
 
+SERVICE_ACCOUNT_CREATE_MAX_ATTEMPTS=3
+SERVICE_ACCOUNT_QUOTA_BACKOFF_SECONDS=65
+
+create_service_account_with_retry() {
+  local id="$1"
+  local display_name="$2"
+  local email="${id}@${PROJECT_ID}.iam.gserviceaccount.com"
+  local attempt=1
+  local output=""
+
+  while ((attempt <= SERVICE_ACCOUNT_CREATE_MAX_ATTEMPTS)); do
+    if gcloud iam service-accounts describe "${email}" \
+      --project="${PROJECT_ID}" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    if output="$(gcloud iam service-accounts create "${id}" \
+      --project="${PROJECT_ID}" \
+      --display-name="${display_name}" \
+      --quiet 2>&1)"; then
+      printf '%s\n' "${output}"
+      return 0
+    fi
+
+    printf '%s\n' "${output}" >&2
+    if [[ "${output}" != *"RESOURCE_EXHAUSTED"* ||
+      "${output}" != *"Service accounts created per minute per project"* ||
+      "${attempt}" -ge "${SERVICE_ACCOUNT_CREATE_MAX_ATTEMPTS}" ]]; then
+      return 1
+    fi
+
+    echo "Service-account creation quota reached; retrying in ${SERVICE_ACCOUNT_QUOTA_BACKOFF_SECONDS} seconds." >&2
+    sleep "${SERVICE_ACCOUNT_QUOTA_BACKOFF_SECONDS}"
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 ensure_service_account() {
   local id="$1"
   local display_name="$2"
   local email="${id}@${PROJECT_ID}.iam.gserviceaccount.com"
   if ! gcloud iam service-accounts describe "${email}" \
     --project="${PROJECT_ID}" >/dev/null 2>&1; then
-    gcloud iam service-accounts create "${id}" \
-      --project="${PROJECT_ID}" \
-      --display-name="${display_name}" \
-      --quiet
+    create_service_account_with_retry "${id}" "${display_name}"
   fi
 }
 
