@@ -5,6 +5,43 @@ changing Replit or provisioning cloud resources. GitHub remains the source of
 truth. Replit can remain available as a temporary preview and rollback surface
 until a separately approved cutover.
 
+## Proposed foundation target
+
+`staging-foundation.json` records the first bounded Google Cloud target:
+
+- project `samra-pay-staging` under organization `614833350075`;
+- region `us-east4` (Northern Virginia);
+- synthetic staging data only;
+- a $50 monthly budget alert;
+- one immutable `samra-staging` Docker repository;
+- separate build, deploy, API, browser, design, and migration identities; and
+- Firebase added to the existing project without enabling Firebase Auth,
+  Firestore, Hosting, or registering a mobile app before its identifiers lock.
+
+The plan is executable only through `bootstrap-staging-foundation.sh --apply`
+with the exact reviewed project, organization, region, operator domain, and an
+explicit authorization sentinel. Its default is `--plan`, which performs local
+validation and changes no cloud state. The apply phase assumes the project was
+created under the approved organization and billing was linked separately. It
+does not create either one.
+
+The bounded foundation enables only approved APIs, project labels, the
+immutable image repository, seven keyless service accounts, minimum IAM
+bindings, and empty database-secret metadata. It does not create a secret
+version, Cloud SQL instance, Cloud Run workload, load balancer, Firebase app,
+public endpoint, real-provider integration, or Replit change.
+
+Example review-only command:
+
+```sh
+SAMRA_GCP_OPERATOR_ACCOUNT="operator@davidhaile.com" \
+  bash deploy/gcp/bootstrap-staging-foundation.sh --plan
+```
+
+The apply command must not run until the permanent project ID, organization,
+billing, region, operator, budget alert, and foundation scope have been
+confirmed at the action boundary.
+
 ## Bounded target architecture
 
 | Workload                      | Google Cloud target      | Purpose                                                          |
