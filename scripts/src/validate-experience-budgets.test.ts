@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   evaluateExperienceBudgets,
+  resolveWorkspacePath,
   validateContract,
   type ExperienceBudgetContract,
 } from "./validate-experience-budgets";
@@ -23,6 +24,15 @@ afterEach(async () => {
 });
 
 describe("experience artifact budgets", () => {
+  it("anchors relative evidence paths to the workspace root", () => {
+    expect(resolveWorkspacePath("tmp/report.json", "/workspace")).toBe(
+      path.join("/workspace", "tmp/report.json"),
+    );
+    expect(resolveWorkspacePath("/absolute/report.json", "/workspace")).toBe(
+      "/absolute/report.json",
+    );
+  });
+
   it("measures the single governed artifact in raw and gzip bytes", async () => {
     const root = await fixture("dist/entry-app.js", "Samra Pay ".repeat(50));
     const report = await evaluateExperienceBudgets(contract(), root, metadata);

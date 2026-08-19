@@ -232,13 +232,20 @@ function normalizeCandidateSha(value: string): string {
   );
 }
 
+export function resolveWorkspacePath(
+  value: string,
+  workspaceRoot = WORKSPACE_ROOT,
+): string {
+  return path.resolve(workspaceRoot, value);
+}
+
 async function main(): Promise<void> {
   const rawArguments = process.argv.slice(2);
   const args = rawArguments[0] === "--" ? rawArguments.slice(1) : rawArguments;
-  const contractPath = path.resolve(
+  const contractPath = resolveWorkspacePath(
     readArgument(args, "--contract") ?? DEFAULT_CONTRACT_PATH,
   );
-  const reportPath = path.resolve(
+  const reportPath = resolveWorkspacePath(
     readArgument(args, "--output") ?? DEFAULT_REPORT_PATH,
   );
   const contract = JSON.parse(
