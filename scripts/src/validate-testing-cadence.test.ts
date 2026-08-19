@@ -28,6 +28,8 @@ const workflow = [
   "pnpm run test:testing-cadence",
   "pnpm run test:release-contract",
   "pnpm run test:gcp-platform",
+  "pnpm run test:experience-budgets",
+  "customer-experience-budgets",
   "Samra Pay daily backend acceptance",
 ].join("\n");
 
@@ -168,7 +170,15 @@ const policy: TestingCadencePolicy = {
       cadences: ["release"],
     },
   ],
-  stopConditions: ["one", "two", "three", "four", "five", "six"],
+  stopConditions: [
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "A governed artifact exceeds its approved raw or gzip budget.",
+  ],
   boundaries: ["one", "two", "three", "four"],
 };
 
@@ -259,5 +269,34 @@ describe("validateTestingCadence", () => {
         documentation,
       ),
     ).toThrow(/Release dispatch must include the commercial gate by default/);
+  });
+
+  it("rejects CI that silently drops the experience budget gate", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/ci.yml": workflow.replace(
+            "pnpm run test:experience-budgets",
+            "",
+          ),
+        },
+        documentation,
+      ),
+    ).toThrow(/test:experience-budgets/);
+  });
+
+  it("rejects policy that omits the experience budget stop condition", () => {
+    expect(() =>
+      validateTestingCadence(
+        {
+          ...policy,
+          stopConditions: ["one", "two", "three", "four", "five", "six"],
+        },
+        workflows,
+        documentation,
+      ),
+    ).toThrow(/experience budget regressions/);
   });
 });

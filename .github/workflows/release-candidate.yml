@@ -145,6 +145,7 @@ jobs:
           pnpm run test
           pnpm run test:gcp-platform
           pnpm -r --filter "!@workspace/samra-pay-commercial" --if-present run build
+          pnpm run test:experience-budgets -- --candidate-sha "${{ inputs.candidate_sha }}" --output artifacts/release-candidate/experience-budget-report.json
 
       - name: Run isolated commercial release build
         id: commercial
@@ -296,6 +297,7 @@ jobs:
             artifacts/release-candidate/qase-run.json
             artifacts/release-candidate/release-evidence-manifest.json
             artifacts/release-candidate/release-evidence-manifest.sha256
+            artifacts/release-candidate/experience-budget-report.json
             artifacts/api-server/test-results/postgres-persistence.xml
             artifacts/api-server/test-results/postgres-http.xml
             artifacts/api-server/test-results/daily-synthetic-journeys.xml

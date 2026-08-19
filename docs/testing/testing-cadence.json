@@ -172,7 +172,8 @@
     "A journal is unbalanced or a reconciliation variance is unexplained.",
     "A duplicate command can move money twice or changed replay evidence is accepted.",
     "An API outage silently exposes mock financial data.",
-    "The tested commit differs from the candidate commit or Qase environment attribution is missing."
+    "The tested commit differs from the candidate commit or Qase environment attribution is missing.",
+    "A governed customer, mobile, or operations artifact is missing, ambiguous, or exceeds its approved raw or gzip budget."
   ],
   "boundaries": [
     "Use disposable PostgreSQL and synthetic fixtures only.",

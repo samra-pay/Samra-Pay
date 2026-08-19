@@ -102,6 +102,21 @@ jobs:
           EXPO_PUBLIC_SAMRA_DATA_MODE: "api"
           EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.ci.invalid"
 
+      - name: Enforce customer experience artifact budgets
+        run: >-
+          pnpm run test:experience-budgets --
+          --candidate-sha "${GITHUB_SHA}"
+          --output tmp/experience-budget-report.json
+
+      - name: Preserve customer experience budget evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-experience-budgets
+          path: tmp/experience-budget-report.json
+          if-no-files-found: error
+          retention-days: 30
+
   commercial-daily:
     name: Daily commercial isolation gate
     if: github.event_name == 'schedule' || inputs.run_commercial == 'true'
