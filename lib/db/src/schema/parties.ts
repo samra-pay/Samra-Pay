@@ -23,8 +23,8 @@ export const customers = samraCore.table(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     externalRef: text("external_ref").notNull(),
-    displayName: text("display_name").notNull(),
-    countryCode: varchar("country_code", { length: 2 }).notNull(),
+    displayName: text("display_name"),
+    countryCode: varchar("country_code", { length: 2 }),
     state: customerStateEnum("state").notNull().default("active"),
     metadata: jsonb("metadata")
       .$type<Record<string, unknown>>()

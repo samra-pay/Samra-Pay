@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
 import {
   PostgresLedgerControl,
@@ -7,6 +7,8 @@ import {
   PostgresRemittanceRepository,
   PostgresOperationsStore,
   PostgresCustomerIdentityStore,
+  PostgresCustomerOnboardingStore,
+  ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerIdentityConflictError,
   RandomIdGenerator,
   createDatabase,
@@ -42,6 +44,45 @@ function createRuntime() {
     }),
     operationsStore,
   };
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+async function onboardingPersistenceCounts(
+  pool: ReturnType<typeof createDatabase>["pool"],
+): Promise<
+  Readonly<{
+    customers: string;
+    identities: string;
+    onboardings: string;
+    transitions: string;
+    audits: string;
+    idempotency_records: string;
+  }>
+> {
+  const result = await pool.query<{
+    customers: string;
+    identities: string;
+    onboardings: string;
+    transitions: string;
+    audits: string;
+    idempotency_records: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text FROM samra_core.customers) AS customers,
+       (SELECT count(*)::text FROM samra_core.customer_auth_identities)
+         AS identities,
+       (SELECT count(*)::text FROM samra_core.customer_onboardings)
+         AS onboardings,
+       (SELECT count(*)::text
+          FROM samra_core.customer_onboarding_transitions) AS transitions,
+       (SELECT count(*)::text FROM samra_core.audit_events) AS audits,
+       (SELECT count(*)::text FROM samra_core.idempotency_records)
+         AS idempotency_records`,
+  );
+  return Object.freeze({ ...result.rows[0]! });
 }
 
 test.after(async () => {
@@ -184,6 +225,470 @@ test("Auth0 identity bindings are durable, idempotent, conflict-safe, and audita
       [concurrent[0]!.identityId],
     ),
   );
+});
+
+test("customer onboarding is atomic across first login, restart, consent replay, decline recovery, and audit evidence", async () => {
+  const first = createRuntime();
+  const second = createRuntime();
+  const issuer = `https://${randomUUID()}.onboarding.samra.test/`;
+  const subject = `auth0|${randomUUID()}`;
+  const firstStore = new PostgresCustomerOnboardingStore(first.context);
+  const secondStore = new PostgresCustomerOnboardingStore(second.context);
+
+  const started = await Promise.all([
+    firstStore.startAuth0Onboarding({
+      issuer,
+      subject,
+      idempotencyKey: "first-login-command-001",
+    }),
+    secondStore.startAuth0Onboarding({
+      issuer,
+      subject,
+      idempotencyKey: "first-login-command-002",
+    }),
+  ]);
+  assert.deepEqual(started.map((result) => result.created).sort(), [
+    false,
+    true,
+  ]);
+  assert.equal(
+    started[0]!.snapshot.onboardingId,
+    started[1]!.snapshot.onboardingId,
+  );
+  assert.equal(
+    started[0]!.snapshot.customerId,
+    started[1]!.snapshot.customerId,
+  );
+  assert.equal(started[0]!.snapshot.state, "consent_pending");
+  assert.equal(started[0]!.snapshot.version, 1);
+  assert.equal(
+    started[0]!.snapshot.consentBundle.legalEffect,
+    "non_production",
+  );
+
+  const durable = await new PostgresCustomerOnboardingStore(
+    second.context,
+  ).getAuth0Onboarding({ issuer, subject });
+  assert.equal(durable.onboardingId, started[0]!.snapshot.onboardingId);
+  assert.equal(durable.customerId, started[0]!.snapshot.customerId);
+  assert.equal(durable.state, "consent_pending");
+
+  const initialized = await first.connection.pool.query<{
+    customers: string;
+    identities: string;
+    onboardings: string;
+    transitions: string;
+    accounts: string;
+    beneficiaries: string;
+    display_name: string | null;
+    country_code: string | null;
+    audit_document: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text FROM samra_core.customers
+         WHERE external_ref = $1) AS customers,
+       (SELECT count(*)::text FROM samra_core.customer_auth_identities
+         WHERE provider = 'auth0' AND issuer = $2 AND subject = $3)
+         AS identities,
+       (SELECT count(*)::text FROM samra_core.customer_onboardings onboarding
+         JOIN samra_core.customers customer ON customer.id = onboarding.customer_id
+        WHERE customer.external_ref = $1) AS onboardings,
+       (SELECT count(*)::text
+          FROM samra_core.customer_onboarding_transitions transition
+          JOIN samra_core.customer_onboardings onboarding
+            ON onboarding.id = transition.onboarding_id
+          JOIN samra_core.customers customer
+            ON customer.id = onboarding.customer_id
+         WHERE customer.external_ref = $1) AS transitions,
+       (SELECT count(*)::text FROM samra_core.product_accounts account
+          JOIN samra_core.customers customer ON customer.id = account.customer_id
+         WHERE customer.external_ref = $1) AS accounts,
+       (SELECT count(*)::text FROM samra_core.beneficiaries beneficiary
+          JOIN samra_core.customers customer ON customer.id = beneficiary.customer_id
+         WHERE customer.external_ref = $1) AS beneficiaries,
+       (SELECT display_name FROM samra_core.customers WHERE external_ref = $1)
+         AS display_name,
+       (SELECT country_code FROM samra_core.customers WHERE external_ref = $1)
+         AS country_code,
+       (SELECT COALESCE(string_agg(event_key || metadata::text, ''), '')
+          FROM samra_core.audit_events
+         WHERE entity_id IN ($1, $4)) AS audit_document`,
+    [durable.customerId, issuer, subject, durable.onboardingId],
+  );
+  assert.deepEqual(initialized.rows[0], {
+    customers: "1",
+    identities: "1",
+    onboardings: "1",
+    transitions: "1",
+    accounts: "0",
+    beneficiaries: "0",
+    display_name: null,
+    country_code: null,
+    audit_document: initialized.rows[0]!.audit_document,
+  });
+  assert.equal(initialized.rows[0]!.audit_document.includes(subject), false);
+  const pendingOperationsCustomer =
+    await first.operationsStore.listOperationsCustomers({
+      search: durable.customerId,
+      limit: 10,
+    });
+  assert.equal(pendingOperationsCustomer.length, 1);
+  assert.equal(
+    pendingOperationsCustomer[0]!.displayName,
+    "Customer profile pending",
+  );
+  assert.equal(pendingOperationsCustomer[0]!.countryCode, "--");
+  assert.equal(
+    pendingOperationsCustomer[0]!.status,
+    "onboarding_consent_pending",
+  );
+
+  const decisions = ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+    (document) => ({
+      consentType: document.consentType,
+      documentVersion: document.documentVersion,
+      decision: "accepted" as const,
+    }),
+  );
+  const rawConsentKey = "required-consent-command-001";
+  const consented = await Promise.all([
+    firstStore.recordAuth0ConsentBundle({
+      issuer,
+      subject,
+      idempotencyKey: rawConsentKey,
+      bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+      locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+      decisions,
+    }),
+    secondStore.recordAuth0ConsentBundle({
+      issuer,
+      subject,
+      idempotencyKey: rawConsentKey,
+      bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+      locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+      decisions,
+    }),
+  ]);
+  assert.deepEqual(consented.map((result) => result.replayed).sort(), [
+    false,
+    true,
+  ]);
+  assert.equal(consented[0]!.snapshot.state, "identity_in_progress");
+  assert.equal(consented[0]!.snapshot.version, 2);
+  assert.equal(
+    consented[0]!.snapshot.onboardingId,
+    consented[1]!.snapshot.onboardingId,
+  );
+  const identityPendingOperationsCustomer =
+    await first.operationsStore.listOperationsCustomers({
+      search: durable.customerId,
+      limit: 10,
+    });
+  assert.equal(
+    identityPendingOperationsCustomer[0]!.status,
+    "onboarding_identity_in_progress",
+  );
+
+  const consentEvidence = await first.connection.pool.query<{
+    consent_rows: string;
+    transition_rows: string;
+    audit_rows: string;
+    idempotency_rows: string;
+    stored_keys: string;
+    audit_document: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text FROM samra_core.customer_consents
+         WHERE onboarding_id = $1::uuid) AS consent_rows,
+       (SELECT count(*)::text FROM samra_core.customer_onboarding_transitions
+         WHERE onboarding_id = $1::uuid) AS transition_rows,
+       (SELECT count(*)::text FROM samra_core.audit_events
+         WHERE entity_type = 'customer_onboarding'
+           AND entity_id = ($1::uuid)::text)
+         AS audit_rows,
+       (SELECT count(*)::text FROM samra_core.idempotency_records
+         WHERE resource_type = 'customer_onboarding'
+           AND resource_id = $1::uuid)
+         AS idempotency_rows,
+       (SELECT COALESCE(string_agg(idempotency_key, ''), '')
+          FROM samra_core.customer_consents
+         WHERE onboarding_id = $1::uuid)
+         AS stored_keys,
+       (SELECT COALESCE(string_agg(event_key || metadata::text, ''), '')
+          FROM samra_core.audit_events
+         WHERE entity_type = 'customer_onboarding'
+           AND entity_id = ($1::uuid)::text)
+         AS audit_document`,
+    [durable.onboardingId],
+  );
+  assert.deepEqual(
+    {
+      consent_rows: consentEvidence.rows[0]!.consent_rows,
+      transition_rows: consentEvidence.rows[0]!.transition_rows,
+      audit_rows: consentEvidence.rows[0]!.audit_rows,
+      idempotency_rows: consentEvidence.rows[0]!.idempotency_rows,
+    },
+    {
+      consent_rows: "3",
+      transition_rows: "2",
+      audit_rows: "2",
+      idempotency_rows: "1",
+    },
+  );
+  assert.equal(
+    consentEvidence.rows[0]!.stored_keys.includes(rawConsentKey),
+    false,
+  );
+  assert.equal(
+    consentEvidence.rows[0]!.audit_document.includes(rawConsentKey),
+    false,
+  );
+  assert.equal(
+    consentEvidence.rows[0]!.audit_document.includes(subject),
+    false,
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `INSERT INTO samra_core.customer_consents
+       (customer_id, onboarding_id, consent_type, document_version,
+        bundle_version, decision, locale, channel, idempotency_key)
+       SELECT customer.id, $1, 'privacy_notice', 'alpha-non-production-v1',
+              'alpha-non-production-v1', 'accepted', 'en-US', 'api', $2
+       FROM samra_core.customers customer
+       WHERE customer.external_ref = 'demo_customer_001'`,
+      [durable.onboardingId, "0".repeat(64)],
+    ),
+  );
+
+  const replayAfterRestart = await new PostgresCustomerOnboardingStore(
+    createRuntime().context,
+  ).recordAuth0ConsentBundle({
+    issuer,
+    subject,
+    idempotencyKey: rawConsentKey,
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions,
+  });
+  assert.equal(replayAfterRestart.replayed, true);
+  assert.equal(replayAfterRestart.snapshot.version, 2);
+  await assert.rejects(
+    firstStore.recordAuth0ConsentBundle({
+      issuer,
+      subject,
+      idempotencyKey: rawConsentKey,
+      bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+      locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+      decisions: decisions.map((decision, index) =>
+        index === 0 ? { ...decision, decision: "declined" as const } : decision,
+      ),
+    }),
+    /idempotency key was already used/i,
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_consents SET locale = locale
+        WHERE onboarding_id = $1`,
+      [durable.onboardingId],
+    ),
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `DELETE FROM samra_core.customer_onboarding_transitions
+        WHERE onboarding_id = $1`,
+      [durable.onboardingId],
+    ),
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_onboardings
+          SET state = 'activated', version = version + 1, entered_at = now(),
+              updated_at = now()
+        WHERE id = $1`,
+      [durable.onboardingId],
+    ),
+  );
+
+  const declineSubject = `auth0|${randomUUID()}`;
+  const declinedStart = await firstStore.startAuth0Onboarding({
+    issuer,
+    subject: declineSubject,
+    idempotencyKey: "decline-start-command-001",
+  });
+  const declined = await firstStore.recordAuth0ConsentBundle({
+    issuer,
+    subject: declineSubject,
+    idempotencyKey: "decline-consent-command-001",
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions: decisions.map((decision, index) =>
+      index === 0 ? { ...decision, decision: "declined" as const } : decision,
+    ),
+  });
+  assert.equal(declined.snapshot.state, "consent_pending");
+  assert.equal(declined.snapshot.reasonFamily, "required_consent_declined");
+  assert.equal(declined.snapshot.version, 2);
+  const recovered = await firstStore.recordAuth0ConsentBundle({
+    issuer,
+    subject: declineSubject,
+    idempotencyKey: "decline-consent-command-002",
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions,
+  });
+  assert.equal(recovered.snapshot.state, "identity_in_progress");
+  assert.equal(recovered.snapshot.reasonFamily, null);
+  assert.equal(recovered.snapshot.version, 3);
+  assert.equal(
+    recovered.snapshot.onboardingId,
+    declinedStart.snapshot.onboardingId,
+  );
+});
+
+test("customer onboarding rolls back every write after controlled mid-transaction failures and remains retryable", async () => {
+  const target = createRuntime();
+  const store = new PostgresCustomerOnboardingStore(target.context);
+  const issuer = `https://${randomUUID()}.onboarding-rollback.samra.test/`;
+  const failedStartSubject = `auth0|rollback-start-${randomUUID()}`;
+  const failedConsentSubject = `auth0|rollback-consent-${randomUUID()}`;
+  const failedStartKey = "rollback-first-login-command-001";
+  const successfulStartKey = "rollback-first-login-command-002";
+  const failedConsentKey = "rollback-consent-command-001";
+  const triggerSuffix = randomUUID().replaceAll("-", "");
+  const functionName = `test_fail_onboarding_transition_${triggerSuffix}`;
+  const triggerName = `test_fail_onboarding_transition_${triggerSuffix}`;
+  const failedStartCommand = `start:${sha256(failedStartKey)}`;
+  const failedConsentCommand = `consent:${sha256(failedConsentKey)}`;
+  const decisions = ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+    (document) => ({
+      consentType: document.consentType,
+      documentVersion: document.documentVersion,
+      decision: "accepted" as const,
+    }),
+  );
+
+  await target.connection.pool.query(
+    `CREATE FUNCTION samra_core."${functionName}"()
+     RETURNS trigger
+     LANGUAGE plpgsql
+     AS $$
+     BEGIN
+       IF NEW.command_key IN ('${failedStartCommand}', '${failedConsentCommand}') THEN
+         RAISE EXCEPTION 'controlled onboarding transition failure'
+           USING ERRCODE = 'P0001';
+       END IF;
+       RETURN NEW;
+     END;
+     $$`,
+  );
+  await target.connection.pool.query(
+    `CREATE TRIGGER "${triggerName}"
+     BEFORE INSERT ON samra_core.customer_onboarding_transitions
+     FOR EACH ROW EXECUTE FUNCTION samra_core."${functionName}"()`,
+  );
+
+  try {
+    const beforeStart = await onboardingPersistenceCounts(
+      target.connection.pool,
+    );
+    await assert.rejects(
+      store.startAuth0Onboarding({
+        issuer,
+        subject: failedStartSubject,
+        idempotencyKey: failedStartKey,
+      }),
+      /controlled onboarding transition failure/i,
+    );
+    assert.deepEqual(
+      await onboardingPersistenceCounts(target.connection.pool),
+      beforeStart,
+    );
+    const failedIdentity = await target.connection.pool.query(
+      `SELECT count(*)::int AS count
+       FROM samra_core.customer_auth_identities
+       WHERE provider = 'auth0' AND issuer = $1 AND subject = $2`,
+      [issuer, failedStartSubject],
+    );
+    assert.equal(failedIdentity.rows[0]!.count, 0);
+
+    const consentStart = await store.startAuth0Onboarding({
+      issuer,
+      subject: failedConsentSubject,
+      idempotencyKey: successfulStartKey,
+    });
+    await assert.rejects(
+      store.recordAuth0ConsentBundle({
+        issuer,
+        subject: failedConsentSubject,
+        idempotencyKey: failedConsentKey,
+        bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+        locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+        decisions,
+      }),
+      /controlled onboarding transition failure/i,
+    );
+    const afterConsentFailure = await store.getAuth0Onboarding({
+      issuer,
+      subject: failedConsentSubject,
+    });
+    assert.equal(afterConsentFailure.state, "consent_pending");
+    assert.equal(afterConsentFailure.version, 1);
+    const consentEvidence = await target.connection.pool.query<{
+      consents: string;
+      transitions: string;
+      audits: string;
+      idempotency_records: string;
+    }>(
+      `SELECT
+         (SELECT count(*)::text FROM samra_core.customer_consents
+           WHERE onboarding_id = $1::uuid) AS consents,
+         (SELECT count(*)::text
+            FROM samra_core.customer_onboarding_transitions
+           WHERE onboarding_id = $1::uuid) AS transitions,
+         (SELECT count(*)::text FROM samra_core.audit_events
+           WHERE entity_type = 'customer_onboarding'
+             AND entity_id = ($1::uuid)::text)
+           AS audits,
+         (SELECT count(*)::text FROM samra_core.idempotency_records
+           WHERE resource_type = 'customer_onboarding'
+             AND resource_id = $1::uuid)
+           AS idempotency_records`,
+      [consentStart.snapshot.onboardingId],
+    );
+    assert.deepEqual(consentEvidence.rows[0], {
+      consents: "0",
+      transitions: "1",
+      audits: "1",
+      idempotency_records: "0",
+    });
+  } finally {
+    await target.connection.pool.query(
+      `DROP TRIGGER IF EXISTS "${triggerName}"
+       ON samra_core.customer_onboarding_transitions`,
+    );
+    await target.connection.pool.query(
+      `DROP FUNCTION IF EXISTS samra_core."${functionName}"()`,
+    );
+  }
+
+  const retriedStart = await store.startAuth0Onboarding({
+    issuer,
+    subject: failedStartSubject,
+    idempotencyKey: failedStartKey,
+  });
+  assert.equal(retriedStart.created, true);
+  assert.equal(retriedStart.snapshot.state, "consent_pending");
+  const retriedConsent = await store.recordAuth0ConsentBundle({
+    issuer,
+    subject: failedConsentSubject,
+    idempotencyKey: failedConsentKey,
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions,
+  });
+  assert.equal(retriedConsent.replayed, false);
+  assert.equal(retriedConsent.snapshot.state, "identity_in_progress");
+  assert.equal(retriedConsent.snapshot.version, 2);
 });
 
 test("PostgreSQL is the durable source of truth across atomicity, concurrency, restart, ledger, refund, and reconciliation", async () => {

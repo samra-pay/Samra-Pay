@@ -436,9 +436,20 @@ export class PostgresOperationsStore {
       open_exceptions: number;
     }>(
       `SELECT
-         (SELECT COALESCE(jsonb_object_agg(state, count), '{}'::jsonb)
-          FROM (SELECT state::text, count(*)::int AS count
-                FROM samra_core.customers GROUP BY state) x) AS customers,
+         (SELECT COALESCE(jsonb_object_agg(status, count), '{}'::jsonb)
+          FROM (
+            SELECT CASE
+                     WHEN onboarding.state IS NOT NULL
+                       AND onboarding.state <> 'activated'
+                       THEN 'onboarding_' || onboarding.state
+                     ELSE customer.state::text
+                   END AS status,
+                   count(*)::int AS count
+            FROM samra_core.customers customer
+            LEFT JOIN samra_core.customer_onboardings onboarding
+              ON onboarding.customer_id = customer.id
+            GROUP BY 1
+          ) x) AS customers,
          (SELECT COALESCE(jsonb_object_agg(state, count), '{}'::jsonb)
           FROM (SELECT state::text, count(*)::int AS count
                 FROM samra_core.remittance_transfers GROUP BY state) x) AS transfers,
@@ -482,8 +493,15 @@ export class PostgresOperationsStore {
       last_transfer_at: Date | null;
       created_at: Date;
     }>(
-      `SELECT c.external_ref AS customer_ref, c.display_name, c.country_code,
-              c.state::text,
+      `SELECT c.external_ref AS customer_ref,
+              COALESCE(c.display_name, 'Customer profile pending') AS display_name,
+              COALESCE(c.country_code, '--') AS country_code,
+              CASE
+                WHEN onboarding.state IS NOT NULL
+                  AND onboarding.state <> 'activated'
+                  THEN 'onboarding_' || onboarding.state
+                ELSE c.state::text
+              END AS state,
               (SELECT count(*)::int FROM samra_core.product_accounts a
                WHERE a.customer_id = c.id) AS account_count,
               (SELECT count(*)::int FROM samra_core.beneficiaries b
@@ -502,8 +520,10 @@ export class PostgresOperationsStore {
                WHERE t.customer_id = c.id) AS last_transfer_at,
               c.created_at
        FROM samra_core.customers c
+       LEFT JOIN samra_core.customer_onboardings onboarding
+         ON onboarding.customer_id = c.id
        WHERE ($1::text IS NULL OR c.external_ref ILIKE '%' || $1 || '%'
-              OR c.display_name ILIKE '%' || $1 || '%')
+              OR COALESCE(c.display_name, '') ILIKE '%' || $1 || '%')
        ORDER BY c.created_at DESC, c.external_ref DESC
        LIMIT $2`,
       [input.search ?? null, input.limit],

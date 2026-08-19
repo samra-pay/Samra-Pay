@@ -5,6 +5,110 @@
  * Samra Pay synthetic architecture-foundation API
  * OpenAPI spec version: 0.2.0
  */
+export type CustomerOnboardingState =
+  (typeof CustomerOnboardingState)[keyof typeof CustomerOnboardingState];
+
+export const CustomerOnboardingState = {
+  not_started: "not_started",
+  authenticated: "authenticated",
+  consent_pending: "consent_pending",
+  identity_in_progress: "identity_in_progress",
+  identity_review: "identity_review",
+  identity_approved: "identity_approved",
+  bank_link_pending: "bank_link_pending",
+  bank_matched: "bank_matched",
+  wallet_consent_pending: "wallet_consent_pending",
+  wallet_provisioning: "wallet_provisioning",
+  wallet_ready: "wallet_ready",
+  funding_ready: "funding_ready",
+  activated: "activated",
+  restricted: "restricted",
+} as const;
+
+export type CustomerConsentType =
+  (typeof CustomerConsentType)[keyof typeof CustomerConsentType];
+
+export const CustomerConsentType = {
+  terms_of_service: "terms_of_service",
+  privacy_notice: "privacy_notice",
+  electronic_communications: "electronic_communications",
+} as const;
+
+export interface CustomerConsentDocument {
+  consentType: CustomerConsentType;
+  documentVersion: string;
+  required: boolean;
+}
+
+export type CustomerConsentBundleLegalEffect =
+  (typeof CustomerConsentBundleLegalEffect)[keyof typeof CustomerConsentBundleLegalEffect];
+
+export const CustomerConsentBundleLegalEffect = {
+  non_production: "non_production",
+} as const;
+
+export interface CustomerConsentBundle {
+  bundleVersion: string;
+  locale: string;
+  legalEffect: CustomerConsentBundleLegalEffect;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  documents: CustomerConsentDocument[];
+}
+
+export interface CustomerOnboarding {
+  onboardingId: string;
+  customerId: string;
+  state: CustomerOnboardingState;
+  latestCompletedStep: string;
+  reasonFamily: string | null;
+  /** @minimum 1 */
+  version: number;
+  enteredAt: string;
+  createdAt: string;
+  updatedAt: string;
+  nextAllowedActions: string[];
+  consentBundle: CustomerConsentBundle;
+}
+
+export type CustomerConsentDecisionDecision =
+  (typeof CustomerConsentDecisionDecision)[keyof typeof CustomerConsentDecisionDecision];
+
+export const CustomerConsentDecisionDecision = {
+  accepted: "accepted",
+  declined: "declined",
+} as const;
+
+export interface CustomerConsentDecision {
+  consentType: CustomerConsentType;
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  documentVersion: string;
+  decision: CustomerConsentDecisionDecision;
+}
+
+export interface SubmitCustomerConsentBundleRequest {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  bundleVersion: string;
+  /**
+   * @minLength 2
+   * @maxLength 35
+   */
+  locale: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  decisions: CustomerConsentDecision[];
+}
+
 export interface CancelOperationsTransferRequest {
   /**
    * @minLength 8
@@ -891,7 +995,7 @@ export type UnavailableResponse = ApiProblem;
 export type UnauthorizedProblemResponse = ApiProblem;
 
 /**
- * The authenticated customer identity is unbound or restricted, or the workforce role lacks permission
+ * The authenticated customer identity is unbound, restricted, or not activated through onboarding, or the workforce role lacks permission
  */
 export type ForbiddenProblemResponse = ApiProblem;
 

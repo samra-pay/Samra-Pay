@@ -28,6 +28,7 @@ import type {
   CreateQuoteRequest,
   CreateTransferRequest,
   CurrentCustomer,
+  CustomerOnboarding,
   ExpiredProblemResponse,
   ForbiddenProblemResponse,
   HealthStatus,
@@ -54,6 +55,7 @@ import type {
   ResolveOperationsReconciliationExceptionRequest,
   RunReconciliationRequest,
   SelectScenarioRequest,
+  SubmitCustomerConsentBundleRequest,
   Transfer,
   TransferPage,
   UnauthorizedProblemResponse,
@@ -322,6 +324,293 @@ export function useGetCurrentCustomer<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getStartCustomerOnboardingUrl = () => {
+  return `/api/v1/onboarding`;
+};
+
+/**
+ * Creates a Samra-owned pending customer, Auth0 identity binding, and onboarding aggregate exactly once. Auth0 profile claims are not copied into the customer record.
+ * @summary Atomically create or resume the authenticated customer onboarding aggregate
+ */
+export const startCustomerOnboarding = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerOnboarding> => {
+  return customFetch<CustomerOnboarding>(getStartCustomerOnboardingUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getStartCustomerOnboardingMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCustomerOnboarding>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startCustomerOnboarding>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["startCustomerOnboarding"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startCustomerOnboarding>>,
+    void
+  > = () => {
+    return startCustomerOnboarding(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartCustomerOnboardingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startCustomerOnboarding>>
+>;
+
+export type StartCustomerOnboardingMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Atomically create or resume the authenticated customer onboarding aggregate
+ */
+export const useStartCustomerOnboarding = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCustomerOnboarding>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startCustomerOnboarding>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getStartCustomerOnboardingMutationOptions(options));
+};
+
+export const getGetCustomerOnboardingUrl = () => {
+  return `/api/v1/onboarding`;
+};
+
+/**
+ * @summary Resume the authenticated customer onboarding aggregate
+ */
+export const getCustomerOnboarding = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerOnboarding> => {
+  return customFetch<CustomerOnboarding>(getGetCustomerOnboardingUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCustomerOnboardingQueryKey = () => {
+  return [`/api/v1/onboarding`] as const;
+};
+
+export const getGetCustomerOnboardingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerOnboarding>>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerOnboarding>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCustomerOnboardingQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerOnboarding>>
+  > = ({ signal }) => getCustomerOnboarding({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerOnboarding>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerOnboardingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerOnboarding>>
+>;
+export type GetCustomerOnboardingQueryError = ErrorType<
+  UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Resume the authenticated customer onboarding aggregate
+ */
+
+export function useGetCustomerOnboarding<
+  TData = Awaited<ReturnType<typeof getCustomerOnboarding>>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerOnboarding>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerOnboardingQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSubmitCustomerConsentBundleUrl = () => {
+  return `/api/v1/onboarding/consents`;
+};
+
+/**
+ * The server accepts only the current non-production consent catalog. All decisions, the aggregate transition, idempotency evidence, and audit evidence commit atomically.
+ * @summary Record an immutable, versioned required-consent bundle
+ */
+export const submitCustomerConsentBundle = async (
+  submitCustomerConsentBundleRequest: SubmitCustomerConsentBundleRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerOnboarding> => {
+  return customFetch<CustomerOnboarding>(getSubmitCustomerConsentBundleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitCustomerConsentBundleRequest),
+  });
+};
+
+export const getSubmitCustomerConsentBundleMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitCustomerConsentBundle>>,
+    TError,
+    { data: BodyType<SubmitCustomerConsentBundleRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitCustomerConsentBundle>>,
+  TError,
+  { data: BodyType<SubmitCustomerConsentBundleRequest> },
+  TContext
+> => {
+  const mutationKey = ["submitCustomerConsentBundle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitCustomerConsentBundle>>,
+    { data: BodyType<SubmitCustomerConsentBundleRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitCustomerConsentBundle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitCustomerConsentBundleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitCustomerConsentBundle>>
+>;
+export type SubmitCustomerConsentBundleMutationBody =
+  BodyType<SubmitCustomerConsentBundleRequest>;
+export type SubmitCustomerConsentBundleMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Record an immutable, versioned required-consent bundle
+ */
+export const useSubmitCustomerConsentBundle = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitCustomerConsentBundle>>,
+    TError,
+    { data: BodyType<SubmitCustomerConsentBundleRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitCustomerConsentBundle>>,
+  TError,
+  { data: BodyType<SubmitCustomerConsentBundleRequest> },
+  TContext
+> => {
+  return useMutation(getSubmitCustomerConsentBundleMutationOptions(options));
+};
 
 export const getListAccountsUrl = () => {
   return `/api/v1/accounts`;

@@ -20,3 +20,12 @@ export class CustomerAccessRestrictedError extends Error {
     this.name = "CustomerAccessRestrictedError";
   }
 }
+
+export class CustomerOnboardingRequiredError extends Error {
+  constructor(
+    message = "Customer onboarding must be completed before financial products are available.",
+  ) {
+    super(message);
+    this.name = "CustomerOnboardingRequiredError";
+  }
+}

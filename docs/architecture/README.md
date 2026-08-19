@@ -99,5 +99,6 @@ passes its acceptance gate.
 - [Frontend cutover](./frontend-cutover.md)
 - [Operations control plane](./operations-control-plane.md)
 - [Customer identity and Auth0 foundation](./customer-identity-auth0.md)
+- [Customer onboarding and consent foundation](./customer-onboarding.md)
 - [Replit safety and release gates](./replit-runbook.md)
 - [Backend assurance release readiness](../testing/backend-assurance-release-readiness.md)

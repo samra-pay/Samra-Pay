@@ -2,6 +2,10 @@ import type pg from "pg";
 
 const REQUIRED_RUNTIME_RELATIONS = Object.freeze([
   "samra_core.customers",
+  "samra_core.customer_auth_identities",
+  "samra_core.customer_onboardings",
+  "samra_core.customer_onboarding_transitions",
+  "samra_core.customer_consents",
   "samra_core.ledger_journals",
   "samra_core.ledger_account_balances",
   "samra_core.remittance_transfers",

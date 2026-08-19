@@ -1,0 +1,134 @@
+# Customer onboarding and consent foundation
+
+## Decision
+
+Samra Pay owns the customer ID, onboarding state, consent evidence, capability decisions, and audit trail. Auth0 proves that an external subject authenticated; it does not create a financial entitlement. Persona, Crossmint, Rain, Cybrid, Bridge, banks, and funding rails remain downstream adapters.
+
+This foundation creates one durable customer and one onboarding aggregate across web and mobile. It does not configure Auth0, call Persona, create a wallet, fund an account, enable a deployment, or change Replit.
+
+## Runtime boundary
+
+The endpoints exist only in the disabled-by-default Auth0 plus PostgreSQL demo boundary defined in [Customer identity and Auth0 foundation](./customer-identity-auth0.md). The current consent catalog is explicitly `non_production`; it is architecture and test evidence, not approved legal text.
+
+## Durable model
+
+`samra_core.customer_onboardings` is the current aggregate. It carries:
+
+- one immutable Samra customer binding;
+- the canonical current state;
+- the latest completed step;
+- a normalized reason family;
+- an optimistic-concurrency version;
+- state-entry and record timestamps.
+
+`samra_core.customer_onboarding_transitions` is append-only state history. `samra_core.customer_consents` is append-only consent evidence with the consent type, document and bundle versions, locale, decision, server channel, and a one-way hash of the client idempotency key. Raw Auth0 subjects, tokens, email, phone, name, passwords, and provider payloads do not enter consent or audit evidence.
+
+Pending customer rows intentionally have null profile fields. The API presents a clear pending-profile label to workforce users; it does not manufacture a customer name or country from untrusted Auth0 claims.
+
+## Email, phone, and duplicate policy
+
+Email, phone, and name claims are attributes, never identity keys or authorization inputs. This phase does not copy them from an access token. A future profile command may accept a contact attribute only after the exact Auth0 application, verification claim, normalization rule, change-notification rule, and retention purpose are approved. A verified email or phone still cannot automatically merge two Samra customers.
+
+Because this foundation has no safe duplicate-person signal, a new Auth0 subject receives a separate profile-pending record and no financial capability. The Persona phase must compare normalized identity outcomes before wallet creation and route a potential duplicate to audited review. It must not create a second wallet or auto-merge records.
+
+## State and capability gate
+
+The durable states are:
+
+```text
+not_started
+authenticated
+consent_pending
+identity_in_progress
+identity_review
+identity_approved
+bank_link_pending
+bank_matched
+wallet_consent_pending
+wallet_provisioning
+wallet_ready
+funding_ready
+activated
+restricted
+```
+
+Only `activated` may pass the existing customer financial-route actor resolver. A bound customer in every other onboarding state receives `CUSTOMER_ONBOARDING_REQUIRED`. A revoked Auth0 binding or suspended or closed customer receives `CUSTOMER_ACCESS_RESTRICTED`. Existing synthetic customers without an onboarding row retain the pre-existing test behavior; a controlled onboarding start backfills them as activated.
+
+The database trigger permits only the reviewed forward transition graph and transition to `restricted`. It rejects skipped activation, stale version changes, identity rebinding, evidence updates, and evidence deletion.
+
+## API contract
+
+| Endpoint                           | Purpose                                    | Result                                                                                |
+| ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `POST /api/v1/onboarding`          | First-login initialization or safe resume  | `201` when the aggregate is created, `200` when it already exists                     |
+| `GET /api/v1/onboarding`           | Cross-surface resume                       | Current durable state, version, timestamps, consent catalog, and next allowed actions |
+| `POST /api/v1/onboarding/consents` | Submit the complete current consent bundle | Immutable decisions plus one atomic aggregate transition                              |
+
+All three endpoints require an already validated Auth0 API access token. Both command endpoints require `Idempotency-Key`. No endpoint accepts a customer ID, Auth0 subject, email, phone, name, KYC status, wallet status, or capability from the client.
+
+## First-login transaction
+
+The server normalizes the configured issuer and verified token subject, then takes a transaction-scoped identity lock. In one PostgreSQL transaction it:
+
+1. resolves the existing immutable identity binding, if present;
+2. otherwise creates a profile-pending Samra customer with a server-generated external reference;
+3. binds the Auth0 issuer and subject exactly once;
+4. creates the onboarding aggregate at `consent_pending`;
+5. appends the initial transition and redacted audit evidence;
+6. commits all records or none.
+
+Concurrent calls across API processes resolve to the same customer and onboarding IDs. A restart reads the same aggregate from PostgreSQL.
+
+## Consent transaction
+
+The server, not the client, owns the current consent catalog. A submission must contain exactly one decision for every required document and must match the current bundle, document versions, and locale.
+
+In one transaction the server:
+
+1. locks the authenticated identity and onboarding aggregate;
+2. verifies the hashed idempotency command and request fingerprint;
+3. appends each versioned consent decision;
+4. moves accepted bundles to `identity_in_progress`, or records a normalized decline while remaining `consent_pending`;
+5. appends transition and redacted audit evidence;
+6. stores the exact response for deterministic replay.
+
+A reused key with changed decisions returns a conflict. A declined customer may later submit a new command and continue. Stored consent and transition rows cannot be updated or deleted.
+
+## Operations visibility
+
+The operations customer summary separates onboarding customers from activated customers with statuses such as `onboarding_consent_pending` and `onboarding_identity_in_progress`. Missing profile fields render as `Customer profile pending` and `--`; the source columns remain null. This lets support see the customer without presenting placeholder text as canonical profile truth.
+
+## Failure behavior
+
+| Failure                                           | Server behavior                                                                   |
+| ------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Missing or invalid access token                   | `401 CUSTOMER_AUTHENTICATION_REQUIRED`                                            |
+| Valid but uninitialized identity on resume        | `403 CUSTOMER_IDENTITY_UNBOUND`; client must call first-login initialization      |
+| Non-activated customer accesses financial route   | `403 CUSTOMER_ONBOARDING_REQUIRED`                                                |
+| Revoked identity or suspended or closed customer  | `403 CUSTOMER_ACCESS_RESTRICTED`                                                  |
+| Missing or malformed idempotency key              | `422 VALIDATION_ERROR`                                                            |
+| Wrong, incomplete, or duplicate consent catalog   | `422 INVALID_ARGUMENT`                                                            |
+| Same idempotency key with different decisions     | `409 CONFLICT`                                                                    |
+| Disallowed state jump or repeat after progression | `409 INVALID_TRANSITION`                                                          |
+| Database failure during a command                 | Full rollback; no partial customer, binding, consent, transition, or audit record |
+
+## Acceptance evidence
+
+The change is acceptable only when Linux CI proves:
+
+1. generated OpenAPI, React client, and Zod contracts are synchronized;
+2. first login creates one customer, identity binding, aggregate, transition, and audit trail;
+3. concurrent first-login calls across two pools return the same IDs;
+4. pending profiles contain no copied Auth0 email, phone, name, or token data;
+5. financial routes remain blocked before activation;
+6. consent acceptance, decline, recovery, and same-key replay are atomic;
+7. changed-request key reuse is rejected;
+8. restart returns the same aggregate and replay response;
+9. consent and transition evidence is append-only;
+10. raw subjects and raw idempotency keys are absent from audit evidence;
+11. prior-schema migration and repeat migration remain safe;
+12. the full workspace test, typecheck, build, and PostgreSQL gates pass.
+
+## Next authorized build
+
+The next backend build is the Persona adapter and normalized identity-case state machine. It may start a Persona inquiry only from `identity_in_progress`; it must not write provider decisions directly into customer capability fields, and it must not call Crossmint until the Samra-owned normalized identity state is approved.

@@ -8,6 +8,7 @@ import {
   CustomerAccessRestrictedError,
   CustomerAuthenticationRequiredError,
   CustomerIdentityUnboundError,
+  CustomerOnboardingRequiredError,
 } from "../lib/customer-auth-errors";
 
 type CustomerIdentityReader = Pick<
@@ -55,6 +56,12 @@ function actorFromIdentity(
     identity.customerState !== "active"
   ) {
     throw new CustomerAccessRestrictedError();
+  }
+  if (
+    identity.onboardingState !== null &&
+    identity.onboardingState !== "activated"
+  ) {
+    throw new CustomerOnboardingRequiredError();
   }
   return Object.freeze({
     id: identity.customerExternalRef,

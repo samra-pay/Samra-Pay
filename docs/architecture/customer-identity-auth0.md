@@ -38,7 +38,7 @@ AUTH0_AUDIENCE=<exact-Samra-API-identifier>
 
 `AUTH0_ISSUER_BASE_URL` must be an HTTPS origin. Paths, embedded credentials, queries, and fragments are rejected. The signing algorithm is locked in code to RS256 and is not an environment override.
 
-The API accepts access tokens only. ID tokens are not API credentials. Missing, malformed, expired, wrongly signed, wrong-issuer, and wrong-audience tokens fail with 401. A valid Auth0 subject without a Samra binding fails with 403. A revoked binding or suspended/closed customer also fails with 403.
+The API accepts access tokens only. ID tokens are not API credentials. Missing, malformed, expired, wrongly signed, wrong-issuer, and wrong-audience tokens fail with 401. A valid Auth0 subject without a Samra binding fails with 403 on customer-data routes; the controlled `POST /api/v1/onboarding` exception may atomically create the pending Samra customer, binding, and onboarding aggregate. A revoked binding or suspended/closed customer also fails with 403.
 
 ## Durable identity model
 
@@ -61,7 +61,7 @@ Email, phone, name, password, access token, refresh token, ID token, Persona dat
 2. The client sends the access token in `Authorization: Bearer <token>`.
 3. The API validates signature, algorithm, issuer, audience, expiration, and subject.
 4. The API resolves the verified issuer and subject through the durable identity mapping.
-5. The API rejects missing, unbound, revoked, suspended, and closed identities.
+5. The API rejects missing, unbound, revoked, suspended, and closed identities on customer-data routes; only the onboarding initialization route may create an unbound subject's pending customer and binding.
 6. The API constructs the canonical customer actor from Samra-owned data.
 7. Domain services authorize every customer-owned resource using that actor. Client-supplied customer selectors are ignored.
 
@@ -105,7 +105,7 @@ The foundation is acceptable when all of the following are proven:
 
 This document, configuration, JWT middleware, durable identity mapping, canonical actor resolution, API contract, and automated tests.
 
-### PR B — onboarding aggregate
+### PR B — onboarding aggregate (implemented by this follow-on)
 
 Create the Samra onboarding record and pending customer profile, bind an Auth0 subject exactly once, define verified-email/phone policy, capture consent versions, and issue the next required onboarding step. No Persona or Crossmint call occurs before this state machine is durable.
 

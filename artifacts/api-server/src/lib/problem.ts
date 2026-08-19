@@ -6,6 +6,7 @@ import {
   CustomerAccessRestrictedError,
   CustomerAuthenticationRequiredError,
   CustomerIdentityUnboundError,
+  CustomerOnboardingRequiredError,
 } from "./customer-auth-errors";
 
 export type FieldErrors = Readonly<Record<string, readonly string[]>>;
@@ -127,6 +128,15 @@ function mapError(error: unknown): Readonly<{
       status: 403,
       code: "CUSTOMER_ACCESS_RESTRICTED",
       title: "Customer access restricted",
+      detail: error.message,
+      fieldErrors: {},
+    };
+  }
+  if (error instanceof CustomerOnboardingRequiredError) {
+    return {
+      status: 403,
+      code: "CUSTOMER_ONBOARDING_REQUIRED",
+      title: "Customer onboarding required",
       detail: error.message,
       fieldErrors: {},
     };
