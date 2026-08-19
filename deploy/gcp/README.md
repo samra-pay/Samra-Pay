@@ -31,7 +31,9 @@ with the exact reviewed project, organization, region, operator domain, and an
 explicit authorization sentinel. Its default is `--plan`, which performs local
 validation and changes no cloud state. The apply phase assumes the project was
 created under the approved organization and billing was linked separately. It
-does not create either one.
+does not create either one. In Cloud Shell, the operator guard reads the
+currently configured `gcloud` account and requires an exact match before any
+mutation.
 
 The bounded bootstrap enables only the approved Samra-managed APIs, project
 labels, the immutable image repository, seven keyless Samra service accounts,
