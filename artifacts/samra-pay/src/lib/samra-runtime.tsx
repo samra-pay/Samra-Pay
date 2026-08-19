@@ -11,13 +11,30 @@ import {
   type SamraDataMode,
   type SamraDataSource,
 } from "@workspace/samra-client";
-import { createGeneratedSamraTransport } from "@workspace/samra-client/generated-transport";
-import { SamraDataSourceProvider } from "@workspace/samra-client/react";
+import {
+  SyntheticSamraOnboardingSource,
+  type SamraOnboardingDemoControls,
+  type SamraOnboardingSource,
+} from "@workspace/samra-client/onboarding";
+import {
+  createGeneratedSamraTransport,
+  GeneratedSamraOnboardingSource,
+} from "@workspace/samra-client/generated-transport";
+import {
+  SamraDataSourceProvider,
+  SamraOnboardingSourceProvider,
+} from "@workspace/samra-client/react";
 
 const DataModeContext = createContext<SamraDataMode | null>(null);
 
 type RuntimeResolution =
-  | Readonly<{ mode: SamraDataMode; source: SamraDataSource; error?: never }>
+  | Readonly<{
+      mode: SamraDataMode;
+      source: SamraDataSource;
+      onboardingSource: SamraOnboardingSource;
+      onboardingDemoControls: SamraOnboardingDemoControls | null;
+      error?: never;
+    }>
   | Readonly<{ error: Error; mode?: never; source?: never }>;
 
 function toError(value: unknown): Error {
@@ -58,7 +75,16 @@ export function SamraRuntimeProvider({
         mode === "api"
           ? new ApiSamraDataSource(createGeneratedSamraTransport())
           : legacyMockBoundary;
-      return { mode, source };
+      const onboardingSource =
+        mode === "api"
+          ? new GeneratedSamraOnboardingSource()
+          : new SyntheticSamraOnboardingSource();
+      return {
+        mode,
+        source,
+        onboardingSource,
+        onboardingDemoControls: mode === "mock" ? onboardingSource : null,
+      };
     } catch (error) {
       return { error: toError(error) };
     }
@@ -85,7 +111,13 @@ export function SamraRuntimeProvider({
   return (
     <DataModeContext.Provider value={runtime.mode}>
       <SamraDataSourceProvider source={runtime.source}>
-        {children}
+        <SamraOnboardingSourceProvider
+          mode={runtime.mode}
+          source={runtime.onboardingSource}
+          demoControls={runtime.onboardingDemoControls}
+        >
+          {children}
+        </SamraOnboardingSourceProvider>
       </SamraDataSourceProvider>
     </DataModeContext.Provider>
   );

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { MobileDataMode } from "@/lib/runtime-config";
 
-const STORAGE_KEY = 'samra-pay-demo-session';
+const STORAGE_KEY = "samra-pay-demo-session";
 
 interface AuthContextValue {
   isReady: boolean;
@@ -12,21 +13,35 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({
+  mode,
+  children,
+}: {
+  mode: MobileDataMode;
+  children: React.ReactNode;
+}) {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
 
   useEffect(() => {
+    if (mode !== "mock") {
+      setIsSignedIn(false);
+      setIsReady(true);
+      return;
+    }
     AsyncStorage.getItem(STORAGE_KEY)
-      .then((value) => setIsSignedIn(value === 'true'))
+      .then((value) => setIsSignedIn(value === "true"))
       .catch(() => setIsSignedIn(false))
       .finally(() => setIsReady(true));
-  }, []);
+  }, [mode]);
 
   const signIn = async () => {
+    if (mode !== "mock") {
+      throw new Error("Auth0 sign-in is not configured for this build.");
+    }
     setIsSignedIn(true);
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, 'true');
+      await AsyncStorage.setItem(STORAGE_KEY, "true");
     } catch {
       // demo session only — ignore persistence errors
     }
@@ -34,10 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     setIsSignedIn(false);
-    try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
+    if (mode === "mock") {
+      try {
+        await AsyncStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // synthetic session only — ignore cleanup errors
+      }
     }
   };
 
@@ -50,6 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }

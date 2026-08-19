@@ -17,11 +17,28 @@ import type {
   CreateQuoteInput,
   CreateTransferInput,
   SamraDataSource,
+  SamraDataMode,
   TransferQuery,
   TransferStatus,
 } from "./index";
+import type {
+  CustomerIdentityProviderDecision,
+  SamraOnboardingDemoControls,
+  SamraOnboardingSource,
+  SubmitCustomerConsentBundleInput,
+} from "./onboarding";
 
 const DataSourceContext = createContext<SamraDataSource | null>(null);
+
+type SamraOnboardingRuntime = Readonly<{
+  mode: SamraDataMode;
+  source: SamraOnboardingSource;
+  demoControls: SamraOnboardingDemoControls | null;
+}>;
+
+const OnboardingSourceContext = createContext<SamraOnboardingRuntime | null>(
+  null,
+);
 
 export function SamraDataSourceProvider({
   source,
@@ -44,6 +61,33 @@ export function useSamraDataSource(): SamraDataSource {
   return source;
 }
 
+export function SamraOnboardingSourceProvider({
+  mode,
+  source,
+  demoControls = null,
+  children,
+}: PropsWithChildren<{
+  mode: SamraDataMode;
+  source: SamraOnboardingSource;
+  demoControls?: SamraOnboardingDemoControls | null;
+}>): ReactElement {
+  return (
+    <OnboardingSourceContext.Provider value={{ mode, source, demoControls }}>
+      {children}
+    </OnboardingSourceContext.Provider>
+  );
+}
+
+export function useSamraOnboardingRuntime(): SamraOnboardingRuntime {
+  const runtime = useContext(OnboardingSourceContext);
+  if (!runtime) {
+    throw new Error(
+      "SamraOnboardingSourceProvider is missing from the application boundary",
+    );
+  }
+  return runtime;
+}
+
 export const samraQueryKeys = {
   customer: ["samra", "customer"] as const,
   accounts: ["samra", "accounts"] as const,
@@ -54,6 +98,8 @@ export const samraQueryKeys = {
   transfers: (input?: TransferQuery) =>
     ["samra", "remittance", "transfers", input ?? {}] as const,
   transfer: (id: string) => ["samra", "remittance", "transfer", id] as const,
+  onboarding: ["samra", "onboarding"] as const,
+  identityCase: ["samra", "onboarding", "identity"] as const,
 };
 
 function retryTransient(failureCount: number, error: unknown): boolean {
@@ -207,6 +253,121 @@ export function useCancelTransfer() {
     async onSuccess(transfer) {
       queryClient.setQueryData(samraQueryKeys.transfer(transfer.id), transfer);
       await invalidateFinancialQueries(queryClient);
+    },
+  });
+}
+
+export function useCustomerOnboarding() {
+  const { source } = useSamraOnboardingRuntime();
+  return useQuery({
+    ...queryDefaults(samraQueryKeys.onboarding),
+    queryFn: () => source.getOnboarding(),
+  });
+}
+
+export function useCustomerIdentityCase(enabled: boolean) {
+  const { source } = useSamraOnboardingRuntime();
+  return useQuery({
+    ...queryDefaults(samraQueryKeys.identityCase),
+    queryFn: () => source.getIdentityCase(),
+    enabled,
+  });
+}
+
+export function useStartCustomerOnboarding() {
+  const { source } = useSamraOnboardingRuntime();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idempotencyKey: string) =>
+      source.startOnboarding(idempotencyKey),
+    retry: false,
+    onSuccess(snapshot) {
+      queryClient.setQueryData(samraQueryKeys.onboarding, snapshot);
+    },
+  });
+}
+
+export function useSubmitCustomerConsents() {
+  const { source } = useSamraOnboardingRuntime();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      input,
+      idempotencyKey,
+    }: {
+      input: SubmitCustomerConsentBundleInput;
+      idempotencyKey: string;
+    }) => source.submitConsentBundle(input, idempotencyKey),
+    retry: false,
+    onSuccess(snapshot) {
+      queryClient.setQueryData(samraQueryKeys.onboarding, snapshot);
+      queryClient.setQueryData(samraQueryKeys.identityCase, null);
+    },
+  });
+}
+
+export function useStartCustomerIdentityVerification() {
+  const { source } = useSamraOnboardingRuntime();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idempotencyKey: string) =>
+      source.startIdentityVerification(idempotencyKey),
+    retry: false,
+    onSuccess(snapshot) {
+      queryClient.setQueryData(samraQueryKeys.identityCase, snapshot);
+      void queryClient.invalidateQueries({
+        queryKey: samraQueryKeys.onboarding,
+      });
+    },
+  });
+}
+
+export function useAdvanceDemoCustomerIdentity() {
+  const { demoControls } = useSamraOnboardingRuntime();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      identityCaseId,
+      decision,
+      idempotencyKey,
+    }: {
+      identityCaseId: string;
+      decision: CustomerIdentityProviderDecision;
+      idempotencyKey: string;
+    }) => {
+      if (!demoControls) {
+        throw new Error("Synthetic identity controls are not enabled.");
+      }
+      return demoControls.advanceIdentity(
+        identityCaseId,
+        decision,
+        idempotencyKey,
+      );
+    },
+    retry: false,
+    async onSuccess(snapshot) {
+      queryClient.setQueryData(samraQueryKeys.identityCase, snapshot);
+      await queryClient.invalidateQueries({
+        queryKey: samraQueryKeys.onboarding,
+      });
+    },
+  });
+}
+
+export function useResetDemoCustomerOnboarding() {
+  const { demoControls } = useSamraOnboardingRuntime();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!demoControls?.reset) {
+        throw new Error("Synthetic onboarding reset is not enabled.");
+      }
+      await demoControls.reset();
+    },
+    retry: false,
+    onSuccess() {
+      queryClient.setQueryData(samraQueryKeys.onboarding, null);
+      queryClient.setQueryData(samraQueryKeys.identityCase, null);
     },
   });
 }

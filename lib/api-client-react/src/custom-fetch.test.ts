@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { customFetch, RequestTimeoutError } from "./custom-fetch.ts";
+import {
+  customFetch,
+  RequestTimeoutError,
+  setAuthTokenGetter,
+} from "./custom-fetch.ts";
 
 test("customFetch parses successful JSON responses", async () => {
   const originalFetch = globalThis.fetch;
@@ -60,6 +64,38 @@ test("customFetch preserves caller cancellation instead of labeling it a timeout
     controller.abort(new Error("caller cancelled"));
     await assert.rejects(request, /caller cancelled/);
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("customFetch resolves short-lived bearer tokens per request without overriding callers", async () => {
+  const originalFetch = globalThis.fetch;
+  const observed: string[] = [];
+  globalThis.fetch = async (_input, init) => {
+    observed.push(new Headers(init?.headers).get("authorization") ?? "");
+    return new Response(JSON.stringify({ status: "ok" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  let tokenVersion = 0;
+  setAuthTokenGetter(() => `short-lived-${++tokenVersion}`);
+
+  try {
+    await customFetch("/api/first");
+    await customFetch("/api/second");
+    await customFetch("/api/explicit", {
+      headers: { Authorization: "Bearer caller-owned" },
+    });
+
+    assert.deepEqual(observed, [
+      "Bearer short-lived-1",
+      "Bearer short-lived-2",
+      "Bearer caller-owned",
+    ]);
+    assert.equal(tokenVersion, 2);
+  } finally {
+    setAuthTokenGetter(null);
     globalThis.fetch = originalFetch;
   }
 });

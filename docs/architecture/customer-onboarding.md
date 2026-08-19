@@ -10,6 +10,39 @@ This foundation creates one durable customer and one onboarding aggregate across
 
 The endpoints exist only in the disabled-by-default Auth0 plus PostgreSQL demo boundary defined in [Customer identity and Auth0 foundation](./customer-identity-auth0.md). The current consent catalog is explicitly `non_production`; it is architecture and test evidence, not approved legal text.
 
+## Web and mobile journey boundary
+
+Web and mobile now consume one shared onboarding state model and one generated
+API adapter. Both surfaces provide the same four-step progress model, explicit
+versioned consent decisions, durable resume behavior, normalized identity
+states, reviewed failure copy, and a clear stop before wallet or funding setup.
+
+Mock mode uses an in-memory, deterministic journey with synthetic identifiers
+and explicit fake Persona controls. API mode uses only server responses and
+never falls back to that synthetic state. A backend outage keeps the saved
+server record authoritative and produces a retryable error.
+
+No legal choice is preselected. The connected clients do not store onboarding
+state, identity evidence, access tokens, refresh tokens, provider payloads, or
+PII in browser storage or mobile `AsyncStorage`. Mobile storage is limited to a
+named boolean demo-session marker in mock mode.
+
+Auth0 remains a deliberate configuration gate:
+
+- web will use Universal Login and request the configured API audience and
+  scopes through the Auth0 React SDK;
+- mobile will use the native Auth0 SDK only after a custom Expo development
+  build or EAS workflow is approved, because the native SDK is not compatible
+  with Expo Go;
+- both clients will resolve short-lived tokens on demand through the shared
+  request boundary; the request module does not persist them;
+- API-mode login stays disabled until tenant, application, audience, callback,
+  logout, and deep-link values are supplied and validated.
+
+Official implementation references: [Auth0 React SPA quickstart](https://auth0.com/docs/quickstart/spa/react),
+[Auth0 Expo quickstart](https://auth0.com/docs/quickstart/native/react-native-expo),
+and [Auth0 React Native SDK](https://github.com/auth0/react-native-auth0).
+
 ## Durable model
 
 `samra_core.customer_onboardings` is the current aggregate. It carries:
@@ -136,7 +169,11 @@ defined in [Customer identity case and Persona boundary](./customer-identity-per
 They may start only from `identity_in_progress`, and provider decisions never
 write customer capability fields directly.
 
-The next build connects the web and mobile onboarding journey to Auth0,
-onboarding resume, consent, and normalized identity state. Crossmint remains
-blocked until that journey passes its correctness, recovery, accessibility,
-performance, and usability gates.
+The web and mobile onboarding journey is connected to durable onboarding resume,
+consent, and normalized identity state. Live Auth0 tenant configuration and the
+mobile custom-development-build decision remain hard stops, not values to guess.
+
+The next build adds Samra-owned funnel telemetry and acquisition attribution
+without PII or vendor-specific events. Crossmint remains blocked until the
+journey passes correctness, recovery, accessibility, performance, and usability
+gates and live identity configuration is approved.

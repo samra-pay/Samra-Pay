@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@workspace/samra-pay-ds/components/ui/toaster";
@@ -35,6 +35,7 @@ import { isUnavailableFinancialPreview } from "@/lib/dashboard-api-model";
 import { useParams } from "wouter";
 
 const queryClient = new QueryClient();
+const CustomerOnboardingPage = lazy(() => import("@/pages/onboarding"));
 
 function DashboardRouter() {
   const params = useParams();
@@ -77,6 +78,13 @@ function Router() {
       <Switch>
         {/* No navbar/footer on login */}
         <Route path="/login" component={Login} />
+        <Route path="/onboarding">
+          <RoutedErrorBoundary>
+            <Suspense fallback={<OnboardingRouteFallback />}>
+              <CustomerOnboardingPage />
+            </Suspense>
+          </RoutedErrorBoundary>
+        </Route>
 
         {/* Dashboard Routes - simplified for demo */}
         <Route path="/dashboard">
@@ -117,6 +125,16 @@ function Router() {
         </Route>
       </Switch>
     </div>
+  );
+}
+
+function OnboardingRouteFallback() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+      <p role="status" className="text-sm text-muted-foreground">
+        Loading secure onboarding…
+      </p>
+    </main>
   );
 }
 

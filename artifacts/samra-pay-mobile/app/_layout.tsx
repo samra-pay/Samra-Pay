@@ -1,19 +1,19 @@
-import React, { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { LanguageProvider } from '@/context/LanguageContext';
-import { TransferProvider } from '@/context/TransferContext';
-import { initializeMobileRuntime } from '@/lib/runtime-config';
-import { MobileSamraRuntimeProvider } from '@/lib/samra-runtime';
-import { tokens } from '@workspace/samra-pay-ds/tokens';
-import { useDesignSystemFonts } from '@workspace/samra-pay-ds/hooks/use-fonts';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
+import React, { useEffect } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { LanguageProvider } from "@/context/LanguageContext";
+import { TransferProvider } from "@/context/TransferContext";
+import { initializeMobileRuntime } from "@/lib/runtime-config";
+import { MobileSamraRuntimeProvider } from "@/lib/samra-runtime";
+import { tokens } from "@workspace/samra-pay-ds/tokens";
+import { useDesignSystemFonts } from "@workspace/samra-pay-ds/hooks/use-fonts";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 
 // Configure the generated API client before any provider or screen can issue a
 // request. Invalid API-mode builds fail explicitly during application startup.
@@ -32,7 +32,7 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
-        headerBackTitle: 'Back',
+        headerBackTitle: "Back",
         contentStyle: { backgroundColor: tokens.color.dark.background },
       }}
     >
@@ -40,6 +40,7 @@ function RootLayoutNav() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={isSignedIn}>
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
       </Stack.Protected>
@@ -65,7 +66,7 @@ export default function RootLayout() {
           <MobileSamraRuntimeProvider config={mobileRuntimeConfig}>
             <GestureHandlerRootView>
               <KeyboardProvider>
-                <AuthProvider>
+                <AuthProvider mode={mobileRuntimeConfig.dataMode}>
                   <LanguageProvider>
                     <TransferProvider>
                       <StatusBar style="light" />
