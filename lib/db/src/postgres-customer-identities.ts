@@ -7,6 +7,7 @@ export type CustomerAuthIdentityResolution = Readonly<{
   customerExternalRef: string;
   customerDisplayName: string;
   customerState: "active" | "suspended" | "closed";
+  onboardingState: string | null;
 }>;
 
 export type CustomerAuthIdentityBinding = Readonly<{
@@ -23,6 +24,7 @@ type IdentityRow = {
   customer_external_ref: string;
   customer_display_name: string;
   customer_state: "active" | "suspended" | "closed";
+  onboarding_state: string | null;
 };
 
 export class CustomerIdentityNotFoundError extends Error {
@@ -50,8 +52,8 @@ export class PostgresCustomerIdentityStore {
     issuer: string;
     subject: string;
   }): Promise<CustomerAuthIdentityResolution | undefined> {
-    const issuer = normalizeIssuer(input.issuer);
-    const subject = normalizeSubject(input.subject);
+    const issuer = normalizeAuth0Issuer(input.issuer);
+    const subject = normalizeAuth0Subject(input.subject);
     const result = await this.#context.query().query<IdentityRow>(
       `${identitySelectSql}
        WHERE identity.provider = 'auth0'
@@ -69,8 +71,8 @@ export class PostgresCustomerIdentityStore {
     subject: string;
   }): Promise<CustomerAuthIdentityBinding> {
     const customerExternalRef = normalizeCustomerRef(input.customerExternalRef);
-    const issuer = normalizeIssuer(input.issuer);
-    const subject = normalizeSubject(input.subject);
+    const issuer = normalizeAuth0Issuer(input.issuer);
+    const subject = normalizeAuth0Subject(input.subject);
 
     return this.#context.run(async () => {
       const query = this.#context.query();
@@ -151,10 +153,13 @@ const identitySelectSql = `SELECT
   identity.state AS identity_state,
   customer.id AS customer_id,
   customer.external_ref AS customer_external_ref,
-  customer.display_name AS customer_display_name,
-  customer.state AS customer_state
+  COALESCE(customer.display_name, 'Customer profile pending') AS customer_display_name,
+  customer.state AS customer_state,
+  onboarding.state AS onboarding_state
 FROM samra_core.customer_auth_identities identity
-JOIN samra_core.customers customer ON customer.id = identity.customer_id`;
+JOIN samra_core.customers customer ON customer.id = identity.customer_id
+LEFT JOIN samra_core.customer_onboardings onboarding
+  ON onboarding.customer_id = customer.id`;
 
 function mapIdentity(row: IdentityRow): CustomerAuthIdentityResolution {
   return Object.freeze({
@@ -164,6 +169,7 @@ function mapIdentity(row: IdentityRow): CustomerAuthIdentityResolution {
     customerExternalRef: row.customer_external_ref,
     customerDisplayName: row.customer_display_name,
     customerState: row.customer_state,
+    onboardingState: row.onboarding_state,
   });
 }
 
@@ -175,7 +181,7 @@ function normalizeCustomerRef(value: string): string {
   return normalized;
 }
 
-function normalizeIssuer(value: string): string {
+export function normalizeAuth0Issuer(value: string): string {
   const normalized = value.trim();
   let issuer: URL;
   try {
@@ -196,7 +202,7 @@ function normalizeIssuer(value: string): string {
   return `${issuer.origin}/`;
 }
 
-function normalizeSubject(value: string): string {
+export function normalizeAuth0Subject(value: string): string {
   if (!value || value !== value.trim() || value.length > 255) {
     throw new CustomerIdentityConflictError();
   }

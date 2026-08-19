@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
+import type { RequestHandler } from "express";
+import { UnauthorizedError } from "express-oauth2-jwt-bearer";
+import { randomUUID } from "node:crypto";
+import { ALPHA_ONBOARDING_CONSENT_BUNDLE } from "@workspace/db";
 import { createApp } from "../src/app";
 import type { ApiRuntimeConfig } from "../src/config";
 import { createConfiguredDemoRuntime } from "../src/domain/create-demo-runtime";
@@ -899,9 +903,155 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
   }
 });
 
-async function startServer(): Promise<RunningServer> {
-  const runtime = createConfiguredDemoRuntime(postgresConfig);
-  const app = createApp(postgresConfig, runtime);
+test("the Auth0 HTTP onboarding boundary creates one customer, resumes after restart, and blocks financial access before activation", async () => {
+  const originalDatabaseUrl = process.env["DATABASE_URL"];
+  process.env["DATABASE_URL"] = connectionString;
+  const running: RunningServer[] = [];
+  const issuer = `https://${randomUUID()}.http-onboarding.samra.test/`;
+  const subject = `auth0|${randomUUID()}`;
+  const config: ApiRuntimeConfig = Object.freeze({
+    backendMode: "demo",
+    providerMode: "fake",
+    persistenceMode: "postgres",
+    devControlsEnabled: true,
+    runWorker: false,
+    workerIntervalMilliseconds: 5,
+    internalOperationsEnabled: false,
+    customerAuth: Object.freeze({
+      mode: "auth0",
+      issuerBaseUrl: issuer,
+      audience: "https://api.samrapay.test",
+      tokenSigningAlgorithm: "RS256",
+    }),
+  });
+  const token = `test:${subject}`;
+  const authorization = { authorization: `Bearer ${token}` };
+  const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
+    if (req.header("authorization") !== `Bearer ${token}`) {
+      next(new UnauthorizedError());
+      return;
+    }
+    req.auth = {
+      header: { alg: "RS256" },
+      payload: {
+        iss: issuer,
+        sub: subject,
+        aud: "https://api.samrapay.test",
+        exp: Math.floor(Date.now() / 1_000) + 300,
+      },
+      token,
+    };
+    next();
+  };
+
+  try {
+    const first = await startServer(config, { customerAccessTokenMiddleware });
+    const second = await startServer(config, {
+      customerAccessTokenMiddleware,
+    });
+    running.push(first, second);
+
+    assert.equal(
+      (await apiRequest(first.origin, "/api/v1/onboarding")).status,
+      401,
+    );
+    const [startA, startB] = await Promise.all([
+      apiRequest(first.origin, "/api/v1/onboarding", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-first-login-command-001",
+        },
+      }),
+      apiRequest(second.origin, "/api/v1/onboarding", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-first-login-command-002",
+        },
+      }),
+    ]);
+    assert.deepEqual([startA.status, startB.status].sort(), [200, 201]);
+    const onboardingA = startA.body as JsonObject;
+    const onboardingB = startB.body as JsonObject;
+    assert.equal(onboardingA["onboardingId"], onboardingB["onboardingId"]);
+    assert.equal(onboardingA["customerId"], onboardingB["customerId"]);
+    assert.equal(onboardingA["state"], "consent_pending");
+
+    const financialAccess = objectBody(
+      await apiRequest(first.origin, "/api/v1/me", {
+        headers: authorization,
+      }),
+      403,
+    );
+    assert.equal(financialAccess["code"], "CUSTOMER_ONBOARDING_REQUIRED");
+
+    const consentBody = {
+      bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+      locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+      decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map((document) => ({
+        consentType: document.consentType,
+        documentVersion: document.documentVersion,
+        decision: "accepted",
+      })),
+    };
+    const [consentA, consentB] = await Promise.all([
+      apiRequest(first.origin, "/api/v1/onboarding/consents", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-consent-command-001",
+        },
+        body: consentBody,
+      }),
+      apiRequest(second.origin, "/api/v1/onboarding/consents", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-consent-command-001",
+        },
+        body: consentBody,
+      }),
+    ]);
+    assert.equal(consentA.status, 200);
+    assert.equal(consentB.status, 200);
+    assert.equal(
+      (consentA.body as JsonObject)["state"],
+      "identity_in_progress",
+    );
+    assert.equal((consentB.body as JsonObject)["version"], 2);
+
+    await stopServer(first);
+    const afterRestart = await startServer(config, {
+      customerAccessTokenMiddleware,
+    });
+    running.push(afterRestart);
+    const resumed = objectBody(
+      await apiRequest(afterRestart.origin, "/api/v1/onboarding", {
+        headers: authorization,
+      }),
+      200,
+    );
+    assert.equal(resumed["onboardingId"], onboardingA["onboardingId"]);
+    assert.equal(resumed["customerId"], onboardingA["customerId"]);
+    assert.equal(resumed["state"], "identity_in_progress");
+    assert.equal(resumed["version"], 2);
+  } finally {
+    await Promise.allSettled(running.map(stopServer));
+    if (originalDatabaseUrl === undefined) {
+      delete process.env["DATABASE_URL"];
+    } else {
+      process.env["DATABASE_URL"] = originalDatabaseUrl;
+    }
+  }
+});
+
+async function startServer(
+  config: ApiRuntimeConfig = postgresConfig,
+  dependencies: Parameters<typeof createApp>[2] = {},
+): Promise<RunningServer> {
+  const runtime = createConfiguredDemoRuntime(config);
+  const app = createApp(config, runtime, dependencies);
   const server = await new Promise<Server>((resolve, reject) => {
     const candidate = app.listen(0, "127.0.0.1", (error?: Error) =>
       error ? reject(error) : resolve(candidate),

@@ -10,6 +10,7 @@ servers:
 tags:
   - name: health
   - name: customer
+  - name: onboarding
   - name: accounts
   - name: activity
   - name: beneficiaries
@@ -67,6 +68,93 @@ paths:
           $ref: "#/components/responses/UnauthorizedProblem"
         "403":
           $ref: "#/components/responses/ForbiddenProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/onboarding:
+    post:
+      operationId: startCustomerOnboarding
+      tags: [onboarding]
+      summary: Atomically create or resume the authenticated customer onboarding aggregate
+      description: Creates a Samra-owned pending customer, Auth0 identity binding, and onboarding aggregate exactly once. Auth0 profile claims are not copied into the customer record.
+      security:
+        - CustomerBearer: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Existing onboarding aggregate resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerOnboarding"
+        "201":
+          description: Customer onboarding aggregate created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerOnboarding"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    get:
+      operationId: getCustomerOnboarding
+      tags: [onboarding]
+      summary: Resume the authenticated customer onboarding aggregate
+      security:
+        - CustomerBearer: []
+      responses:
+        "200":
+          description: Current durable onboarding state and next allowed actions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerOnboarding"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/onboarding/consents:
+    post:
+      operationId: submitCustomerConsentBundle
+      tags: [onboarding]
+      summary: Record an immutable, versioned required-consent bundle
+      description: The server accepts only the current non-production consent catalog. All decisions, the aggregate transition, idempotency evidence, and audit evidence commit atomically.
+      security:
+        - CustomerBearer: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitCustomerConsentBundleRequest"
+      responses:
+        "200":
+          description: Consent decisions recorded or safely replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerOnboarding"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -1005,13 +1093,150 @@ components:
           schema:
             $ref: "#/components/schemas/ApiProblem"
     ForbiddenProblem:
-      description: The authenticated customer identity is unbound or restricted, or the workforce role lacks permission
+      description: The authenticated customer identity is unbound, restricted, or not activated through onboarding, or the workforce role lacks permission
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/ApiProblem"
 
   schemas:
+    CustomerOnboardingState:
+      type: string
+      enum:
+        - not_started
+        - authenticated
+        - consent_pending
+        - identity_in_progress
+        - identity_review
+        - identity_approved
+        - bank_link_pending
+        - bank_matched
+        - wallet_consent_pending
+        - wallet_provisioning
+        - wallet_ready
+        - funding_ready
+        - activated
+        - restricted
+
+    CustomerConsentType:
+      type: string
+      enum:
+        - terms_of_service
+        - privacy_notice
+        - electronic_communications
+
+    CustomerConsentDocument:
+      type: object
+      additionalProperties: false
+      properties:
+        consentType:
+          $ref: "#/components/schemas/CustomerConsentType"
+        documentVersion:
+          type: string
+        required:
+          type: boolean
+      required: [consentType, documentVersion, required]
+
+    CustomerConsentBundle:
+      type: object
+      additionalProperties: false
+      properties:
+        bundleVersion:
+          type: string
+        locale:
+          type: string
+        legalEffect:
+          type: string
+          enum: [non_production]
+        documents:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/CustomerConsentDocument"
+      required: [bundleVersion, locale, legalEffect, documents]
+
+    CustomerOnboarding:
+      type: object
+      additionalProperties: false
+      properties:
+        onboardingId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+        state:
+          $ref: "#/components/schemas/CustomerOnboardingState"
+        latestCompletedStep:
+          type: string
+        reasonFamily:
+          anyOf: [{ type: string }, { type: "null" }]
+        version:
+          type: integer
+          minimum: 1
+        enteredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        nextAllowedActions:
+          type: array
+          items:
+            type: string
+        consentBundle:
+          $ref: "#/components/schemas/CustomerConsentBundle"
+      required:
+        - onboardingId
+        - customerId
+        - state
+        - latestCompletedStep
+        - reasonFamily
+        - version
+        - enteredAt
+        - createdAt
+        - updatedAt
+        - nextAllowedActions
+        - consentBundle
+
+    CustomerConsentDecision:
+      type: object
+      additionalProperties: false
+      properties:
+        consentType:
+          $ref: "#/components/schemas/CustomerConsentType"
+        documentVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+        decision:
+          type: string
+          enum: [accepted, declined]
+      required: [consentType, documentVersion, decision]
+
+    SubmitCustomerConsentBundleRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        bundleVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+        locale:
+          type: string
+          minLength: 2
+          maxLength: 35
+        decisions:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/CustomerConsentDecision"
+      required: [bundleVersion, locale, decisions]
+
     CancelOperationsTransferRequest:
       type: object
       additionalProperties: false

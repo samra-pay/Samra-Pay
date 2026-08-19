@@ -17,6 +17,7 @@ import {
   CreateRemittanceTransferHeader,
   CreateRemittanceTransferResponse,
   GetCurrentCustomerResponse,
+  GetCustomerOnboardingResponse,
   GetWorkforceSessionResponse,
   GetBeneficiaryParams,
   GetBeneficiaryResponse,
@@ -36,6 +37,11 @@ import {
   SelectDemoTransferScenarioBody,
   SelectDemoTransferScenarioParams,
   SelectDemoTransferScenarioResponse,
+  StartCustomerOnboardingHeader,
+  StartCustomerOnboardingResponse,
+  SubmitCustomerConsentBundleBody,
+  SubmitCustomerConsentBundleHeader,
+  SubmitCustomerConsentBundleResponse,
   UpdateBeneficiaryBody,
   UpdateBeneficiaryParams,
   UpdateBeneficiaryResponse,
@@ -76,11 +82,13 @@ import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import {
   WorkforceAuthenticationError,
+  CustomerOnboardingAccessRestrictedError,
+  CustomerOnboardingNotFoundError,
   type PostgresWorkforceAuthStore,
   type WorkforceIdentity,
   type WorkforceRole,
 } from "@workspace/db";
-import type { ApiRuntimeConfig } from "../../config";
+import type { ApiRuntimeConfig, CustomerAuthConfig } from "../../config";
 import {
   DEMO_ACTOR,
   DemoRuntime,
@@ -94,6 +102,11 @@ import {
   RequestValidationError,
 } from "../../lib/problem";
 import { createAuth0AccessTokenMiddleware } from "../../lib/customer-access-token";
+import {
+  CustomerAccessRestrictedError,
+  CustomerAuthenticationRequiredError,
+  CustomerIdentityUnboundError,
+} from "../../lib/customer-auth-errors";
 
 const WORKFORCE_SESSION_COOKIE = "samra_ops_session";
 const WORKFORCE_COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1_000;
@@ -188,6 +201,7 @@ export function createV1Router(
   const router = Router();
 
   if (config.customerAuth.mode === "auth0") {
+    const auth0Config = config.customerAuth;
     if (runtime.customerAuthenticationMode !== "auth0") {
       throw new Error(
         "Auth0 customer mode requires an Auth0-backed customer actor resolver.",
@@ -196,8 +210,72 @@ export function createV1Router(
     router.use(
       customerRouteAuthenticationBoundary(
         dependencies.customerAccessTokenMiddleware ??
-          createAuth0AccessTokenMiddleware(config.customerAuth),
+          createAuth0AccessTokenMiddleware(auth0Config),
       ),
+    );
+    if (!runtime.customerOnboardingStore) {
+      throw new Error(
+        "Auth0 customer mode requires a durable customer onboarding store.",
+      );
+    }
+    const onboarding = runtime.customerOnboardingStore;
+
+    router.post(
+      "/onboarding",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        const header = parseSchema(StartCustomerOnboardingHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        try {
+          const result = await onboarding.startAuth0Onboarding({
+            ...identity,
+            idempotencyKey: header["Idempotency-Key"],
+          });
+          res
+            .status(result.created ? 201 : 200)
+            .json(StartCustomerOnboardingResponse.parse(result.snapshot));
+        } catch (error) {
+          throw translateOnboardingAccessError(error);
+        }
+      }),
+    );
+
+    router.get(
+      "/onboarding",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        try {
+          res.json(
+            GetCustomerOnboardingResponse.parse(
+              await onboarding.getAuth0Onboarding(identity),
+            ),
+          );
+        } catch (error) {
+          throw translateOnboardingAccessError(error);
+        }
+      }),
+    );
+
+    router.post(
+      "/onboarding/consents",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        const header = parseSchema(SubmitCustomerConsentBundleHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        const body = parseSchema(SubmitCustomerConsentBundleBody, req.body);
+        try {
+          const result = await onboarding.recordAuth0ConsentBundle({
+            ...identity,
+            idempotencyKey: header["Idempotency-Key"],
+            ...body,
+          });
+          res.json(SubmitCustomerConsentBundleResponse.parse(result.snapshot));
+        } catch (error) {
+          throw translateOnboardingAccessError(error);
+        }
+      }),
     );
   }
 
@@ -1066,6 +1144,35 @@ function customerRouteAuthenticationBoundary(
     }
     authenticate(request, response, next);
   };
+}
+
+function verifiedAuth0Identity(
+  request: Parameters<RequestHandler>[0],
+  config: Extract<CustomerAuthConfig, { mode: "auth0" }>,
+): Readonly<{ issuer: string; subject: string }> {
+  const issuer = request.auth?.payload.iss;
+  const subject = request.auth?.payload.sub;
+  if (
+    issuer !== config.issuerBaseUrl ||
+    typeof subject !== "string" ||
+    subject.length === 0 ||
+    subject.length > 255 ||
+    subject !== subject.trim() ||
+    /[\u0000-\u001f\u007f]/u.test(subject)
+  ) {
+    throw new CustomerAuthenticationRequiredError();
+  }
+  return Object.freeze({ issuer, subject });
+}
+
+function translateOnboardingAccessError(error: unknown): unknown {
+  if (error instanceof CustomerOnboardingNotFoundError) {
+    return new CustomerIdentityUnboundError();
+  }
+  if (error instanceof CustomerOnboardingAccessRestrictedError) {
+    return new CustomerAccessRestrictedError();
+  }
+  return error;
 }
 
 async function resolveWorkforceOperator(

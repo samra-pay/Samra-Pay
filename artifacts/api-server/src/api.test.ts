@@ -13,6 +13,13 @@ import {
 } from "./domain/demo-runtime";
 import { DEMO_LEDGER_ACCOUNT_IDS } from "./domain/demo-ledger";
 import { Auth0CustomerActorResolver } from "./domain/customer-auth";
+import {
+  ALPHA_ONBOARDING_CONSENT_BUNDLE,
+  CustomerOnboardingNotFoundError,
+  type CustomerOnboardingSnapshot,
+  type CustomerOnboardingState,
+  type CustomerOnboardingStore,
+} from "@workspace/db";
 
 const demoConfig: ApiRuntimeConfig = Object.freeze({
   backendMode: "demo",
@@ -122,6 +129,8 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
             : input.subject === "auth0|closed"
               ? ("closed" as const)
               : ("active" as const),
+        onboardingState:
+          input.subject === "auth0|onboarding" ? "consent_pending" : null,
       });
     },
   };
@@ -130,6 +139,17 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
     actorResolver: resolver,
     beneficiaryActorResolver: resolver,
     customerAuthenticationMode: "auth0",
+    customerOnboardingStore: {
+      async startAuth0Onboarding() {
+        throw new Error("not used by this authentication-boundary test");
+      },
+      async getAuth0Onboarding() {
+        throw new Error("not used by this authentication-boundary test");
+      },
+      async recordAuth0ConsentBundle() {
+        throw new Error("not used by this authentication-boundary test");
+      },
+    },
   });
   const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
     const authorization = req.header("authorization");
@@ -198,6 +218,15 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
         assert.equal(restricted.body["code"], "CUSTOMER_ACCESS_RESTRICTED");
       }
 
+      const onboardingRequired = await request(origin, "/api/v1/me", {
+        headers: { authorization: "Bearer test:auth0|onboarding" },
+      });
+      assert.equal(onboardingRequired.status, 403);
+      assert.equal(
+        onboardingRequired.body["code"],
+        "CUSTOMER_ONBOARDING_REQUIRED",
+      );
+
       const currentCustomer = await request(origin, "/api/v1/me", {
         headers: {
           authorization: "Bearer test:auth0|active",
@@ -214,6 +243,172 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
         { method: "POST", body: { scenario: "happy_path" } },
       );
       assert.equal(devControl.status, 201);
+    },
+    { customerAccessTokenMiddleware },
+  );
+});
+
+test("Auth0 onboarding starts and resumes before the financial-route authorization gate opens", async () => {
+  const issuer = "https://samra-onboarding.us.auth0.com/";
+  const authConfig: ApiRuntimeConfig = Object.freeze({
+    ...demoConfig,
+    persistenceMode: "postgres",
+    customerAuth: Object.freeze({
+      mode: "auth0",
+      issuerBaseUrl: issuer,
+      audience: "https://api.samrapay.test",
+      tokenSigningAlgorithm: "RS256",
+    }),
+  });
+  let bound = false;
+  let state: CustomerOnboardingState = "consent_pending";
+  let version = 1;
+  let observedStartInput: Readonly<Record<string, unknown>> | undefined;
+  const snapshot = (): CustomerOnboardingSnapshot =>
+    Object.freeze({
+      onboardingId: "00000000-0000-4000-8000-000000000099",
+      customerId: "customer_pending_001",
+      state,
+      latestCompletedStep:
+        state === "consent_pending" ? "authenticated" : "required_consents",
+      reasonFamily: null,
+      version,
+      enteredAt: "2026-08-18T12:00:00.000Z",
+      createdAt: "2026-08-18T12:00:00.000Z",
+      updatedAt: "2026-08-18T12:00:00.000Z",
+      nextAllowedActions:
+        state === "consent_pending"
+          ? ["review_required_consents", "submit_required_consents"]
+          : ["start_identity_verification"],
+      consentBundle: ALPHA_ONBOARDING_CONSENT_BUNDLE,
+    });
+  const onboardingStore: CustomerOnboardingStore = {
+    async startAuth0Onboarding(input) {
+      observedStartInput = input;
+      const created = !bound;
+      bound = true;
+      return Object.freeze({ snapshot: snapshot(), created });
+    },
+    async getAuth0Onboarding() {
+      if (!bound) throw new CustomerOnboardingNotFoundError();
+      return snapshot();
+    },
+    async recordAuth0ConsentBundle() {
+      if (!bound) throw new CustomerOnboardingNotFoundError();
+      state = "identity_in_progress";
+      version += 1;
+      return Object.freeze({ snapshot: snapshot(), replayed: false });
+    },
+  };
+  const identities = {
+    async resolveAuth0Identity() {
+      if (!bound) return undefined;
+      return Object.freeze({
+        identityId: "00000000-0000-4000-8000-000000000098",
+        identityState: "active" as const,
+        customerId: "00000000-0000-4000-8000-000000000097",
+        customerExternalRef: "customer_pending_001",
+        customerDisplayName: "Customer profile pending",
+        customerState: "active" as const,
+        onboardingState: state,
+      });
+    },
+  };
+  const resolver = new Auth0CustomerActorResolver(identities, issuer);
+  const runtime = new DemoRuntime({
+    actorResolver: resolver,
+    beneficiaryActorResolver: resolver,
+    customerAuthenticationMode: "auth0",
+    customerOnboardingStore: onboardingStore,
+  });
+  const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
+    const authorization = req.header("authorization");
+    if (authorization !== "Bearer test:onboarding-subject") {
+      next(new UnauthorizedError());
+      return;
+    }
+    req.auth = {
+      header: { alg: "RS256" },
+      payload: {
+        iss: issuer,
+        sub: "auth0|onboarding-subject",
+        aud: "https://api.samrapay.test",
+        exp: Math.floor(Date.now() / 1_000) + 300,
+        email: "client-claim-must-not-bind@example.test",
+        name: "Client Claim Must Not Bind",
+      },
+      token: authorization.slice("Bearer ".length),
+    };
+    next();
+  };
+  const bearer = { authorization: "Bearer test:onboarding-subject" };
+
+  await withServer(
+    authConfig,
+    runtime,
+    async (origin) => {
+      const beforeStart = await request(origin, "/api/v1/me", {
+        headers: bearer,
+      });
+      assert.equal(beforeStart.status, 403);
+      assert.equal(beforeStart.body["code"], "CUSTOMER_IDENTITY_UNBOUND");
+
+      const missingKey = await request(origin, "/api/v1/onboarding", {
+        method: "POST",
+        headers: bearer,
+      });
+      assert.equal(missingKey.status, 422);
+
+      const started = await request(origin, "/api/v1/onboarding", {
+        method: "POST",
+        headers: { ...bearer, "Idempotency-Key": "onboarding-start-001" },
+      });
+      assert.equal(started.status, 201);
+      assert.equal(started.body["state"], "consent_pending");
+      assert.equal(started.body["customerId"], "customer_pending_001");
+      assert.equal(
+        JSON.stringify(observedStartInput).includes("example.test"),
+        false,
+      );
+
+      const resumedStart = await request(origin, "/api/v1/onboarding", {
+        method: "POST",
+        headers: { ...bearer, "Idempotency-Key": "onboarding-start-001" },
+      });
+      assert.equal(resumedStart.status, 200);
+      const resumed = await request(origin, "/api/v1/onboarding", {
+        headers: bearer,
+      });
+      assert.equal(resumed.status, 200);
+      assert.equal(resumed.body["onboardingId"], started.body["onboardingId"]);
+
+      const productsBlocked = await request(origin, "/api/v1/me", {
+        headers: bearer,
+      });
+      assert.equal(productsBlocked.status, 403);
+      assert.equal(
+        productsBlocked.body["code"],
+        "CUSTOMER_ONBOARDING_REQUIRED",
+      );
+
+      const consented = await request(origin, "/api/v1/onboarding/consents", {
+        method: "POST",
+        headers: { ...bearer, "Idempotency-Key": "consent-command-001" },
+        body: {
+          bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+          locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+          decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+            (document) => ({
+              consentType: document.consentType,
+              documentVersion: document.documentVersion,
+              decision: "accepted",
+            }),
+          ),
+        },
+      });
+      assert.equal(consented.status, 200);
+      assert.equal(consented.body["state"], "identity_in_progress");
+      assert.equal(consented.body["version"], 2);
     },
     { customerAccessTokenMiddleware },
   );

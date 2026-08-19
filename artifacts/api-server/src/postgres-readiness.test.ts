@@ -16,10 +16,17 @@ test("PostgreSQL readiness checks required relations without writing", async () 
   await assertPostgresRuntimeReady(pool);
   assert.equal(calls.length, 1);
   assert.match(calls[0]!.sql, /to_regclass/);
-  assert.doesNotMatch(calls[0]!.sql, /\b(?:insert|update|delete|alter|drop)\b/i);
+  assert.doesNotMatch(
+    calls[0]!.sql,
+    /\b(?:insert|update|delete|alter|drop)\b/i,
+  );
   assert.deepEqual(calls[0]!.values, [
     [
       "samra_core.customers",
+      "samra_core.customer_auth_identities",
+      "samra_core.customer_onboardings",
+      "samra_core.customer_onboarding_transitions",
+      "samra_core.customer_consents",
       "samra_core.ledger_journals",
       "samra_core.ledger_account_balances",
       "samra_core.remittance_transfers",

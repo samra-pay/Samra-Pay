@@ -32,6 +32,226 @@ export const GetCurrentCustomerResponse = zod.object({
 });
 
 /**
+ * Creates a Samra-owned pending customer, Auth0 identity binding, and onboarding aggregate exactly once. Auth0 profile claims are not copied into the customer record.
+ * @summary Atomically create or resume the authenticated customer onboarding aggregate
+ */
+export const startCustomerOnboardingHeaderIdempotencyKeyMin = 8;
+export const startCustomerOnboardingHeaderIdempotencyKeyMax = 128;
+
+export const StartCustomerOnboardingHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(startCustomerOnboardingHeaderIdempotencyKeyMin)
+    .max(startCustomerOnboardingHeaderIdempotencyKeyMax),
+});
+
+export const startCustomerOnboardingResponseConsentBundleDocumentsMin = 3;
+export const startCustomerOnboardingResponseConsentBundleDocumentsMax = 3;
+
+export const StartCustomerOnboardingResponse = zod.object({
+  onboardingId: zod.string().uuid(),
+  customerId: zod.string(),
+  state: zod.enum([
+    "not_started",
+    "authenticated",
+    "consent_pending",
+    "identity_in_progress",
+    "identity_review",
+    "identity_approved",
+    "bank_link_pending",
+    "bank_matched",
+    "wallet_consent_pending",
+    "wallet_provisioning",
+    "wallet_ready",
+    "funding_ready",
+    "activated",
+    "restricted",
+  ]),
+  latestCompletedStep: zod.string(),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  version: zod.number().int().min(1),
+  enteredAt: zod.string().datetime({ offset: true }),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+  consentBundle: zod.object({
+    bundleVersion: zod.string(),
+    locale: zod.string(),
+    legalEffect: zod.enum(["non_production"]),
+    documents: zod
+      .array(
+        zod.object({
+          consentType: zod.enum([
+            "terms_of_service",
+            "privacy_notice",
+            "electronic_communications",
+          ]),
+          documentVersion: zod.string(),
+          required: zod.boolean(),
+        }),
+      )
+      .min(startCustomerOnboardingResponseConsentBundleDocumentsMin)
+      .max(startCustomerOnboardingResponseConsentBundleDocumentsMax),
+  }),
+});
+
+/**
+ * @summary Resume the authenticated customer onboarding aggregate
+ */
+
+export const getCustomerOnboardingResponseConsentBundleDocumentsMin = 3;
+export const getCustomerOnboardingResponseConsentBundleDocumentsMax = 3;
+
+export const GetCustomerOnboardingResponse = zod.object({
+  onboardingId: zod.string().uuid(),
+  customerId: zod.string(),
+  state: zod.enum([
+    "not_started",
+    "authenticated",
+    "consent_pending",
+    "identity_in_progress",
+    "identity_review",
+    "identity_approved",
+    "bank_link_pending",
+    "bank_matched",
+    "wallet_consent_pending",
+    "wallet_provisioning",
+    "wallet_ready",
+    "funding_ready",
+    "activated",
+    "restricted",
+  ]),
+  latestCompletedStep: zod.string(),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  version: zod.number().int().min(1),
+  enteredAt: zod.string().datetime({ offset: true }),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+  consentBundle: zod.object({
+    bundleVersion: zod.string(),
+    locale: zod.string(),
+    legalEffect: zod.enum(["non_production"]),
+    documents: zod
+      .array(
+        zod.object({
+          consentType: zod.enum([
+            "terms_of_service",
+            "privacy_notice",
+            "electronic_communications",
+          ]),
+          documentVersion: zod.string(),
+          required: zod.boolean(),
+        }),
+      )
+      .min(getCustomerOnboardingResponseConsentBundleDocumentsMin)
+      .max(getCustomerOnboardingResponseConsentBundleDocumentsMax),
+  }),
+});
+
+/**
+ * The server accepts only the current non-production consent catalog. All decisions, the aggregate transition, idempotency evidence, and audit evidence commit atomically.
+ * @summary Record an immutable, versioned required-consent bundle
+ */
+export const submitCustomerConsentBundleHeaderIdempotencyKeyMin = 8;
+export const submitCustomerConsentBundleHeaderIdempotencyKeyMax = 128;
+
+export const SubmitCustomerConsentBundleHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(submitCustomerConsentBundleHeaderIdempotencyKeyMin)
+    .max(submitCustomerConsentBundleHeaderIdempotencyKeyMax),
+});
+
+export const submitCustomerConsentBundleBodyBundleVersionMax = 128;
+
+export const submitCustomerConsentBundleBodyLocaleMin = 2;
+export const submitCustomerConsentBundleBodyLocaleMax = 35;
+
+export const submitCustomerConsentBundleBodyDecisionsItemDocumentVersionMax = 128;
+
+export const submitCustomerConsentBundleBodyDecisionsMin = 3;
+export const submitCustomerConsentBundleBodyDecisionsMax = 3;
+
+export const SubmitCustomerConsentBundleBody = zod.object({
+  bundleVersion: zod
+    .string()
+    .min(1)
+    .max(submitCustomerConsentBundleBodyBundleVersionMax),
+  locale: zod
+    .string()
+    .min(submitCustomerConsentBundleBodyLocaleMin)
+    .max(submitCustomerConsentBundleBodyLocaleMax),
+  decisions: zod
+    .array(
+      zod.object({
+        consentType: zod.enum([
+          "terms_of_service",
+          "privacy_notice",
+          "electronic_communications",
+        ]),
+        documentVersion: zod
+          .string()
+          .min(1)
+          .max(submitCustomerConsentBundleBodyDecisionsItemDocumentVersionMax),
+        decision: zod.enum(["accepted", "declined"]),
+      }),
+    )
+    .min(submitCustomerConsentBundleBodyDecisionsMin)
+    .max(submitCustomerConsentBundleBodyDecisionsMax),
+});
+
+export const submitCustomerConsentBundleResponseConsentBundleDocumentsMin = 3;
+export const submitCustomerConsentBundleResponseConsentBundleDocumentsMax = 3;
+
+export const SubmitCustomerConsentBundleResponse = zod.object({
+  onboardingId: zod.string().uuid(),
+  customerId: zod.string(),
+  state: zod.enum([
+    "not_started",
+    "authenticated",
+    "consent_pending",
+    "identity_in_progress",
+    "identity_review",
+    "identity_approved",
+    "bank_link_pending",
+    "bank_matched",
+    "wallet_consent_pending",
+    "wallet_provisioning",
+    "wallet_ready",
+    "funding_ready",
+    "activated",
+    "restricted",
+  ]),
+  latestCompletedStep: zod.string(),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  version: zod.number().int().min(1),
+  enteredAt: zod.string().datetime({ offset: true }),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+  consentBundle: zod.object({
+    bundleVersion: zod.string(),
+    locale: zod.string(),
+    legalEffect: zod.enum(["non_production"]),
+    documents: zod
+      .array(
+        zod.object({
+          consentType: zod.enum([
+            "terms_of_service",
+            "privacy_notice",
+            "electronic_communications",
+          ]),
+          documentVersion: zod.string(),
+          required: zod.boolean(),
+        }),
+      )
+      .min(submitCustomerConsentBundleResponseConsentBundleDocumentsMin)
+      .max(submitCustomerConsentBundleResponseConsentBundleDocumentsMax),
+  }),
+});
+
+/**
  * @summary List ledger-derived customer accounts
  */
 export const listAccountsResponseLast4RegExp = new RegExp("^[0-9]{4}$");

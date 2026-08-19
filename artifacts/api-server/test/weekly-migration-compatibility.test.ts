@@ -140,6 +140,9 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
       resolution_columns: string;
       customer_auth_identity_table: string;
       customer_auth_identity_guard: string;
+      customer_onboarding_tables: string;
+      customer_onboarding_guards: string;
+      pending_profile_columns: string;
     }>(
       `SELECT
          (SELECT count(*) FROM samra_migrations.migration_history)::text AS migrations,
@@ -169,10 +172,24 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
            AS customer_auth_identity_table,
          (SELECT count(*)::text FROM pg_trigger
           WHERE tgname = 'customer_auth_identities_controlled_mutation'
-            AND NOT tgisinternal) AS customer_auth_identity_guard`,
+            AND NOT tgisinternal) AS customer_auth_identity_guard,
+         (SELECT count(*)::text FROM information_schema.tables
+          WHERE table_schema = 'samra_core'
+            AND table_name IN ('customer_onboardings',
+                               'customer_onboarding_transitions',
+                               'customer_consents')) AS customer_onboarding_tables,
+         (SELECT count(*)::text FROM pg_trigger
+          WHERE tgname IN ('customer_onboardings_controlled_mutation',
+                           'customer_onboarding_transitions_append_only',
+                           'customer_consents_append_only')
+            AND NOT tgisinternal) AS customer_onboarding_guards,
+         (SELECT count(*)::text FROM information_schema.columns
+          WHERE table_schema = 'samra_core' AND table_name = 'customers'
+            AND column_name IN ('display_name','country_code')
+            AND is_nullable = 'YES') AS pending_profile_columns`,
     );
     assert.deepEqual(upgraded.rows[0], {
-      migrations: "12",
+      migrations: "13",
       customers: "2",
       opening_journals: "1",
       natural_balance_minor: "425000",
@@ -181,6 +198,9 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
       resolution_columns: "3",
       customer_auth_identity_table: "1",
       customer_auth_identity_guard: "1",
+      customer_onboarding_tables: "3",
+      customer_onboarding_guards: "3",
+      pending_profile_columns: "2",
     });
   } finally {
     if (target) await target.pool.end();
