@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "status": "review-only",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "deploymentAuthorized": false,
+  "project": {
+    "id": "samra-pay-staging",
+    "organizationId": "614833350075",
+    "region": "us-east4"
+  },
+  "network": {
+    "name": "samra-staging-vpc",
+    "subnetMode": "custom",
+    "routingMode": "REGIONAL",
+    "subnet": {
+      "name": "samra-staging-us-east4",
+      "cidr": "10.40.0.0/24",
+      "privateGoogleAccess": true
+    },
+    "privateServicesAccess": {
+      "rangeName": "google-managed-services-samra-staging-vpc",
+      "address": "10.41.0.0",
+      "prefixLength": 24,
+      "purpose": "VPC_PEERING",
+      "service": "servicenetworking.googleapis.com"
+    }
+  },
+  "instance": {
+    "name": "samra-staging-postgres",
+    "databaseVersion": "POSTGRES_16",
+    "edition": "ENTERPRISE",
+    "tier": "db-g1-small",
+    "availabilityType": "ZONAL",
+    "diskType": "PD_SSD",
+    "diskSizeGb": 10,
+    "storageAutoResize": true,
+    "storageAutoResizeLimitGb": 50,
+    "ipv4Enabled": false,
+    "dataApiAccess": "DISALLOW_DATA_API",
+    "privateIpRequired": true,
+    "deletionProtection": true,
+    "backup": {
+      "enabled": true,
+      "startTimeUtc": "07:00",
+      "location": "us",
+      "retainedBackups": 7,
+      "pointInTimeRecoveryEnabled": true,
+      "transactionLogRetentionDays": 7
+    },
+    "database": {
+      "name": "samra_staging",
+      "emptyAtCreation": true
+    }
+  },
+  "apply": {
+    "authorizationSentinel": "AUTHORIZED_STAGING_DATABASE",
+    "resumableOnlyWhenExistingResourcesMatch": true,
+    "liveCostEstimateRequiredBeforeApply": true,
+    "budgetAlertIsNotASpendingCap": true,
+    "creates": [
+      "dedicated custom-mode staging VPC",
+      "one regional staging subnet",
+      "one private services access allocation and connection",
+      "one private PostgreSQL 16 staging instance",
+      "one empty staging database"
+    ],
+    "doesNotCreate": [
+      "public IP or authorized network",
+      "database credential or application user",
+      "Secret Manager version",
+      "schema migration or seed data",
+      "Cloud Run service or job",
+      "production resource",
+      "real provider integration",
+      "customer data",
+      "Replit change"
+    ]
+  }
+}

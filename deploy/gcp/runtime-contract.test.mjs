@@ -73,6 +73,44 @@ test("limits database and secret access to API and migration identities", () => 
   assert.deepEqual(contract.migrationJob.secretAccess, ["database-url"]);
 });
 
+test("pins the private cost-bounded staging database substrate", () => {
+  assert.deepEqual(
+    {
+      engine: contract.database.engine,
+      network: contract.database.network,
+      subnet: contract.database.subnet,
+      privateServicesAccessRange: contract.database.privateServicesAccessRange,
+      edition: contract.database.edition,
+      tier: contract.database.tier,
+      availabilityType: contract.database.availabilityType,
+      diskSizeGb: contract.database.diskSizeGb,
+      storageAutoResizeLimitGb: contract.database.storageAutoResizeLimitGb,
+      privateIpRequired: contract.database.privateIpRequired,
+      publicIpAllowed: contract.database.publicIpAllowed,
+      retainedBackups: contract.database.retainedBackups,
+      transactionLogRetentionDays:
+        contract.database.transactionLogRetentionDays,
+      deletionProtectionRequired: contract.database.deletionProtectionRequired,
+    },
+    {
+      engine: "postgresql-16",
+      network: "samra-staging-vpc",
+      subnet: "samra-staging-us-east4",
+      privateServicesAccessRange: "google-managed-services-samra-staging-vpc",
+      edition: "enterprise",
+      tier: "db-g1-small",
+      availabilityType: "zonal-non-production",
+      diskSizeGb: 10,
+      storageAutoResizeLimitGb: 50,
+      privateIpRequired: true,
+      publicIpAllowed: false,
+      retainedBackups: 7,
+      transactionLogRetentionDays: 7,
+      deletionProtectionRequired: true,
+    },
+  );
+});
+
 test("requires authenticated load-balancer ingress for every service", () => {
   for (const [name, service] of services) {
     assert.equal(
