@@ -231,6 +231,43 @@ argument, image, repository file, or ordinary environment-variable manifest.
 
 ## Database and migration guardrails
 
+`staging-database.json` is the exact, review-only database substrate contract.
+It deliberately chooses a zonal `db-g1-small` Cloud SQL Enterprise instance for
+synthetic staging: enough to integrate and test the product while containing
+idle cost, but explicitly not a production availability claim. PostgreSQL 16 is
+pinned rather than inheriting Google's changing default database version.
+
+The private network uses two non-overlapping `/24` ranges: `10.40.0.0/24` for
+the regional application subnet and `10.41.0.0/24` for Private Services Access.
+The instance has no public IPv4 address or authorized network. Storage starts at
+10 GB SSD, can grow only to 50 GB, and cannot be deleted while deletion
+protection is enabled. Daily backups and PostgreSQL write-ahead logs are retained
+for seven days for point-in-time recovery.
+
+The workflow has three distinct gates:
+
+1. `provision-staging-database.sh --plan` validates the local contract and reads
+   no cloud state.
+2. `--review` runs an authenticated, read-only collision and drift review in
+   Cloud Shell.
+3. `--apply` additionally requires the exact
+   `SAMRA_GCP_DATABASE_APPLY=AUTHORIZED_STAGING_DATABASE` sentinel and stops on
+   any mismatch before reusing an existing resource.
+
+Before apply, the operator must review a current Google Cloud cost estimate. The
+existing $50 budget alert provides notification only; it is not a spending cap.
+
+After apply, `audit-staging-database.sh` independently checks the organization,
+billing, project labels, network, private-service connection, Cloud SQL shape,
+public-IP absence, backup/PITR/deletion controls, database presence, zero
+database-secret versions, and zero Cloud Run services/jobs. It does not connect
+to the database or inspect tables because this phase creates no credential. A
+separate fixed-SHA Cloud Shell session must run this audit before the database
+phase is accepted.
+
+This phase creates no credential, application database user, secret version,
+schema migration, seed row, runtime, provider connection, or Replit change.
+
 1. Create a dedicated staging Cloud SQL PostgreSQL instance and database.
 2. Use a dedicated migration identity and a distinct runtime identity.
 3. Store the connection value in Secret Manager.
