@@ -93,6 +93,20 @@ test("requires plan-first apply and verifies organization and billing", () => {
   );
 });
 
+test("resolves Cloud Shell label support before the first mutation", () => {
+  const capabilityCheck = script.indexOf("STABLE_PROJECT_UPDATE_HELP=");
+  const firstMutation = script.indexOf("gcloud services enable");
+  assert.ok(capabilityCheck >= 0);
+  assert.ok(firstMutation > capabilityCheck);
+  assert.match(script, /PROJECT_LABEL_RELEASE_TRACK="stable"/);
+  assert.match(script, /PROJECT_LABEL_RELEASE_TRACK="alpha"/);
+  assert.match(script, /gcloud alpha projects update/);
+  assert.match(script, /no cloud mutation was attempted/);
+  assert.match(script, /verify_project_label environment staging/);
+  assert.match(script, /verify_project_label data_classification synthetic/);
+  assert.match(script, /verify_project_label application samra-pay/);
+});
+
 test("creates only reviewed keyless staging foundation resources", () => {
   for (const required of [
     "gcloud services enable",

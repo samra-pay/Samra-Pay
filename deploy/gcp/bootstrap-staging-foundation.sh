@@ -86,6 +86,25 @@ if [[ "${BILLING_ENABLED}" != "True" ]]; then
   exit 1
 fi
 
+STABLE_PROJECT_UPDATE_HELP="$(
+  CLOUDSDK_CORE_DISABLE_PROMPTS=1 CLOUDSDK_PAGER="" \
+    gcloud projects update --help 2>&1 || true
+)"
+if [[ "${STABLE_PROJECT_UPDATE_HELP}" == *"--update-labels"* ]]; then
+  PROJECT_LABEL_RELEASE_TRACK="stable"
+else
+  ALPHA_PROJECT_UPDATE_HELP="$(
+    CLOUDSDK_CORE_DISABLE_PROMPTS=1 CLOUDSDK_PAGER="" \
+      gcloud alpha projects update --help 2>&1 || true
+  )"
+  if [[ "${ALPHA_PROJECT_UPDATE_HELP}" == *"--update-labels"* ]]; then
+    PROJECT_LABEL_RELEASE_TRACK="alpha"
+  else
+    echo "This gcloud installation cannot update project labels; no cloud mutation was attempted." >&2
+    exit 1
+  fi
+fi
+
 mapfile -t APIS < <(
   node -e '
     const foundation = require(process.argv[1]);
@@ -94,9 +113,30 @@ mapfile -t APIS < <(
 )
 
 gcloud services enable "${APIS[@]}" --project="${PROJECT_ID}" --quiet
-gcloud projects update "${PROJECT_ID}" \
-  --update-labels=environment=staging,data_classification=synthetic,application=samra-pay \
-  --quiet
+if [[ "${PROJECT_LABEL_RELEASE_TRACK}" == "stable" ]]; then
+  gcloud projects update "${PROJECT_ID}" \
+    --update-labels=environment=staging,data_classification=synthetic,application=samra-pay \
+    --quiet
+else
+  gcloud alpha projects update "${PROJECT_ID}" \
+    --update-labels=environment=staging,data_classification=synthetic,application=samra-pay \
+    --quiet
+fi
+
+verify_project_label() {
+  local key="$1"
+  local expected="$2"
+  local actual
+  actual="$(gcloud projects describe "${PROJECT_ID}" --format="value(labels.${key})")"
+  if [[ "${actual}" != "${expected}" ]]; then
+    echo "Project label ${key} must be ${expected}; found ${actual:-missing}." >&2
+    exit 1
+  fi
+}
+
+verify_project_label environment staging
+verify_project_label data_classification synthetic
+verify_project_label application samra-pay
 
 if ! gcloud artifacts repositories describe "${REPOSITORY}" \
   --project="${PROJECT_ID}" --location="${REGION}" >/dev/null 2>&1; then

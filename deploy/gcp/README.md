@@ -33,7 +33,10 @@ validation and changes no cloud state. The apply phase assumes the project was
 created under the approved organization and billing was linked separately. It
 does not create either one. In Cloud Shell, the operator guard reads the
 currently configured `gcloud` account and requires an exact match before any
-mutation.
+mutation. The bootstrap also resolves stable-versus-alpha project-label support
+before its first cloud mutation, then verifies every Samra-managed project label
+after the update. This keeps supported Cloud Shell releases resumable without
+silently omitting the synthetic-staging boundary.
 
 The bounded bootstrap enables only the approved Samra-managed APIs, project
 labels, the immutable image repository, seven keyless Samra service accounts,
