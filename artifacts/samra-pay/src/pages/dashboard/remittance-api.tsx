@@ -29,6 +29,7 @@ import {
   useCreateQuote,
   useCreateTransfer,
   useRemittanceOptions,
+  useSamraCustomerAcquisition,
   useTransfer,
   useTransfers,
 } from "@workspace/samra-client/react";
@@ -461,6 +462,7 @@ function RecentTransfers({
 }
 
 export function ApiDashboardRemittance() {
+  const acquisition = useSamraCustomerAcquisition();
   const restoredQuote = useMemo(() => readActiveQuote(), []);
   const restoredTransferId = useMemo(() => readActiveTransferId(), []);
   const [screen, setScreen] = useState<Screen>(() =>
@@ -563,6 +565,7 @@ export function ApiDashboardRemittance() {
     ) {
       return;
     }
+    void acquisition.recordOnce("quote_started");
     try {
       const serverQuote = await quoteMutation.mutateAsync({
         sourceAccountId: account.id,
@@ -571,6 +574,7 @@ export function ApiDashboardRemittance() {
         fundingMethod: "samra_balance",
         deliveryMethod,
       });
+      void acquisition.recordOnce("quote_completed");
       if (quote && quote.id !== serverQuote.id) {
         clearActiveRemittanceFlow(quote.id);
       }

@@ -12,15 +12,23 @@ import {
   type SamraDataSource,
 } from "@workspace/samra-client";
 import {
+  CustomerAcquisitionTracker,
+  DISABLED_CUSTOMER_ACQUISITION_CLIENT,
+  deriveWebCustomerAcquisitionAttribution,
+  type CustomerAcquisitionClient,
+} from "@workspace/samra-client/acquisition";
+import {
   SyntheticSamraOnboardingSource,
   type SamraOnboardingDemoControls,
   type SamraOnboardingSource,
 } from "@workspace/samra-client/onboarding";
 import {
   createGeneratedSamraTransport,
+  GeneratedCustomerAcquisitionTransport,
   GeneratedSamraOnboardingSource,
 } from "@workspace/samra-client/generated-transport";
 import {
+  SamraCustomerAcquisitionProvider,
   SamraDataSourceProvider,
   SamraOnboardingSourceProvider,
 } from "@workspace/samra-client/react";
@@ -31,6 +39,7 @@ type RuntimeResolution =
   | Readonly<{
       mode: SamraDataMode;
       source: SamraDataSource;
+      acquisitionClient: CustomerAcquisitionClient;
       onboardingSource: SamraOnboardingSource;
       onboardingDemoControls: SamraOnboardingDemoControls | null;
       error?: never;
@@ -79,9 +88,23 @@ export function SamraRuntimeProvider({
         mode === "api"
           ? new GeneratedSamraOnboardingSource()
           : new SyntheticSamraOnboardingSource();
+      const acquisitionClient =
+        mode === "api"
+          ? new CustomerAcquisitionTracker({
+              platform: "web",
+              attribution: deriveWebCustomerAcquisitionAttribution({
+                search: window.location.search,
+                referrer: document.referrer,
+                currentOrigin: window.location.origin,
+              }),
+              transport: new GeneratedCustomerAcquisitionTransport(),
+              allowCookieSession: true,
+            })
+          : DISABLED_CUSTOMER_ACQUISITION_CLIENT;
       return {
         mode,
         source,
+        acquisitionClient,
         onboardingSource,
         onboardingDemoControls: mode === "mock" ? onboardingSource : null,
       };
@@ -110,15 +133,17 @@ export function SamraRuntimeProvider({
 
   return (
     <DataModeContext.Provider value={runtime.mode}>
-      <SamraDataSourceProvider source={runtime.source}>
-        <SamraOnboardingSourceProvider
-          mode={runtime.mode}
-          source={runtime.onboardingSource}
-          demoControls={runtime.onboardingDemoControls}
-        >
-          {children}
-        </SamraOnboardingSourceProvider>
-      </SamraDataSourceProvider>
+      <SamraCustomerAcquisitionProvider client={runtime.acquisitionClient}>
+        <SamraDataSourceProvider source={runtime.source}>
+          <SamraOnboardingSourceProvider
+            mode={runtime.mode}
+            source={runtime.onboardingSource}
+            demoControls={runtime.onboardingDemoControls}
+          >
+            {children}
+          </SamraOnboardingSourceProvider>
+        </SamraDataSourceProvider>
+      </SamraCustomerAcquisitionProvider>
     </DataModeContext.Provider>
   );
 }

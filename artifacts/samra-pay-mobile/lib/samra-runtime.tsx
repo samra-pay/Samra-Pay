@@ -8,17 +8,25 @@ import {
   ApiSamraDataSource,
   type SamraDataSource,
 } from "@workspace/samra-client";
+import {
+  CustomerAcquisitionTracker,
+  DISABLED_CUSTOMER_ACQUISITION_CLIENT,
+  directCustomerAcquisitionAttribution,
+} from "@workspace/samra-client/acquisition";
 import { SyntheticSamraOnboardingSource } from "@workspace/samra-client/onboarding";
 import {
   createGeneratedSamraTransport,
+  GeneratedCustomerAcquisitionTransport,
   GeneratedSamraOnboardingSource,
 } from "@workspace/samra-client/generated-transport";
 import {
+  SamraCustomerAcquisitionProvider,
   SamraDataSourceProvider,
   SamraOnboardingSourceProvider,
 } from "@workspace/samra-client/react";
 
 import type { MobileDataMode, MobileRuntimeConfig } from "@/lib/runtime-config";
+import { createMobileAcquisitionSessionStore } from "@/lib/acquisition-session";
 
 const MobileDataModeContext = createContext<MobileDataMode | null>(null);
 
@@ -61,18 +69,32 @@ export function MobileSamraRuntimeProvider({
         : new SyntheticSamraOnboardingSource(),
     [config.dataMode],
   );
+  const acquisitionClient = useMemo(
+    () =>
+      config.dataMode === "api"
+        ? new CustomerAcquisitionTracker({
+            platform: "mobile",
+            attribution: directCustomerAcquisitionAttribution(),
+            transport: new GeneratedCustomerAcquisitionTransport(),
+            sessionStore: createMobileAcquisitionSessionStore(),
+          })
+        : DISABLED_CUSTOMER_ACQUISITION_CLIENT,
+    [config.dataMode],
+  );
 
   return (
     <MobileDataModeContext.Provider value={config.dataMode}>
-      <SamraDataSourceProvider source={source}>
-        <SamraOnboardingSourceProvider
-          mode={config.dataMode}
-          source={onboardingSource}
-          demoControls={config.dataMode === "mock" ? onboardingSource : null}
-        >
-          {children}
-        </SamraOnboardingSourceProvider>
-      </SamraDataSourceProvider>
+      <SamraCustomerAcquisitionProvider client={acquisitionClient}>
+        <SamraDataSourceProvider source={source}>
+          <SamraOnboardingSourceProvider
+            mode={config.dataMode}
+            source={onboardingSource}
+            demoControls={config.dataMode === "mock" ? onboardingSource : null}
+          >
+            {children}
+          </SamraOnboardingSourceProvider>
+        </SamraDataSourceProvider>
+      </SamraCustomerAcquisitionProvider>
     </MobileDataModeContext.Provider>
   );
 }

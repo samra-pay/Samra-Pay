@@ -1,5 +1,6 @@
 import {
   advanceDemoCustomerIdentity,
+  bindCustomerAcquisitionSession,
   cancelRemittanceTransfer,
   createRemittanceQuote,
   createRemittanceTransfer,
@@ -12,11 +13,13 @@ import {
   listActivity,
   listBeneficiaries,
   listRemittanceTransfers,
+  recordCustomerAcquisitionEvent,
   startCustomerIdentityVerification,
   startCustomerOnboarding,
   submitCustomerConsentBundle,
 } from "@workspace/api-client-react";
 
+import type { CustomerAcquisitionTransport } from "./acquisition";
 import type {
   ActivityQuery,
   CreateQuoteInput,
@@ -84,6 +87,26 @@ export function createGeneratedSamraTransport(): SamraTransport {
       });
     },
   };
+}
+
+export class GeneratedCustomerAcquisitionTransport implements CustomerAcquisitionTransport {
+  async recordEvent(
+    input: Parameters<CustomerAcquisitionTransport["recordEvent"]>[0],
+    idempotencyKey: string,
+  ) {
+    return recordCustomerAcquisitionEvent(input, {
+      headers: idempotencyHeaders(idempotencyKey),
+    });
+  }
+
+  async bindSession(
+    input: Parameters<CustomerAcquisitionTransport["bindSession"]>[0],
+    idempotencyKey: string,
+  ): Promise<void> {
+    await bindCustomerAcquisitionSession(input, {
+      headers: idempotencyHeaders(idempotencyKey),
+    });
+  }
 }
 
 export class GeneratedSamraOnboardingSource

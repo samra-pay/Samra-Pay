@@ -10,6 +10,7 @@ import {
   useCustomerIdentityCase,
   useCustomerOnboarding,
   useResetDemoCustomerOnboarding,
+  useSamraCustomerAcquisition,
   useSamraOnboardingRuntime,
   useStartCustomerIdentityVerification,
   useStartCustomerOnboarding,
@@ -49,6 +50,7 @@ const IDENTITY_STATES = new Set([
 
 export default function CustomerOnboardingPage() {
   const runtime = useSamraOnboardingRuntime();
+  const acquisition = useSamraCustomerAcquisition();
   const [, setLocation] = useLocation();
   const onboardingQuery = useCustomerOnboarding();
   const onboarding = onboardingQuery.data ?? null;
@@ -68,6 +70,10 @@ export default function CustomerOnboardingPage() {
   const startIdentity = useStartCustomerIdentityVerification();
   const advanceIdentity = useAdvanceDemoCustomerIdentity();
   const resetDemo = useResetDemoCustomerOnboarding();
+
+  useEffect(() => {
+    void acquisition.recordOnce("signup_started");
+  }, [acquisition]);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -101,7 +107,10 @@ export default function CustomerOnboardingPage() {
           loading={startOnboarding.isPending}
           onClick={() =>
             startOnboarding.mutate(commandKey(commandKeys.current, "start"), {
-              onSuccess: () => commandKeys.current.delete("start"),
+              onSuccess: () => {
+                commandKeys.current.delete("start");
+                void acquisition.bind();
+              },
             })
           }
         >
@@ -367,6 +376,7 @@ export default function CustomerOnboardingPage() {
     );
   }, [
     accepted,
+    acquisition,
     advanceIdentity,
     documents,
     identityCase,
