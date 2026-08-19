@@ -293,6 +293,51 @@ test("the HTTP API uses PostgreSQL as durable balance truth across concurrency, 
       Number((operationsSummary["customers"] as JsonObject)["active"] ?? 0),
       2,
     );
+    const acquisitionEvent = objectBody(
+      await apiRequest(first.origin, "/api/v1/acquisition/events", {
+        method: "POST",
+        headers: { "Idempotency-Key": "http-acquisition-event-001" },
+        body: {
+          eventType: "landing_view",
+          platform: "web",
+          attribution: {
+            channel: "partner",
+            source: "community_partner",
+            medium: "referral",
+            campaign: "http_acceptance",
+          },
+        },
+      }),
+      201,
+    );
+    assert.match(String(acquisitionEvent["sessionId"]), /^acq_[0-9a-f]{32}$/);
+    assert.equal(
+      (
+        await apiRequest(
+          first.origin,
+          "/api/v1/internal/operations/customer-funnel",
+          { headers: supportHeaders },
+        )
+      ).status,
+      403,
+    );
+    const funnelReport = objectBody(
+      await apiRequest(
+        first.origin,
+        "/api/v1/internal/operations/customer-funnel",
+        { headers: operationsHeaders },
+      ),
+      200,
+    );
+    assert.ok(
+      Number((funnelReport["eventSessions"] as JsonObject)["landing_view"]) >=
+        1,
+    );
+    assert.deepEqual(funnelReport["privacy"], {
+      aggregateOnly: true,
+      containsCustomerIdentifiers: false,
+      acceptedDimensions: ["channel", "source", "medium", "campaign"],
+    });
     const operationsCustomers = arrayBody(
       await apiRequest(
         first.origin,

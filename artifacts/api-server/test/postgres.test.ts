@@ -9,6 +9,7 @@ import {
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
   PostgresCustomerIdentityCaseStore,
+  PostgresCustomerFunnelStore,
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerIdentityConflictError,
   RandomIdGenerator,
@@ -88,6 +89,285 @@ async function onboardingPersistenceCounts(
 
 test.after(async () => {
   await Promise.all(connections.map((connection) => connection.pool.end()));
+});
+
+test("customer funnel attribution is append-only, concurrent, privacy-safe, and derives the five-send milestone only from durable transfers", async () => {
+  const first = createRuntime();
+  const second = createRuntime();
+  const firstFunnel = new PostgresCustomerFunnelStore(first.context);
+  const secondFunnel = new PostgresCustomerFunnelStore(second.context);
+  const onboarding = new PostgresCustomerOnboardingStore(first.context);
+  const identityCases = new PostgresCustomerIdentityCaseStore(first.context);
+  const newIssuer = `https://${randomUUID()}.funnel.samra.test/`;
+  const newSubject = `auth0|${randomUUID()}`;
+  const newSession = `acq_${randomUUID().replaceAll("-", "")}`;
+
+  const concurrentEvents = await Promise.all([
+    firstFunnel.recordEvent({
+      sessionId: newSession,
+      idempotencyKey: "funnel-event-concurrent-001",
+      eventType: "landing_view",
+      platform: "web",
+      attribution: {
+        channel: "paid_social",
+        source: "instagram",
+        medium: "paid_social",
+        campaign: "alpha_launch",
+      },
+    }),
+    secondFunnel.recordEvent({
+      sessionId: newSession,
+      idempotencyKey: "funnel-event-concurrent-001",
+      eventType: "landing_view",
+      platform: "web",
+      attribution: {
+        channel: "paid_social",
+        source: "instagram",
+        medium: "paid_social",
+        campaign: "alpha_launch",
+      },
+    }),
+  ]);
+  assert.deepEqual(
+    concurrentEvents.map((receipt) => receipt.recorded).sort(),
+    [false, true],
+  );
+  assert.equal(
+    concurrentEvents[0]!.recordedAt,
+    concurrentEvents[1]!.recordedAt,
+  );
+  await assert.rejects(
+    firstFunnel.recordEvent({
+      sessionId: newSession,
+      idempotencyKey: "funnel-event-concurrent-001",
+      eventType: "signup_started",
+      platform: "web",
+      attribution: {
+        channel: "paid_social",
+        source: "instagram",
+        medium: "paid_social",
+        campaign: "changed_campaign",
+      },
+    }),
+    /reused with different input/,
+  );
+  await assert.rejects(
+    firstFunnel.recordEvent({
+      sessionId: newSession,
+      idempotencyKey: "funnel-event-private-url-001",
+      eventType: "signup_started",
+      platform: "web",
+      attribution: {
+        channel: "referral",
+        source: "https://example.test/path?email=private@example.test",
+      },
+    }),
+    /lowercase slug/,
+  );
+
+  await firstFunnel.recordEvent({
+    sessionId: newSession,
+    idempotencyKey: "funnel-event-signup-001",
+    eventType: "signup_started",
+    platform: "web",
+    attribution: {
+      channel: "paid_social",
+      source: "instagram",
+      medium: "paid_social",
+      campaign: "alpha_launch",
+    },
+  });
+  await onboarding.startAuth0Onboarding({
+    issuer: newIssuer,
+    subject: newSubject,
+    idempotencyKey: "funnel-onboarding-start-001",
+  });
+  await onboarding.recordAuth0ConsentBundle({
+    issuer: newIssuer,
+    subject: newSubject,
+    idempotencyKey: "funnel-consent-bundle-001",
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map((document) => ({
+      consentType: document.consentType,
+      documentVersion: document.documentVersion,
+      decision: "accepted" as const,
+    })),
+  });
+  const prepared = await identityCases.prepareAuth0IdentityCase({
+    issuer: newIssuer,
+    subject: newSubject,
+    idempotencyKey: "funnel-identity-start-001",
+  });
+  await identityCases.attachProviderInquiry({
+    identityCaseId: prepared.snapshot.identityCaseId,
+    providerRequestKey: prepared.providerRequestKey,
+    providerInquiryRef: `inq_${randomUUID()}`,
+  });
+  await identityCases.recordProviderEvent({
+    identityCaseId: prepared.snapshot.identityCaseId,
+    providerEventRef: `evt_${randomUUID()}`,
+    eventType: "inquiry.approved",
+    decision: "approved",
+    payloadDigest: sha256("synthetic approved identity evidence"),
+  });
+
+  const concurrentLinks = await Promise.all([
+    firstFunnel.bindAuth0Session({
+      issuer: newIssuer,
+      subject: newSubject,
+      sessionId: newSession,
+      idempotencyKey: "funnel-bind-concurrent-001",
+    }),
+    secondFunnel.bindAuth0Session({
+      issuer: newIssuer,
+      subject: newSubject,
+      sessionId: newSession,
+      idempotencyKey: "funnel-bind-concurrent-002",
+    }),
+  ]);
+  assert.deepEqual(
+    concurrentLinks.map((receipt) => receipt.linked).sort(),
+    [false, true],
+  );
+  assert.equal(
+    concurrentLinks[0]!.customerId,
+    concurrentLinks[1]!.customerId,
+  );
+
+  const legacyIssuer = `https://${randomUUID()}.legacy-funnel.samra.test/`;
+  const legacySubject = `auth0|${randomUUID()}`;
+  const identityStore = new PostgresCustomerIdentityStore(first.context);
+  await identityStore.bindAuth0Identity({
+    customerExternalRef: "demo_customer_001",
+    issuer: legacyIssuer,
+    subject: legacySubject,
+  });
+  await onboarding.startAuth0Onboarding({
+    issuer: legacyIssuer,
+    subject: legacySubject,
+    idempotencyKey: "funnel-legacy-onboarding-001",
+  });
+  await assert.rejects(
+    firstFunnel.bindAuth0Session({
+      issuer: legacyIssuer,
+      subject: legacySubject,
+      sessionId: newSession,
+      idempotencyKey: "funnel-conflicting-link-001",
+    }),
+    /already linked to another customer/,
+  );
+
+  const legacySession = `acq_${randomUUID().replaceAll("-", "")}`;
+  await firstFunnel.recordEvent({
+    sessionId: legacySession,
+    idempotencyKey: "funnel-legacy-landing-001",
+    eventType: "landing_view",
+    platform: "mobile",
+    attribution: {
+      channel: "referral",
+      source: "community_partner",
+      medium: "referral",
+      campaign: "diaspora_alpha",
+    },
+  });
+  await firstFunnel.bindAuth0Session({
+    issuer: legacyIssuer,
+    subject: legacySubject,
+    sessionId: legacySession,
+    idempotencyKey: "funnel-legacy-bind-001",
+  });
+
+  for (let send = 1; send <= 5; send += 1) {
+    const quote = await first.runtime.service.createQuote({
+      actorId: "demo_customer_001",
+      sourceAccountId: "demo_usd_account_001",
+      beneficiaryId: "beneficiary_bank_001",
+      sourceAmountMinor: 100n,
+      fundingMethod: "samra_balance",
+      deliveryMethod: "bank",
+    });
+    const transfer = await first.runtime.service.createTransfer({
+      actorId: "demo_customer_001",
+      quoteId: quote.id,
+      idempotencyKey: `funnel-five-send-${send}-${randomUUID()}`,
+    });
+    await advanceUntil(first.runtime, transfer.id, "COMPLETED");
+  }
+
+  const report = await firstFunnel.funnelReport({
+    from: new Date(Date.now() - 60_000),
+    to: new Date(Date.now() + 60_000),
+    now: new Date("2026-08-19T12:30:00.000Z"),
+  });
+  assert.deepEqual(report.milestones, {
+    linked_customer: 2,
+    onboarding_started: 2,
+    consent_completed: 1,
+    identity_approved: 1,
+    activated: 1,
+    send_1_completed: 1,
+    send_2_completed: 1,
+    send_3_completed: 1,
+    send_4_completed: 1,
+    send_5_completed: 1,
+  });
+  assert.equal(report.eventSessions.landing_view, 2);
+  assert.equal(report.eventSessions.signup_started, 1);
+  assert.equal(report.eventSessions.quote_completed, 0);
+  assert.deepEqual(
+    report.firstTouch.map((row) => [row.channel, row.customers]).sort(),
+    [
+      ["paid_social", 1],
+      ["referral", 1],
+    ],
+  );
+  assert.deepEqual(report.firstTouch, report.lastNonDirect);
+  assert.deepEqual(report.privacy, {
+    aggregateOnly: true,
+    containsCustomerIdentifiers: false,
+    acceptedDimensions: ["channel", "source", "medium", "campaign"],
+  });
+  assert.equal(JSON.stringify(report).includes(newSubject), false);
+  assert.equal(JSON.stringify(report).includes("demo_customer_001"), false);
+
+  const evidence = await first.connection.pool.query<{
+    events: string;
+    links: string;
+    audit_document: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text
+          FROM samra_core.customer_acquisition_events event
+          JOIN samra_core.customer_acquisition_sessions session
+            ON session.id = event.session_id
+         WHERE session.external_ref = $1) AS events,
+       (SELECT count(*)::text
+          FROM samra_core.customer_acquisition_links link
+          JOIN samra_core.customer_acquisition_sessions session
+            ON session.id = link.session_id
+         WHERE session.external_ref = $1) AS links,
+       COALESCE(string_agg(audit.event_key || audit.metadata::text, ''), '')
+         AS audit_document
+      FROM samra_core.audit_events audit
+     WHERE audit.action = 'customer_acquisition_session_linked'`,
+    [newSession],
+  );
+  assert.equal(evidence.rows[0]!.events, "2");
+  assert.equal(evidence.rows[0]!.links, "1");
+  assert.equal(evidence.rows[0]!.audit_document.includes(newSubject), false);
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_acquisition_events
+          SET campaign = 'tampered'
+        WHERE session_id = (
+          SELECT id FROM samra_core.customer_acquisition_sessions
+           WHERE external_ref = $1
+        )`,
+      [newSession],
+    ),
+    /append-only/,
+  );
 });
 
 test("Auth0 identity bindings are durable, idempotent, conflict-safe, and auditable without copying the subject into audit evidence", async () => {

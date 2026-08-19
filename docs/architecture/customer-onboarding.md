@@ -173,7 +173,13 @@ The web and mobile onboarding journey is connected to durable onboarding resume,
 consent, and normalized identity state. Live Auth0 tenant configuration and the
 mobile custom-development-build decision remain hard stops, not values to guess.
 
-The next build adds Samra-owned funnel telemetry and acquisition attribution
-without PII or vendor-specific events. Crossmint remains blocked until the
-journey passes correctness, recovery, accessibility, performance, and usability
-gates and live identity configuration is approved.
+The Samra-owned funnel telemetry and acquisition attribution foundation is
+defined in [Customer funnel telemetry and acquisition attribution](./customer-funnel-attribution.md).
+It records allowlisted low-trust interactions without PII and derives identity,
+activation, and first-through-fifth-send milestones only from canonical
+PostgreSQL state.
+
+The next build instruments the owned web and mobile journeys through the shared
+fail-open telemetry boundary. Crossmint remains blocked until the journey passes
+correctness, recovery, accessibility, performance, and usability gates and live
+identity configuration is approved.

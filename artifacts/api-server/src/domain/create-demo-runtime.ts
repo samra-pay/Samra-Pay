@@ -8,6 +8,7 @@ import {
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
   PostgresCustomerIdentityCaseStore,
+  PostgresCustomerFunnelStore,
   RandomIdGenerator,
   assertPostgresRuntimeReady,
   createDatabase,
@@ -52,6 +53,7 @@ export function createConfiguredDemoRuntime(
     operationsStore: new PostgresOperationsStore(context),
     workforceAuthStore: new PostgresWorkforceAuthStore(context),
     operationsCaseStore: new PostgresOperationsCaseStore(context),
+    customerFunnelStore: new PostgresCustomerFunnelStore(context),
     actorResolver: customerActorResolver,
     beneficiaryActorResolver: customerActorResolver,
     customerAuthenticationMode:

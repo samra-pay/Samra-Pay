@@ -4,6 +4,9 @@ import {
   AdvanceDemoCustomerIdentityHeader,
   AdvanceDemoCustomerIdentityParams,
   AdvanceDemoCustomerIdentityResponse,
+  BindCustomerAcquisitionSessionBody,
+  BindCustomerAcquisitionSessionHeader,
+  BindCustomerAcquisitionSessionResponse,
   CancelRemittanceTransferHeader,
   CancelRemittanceTransferParams,
   CancelRemittanceTransferResponse,
@@ -54,6 +57,8 @@ import {
   UpdateBeneficiaryResponse,
   DeleteBeneficiaryParams,
   GetOperationsSummaryResponse,
+  GetOperationsCustomerFunnelQueryParams,
+  GetOperationsCustomerFunnelResponse,
   GetOperationsTransferParams,
   GetOperationsTransferResponse,
   ListOperationsCustomersQueryParams,
@@ -66,6 +71,9 @@ import {
   ResolveOperationsReconciliationExceptionHeader,
   ResolveOperationsReconciliationExceptionParams,
   ResolveOperationsReconciliationExceptionResponse,
+  RecordCustomerAcquisitionEventBody,
+  RecordCustomerAcquisitionEventHeader,
+  RecordCustomerAcquisitionEventResponse,
   ListOperationsTransfersQueryParams,
   ListOperationsTransfersResponse,
   AddOperationsCaseNoteBody,
@@ -92,6 +100,7 @@ import {
   WorkforceAuthenticationError,
   CustomerOnboardingAccessRestrictedError,
   CustomerOnboardingNotFoundError,
+  CustomerAcquisitionSessionNotFoundError,
   type PostgresWorkforceAuthStore,
   type WorkforceIdentity,
   type WorkforceRole,
@@ -119,9 +128,12 @@ import {
 
 const WORKFORCE_SESSION_COOKIE = "samra_ops_session";
 const WORKFORCE_COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1_000;
+const ACQUISITION_SESSION_COOKIE = "samra_acquisition_session";
+const ACQUISITION_COOKIE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1_000;
 
 type OperationsPermission =
   | "summary:read"
+  | "funnel:read"
   | "customers:read"
   | "transfers:read"
   | "transfers:manage"
@@ -144,6 +156,7 @@ const ROLE_PERMISSIONS: Readonly<
   ]),
   operations_analyst: new Set<OperationsPermission>([
     "summary:read",
+    "funnel:read",
     "customers:read",
     "transfers:read",
     "transfers:manage",
@@ -160,6 +173,7 @@ const ROLE_PERMISSIONS: Readonly<
   ]),
   administrator: new Set<OperationsPermission>([
     "summary:read",
+    "funnel:read",
     "customers:read",
     "transfers:read",
     "transfers:manage",
@@ -209,6 +223,29 @@ export function createV1Router(
 ): Router {
   const router = Router();
 
+  if (runtime.customerFunnelStore) {
+    const funnel = runtime.customerFunnelStore;
+    router.post(
+      "/acquisition/events",
+      asyncRoute(async (req, res) => {
+        const header = parseSchema(RecordCustomerAcquisitionEventHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        const body = parseSchema(RecordCustomerAcquisitionEventBody, req.body);
+        const receipt = await funnel.recordEvent({
+          ...body,
+          sessionId:
+            body.sessionId ?? customerAcquisitionSessionToken(req),
+          idempotencyKey: header["Idempotency-Key"],
+        });
+        setCustomerAcquisitionSessionCookie(req, res, receipt.sessionId);
+        res
+          .status(receipt.recorded ? 201 : 200)
+          .json(RecordCustomerAcquisitionEventResponse.parse(receipt));
+      }),
+    );
+  }
+
   if (config.customerAuth.mode === "auth0") {
     const auth0Config = config.customerAuth;
     if (runtime.customerAuthenticationMode !== "auth0") {
@@ -234,6 +271,7 @@ export function createV1Router(
       );
     }
     const identityVerification = runtime.customerIdentityVerificationService;
+    const funnel = runtime.customerFunnelStore;
 
     router.post(
       "/onboarding",
@@ -332,6 +370,37 @@ export function createV1Router(
         }
       }),
     );
+
+    if (funnel) {
+      router.post(
+        "/acquisition/bind",
+        asyncRoute(async (req, res) => {
+          const identity = verifiedAuth0Identity(req, auth0Config);
+          const header = parseSchema(BindCustomerAcquisitionSessionHeader, {
+            "Idempotency-Key": req.header("Idempotency-Key"),
+          });
+          const body = parseSchema(
+            BindCustomerAcquisitionSessionBody,
+            req.body ?? {},
+          );
+          const sessionId =
+            body.sessionId ?? customerAcquisitionSessionToken(req);
+          if (!sessionId) throw new CustomerAcquisitionSessionNotFoundError();
+          try {
+            const receipt = await funnel.bindAuth0Session({
+              ...identity,
+              sessionId,
+              idempotencyKey: header["Idempotency-Key"],
+            });
+            res
+              .status(receipt.linked ? 201 : 200)
+              .json(BindCustomerAcquisitionSessionResponse.parse(receipt));
+          } catch (error) {
+            throw translateAcquisitionError(error);
+          }
+        }),
+      );
+    }
   }
 
   router.get(
@@ -794,6 +863,42 @@ export function createV1Router(
       }),
     );
 
+    if (runtime.customerFunnelStore) {
+      const funnel = runtime.customerFunnelStore;
+      router.get(
+        "/internal/operations/customer-funnel",
+        asyncRoute(async (req, res) => {
+          const operator = await requireOperationsPermission(
+            req,
+            workforce,
+            operations,
+            "funnel:read",
+          );
+          const query = parseSchema(
+            GetOperationsCustomerFunnelQueryParams,
+            req.query,
+          );
+          const now = new Date();
+          const to = query.cohortTo ? new Date(query.cohortTo) : now;
+          const from = query.cohortFrom
+            ? new Date(query.cohortFrom)
+            : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1_000);
+          const report = await funnel.funnelReport({
+            from,
+            to,
+            now,
+          });
+          await auditOperatorRead(
+            operations,
+            operator,
+            "operations_customer_funnel",
+            `${report.cohortFrom}:${report.cohortTo}`,
+          );
+          res.json(GetOperationsCustomerFunnelResponse.parse(report));
+        }),
+      );
+    }
+
     router.get(
       "/internal/operations/customers",
       asyncRoute(async (req, res) => {
@@ -1224,6 +1329,7 @@ function customerRouteAuthenticationBoundary(
       ? originalPath.slice(v1Prefix.length) || "/"
       : originalPath;
     if (
+      path === "/acquisition/events" ||
       path === "/internal" ||
       path.startsWith("/internal/") ||
       path === "/dev" ||
@@ -1273,6 +1379,15 @@ function translateIdentityVerificationError(error: unknown): unknown {
   }
   if (error instanceof IdentityProviderUnavailableError) {
     return new BackendUnavailableError(error.message);
+  }
+  return error;
+}
+
+function translateAcquisitionError(error: unknown): unknown {
+  const translated = translateOnboardingAccessError(error);
+  if (translated !== error) return translated;
+  if (error instanceof CustomerAcquisitionSessionNotFoundError) {
+    return new DomainError("NOT_FOUND", error.message);
   }
   return error;
 }
@@ -1371,6 +1486,30 @@ function workforceSessionToken(
   const cookies = request.cookies as Record<string, unknown> | undefined;
   const value = cookies?.[WORKFORCE_SESSION_COOKIE];
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function customerAcquisitionSessionToken(
+  request: Parameters<RequestHandler>[0],
+): string | undefined {
+  const cookies = request.cookies as Record<string, unknown> | undefined;
+  const value = cookies?.[ACQUISITION_SESSION_COOKIE];
+  return typeof value === "string" && /^acq_[0-9a-f]{32}$/.test(value)
+    ? value
+    : undefined;
+}
+
+function setCustomerAcquisitionSessionCookie(
+  request: Parameters<RequestHandler>[0],
+  response: Parameters<RequestHandler>[1],
+  sessionId: string,
+): void {
+  response.cookie(ACQUISITION_SESSION_COOKIE, sessionId, {
+    httpOnly: true,
+    secure: isSecureRequest(request),
+    sameSite: "lax",
+    path: "/api/v1",
+    maxAge: ACQUISITION_COOKIE_MAX_AGE_MS,
+  });
 }
 
 function setWorkforceSessionCookie(

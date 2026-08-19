@@ -22,6 +22,7 @@ import type {
   AddOperationsCaseNoteRequest,
   AdvanceDemoCustomerIdentityRequest,
   Beneficiary,
+  BindCustomerAcquisitionSessionRequest,
   CancelOperationsTransferRequest,
   ConflictProblemResponse,
   CreateBeneficiaryRequest,
@@ -29,11 +30,15 @@ import type {
   CreateQuoteRequest,
   CreateTransferRequest,
   CurrentCustomer,
+  CustomerAcquisitionEventReceipt,
+  CustomerAcquisitionLinkReceipt,
+  CustomerFunnelReport,
   CustomerIdentityCase,
   CustomerIdentityProviderEventResult,
   CustomerOnboarding,
   ExpiredProblemResponse,
   ForbiddenProblemResponse,
+  GetOperationsCustomerFunnelParams,
   HealthStatus,
   ListActivityParams,
   ListOperationsAuditEventsParams,
@@ -53,6 +58,7 @@ import type {
   OperationsTransferDetail,
   ReadinessStatus,
   ReconciliationRun,
+  RecordCustomerAcquisitionEventRequest,
   RemittanceOptions,
   RemittanceQuote,
   ResolveOperationsReconciliationExceptionRequest,
@@ -327,6 +333,215 @@ export function useGetCurrentCustomer<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getRecordCustomerAcquisitionEventUrl = () => {
+  return `/api/v1/acquisition/events`;
+};
+
+/**
+ * Creates or resumes an opaque first-party acquisition session. The server accepts only allowlisted event types and normalized attribution slugs; it does not accept URLs, referrers, device fingerprints, customer identifiers, PII, financial state, or client timestamps.
+ * @summary Record one privacy-safe, low-trust acquisition event
+ */
+export const recordCustomerAcquisitionEvent = async (
+  recordCustomerAcquisitionEventRequest: RecordCustomerAcquisitionEventRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerAcquisitionEventReceipt> => {
+  return customFetch<CustomerAcquisitionEventReceipt>(
+    getRecordCustomerAcquisitionEventUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(recordCustomerAcquisitionEventRequest),
+    },
+  );
+};
+
+export const getRecordCustomerAcquisitionEventMutationOptions = <
+  TError = ErrorType<
+    ConflictProblemResponse | ValidationProblemResponse | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordCustomerAcquisitionEvent>>,
+    TError,
+    { data: BodyType<RecordCustomerAcquisitionEventRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordCustomerAcquisitionEvent>>,
+  TError,
+  { data: BodyType<RecordCustomerAcquisitionEventRequest> },
+  TContext
+> => {
+  const mutationKey = ["recordCustomerAcquisitionEvent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordCustomerAcquisitionEvent>>,
+    { data: BodyType<RecordCustomerAcquisitionEventRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordCustomerAcquisitionEvent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordCustomerAcquisitionEventMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordCustomerAcquisitionEvent>>
+>;
+export type RecordCustomerAcquisitionEventMutationBody =
+  BodyType<RecordCustomerAcquisitionEventRequest>;
+export type RecordCustomerAcquisitionEventMutationError = ErrorType<
+  ConflictProblemResponse | ValidationProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Record one privacy-safe, low-trust acquisition event
+ */
+export const useRecordCustomerAcquisitionEvent = <
+  TError = ErrorType<
+    ConflictProblemResponse | ValidationProblemResponse | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordCustomerAcquisitionEvent>>,
+    TError,
+    { data: BodyType<RecordCustomerAcquisitionEventRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordCustomerAcquisitionEvent>>,
+  TError,
+  { data: BodyType<RecordCustomerAcquisitionEventRequest> },
+  TContext
+> => {
+  return useMutation(getRecordCustomerAcquisitionEventMutationOptions(options));
+};
+
+export const getBindCustomerAcquisitionSessionUrl = () => {
+  return `/api/v1/acquisition/bind`;
+};
+
+/**
+ * Links a session exactly once after the Auth0 subject has a durable Samra customer binding. The Auth0 subject and customer identifiers are not returned in funnel reports.
+ * @summary Bind an opaque acquisition session to the authenticated Samra customer
+ */
+export const bindCustomerAcquisitionSession = async (
+  bindCustomerAcquisitionSessionRequest?: BindCustomerAcquisitionSessionRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerAcquisitionLinkReceipt> => {
+  return customFetch<CustomerAcquisitionLinkReceipt>(
+    getBindCustomerAcquisitionSessionUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(bindCustomerAcquisitionSessionRequest),
+    },
+  );
+};
+
+export const getBindCustomerAcquisitionSessionMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bindCustomerAcquisitionSession>>,
+    TError,
+    { data?: BodyType<BindCustomerAcquisitionSessionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bindCustomerAcquisitionSession>>,
+  TError,
+  { data?: BodyType<BindCustomerAcquisitionSessionRequest> },
+  TContext
+> => {
+  const mutationKey = ["bindCustomerAcquisitionSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bindCustomerAcquisitionSession>>,
+    { data?: BodyType<BindCustomerAcquisitionSessionRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bindCustomerAcquisitionSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BindCustomerAcquisitionSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bindCustomerAcquisitionSession>>
+>;
+export type BindCustomerAcquisitionSessionMutationBody =
+  BodyType<BindCustomerAcquisitionSessionRequest> | undefined;
+export type BindCustomerAcquisitionSessionMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Bind an opaque acquisition session to the authenticated Samra customer
+ */
+export const useBindCustomerAcquisitionSession = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bindCustomerAcquisitionSession>>,
+    TError,
+    { data?: BodyType<BindCustomerAcquisitionSessionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bindCustomerAcquisitionSession>>,
+  TError,
+  { data?: BodyType<BindCustomerAcquisitionSessionRequest> },
+  TContext
+> => {
+  return useMutation(getBindCustomerAcquisitionSessionMutationOptions(options));
+};
 
 export const getStartCustomerOnboardingUrl = () => {
   return `/api/v1/onboarding`;
@@ -2827,6 +3042,128 @@ export function useGetOperationsSummary<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetOperationsSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetOperationsCustomerFunnelUrl = (
+  params?: GetOperationsCustomerFunnelParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/internal/operations/customer-funnel?${stringifiedParams}`
+    : `/api/v1/internal/operations/customer-funnel`;
+};
+
+/**
+ * Returns only aggregate, privacy-safe counts. Onboarding, identity, activation, and completed-send milestones are derived from Samra-owned PostgreSQL state; client events cannot claim those milestones.
+ * @summary Get aggregate customer funnel and acquisition attribution truth
+ */
+export const getOperationsCustomerFunnel = async (
+  params?: GetOperationsCustomerFunnelParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerFunnelReport> => {
+  return customFetch<CustomerFunnelReport>(
+    getGetOperationsCustomerFunnelUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetOperationsCustomerFunnelQueryKey = (
+  params?: GetOperationsCustomerFunnelParams,
+) => {
+  return [
+    `/api/v1/internal/operations/customer-funnel`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetOperationsCustomerFunnelQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOperationsCustomerFunnel>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+  >,
+>(
+  params?: GetOperationsCustomerFunnelParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationsCustomerFunnel>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOperationsCustomerFunnelQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOperationsCustomerFunnel>>
+  > = ({ signal }) =>
+    getOperationsCustomerFunnel(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationsCustomerFunnel>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOperationsCustomerFunnelQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOperationsCustomerFunnel>>
+>;
+export type GetOperationsCustomerFunnelQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ValidationProblemResponse
+>;
+
+/**
+ * @summary Get aggregate customer funnel and acquisition attribution truth
+ */
+
+export function useGetOperationsCustomerFunnel<
+  TData = Awaited<ReturnType<typeof getOperationsCustomerFunnel>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+  >,
+>(
+  params?: GetOperationsCustomerFunnelParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationsCustomerFunnel>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOperationsCustomerFunnelQueryOptions(
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

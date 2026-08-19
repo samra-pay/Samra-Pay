@@ -32,6 +32,124 @@ export const GetCurrentCustomerResponse = zod.object({
 });
 
 /**
+ * Creates or resumes an opaque first-party acquisition session. The server accepts only allowlisted event types and normalized attribution slugs; it does not accept URLs, referrers, device fingerprints, customer identifiers, PII, financial state, or client timestamps.
+ * @summary Record one privacy-safe, low-trust acquisition event
+ */
+export const recordCustomerAcquisitionEventHeaderIdempotencyKeyMin = 8;
+export const recordCustomerAcquisitionEventHeaderIdempotencyKeyMax = 128;
+
+export const RecordCustomerAcquisitionEventHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(recordCustomerAcquisitionEventHeaderIdempotencyKeyMin)
+    .max(recordCustomerAcquisitionEventHeaderIdempotencyKeyMax),
+});
+
+export const recordCustomerAcquisitionEventBodySessionIdRegExp = new RegExp(
+  "^acq_[0-9a-f]{32}$",
+);
+export const recordCustomerAcquisitionEventBodyAttributionSourceOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const recordCustomerAcquisitionEventBodyAttributionMediumOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const recordCustomerAcquisitionEventBodyAttributionCampaignOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+
+export const RecordCustomerAcquisitionEventBody = zod.object({
+  sessionId: zod
+    .string()
+    .regex(recordCustomerAcquisitionEventBodySessionIdRegExp)
+    .optional(),
+  eventType: zod.enum([
+    "landing_view",
+    "app_open",
+    "quote_started",
+    "quote_completed",
+    "signup_started",
+  ]),
+  platform: zod.enum(["web", "mobile"]),
+  attribution: zod.object({
+    channel: zod.enum([
+      "direct",
+      "organic_search",
+      "organic_social",
+      "paid_search",
+      "paid_social",
+      "referral",
+      "email",
+      "partner",
+      "offline",
+      "unknown",
+    ]),
+    source: zod.union([
+      zod
+        .string()
+        .regex(recordCustomerAcquisitionEventBodyAttributionSourceOneRegExp),
+      zod.null(),
+    ]),
+    medium: zod.union([
+      zod
+        .string()
+        .regex(recordCustomerAcquisitionEventBodyAttributionMediumOneRegExp),
+      zod.null(),
+    ]),
+    campaign: zod.union([
+      zod
+        .string()
+        .regex(recordCustomerAcquisitionEventBodyAttributionCampaignOneRegExp),
+      zod.null(),
+    ]),
+  }),
+});
+
+export const RecordCustomerAcquisitionEventResponse = zod.object({
+  sessionId: zod.string(),
+  eventType: zod.enum([
+    "landing_view",
+    "app_open",
+    "quote_started",
+    "quote_completed",
+    "signup_started",
+  ]),
+  recorded: zod.boolean(),
+  recordedAt: zod.string().datetime({ offset: true }),
+  synthetic: zod.literal(true),
+});
+
+/**
+ * Links a session exactly once after the Auth0 subject has a durable Samra customer binding. The Auth0 subject and customer identifiers are not returned in funnel reports.
+ * @summary Bind an opaque acquisition session to the authenticated Samra customer
+ */
+export const bindCustomerAcquisitionSessionHeaderIdempotencyKeyMin = 8;
+export const bindCustomerAcquisitionSessionHeaderIdempotencyKeyMax = 128;
+
+export const BindCustomerAcquisitionSessionHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(bindCustomerAcquisitionSessionHeaderIdempotencyKeyMin)
+    .max(bindCustomerAcquisitionSessionHeaderIdempotencyKeyMax),
+});
+
+export const bindCustomerAcquisitionSessionBodySessionIdRegExp = new RegExp(
+  "^acq_[0-9a-f]{32}$",
+);
+
+export const BindCustomerAcquisitionSessionBody = zod.object({
+  sessionId: zod
+    .string()
+    .regex(bindCustomerAcquisitionSessionBodySessionIdRegExp)
+    .optional(),
+});
+
+export const BindCustomerAcquisitionSessionResponse = zod.object({
+  sessionId: zod.string(),
+  customerId: zod.string(),
+  linked: zod.boolean(),
+  linkedAt: zod.string().datetime({ offset: true }),
+  synthetic: zod.literal(true),
+});
+
+/**
  * Creates a Samra-owned pending customer, Auth0 identity binding, and onboarding aggregate exactly once. Auth0 profile claims are not copied into the customer record.
  * @summary Atomically create or resume the authenticated customer onboarding aggregate
  */
@@ -1598,6 +1716,243 @@ export const GetOperationsSummaryResponse = zod.object({
     .number()
     .int()
     .min(getOperationsSummaryResponseOpenReconciliationExceptionsMin),
+});
+
+/**
+ * Returns only aggregate, privacy-safe counts. Onboarding, identity, activation, and completed-send milestones are derived from Samra-owned PostgreSQL state; client events cannot claim those milestones.
+ * @summary Get aggregate customer funnel and acquisition attribution truth
+ */
+export const GetOperationsCustomerFunnelQueryParams = zod.object({
+  cohortFrom: zod.coerce.string().datetime({ offset: true }).optional(),
+  cohortTo: zod.coerce.string().datetime({ offset: true }).optional(),
+});
+
+export const getOperationsCustomerFunnelResponseEventSessionsLandingViewMin = 0;
+
+export const getOperationsCustomerFunnelResponseEventSessionsAppOpenMin = 0;
+
+export const getOperationsCustomerFunnelResponseEventSessionsQuoteStartedMin = 0;
+
+export const getOperationsCustomerFunnelResponseEventSessionsQuoteCompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseEventSessionsSignupStartedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesLinkedCustomerMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesOnboardingStartedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesConsentCompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesIdentityApprovedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesActivatedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesSend1CompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesSend2CompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesSend3CompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesSend4CompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseMilestonesSend5CompletedMin = 0;
+
+export const getOperationsCustomerFunnelResponseFirstTouchItemOneSourceOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const getOperationsCustomerFunnelResponseFirstTouchItemOneMediumOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const getOperationsCustomerFunnelResponseFirstTouchItemOneCampaignOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const getOperationsCustomerFunnelResponseFirstTouchItemTwoCustomersMin = 0;
+
+export const getOperationsCustomerFunnelResponseLastNonDirectItemOneSourceOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const getOperationsCustomerFunnelResponseLastNonDirectItemOneMediumOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const getOperationsCustomerFunnelResponseLastNonDirectItemOneCampaignOneRegExp =
+  new RegExp("^[a-z0-9][a-z0-9._-]{0,63}$");
+export const getOperationsCustomerFunnelResponseLastNonDirectItemTwoCustomersMin = 0;
+
+export const GetOperationsCustomerFunnelResponse = zod.object({
+  generatedAt: zod.string().datetime({ offset: true }),
+  cohortFrom: zod.string().datetime({ offset: true }),
+  cohortTo: zod.string().datetime({ offset: true }),
+  eventSessions: zod.object({
+    landing_view: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseEventSessionsLandingViewMin),
+    app_open: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseEventSessionsAppOpenMin),
+    quote_started: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseEventSessionsQuoteStartedMin),
+    quote_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseEventSessionsQuoteCompletedMin),
+    signup_started: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseEventSessionsSignupStartedMin),
+  }),
+  milestones: zod.object({
+    linked_customer: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesLinkedCustomerMin),
+    onboarding_started: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesOnboardingStartedMin),
+    consent_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesConsentCompletedMin),
+    identity_approved: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesIdentityApprovedMin),
+    activated: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesActivatedMin),
+    send_1_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesSend1CompletedMin),
+    send_2_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesSend2CompletedMin),
+    send_3_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesSend3CompletedMin),
+    send_4_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesSend4CompletedMin),
+    send_5_completed: zod
+      .number()
+      .int()
+      .min(getOperationsCustomerFunnelResponseMilestonesSend5CompletedMin),
+  }),
+  firstTouch: zod.array(
+    zod
+      .object({
+        channel: zod.enum([
+          "direct",
+          "organic_search",
+          "organic_social",
+          "paid_search",
+          "paid_social",
+          "referral",
+          "email",
+          "partner",
+          "offline",
+          "unknown",
+        ]),
+        source: zod.union([
+          zod
+            .string()
+            .regex(
+              getOperationsCustomerFunnelResponseFirstTouchItemOneSourceOneRegExp,
+            ),
+          zod.null(),
+        ]),
+        medium: zod.union([
+          zod
+            .string()
+            .regex(
+              getOperationsCustomerFunnelResponseFirstTouchItemOneMediumOneRegExp,
+            ),
+          zod.null(),
+        ]),
+        campaign: zod.union([
+          zod
+            .string()
+            .regex(
+              getOperationsCustomerFunnelResponseFirstTouchItemOneCampaignOneRegExp,
+            ),
+          zod.null(),
+        ]),
+      })
+      .and(
+        zod.object({
+          customers: zod
+            .number()
+            .int()
+            .min(
+              getOperationsCustomerFunnelResponseFirstTouchItemTwoCustomersMin,
+            ),
+        }),
+      ),
+  ),
+  lastNonDirect: zod.array(
+    zod
+      .object({
+        channel: zod.enum([
+          "direct",
+          "organic_search",
+          "organic_social",
+          "paid_search",
+          "paid_social",
+          "referral",
+          "email",
+          "partner",
+          "offline",
+          "unknown",
+        ]),
+        source: zod.union([
+          zod
+            .string()
+            .regex(
+              getOperationsCustomerFunnelResponseLastNonDirectItemOneSourceOneRegExp,
+            ),
+          zod.null(),
+        ]),
+        medium: zod.union([
+          zod
+            .string()
+            .regex(
+              getOperationsCustomerFunnelResponseLastNonDirectItemOneMediumOneRegExp,
+            ),
+          zod.null(),
+        ]),
+        campaign: zod.union([
+          zod
+            .string()
+            .regex(
+              getOperationsCustomerFunnelResponseLastNonDirectItemOneCampaignOneRegExp,
+            ),
+          zod.null(),
+        ]),
+      })
+      .and(
+        zod.object({
+          customers: zod
+            .number()
+            .int()
+            .min(
+              getOperationsCustomerFunnelResponseLastNonDirectItemTwoCustomersMin,
+            ),
+        }),
+      ),
+  ),
+  privacy: zod.object({
+    aggregateOnly: zod.literal(true),
+    containsCustomerIdentifiers: zod.literal(false),
+    acceptedDimensions: zod.tuple([
+      zod.literal("channel"),
+      zod.literal("source"),
+      zod.literal("medium"),
+      zod.literal("campaign"),
+    ]),
+  }),
 });
 
 /**
