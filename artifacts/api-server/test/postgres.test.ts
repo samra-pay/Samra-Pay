@@ -1279,6 +1279,10 @@ test("identity cases survive concurrency and restart while provider replay, stal
 
 test("PostgreSQL is the durable source of truth across atomicity, concurrency, restart, ledger, refund, and reconciliation", async () => {
   const first = createRuntime();
+  const holdBaseline = await first.connection.pool.query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM samra_core.ledger_holds
+     WHERE business_event_id LIKE 'transfer_%'`,
+  );
 
   const failedQuote = await first.runtime.service.createQuote({
     actorId: "demo_customer_001",
@@ -1310,7 +1314,7 @@ test("PostgreSQL is the durable source of truth across atomicity, concurrency, r
     `SELECT count(*)::text AS count FROM samra_core.ledger_holds
      WHERE business_event_id LIKE 'transfer_%'`,
   );
-  assert.equal(rolledBack.rows[0]!.count, "0");
+  assert.equal(rolledBack.rows[0]!.count, holdBaseline.rows[0]!.count);
   assert.equal(
     await first.runtime.service.quoteStatus(failedQuote.id),
     "active",
