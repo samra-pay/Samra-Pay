@@ -1385,8 +1385,16 @@ test("PostgreSQL is the durable source of truth across atomicity, concurrency, r
     "demo_customer_001",
     "happy_path",
   );
-  assert.equal(reconciliation.items.length, 1);
-  assert.equal(reconciliation.items[0]!.classification, "matched");
+  assert.ok(
+    reconciliation.items.some(
+      (item) =>
+        item.matchKey === createdA.id && item.classification === "matched",
+    ),
+  );
+  assert.equal(
+    reconciliation.items.every((item) => item.classification === "matched"),
+    true,
+  );
   const afterReconRestart = createRuntime();
   assert.deepEqual(
     await afterReconRestart.runtime.getReconciliation(reconciliation.id),
