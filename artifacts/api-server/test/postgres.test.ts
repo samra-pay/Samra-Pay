@@ -408,7 +408,7 @@ test("customer onboarding is atomic across first login, restart, consent replay,
          AS audit_rows,
        (SELECT count(*)::text FROM samra_core.idempotency_records
          WHERE resource_type = 'customer_onboarding'
-           AND resource_id = ($1::uuid)::text)
+           AND resource_id = $1::uuid)
          AS idempotency_rows,
        (SELECT COALESCE(string_agg(idempotency_key, ''), '')
           FROM samra_core.customer_consents
@@ -651,7 +651,7 @@ test("customer onboarding rolls back every write after controlled mid-transactio
            AS audits,
          (SELECT count(*)::text FROM samra_core.idempotency_records
            WHERE resource_type = 'customer_onboarding'
-             AND resource_id = ($1::uuid)::text)
+             AND resource_id = $1::uuid)
            AS idempotency_records`,
       [consentStart.snapshot.onboardingId],
     );
