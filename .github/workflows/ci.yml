@@ -112,7 +112,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: customer-experience-budgets
+          name: customer-experience-budgets-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: tmp/experience-budget-report.json
           if-no-files-found: error
           retention-days: 30
