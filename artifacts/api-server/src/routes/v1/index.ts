@@ -1,5 +1,9 @@
 import { Router, type RequestHandler } from "express";
 import {
+  AdvanceDemoCustomerIdentityBody,
+  AdvanceDemoCustomerIdentityHeader,
+  AdvanceDemoCustomerIdentityParams,
+  AdvanceDemoCustomerIdentityResponse,
   CancelRemittanceTransferHeader,
   CancelRemittanceTransferParams,
   CancelRemittanceTransferResponse,
@@ -17,6 +21,7 @@ import {
   CreateRemittanceTransferHeader,
   CreateRemittanceTransferResponse,
   GetCurrentCustomerResponse,
+  GetCustomerIdentityCaseResponse,
   GetCustomerOnboardingResponse,
   GetWorkforceSessionResponse,
   GetBeneficiaryParams,
@@ -39,6 +44,8 @@ import {
   SelectDemoTransferScenarioResponse,
   StartCustomerOnboardingHeader,
   StartCustomerOnboardingResponse,
+  StartCustomerIdentityVerificationHeader,
+  StartCustomerIdentityVerificationResponse,
   SubmitCustomerConsentBundleBody,
   SubmitCustomerConsentBundleHeader,
   SubmitCustomerConsentBundleResponse,
@@ -81,6 +88,7 @@ import { DomainError, parseMinor } from "@workspace/remittance";
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import {
+  CustomerIdentityCaseNotFoundError,
   WorkforceAuthenticationError,
   CustomerOnboardingAccessRestrictedError,
   CustomerOnboardingNotFoundError,
@@ -94,6 +102,7 @@ import {
   DemoRuntime,
   type PublicReconciliationDemoScenario,
 } from "../../domain/demo-runtime";
+import { IdentityProviderUnavailableError } from "../../domain/customer-identity";
 import { serializeQuote, serializeTransfer } from "../../domain/serializers";
 import {
   BackendUnavailableError,
@@ -219,6 +228,12 @@ export function createV1Router(
       );
     }
     const onboarding = runtime.customerOnboardingStore;
+    if (!runtime.customerIdentityVerificationService) {
+      throw new Error(
+        "Auth0 customer mode requires a durable identity verification service.",
+      );
+    }
+    const identityVerification = runtime.customerIdentityVerificationService;
 
     router.post(
       "/onboarding",
@@ -274,6 +289,46 @@ export function createV1Router(
           res.json(SubmitCustomerConsentBundleResponse.parse(result.snapshot));
         } catch (error) {
           throw translateOnboardingAccessError(error);
+        }
+      }),
+    );
+
+    router.post(
+      "/onboarding/identity",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        const header = parseSchema(StartCustomerIdentityVerificationHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        try {
+          const result =
+            await identityVerification.startAuth0IdentityVerification({
+              ...identity,
+              idempotencyKey: header["Idempotency-Key"],
+            });
+          res
+            .status(result.created ? 201 : 200)
+            .json(
+              StartCustomerIdentityVerificationResponse.parse(result.snapshot),
+            );
+        } catch (error) {
+          throw translateIdentityVerificationError(error);
+        }
+      }),
+    );
+
+    router.get(
+      "/onboarding/identity",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        try {
+          res.json(
+            GetCustomerIdentityCaseResponse.parse(
+              await identityVerification.getAuth0IdentityCase(identity),
+            ),
+          );
+        } catch (error) {
+          throw translateIdentityVerificationError(error);
         }
       }),
     );
@@ -546,6 +601,41 @@ export function createV1Router(
   );
 
   if (config.devControlsEnabled) {
+    if (runtime.customerIdentityVerificationService) {
+      router.post(
+        "/dev/onboarding/identity/:identityCaseId/decision",
+        asyncRoute(async (req, res) => {
+          const params = parseSchema(
+            AdvanceDemoCustomerIdentityParams,
+            req.params,
+          );
+          const header = parseSchema(AdvanceDemoCustomerIdentityHeader, {
+            "Idempotency-Key": req.header("Idempotency-Key"),
+          });
+          const body = parseSchema(AdvanceDemoCustomerIdentityBody, req.body);
+          try {
+            const result =
+              await runtime.customerIdentityVerificationService!.simulateProviderDecision(
+                {
+                  identityCaseId: params.identityCaseId,
+                  decision: body.decision,
+                  idempotencyKey: header["Idempotency-Key"],
+                },
+              );
+            res.json(
+              AdvanceDemoCustomerIdentityResponse.parse({
+                identityCase: result.snapshot,
+                replayed: result.replayed,
+                disposition: result.disposition,
+              }),
+            );
+          } catch (error) {
+            throw translateIdentityVerificationError(error);
+          }
+        }),
+      );
+    }
+
     router.post(
       "/dev/remittance/transfers/:transferId/scenario",
       asyncRoute(async (req, res) => {
@@ -1171,6 +1261,18 @@ function translateOnboardingAccessError(error: unknown): unknown {
   }
   if (error instanceof CustomerOnboardingAccessRestrictedError) {
     return new CustomerAccessRestrictedError();
+  }
+  return error;
+}
+
+function translateIdentityVerificationError(error: unknown): unknown {
+  const translated = translateOnboardingAccessError(error);
+  if (translated !== error) return translated;
+  if (error instanceof CustomerIdentityCaseNotFoundError) {
+    return new DomainError("NOT_FOUND", error.message);
+  }
+  if (error instanceof IdentityProviderUnavailableError) {
+    return new BackendUnavailableError(error.message);
   }
   return error;
 }

@@ -7,6 +7,7 @@ import {
   PostgresOperationsCaseStore,
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
+  PostgresCustomerIdentityCaseStore,
   RandomIdGenerator,
   assertPostgresRuntimeReady,
   createDatabase,
@@ -17,6 +18,10 @@ import { DemoRuntime } from "./demo-runtime";
 import { PostgresReconciliationStore } from "./postgres-reconciliation";
 import { PostgresBeneficiaryStore } from "./postgres-beneficiary-store";
 import { Auth0CustomerActorResolver } from "./customer-auth";
+import {
+  CustomerIdentityVerificationService,
+  DeterministicFakePersonaAdapter,
+} from "./customer-identity";
 
 export function createConfiguredDemoRuntime(
   config: ApiRuntimeConfig,
@@ -28,6 +33,9 @@ export function createConfiguredDemoRuntime(
   const context = new PostgresPersistenceContext(connection.pool);
   const customerIdentityStore = new PostgresCustomerIdentityStore(context);
   const customerOnboardingStore = new PostgresCustomerOnboardingStore(context);
+  const customerIdentityCaseStore = new PostgresCustomerIdentityCaseStore(
+    context,
+  );
   const customerActorResolver =
     config.customerAuth.mode === "auth0"
       ? new Auth0CustomerActorResolver(
@@ -51,6 +59,13 @@ export function createConfiguredDemoRuntime(
     customerOnboardingStore:
       config.customerAuth.mode === "auth0"
         ? customerOnboardingStore
+        : undefined,
+    customerIdentityVerificationService:
+      config.customerAuth.mode === "auth0"
+        ? new CustomerIdentityVerificationService({
+            store: customerIdentityCaseStore,
+            provider: new DeterministicFakePersonaAdapter(),
+          })
         : undefined,
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,

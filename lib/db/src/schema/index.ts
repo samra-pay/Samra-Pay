@@ -9,3 +9,4 @@ export * from "./workforce";
 export * from "./cases";
 export * from "./customer-auth";
 export * from "./customer-onboarding";
+export * from "./customer-identity";

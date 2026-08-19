@@ -85,3 +85,4 @@ export * from "./postgres-workforce-auth";
 export * from "./postgres-cases";
 export * from "./postgres-customer-identities";
 export * from "./postgres-customer-onboarding";
+export * from "./postgres-customer-identity";

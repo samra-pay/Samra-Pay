@@ -252,6 +252,64 @@ export const SubmitCustomerConsentBundleResponse = zod.object({
 });
 
 /**
+ * Creates one durable identity case and idempotently starts the configured provider inquiry. The response contains normalized Samra state only and no provider payload or customer PII.
+ * @summary Create or resume the Samra-owned identity verification case
+ */
+export const startCustomerIdentityVerificationHeaderIdempotencyKeyMin = 8;
+export const startCustomerIdentityVerificationHeaderIdempotencyKeyMax = 128;
+
+export const StartCustomerIdentityVerificationHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(startCustomerIdentityVerificationHeaderIdempotencyKeyMin)
+    .max(startCustomerIdentityVerificationHeaderIdempotencyKeyMax),
+});
+
+export const StartCustomerIdentityVerificationResponse = zod.object({
+  identityCaseId: zod.string(),
+  state: zod.enum([
+    "created",
+    "pending",
+    "review",
+    "approved",
+    "declined",
+    "error",
+  ]),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  provider: zod.enum(["persona"]),
+  synthetic: zod.literal(true),
+  version: zod.number().int().min(1),
+  decidedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+});
+
+/**
+ * @summary Resume the authenticated customer identity verification case
+ */
+
+export const GetCustomerIdentityCaseResponse = zod.object({
+  identityCaseId: zod.string(),
+  state: zod.enum([
+    "created",
+    "pending",
+    "review",
+    "approved",
+    "declined",
+    "error",
+  ]),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  provider: zod.enum(["persona"]),
+  synthetic: zod.literal(true),
+  version: zod.number().int().min(1),
+  decidedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+});
+
+/**
  * @summary List ledger-derived customer accounts
  */
 export const listAccountsResponseLast4RegExp = new RegExp("^[0-9]{4}$");
@@ -1275,6 +1333,58 @@ export const SelectDemoTransferScenarioResponse = zod.object({
       detail: zod.string().optional(),
     }),
   ),
+});
+
+/**
+ * Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+ * @summary Apply a deterministic fake Persona decision
+ */
+export const advanceDemoCustomerIdentityPathIdentityCaseIdMin = 8;
+export const advanceDemoCustomerIdentityPathIdentityCaseIdMax = 128;
+
+export const AdvanceDemoCustomerIdentityParams = zod.object({
+  identityCaseId: zod.coerce
+    .string()
+    .min(advanceDemoCustomerIdentityPathIdentityCaseIdMin)
+    .max(advanceDemoCustomerIdentityPathIdentityCaseIdMax),
+});
+
+export const advanceDemoCustomerIdentityHeaderIdempotencyKeyMin = 8;
+export const advanceDemoCustomerIdentityHeaderIdempotencyKeyMax = 128;
+
+export const AdvanceDemoCustomerIdentityHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(advanceDemoCustomerIdentityHeaderIdempotencyKeyMin)
+    .max(advanceDemoCustomerIdentityHeaderIdempotencyKeyMax),
+});
+
+export const AdvanceDemoCustomerIdentityBody = zod.object({
+  decision: zod.enum(["pending", "review", "approved", "declined", "error"]),
+});
+
+export const AdvanceDemoCustomerIdentityResponse = zod.object({
+  identityCase: zod.object({
+    identityCaseId: zod.string(),
+    state: zod.enum([
+      "created",
+      "pending",
+      "review",
+      "approved",
+      "declined",
+      "error",
+    ]),
+    reasonFamily: zod.union([zod.string(), zod.null()]),
+    provider: zod.enum(["persona"]),
+    synthetic: zod.literal(true),
+    version: zod.number().int().min(1),
+    decidedAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+    createdAt: zod.string().datetime({ offset: true }),
+    updatedAt: zod.string().datetime({ offset: true }),
+    nextAllowedActions: zod.array(zod.string()),
+  }),
+  replayed: zod.boolean(),
+  disposition: zod.enum(["applied", "ignored_stale", "conflict"]),
 });
 
 /**

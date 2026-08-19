@@ -14,11 +14,16 @@ import {
 import { DEMO_LEDGER_ACCOUNT_IDS } from "./domain/demo-ledger";
 import { Auth0CustomerActorResolver } from "./domain/customer-auth";
 import {
+  CustomerIdentityVerificationService,
+  DeterministicFakePersonaAdapter,
+} from "./domain/customer-identity";
+import {
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerOnboardingNotFoundError,
   type CustomerOnboardingSnapshot,
   type CustomerOnboardingState,
   type CustomerOnboardingStore,
+  type CustomerIdentityCaseStore,
 } from "@workspace/db";
 
 const demoConfig: ApiRuntimeConfig = Object.freeze({
@@ -40,6 +45,23 @@ const disabledConfig: ApiRuntimeConfig = Object.freeze({
 });
 
 type JsonObject = Record<string, unknown>;
+
+function unusedIdentityVerificationService(): CustomerIdentityVerificationService {
+  const notUsed = async (): Promise<never> => {
+    throw new Error("not used by this test");
+  };
+  const store: CustomerIdentityCaseStore = {
+    prepareAuth0IdentityCase: notUsed,
+    attachProviderInquiry: notUsed,
+    recordProviderStartFailure: notUsed,
+    getAuth0IdentityCase: notUsed,
+    recordProviderEvent: notUsed,
+  };
+  return new CustomerIdentityVerificationService({
+    store,
+    provider: new DeterministicFakePersonaAdapter(),
+  });
+}
 
 test("health remains available while disabled mode returns a stable 503 problem", async () => {
   await withServer(disabledConfig, undefined, async (origin) => {
@@ -150,6 +172,7 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
         throw new Error("not used by this authentication-boundary test");
       },
     },
+    customerIdentityVerificationService: unusedIdentityVerificationService(),
   });
   const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
     const authorization = req.header("authorization");
@@ -320,6 +343,7 @@ test("Auth0 onboarding starts and resumes before the financial-route authorizati
     beneficiaryActorResolver: resolver,
     customerAuthenticationMode: "auth0",
     customerOnboardingStore: onboardingStore,
+    customerIdentityVerificationService: unusedIdentityVerificationService(),
   });
   const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
     const authorization = req.header("authorization");

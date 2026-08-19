@@ -129,6 +129,14 @@ The change is acceptable only when Linux CI proves:
 11. prior-schema migration and repeat migration remain safe;
 12. the full workspace test, typecheck, build, and PostgreSQL gates pass.
 
-## Next authorized build
+## Implemented follow-on and next build
 
-The next backend build is the Persona adapter and normalized identity-case state machine. It may start a Persona inquiry only from `identity_in_progress`; it must not write provider decisions directly into customer capability fields, and it must not call Crossmint until the Samra-owned normalized identity state is approved.
+The provider-neutral identity case and deterministic fake Persona adapter are
+defined in [Customer identity case and Persona boundary](./customer-identity-persona.md).
+They may start only from `identity_in_progress`, and provider decisions never
+write customer capability fields directly.
+
+The next build connects the web and mobile onboarding journey to Auth0,
+onboarding resume, consent, and normalized identity state. Crossmint remains
+blocked until that journey passes its correctness, recovery, accessibility,
+performance, and usability gates.

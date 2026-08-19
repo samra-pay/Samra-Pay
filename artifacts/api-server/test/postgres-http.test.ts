@@ -1036,6 +1036,112 @@ test("the Auth0 HTTP onboarding boundary creates one customer, resumes after res
     assert.equal(resumed["customerId"], onboardingA["customerId"]);
     assert.equal(resumed["state"], "identity_in_progress");
     assert.equal(resumed["version"], 2);
+
+    const [identityStartA, identityStartB] = await Promise.all([
+      apiRequest(second.origin, "/api/v1/onboarding/identity", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-identity-start-command-001",
+        },
+      }),
+      apiRequest(afterRestart.origin, "/api/v1/onboarding/identity", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-identity-start-command-002",
+        },
+      }),
+    ]);
+    assert.deepEqual(
+      [identityStartA.status, identityStartB.status].sort(),
+      [200, 201],
+    );
+    const identityA = identityStartA.body as JsonObject;
+    const identityB = identityStartB.body as JsonObject;
+    assert.equal(identityA["identityCaseId"], identityB["identityCaseId"]);
+    assert.equal(identityA["state"], "pending");
+    assert.equal(identityB["version"], 2);
+    assert.equal(identityA["provider"], "persona");
+    assert.equal(identityA["synthetic"], true);
+    assert.equal(JSON.stringify(identityA).includes(subject), false);
+
+    const reviewPath = `/api/v1/dev/onboarding/identity/${identityA["identityCaseId"]}/decision`;
+    const reviewed = objectBody(
+      await apiRequest(afterRestart.origin, reviewPath, {
+        method: "POST",
+        headers: { "Idempotency-Key": "http-identity-review-event-001" },
+        body: { decision: "review" },
+      }),
+      200,
+    );
+    assert.equal(reviewed["replayed"], false);
+    assert.equal(reviewed["disposition"], "applied");
+    assert.equal((reviewed["identityCase"] as JsonObject)["state"], "review");
+    const replayedReview = objectBody(
+      await apiRequest(second.origin, reviewPath, {
+        method: "POST",
+        headers: { "Idempotency-Key": "http-identity-review-event-001" },
+        body: { decision: "review" },
+      }),
+      200,
+    );
+    assert.equal(replayedReview["replayed"], true);
+    assert.equal(
+      objectBody(
+        await apiRequest(afterRestart.origin, "/api/v1/onboarding", {
+          headers: authorization,
+        }),
+        200,
+      )["state"],
+      "identity_review",
+    );
+
+    const approved = objectBody(
+      await apiRequest(afterRestart.origin, reviewPath, {
+        method: "POST",
+        headers: { "Idempotency-Key": "http-identity-approved-event-001" },
+        body: { decision: "approved" },
+      }),
+      200,
+    );
+    assert.equal(approved["disposition"], "applied");
+    assert.equal((approved["identityCase"] as JsonObject)["state"], "approved");
+    const approvedOnboarding = objectBody(
+      await apiRequest(afterRestart.origin, "/api/v1/onboarding", {
+        headers: authorization,
+      }),
+      200,
+    );
+    assert.equal(approvedOnboarding["state"], "identity_approved");
+    assert.equal(approvedOnboarding["version"], 4);
+    assert.equal(
+      objectBody(
+        await apiRequest(afterRestart.origin, "/api/v1/me", {
+          headers: authorization,
+        }),
+        403,
+      )["code"],
+      "CUSTOMER_ONBOARDING_REQUIRED",
+    );
+
+    await stopServer(afterRestart);
+    const identityRestart = await startServer(config, {
+      customerAccessTokenMiddleware,
+    });
+    running.push(identityRestart);
+    const durableIdentity = objectBody(
+      await apiRequest(identityRestart.origin, "/api/v1/onboarding/identity", {
+        headers: authorization,
+      }),
+      200,
+    );
+    assert.equal(
+      durableIdentity["identityCaseId"],
+      identityA["identityCaseId"],
+    );
+    assert.equal(durableIdentity["state"], "approved");
+    assert.equal(durableIdentity["version"], 4);
   } finally {
     await Promise.allSettled(running.map(stopServer));
     if (originalDatabaseUrl === undefined) {
