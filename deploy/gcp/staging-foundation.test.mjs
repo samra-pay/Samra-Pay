@@ -82,6 +82,8 @@ test("keeps Firebase bounded to distribution and future app registration", () =>
 test("requires plan-first apply and verifies organization and billing", () => {
   assert.match(script, /MODE="\$\{1:---plan\}"/);
   assert.match(script, /AUTHORIZED_STAGING_FOUNDATION/);
+  assert.match(script, /gcloud config get-value account/);
+  assert.doesNotMatch(script, /--filter=status:ACTIVE/);
   assert.match(script, /gcloud projects describe/);
   assert.match(script, /gcloud billing projects describe/);
   assert.match(script, /Plan only\. No Google Cloud resource was changed\./);

@@ -67,7 +67,7 @@ OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 REPOSITORY="samra-staging"
 SECRET_ID="samra-staging-database-url"
 
-ACTIVE_ACCOUNT="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' | head -1)"
+ACTIVE_ACCOUNT="$(gcloud config get-value account 2>/dev/null)"
 if [[ "${ACTIVE_ACCOUNT}" != "${OPERATOR}" ]]; then
   echo "Active gcloud account must be ${OPERATOR}; found ${ACTIVE_ACCOUNT:-none}." >&2
   exit 1
