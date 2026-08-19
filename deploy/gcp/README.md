@@ -18,6 +18,14 @@ until a separately approved cutover.
 - Firebase added to the existing project without enabling Firebase Auth,
   Firestore, Hosting, or registering a mobile app before its identifiers lock.
 
+Adding Firebase cannot be fully undone. It automatically creates a restricted
+browser API key and two provider-managed service-account patterns, adds the
+`firebase:enabled` label, and enables the provider-managed baseline APIs listed
+in `firebase.providerManagedEffects`. Those effects are distinct from the 14
+APIs and seven service accounts explicitly managed by Samra's bootstrap. The
+provider-managed baseline does not itself configure a Firebase app, Analytics,
+Firebase Authentication, Firestore database, or Hosting site.
+
 The plan is executable only through `bootstrap-staging-foundation.sh --apply`
 with the exact reviewed project, organization, region, operator domain, and an
 explicit authorization sentinel. Its default is `--plan`, which performs local
@@ -25,11 +33,13 @@ validation and changes no cloud state. The apply phase assumes the project was
 created under the approved organization and billing was linked separately. It
 does not create either one.
 
-The bounded foundation enables only approved APIs, project labels, the
-immutable image repository, seven keyless service accounts, minimum IAM
-bindings, and empty database-secret metadata. It does not create a secret
-version, Cloud SQL instance, Cloud Run workload, load balancer, Firebase app,
-public endpoint, real-provider integration, or Replit change.
+The bounded bootstrap enables only the approved Samra-managed APIs, project
+labels, the immutable image repository, seven keyless Samra service accounts,
+minimum IAM bindings, and empty database-secret metadata. Firebase's separate
+console linkage adds only the enumerated provider-managed baseline. Neither
+path creates a secret version, Cloud SQL instance, Cloud Run workload, load
+balancer, Firebase app registration, public endpoint, real-provider
+integration, or Replit change.
 
 Example review-only command:
 

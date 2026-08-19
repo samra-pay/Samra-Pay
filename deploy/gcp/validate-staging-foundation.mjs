@@ -6,6 +6,27 @@ const ORGANIZATION_ID = /^[0-9]+$/;
 const REGION = /^[a-z]+-[a-z]+[0-9]$/;
 const SERVICE_ACCOUNT_ID = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const API = /^[a-z0-9.-]+\.googleapis\.com$/;
+const FIREBASE_MANAGED_SERVICE_ACCOUNT_PATTERNS = [
+  "service-${PROJECT_NUMBER}@gcp-sa-firebase.iam.gserviceaccount.com",
+  "firebase-adminsdk-${RANDOM5}@${PROJECT_ID}.iam.gserviceaccount.com",
+];
+const FIREBASE_MANAGED_APIS = [
+  "appengine.googleapis.com",
+  "pubsub.googleapis.com",
+  "cloudresourcemanager.googleapis.com",
+  "runtimeconfig.googleapis.com",
+  "testing.googleapis.com",
+  "fcm.googleapis.com",
+  "firebasedynamiclinks.googleapis.com",
+  "firebasehosting.googleapis.com",
+  "firebaseinstallations.googleapis.com",
+  "firebase.googleapis.com",
+  "firebaseremoteconfig.googleapis.com",
+  "firebaseremoteconfigrealtime.googleapis.com",
+  "firebaserules.googleapis.com",
+  "identitytoolkit.googleapis.com",
+  "securetoken.googleapis.com",
+];
 
 export function readStagingFoundation() {
   return JSON.parse(
@@ -53,6 +74,9 @@ export function validateStagingFoundation(
 
   if (
     foundation.firebase.addToExistingProject !== true ||
+    foundation.firebase.additionFullyReversible !== false ||
+    foundation.firebase.googleAnalyticsEnabled !== false ||
+    foundation.firebase.geminiInFirebaseEnabled !== false ||
     foundation.firebase.authenticationEnabled !== false ||
     foundation.firebase.firestoreEnabled !== false ||
     foundation.firebase.hostingEnabled !== false ||
@@ -61,15 +85,29 @@ export function validateStagingFoundation(
     throw new Error("Firebase must remain a bounded existing-project add-on");
   }
 
-  const apis = foundation.apis;
+  const firebaseEffects = foundation.firebase.providerManagedEffects;
+  if (
+    firebaseEffects?.firebaseEnabledLabel !== true ||
+    firebaseEffects?.browserApiKey !== "auto-created-and-api-restricted" ||
+    JSON.stringify(firebaseEffects.serviceAccountPatterns) !==
+      JSON.stringify(FIREBASE_MANAGED_SERVICE_ACCOUNT_PATTERNS) ||
+    JSON.stringify(firebaseEffects.apis) !==
+      JSON.stringify(FIREBASE_MANAGED_APIS)
+  ) {
+    throw new Error("Firebase provider-managed effects must remain explicit");
+  }
+
+  const apis = foundation.samraManagedApis;
   if (!Array.isArray(apis) || apis.length === 0) {
-    throw new Error("An explicit API allowlist is required");
+    throw new Error("An explicit Samra-managed API allowlist is required");
   }
   if (
     new Set(apis).size !== apis.length ||
     apis.some((api) => !API.test(api))
   ) {
-    throw new Error("The API allowlist contains an invalid or duplicate value");
+    throw new Error(
+      "The Samra-managed API allowlist contains an invalid or duplicate value",
+    );
   }
 
   const accounts = Object.values(foundation.serviceAccounts);
@@ -123,8 +161,11 @@ export function validateStagingFoundation(
     region: project.region,
     repository: foundation.artifactRegistry.repository,
     budgetAlertUsd: project.budgetAlertUsd,
-    apiCount: apis.length,
-    serviceAccountCount: accounts.length,
+    samraManagedApiCount: apis.length,
+    firebaseManagedApiCount: firebaseEffects.apis.length,
+    samraServiceAccountCount: accounts.length,
+    firebaseManagedServiceAccountPatternCount:
+      firebaseEffects.serviceAccountPatterns.length,
   });
 }
 

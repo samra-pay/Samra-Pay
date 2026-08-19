@@ -22,8 +22,10 @@ test("locks one review-only synthetic staging identity", () => {
     region: "us-east4",
     repository: "samra-staging",
     budgetAlertUsd: 50,
-    apiCount: 14,
-    serviceAccountCount: 7,
+    samraManagedApiCount: 14,
+    firebaseManagedApiCount: 15,
+    samraServiceAccountCount: 7,
+    firebaseManagedServiceAccountPatternCount: 2,
   });
   assert.deepEqual(
     validateFoundationEnvironment({
@@ -56,13 +58,25 @@ test("rejects project, organization, region, and operator drift", () => {
 });
 
 test("keeps Firebase bounded to distribution and future app registration", () => {
-  assert.deepEqual(foundation.firebase, {
-    addToExistingProject: true,
-    authenticationEnabled: false,
-    firestoreEnabled: false,
-    hostingEnabled: false,
-    appRegistrationBlockedUntilIdentifiersAreLocked: true,
-  });
+  assert.equal(foundation.firebase.addToExistingProject, true);
+  assert.equal(foundation.firebase.additionFullyReversible, false);
+  assert.equal(foundation.firebase.googleAnalyticsEnabled, false);
+  assert.equal(foundation.firebase.geminiInFirebaseEnabled, false);
+  assert.equal(foundation.firebase.authenticationEnabled, false);
+  assert.equal(foundation.firebase.firestoreEnabled, false);
+  assert.equal(foundation.firebase.hostingEnabled, false);
+  assert.equal(
+    foundation.firebase.appRegistrationBlockedUntilIdentifiersAreLocked,
+    true,
+  );
+  assert.equal(foundation.firebase.providerManagedEffects.apis.length, 15);
+  assert.deepEqual(
+    foundation.firebase.providerManagedEffects.serviceAccountPatterns,
+    [
+      "service-${PROJECT_NUMBER}@gcp-sa-firebase.iam.gserviceaccount.com",
+      "firebase-adminsdk-${RANDOM5}@${PROJECT_ID}.iam.gserviceaccount.com",
+    ],
+  );
 });
 
 test("requires plan-first apply and verifies organization and billing", () => {

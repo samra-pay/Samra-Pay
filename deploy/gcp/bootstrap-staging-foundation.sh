@@ -33,7 +33,7 @@ Plan only. No Google Cloud resource was changed.
 
 The apply phase will:
   1. verify the existing project, organization, billing, and active operator;
-  2. enable only the reviewed staging APIs;
+  2. enable only the reviewed Samra-managed staging APIs;
   3. label the project as synthetic staging;
   4. create one immutable Docker repository;
   5. create seven distinct keyless service accounts;
@@ -42,6 +42,11 @@ The apply phase will:
 
 It will not create Cloud SQL, Cloud Run, Firebase apps, credentials, public
 access, production resources, real-provider integrations, or Replit changes.
+
+Adding Firebase is a separate console action. Firebase automatically creates
+the provider-managed baseline APIs, service accounts, restricted browser API
+key, and project label enumerated in staging-foundation.json. The bootstrap
+does not create, expand, or grant roles to those provider-managed resources.
 PLAN
   exit 0
 fi
@@ -84,7 +89,7 @@ fi
 mapfile -t APIS < <(
   node -e '
     const foundation = require(process.argv[1]);
-    process.stdout.write(foundation.apis.join("\n"));
+    process.stdout.write(foundation.samraManagedApis.join("\n"));
   ' "${ROOT_DIR}/deploy/gcp/staging-foundation.json"
 )
 

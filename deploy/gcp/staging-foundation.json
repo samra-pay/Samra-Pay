@@ -12,17 +12,45 @@
   },
   "firebase": {
     "addToExistingProject": true,
+    "additionFullyReversible": false,
+    "googleAnalyticsEnabled": false,
+    "geminiInFirebaseEnabled": false,
     "authenticationEnabled": false,
     "firestoreEnabled": false,
     "hostingEnabled": false,
-    "appRegistrationBlockedUntilIdentifiersAreLocked": true
+    "appRegistrationBlockedUntilIdentifiersAreLocked": true,
+    "providerManagedEffects": {
+      "firebaseEnabledLabel": true,
+      "browserApiKey": "auto-created-and-api-restricted",
+      "serviceAccountPatterns": [
+        "service-${PROJECT_NUMBER}@gcp-sa-firebase.iam.gserviceaccount.com",
+        "firebase-adminsdk-${RANDOM5}@${PROJECT_ID}.iam.gserviceaccount.com"
+      ],
+      "apis": [
+        "appengine.googleapis.com",
+        "pubsub.googleapis.com",
+        "cloudresourcemanager.googleapis.com",
+        "runtimeconfig.googleapis.com",
+        "testing.googleapis.com",
+        "fcm.googleapis.com",
+        "firebasedynamiclinks.googleapis.com",
+        "firebasehosting.googleapis.com",
+        "firebaseinstallations.googleapis.com",
+        "firebase.googleapis.com",
+        "firebaseremoteconfig.googleapis.com",
+        "firebaseremoteconfigrealtime.googleapis.com",
+        "firebaserules.googleapis.com",
+        "identitytoolkit.googleapis.com",
+        "securetoken.googleapis.com"
+      ]
+    }
   },
   "artifactRegistry": {
     "repository": "samra-staging",
     "format": "docker",
     "immutableTags": true
   },
-  "apis": [
+  "samraManagedApis": [
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
