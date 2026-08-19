@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./acquisition": "./src/acquisition.ts",
     "./generated-transport": "./src/generated-transport.ts",
+    "./legal": "./src/legal.ts",
     "./onboarding": "./src/onboarding.ts",
     "./react": "./src/react.tsx"
   },

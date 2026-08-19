@@ -42,6 +42,7 @@ function RootLayoutNav() {
         contentStyle: { backgroundColor: tokens.color.dark.background },
       }}
     >
+      <Stack.Screen name="legal/[kind]" options={{ headerShown: false }} />
       <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
       </Stack.Protected>

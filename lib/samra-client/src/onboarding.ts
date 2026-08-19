@@ -1,3 +1,5 @@
+import { SAMRA_LEGAL_PATHS } from "./legal.ts";
+
 export const CUSTOMER_ONBOARDING_STATES = Object.freeze([
   "not_started",
   "authenticated",
@@ -96,17 +98,17 @@ export function getCustomerConsentPresentation(
     terms_of_service: Object.freeze({
       title: "Terms of Service",
       summary: "The rules for using the Samra Pay alpha experience.",
-      href: "/terms",
+      href: SAMRA_LEGAL_PATHS.terms,
     }),
     privacy_notice: Object.freeze({
       title: "Privacy Notice",
       summary: "How Samra handles onboarding and verification information.",
-      href: "/privacy",
+      href: SAMRA_LEGAL_PATHS.privacy,
     }),
     electronic_communications: Object.freeze({
       title: "Electronic Communications",
       summary: "Permission to deliver required notices electronically.",
-      href: null,
+      href: SAMRA_LEGAL_PATHS["electronic-communications"],
     }),
   };
   return presentations[consentType];

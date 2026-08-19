@@ -329,22 +329,23 @@ export default function CustomerOnboardingPage() {
       return (
         <div className="space-y-4">
           <StatusPanel icon={CheckCircle2}>
-            Identity evidence accepted. Wallet provisioning remains disabled.
+            Identity evidence accepted. Account activation and wallet
+            provisioning remain disabled.
           </StatusPanel>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11 w-full"
-            onClick={() =>
-              setLocation(
-                runtime.mode === "mock"
-                  ? consumePostLoginRedirect()
-                  : "/dashboard",
-              )
-            }
-          >
-            Continue to Samra Pay
-          </Button>
+          {runtime.mode === "mock" ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => setLocation(consumePostLoginRedirect())}
+            >
+              Continue to synthetic dashboard
+            </Button>
+          ) : (
+            <Button asChild variant="outline" className="min-h-11 w-full">
+              <Link href="/">Return to Samra Pay</Link>
+            </Button>
+          )}
         </div>
       );
     }
@@ -359,11 +360,9 @@ export default function CustomerOnboardingPage() {
             No financial capability was enabled. A reviewed support path is
             required before this onboarding can continue.
           </StatusPanel>
-          <Link href="/" className="block">
-            <Button variant="outline" className="min-h-11 w-full">
-              Return home
-            </Button>
-          </Link>
+          <Button asChild variant="outline" className="min-h-11 w-full">
+            <Link href="/">Return home</Link>
+          </Button>
         </div>
       );
     }
@@ -400,7 +399,15 @@ export default function CustomerOnboardingPage() {
   const queryError = onboardingQuery.error ?? identityQuery.error;
   if (queryError) {
     return (
-      <OnboardingFailure error={queryError} onRetry={onboardingQuery.refetch} />
+      <OnboardingFailure
+        error={queryError}
+        retrying={onboardingQuery.isFetching || identityQuery.isFetching}
+        onRetry={() => {
+          const retries: Promise<unknown>[] = [onboardingQuery.refetch()];
+          if (identityQuery.error) retries.push(identityQuery.refetch());
+          void Promise.all(retries);
+        }}
+      />
     );
   }
 
@@ -503,7 +510,10 @@ function PrimaryAction({
     >
       {loading ? (
         <>
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          <Loader2
+            aria-hidden="true"
+            className="mr-2 h-5 w-5 animate-spin motion-reduce:animate-none"
+          />
           Saving…
         </>
       ) : (
@@ -520,11 +530,17 @@ function BoundaryList() {
   return (
     <ul className="space-y-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm text-muted-foreground">
       <li className="flex gap-3">
-        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <ShieldCheck
+          aria-hidden="true"
+          className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+        />
         Samra stores only normalized case state and opaque provider references.
       </li>
       <li className="flex gap-3">
-        <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <LockKeyhole
+          aria-hidden="true"
+          className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+        />
         Identity documents and provider payloads do not enter the Samra ledger
         or audit log.
       </li>
@@ -544,7 +560,10 @@ function StatusPanel({
       role="status"
       className="flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground"
     >
-      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+      <Icon
+        aria-hidden="true"
+        className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+      />
       <p className="leading-6">{children}</p>
     </div>
   );
@@ -554,7 +573,10 @@ function OnboardingLoading() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <div role="status" className="text-center">
-        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+        <Loader2
+          aria-hidden="true"
+          className="mx-auto h-8 w-8 animate-spin text-primary motion-reduce:animate-none"
+        />
         <p className="mt-3 text-sm text-muted-foreground">
           Resuming your onboarding…
         </p>
@@ -565,15 +587,24 @@ function OnboardingLoading() {
 
 function OnboardingFailure({
   error,
+  retrying,
   onRetry,
 }: {
   error: unknown;
-  onRetry: () => unknown;
+  retrying: boolean;
+  onRetry: () => void;
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
-      <Card className="w-full max-w-lg border-destructive/30 bg-card p-6">
-        <TriangleAlert className="h-8 w-8 text-destructive" />
+      <Card
+        role="alert"
+        aria-live="assertive"
+        className="w-full max-w-lg border-destructive/30 bg-card p-6"
+      >
+        <TriangleAlert
+          aria-hidden="true"
+          className="h-8 w-8 text-destructive"
+        />
         <h1 className="mt-4 text-2xl font-semibold">
           Could not resume onboarding
         </h1>
@@ -584,10 +615,16 @@ function OnboardingFailure({
           type="button"
           variant="outline"
           className="mt-5 min-h-11 w-full"
-          onClick={() => onRetry()}
+          disabled={retrying}
+          onClick={onRetry}
         >
-          <RefreshCcw className="mr-2 h-4 w-4" />
-          Retry
+          <RefreshCcw
+            aria-hidden="true"
+            className={`mr-2 h-4 w-4 ${
+              retrying ? "animate-spin motion-reduce:animate-none" : ""
+            }`}
+          />
+          {retrying ? "Retrying…" : "Retry"}
         </Button>
       </Card>
     </main>
