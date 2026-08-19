@@ -38,6 +38,12 @@ before its first cloud mutation, then verifies every Samra-managed project label
 after the update. This keeps supported Cloud Shell releases resumable without
 silently omitting the synthetic-staging boundary.
 
+Service-account creation is also resumable. Existing accounts are reused, and
+creation is attempted at most three times when Google returns the specific
+per-project creation-rate quota, with a 65-second backoff between attempts. All
+other service-account errors still fail immediately, before any IAM grants are
+attempted.
+
 The bounded bootstrap enables only the approved Samra-managed APIs, project
 labels, the immutable image repository, seven keyless Samra service accounts,
 minimum IAM bindings, and empty database-secret metadata. Firebase's separate

@@ -107,6 +107,18 @@ test("resolves Cloud Shell label support before the first mutation", () => {
   assert.match(script, /verify_project_label application samra-pay/);
 });
 
+test("bounds retries for the documented service-account quota", () => {
+  assert.match(script, /SERVICE_ACCOUNT_CREATE_MAX_ATTEMPTS=3/);
+  assert.match(script, /SERVICE_ACCOUNT_QUOTA_BACKOFF_SECONDS=65/);
+  assert.match(script, /RESOURCE_EXHAUSTED/);
+  assert.match(script, /Service accounts created per minute per project/);
+  assert.match(script, /sleep "\$\{SERVICE_ACCOUNT_QUOTA_BACKOFF_SECONDS\}"/);
+  assert.ok(
+    script.indexOf("create_service_account_with_retry") <
+      script.indexOf("grant_project_role"),
+  );
+});
+
 test("creates only reviewed keyless staging foundation resources", () => {
   for (const required of [
     "gcloud services enable",
