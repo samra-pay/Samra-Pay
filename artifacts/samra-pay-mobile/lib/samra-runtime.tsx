@@ -8,8 +8,15 @@ import {
   ApiSamraDataSource,
   type SamraDataSource,
 } from "@workspace/samra-client";
-import { createGeneratedSamraTransport } from "@workspace/samra-client/generated-transport";
-import { SamraDataSourceProvider } from "@workspace/samra-client/react";
+import { SyntheticSamraOnboardingSource } from "@workspace/samra-client/onboarding";
+import {
+  createGeneratedSamraTransport,
+  GeneratedSamraOnboardingSource,
+} from "@workspace/samra-client/generated-transport";
+import {
+  SamraDataSourceProvider,
+  SamraOnboardingSourceProvider,
+} from "@workspace/samra-client/react";
 
 import type { MobileDataMode, MobileRuntimeConfig } from "@/lib/runtime-config";
 
@@ -47,11 +54,24 @@ export function MobileSamraRuntimeProvider({
         : legacyMockBoundary,
     [config.dataMode],
   );
+  const onboardingSource = useMemo(
+    () =>
+      config.dataMode === "api"
+        ? new GeneratedSamraOnboardingSource()
+        : new SyntheticSamraOnboardingSource(),
+    [config.dataMode],
+  );
 
   return (
     <MobileDataModeContext.Provider value={config.dataMode}>
       <SamraDataSourceProvider source={source}>
-        {children}
+        <SamraOnboardingSourceProvider
+          mode={config.dataMode}
+          source={onboardingSource}
+          demoControls={config.dataMode === "mock" ? onboardingSource : null}
+        >
+          {children}
+        </SamraOnboardingSourceProvider>
       </SamraDataSourceProvider>
     </MobileDataModeContext.Provider>
   );

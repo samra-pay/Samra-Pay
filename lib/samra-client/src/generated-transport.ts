@@ -1,7 +1,10 @@
 import {
+  advanceDemoCustomerIdentity,
   cancelRemittanceTransfer,
   createRemittanceQuote,
   createRemittanceTransfer,
+  getCustomerIdentityCase,
+  getCustomerOnboarding,
   getCurrentCustomer,
   getRemittanceOptions,
   getRemittanceTransfer,
@@ -9,6 +12,9 @@ import {
   listActivity,
   listBeneficiaries,
   listRemittanceTransfers,
+  startCustomerIdentityVerification,
+  startCustomerOnboarding,
+  submitCustomerConsentBundle,
 } from "@workspace/api-client-react";
 
 import type {
@@ -18,6 +24,14 @@ import type {
   SamraTransport,
   TransferQuery,
 } from "./index";
+import type {
+  CustomerIdentityCaseSnapshot,
+  CustomerIdentityProviderDecision,
+  CustomerOnboardingSnapshot,
+  SamraOnboardingDemoControls,
+  SamraOnboardingSource,
+  SubmitCustomerConsentBundleInput,
+} from "./onboarding";
 
 function idempotencyHeaders(key: string): HeadersInit {
   return { "Idempotency-Key": key };
@@ -70,4 +84,112 @@ export function createGeneratedSamraTransport(): SamraTransport {
       });
     },
   };
+}
+
+export class GeneratedSamraOnboardingSource
+  implements SamraOnboardingSource, SamraOnboardingDemoControls
+{
+  async getOnboarding(): Promise<CustomerOnboardingSnapshot | null> {
+    try {
+      return freezeOnboardingSnapshot(await getCustomerOnboarding());
+    } catch (error) {
+      if (isProblem(error, 403, "CUSTOMER_IDENTITY_UNBOUND")) return null;
+      throw error;
+    }
+  }
+
+  async startOnboarding(
+    idempotencyKey: string,
+  ): Promise<CustomerOnboardingSnapshot> {
+    return freezeOnboardingSnapshot(
+      await startCustomerOnboarding({
+        headers: idempotencyHeaders(idempotencyKey),
+      }),
+    );
+  }
+
+  async submitConsentBundle(
+    input: SubmitCustomerConsentBundleInput,
+    idempotencyKey: string,
+  ): Promise<CustomerOnboardingSnapshot> {
+    return freezeOnboardingSnapshot(
+      await submitCustomerConsentBundle(
+        {
+          bundleVersion: input.bundleVersion,
+          locale: input.locale,
+          decisions: input.decisions.map((decision) => ({ ...decision })),
+        },
+        { headers: idempotencyHeaders(idempotencyKey) },
+      ),
+    );
+  }
+
+  async getIdentityCase(): Promise<CustomerIdentityCaseSnapshot | null> {
+    try {
+      return freezeIdentityCaseSnapshot(await getCustomerIdentityCase());
+    } catch (error) {
+      if (isProblem(error, 404, "NOT_FOUND")) return null;
+      throw error;
+    }
+  }
+
+  async startIdentityVerification(
+    idempotencyKey: string,
+  ): Promise<CustomerIdentityCaseSnapshot> {
+    return freezeIdentityCaseSnapshot(
+      await startCustomerIdentityVerification({
+        headers: idempotencyHeaders(idempotencyKey),
+      }),
+    );
+  }
+
+  async advanceIdentity(
+    identityCaseId: string,
+    decision: CustomerIdentityProviderDecision,
+    idempotencyKey: string,
+  ): Promise<CustomerIdentityCaseSnapshot> {
+    const result = await advanceDemoCustomerIdentity(
+      identityCaseId,
+      { decision },
+      { headers: idempotencyHeaders(idempotencyKey) },
+    );
+    return freezeIdentityCaseSnapshot(result.identityCase);
+  }
+}
+
+function isProblem(error: unknown, status: number, code: string): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    status?: unknown;
+    data?: unknown;
+  };
+  if (candidate.status !== status || !candidate.data) return false;
+  if (typeof candidate.data !== "object") return false;
+  return (candidate.data as { code?: unknown }).code === code;
+}
+
+function freezeOnboardingSnapshot(
+  snapshot: CustomerOnboardingSnapshot,
+): CustomerOnboardingSnapshot {
+  return Object.freeze({
+    ...snapshot,
+    consentBundle: Object.freeze({
+      ...snapshot.consentBundle,
+      documents: Object.freeze(
+        snapshot.consentBundle.documents.map((document) =>
+          Object.freeze({ ...document }),
+        ),
+      ),
+    }),
+    nextAllowedActions: Object.freeze([...snapshot.nextAllowedActions]),
+  });
+}
+
+function freezeIdentityCaseSnapshot(
+  snapshot: CustomerIdentityCaseSnapshot,
+): CustomerIdentityCaseSnapshot {
+  return Object.freeze({
+    ...snapshot,
+    nextAllowedActions: Object.freeze([...snapshot.nextAllowedActions]),
+  });
 }

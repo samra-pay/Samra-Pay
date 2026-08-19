@@ -1,28 +1,26 @@
 import { useState } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@workspace/samra-pay-ds/components/ui/button";
-import { Input } from "@workspace/samra-pay-ds/components/ui/input";
-import { useToast } from "@workspace/samra-pay-ds/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { SamraLogo } from "@/components/samra-logo";
 import { consumePostLoginRedirect } from "@/lib/remittance-handoff";
+import { useSamraDataMode } from "@/lib/samra-runtime";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const mode = useSamraDataMode();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "api") return;
     setIsLoading(true);
-    
-    // Simulate network delay then route to dashboard
+
     setTimeout(() => {
       setIsLoading(false);
-      // If a remittance quote was started on the public page, land on remittance Step 2
-      setLocation(consumePostLoginRedirect());
-    }, 800);
+      setLocation("/onboarding");
+    }, 350);
   };
 
   return (
@@ -39,45 +37,71 @@ export default function Login() {
                 <SamraLogo size="lg" showWordmark={false} />
               </div>
             </Link>
-            <h1 className="font-serif text-3xl mb-2 font-normal tracking-tight text-[#F9F7F1]">Welcome <span className="italic text-primary">Back</span></h1>
-            <p className="text-muted-foreground">Sign in to your Samra Pay account</p>
+            <h1 className="mb-2 font-serif text-3xl font-normal tracking-tight text-[#F9F7F1]">
+              {mode === "mock" ? (
+                <>
+                  Explore <span className="italic text-primary">Samra</span>
+                </>
+              ) : (
+                <>
+                  Secure <span className="italic text-primary">Sign In</span>
+                </>
+              )}
+            </h1>
+            <p className="text-muted-foreground">
+              {mode === "mock"
+                ? "Walk through the synthetic customer onboarding journey"
+                : "Authenticate with Samra Pay to continue"}
+            </p>
           </div>
 
           <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground/80">Email</label>
-                <Input 
-                  type="email" 
-                  placeholder="name@example.com" 
-                  className="bg-background/50 border-white/10 focus-visible:border-primary focus-visible:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium text-foreground/80">Password</label>
-                  <span className="text-xs text-primary cursor-pointer hover:underline">Forgot?</span>
-                </div>
-                <Input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className="bg-background/50 border-white/10 focus-visible:border-primary focus-visible:ring-primary/20"
-                />
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="flex gap-3 rounded-xl border border-white/10 bg-background/35 p-4">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {mode === "mock"
+                    ? "No email, password, or real account is used. All onboarding data in this mode is synthetic and resets locally."
+                    : "Direct password entry is disabled. Auth0 Universal Login must be configured before connected sign-in is enabled."}
+                </p>
               </div>
 
-              <Button 
-                type="submit" 
-                variant="gold" 
-                className="w-full h-12 text-base font-medium"
-                disabled={isLoading}
+              <Button
+                type="submit"
+                variant="gold"
+                className="h-12 w-full text-base font-medium"
+                disabled={isLoading || mode === "api"}
               >
-                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Sign In"}
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : mode === "mock" ? (
+                  "Start synthetic onboarding"
+                ) : (
+                  "Auth0 sign-in not configured"
+                )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              Don't have an account? <Link href="/"><span className="text-primary hover:underline cursor-pointer">Apply for access</span></Link>
-            </div>
+            {mode === "mock" ? (
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                Returning to the existing demo?{" "}
+                <button
+                  type="button"
+                  className="min-h-11 text-primary underline-offset-4 hover:underline"
+                  onClick={() => setLocation(consumePostLoginRedirect())}
+                >
+                  Open dashboard
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                <Link href="/">
+                  <span className="cursor-pointer text-primary hover:underline">
+                    Return home
+                  </span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
