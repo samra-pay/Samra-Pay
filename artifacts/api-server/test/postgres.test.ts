@@ -1279,6 +1279,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
 
 test("PostgreSQL is the durable source of truth across atomicity, concurrency, restart, ledger, refund, and reconciliation", async () => {
   const first = createRuntime();
+  const accountBaseline = await first.runtime.accountResponse();
   const holdBaseline = await first.connection.pool.query<{ count: string }>(
     `SELECT count(*)::text AS count FROM samra_core.ledger_holds
      WHERE business_event_id LIKE 'transfer_%'`,
@@ -1353,8 +1354,14 @@ test("PostgreSQL is the durable source of truth across atomicity, concurrency, r
   assert.equal(oneTransfer.rows[0]!.count, "1");
 
   const heldBalance = await first.runtime.accountResponse();
-  assert.equal(heldBalance.bookBalance.minorUnits, "425000");
-  assert.equal(heldBalance.availableBalance.minorUnits, "414700");
+  assert.equal(
+    heldBalance.bookBalance.minorUnits,
+    accountBaseline.bookBalance.minorUnits,
+  );
+  assert.equal(
+    heldBalance.availableBalance.minorUnits,
+    (BigInt(accountBaseline.availableBalance.minorUnits) - 10_300n).toString(),
+  );
 
   const restarted = createRuntime();
   const recovered = await restarted.runtime.service.getTransfer(
@@ -1365,8 +1372,14 @@ test("PostgreSQL is the durable source of truth across atomicity, concurrency, r
   assert.equal(recovered.quote.debitAmount.amountMinor, 10_300n);
   await advanceUntil(restarted.runtime, createdA.id, "COMPLETED");
   const completedBalance = await restarted.runtime.accountResponse();
-  assert.equal(completedBalance.bookBalance.minorUnits, "414700");
-  assert.equal(completedBalance.availableBalance.minorUnits, "414700");
+  const expectedCompletedBalance = (
+    BigInt(accountBaseline.bookBalance.minorUnits) - 10_300n
+  ).toString();
+  assert.equal(completedBalance.bookBalance.minorUnits, expectedCompletedBalance);
+  assert.equal(
+    completedBalance.availableBalance.minorUnits,
+    expectedCompletedBalance,
+  );
 
   const reconciliation = await restarted.runtime.runReconciliation(
     "demo_customer_001",
