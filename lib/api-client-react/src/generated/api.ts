@@ -20,6 +20,7 @@ import type {
   AccountSummary,
   ActivityPage,
   AddOperationsCaseNoteRequest,
+  AdvanceDemoCustomerIdentityRequest,
   Beneficiary,
   CancelOperationsTransferRequest,
   ConflictProblemResponse,
@@ -28,6 +29,8 @@ import type {
   CreateQuoteRequest,
   CreateTransferRequest,
   CurrentCustomer,
+  CustomerIdentityCase,
+  CustomerIdentityProviderEventResult,
   CustomerOnboarding,
   ExpiredProblemResponse,
   ForbiddenProblemResponse,
@@ -611,6 +614,202 @@ export const useSubmitCustomerConsentBundle = <
 > => {
   return useMutation(getSubmitCustomerConsentBundleMutationOptions(options));
 };
+
+export const getStartCustomerIdentityVerificationUrl = () => {
+  return `/api/v1/onboarding/identity`;
+};
+
+/**
+ * Creates one durable identity case and idempotently starts the configured provider inquiry. The response contains normalized Samra state only and no provider payload or customer PII.
+ * @summary Create or resume the Samra-owned identity verification case
+ */
+export const startCustomerIdentityVerification = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerIdentityCase> => {
+  return customFetch<CustomerIdentityCase>(
+    getStartCustomerIdentityVerificationUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getStartCustomerIdentityVerificationMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCustomerIdentityVerification>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startCustomerIdentityVerification>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["startCustomerIdentityVerification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startCustomerIdentityVerification>>,
+    void
+  > = () => {
+    return startCustomerIdentityVerification(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartCustomerIdentityVerificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startCustomerIdentityVerification>>
+>;
+
+export type StartCustomerIdentityVerificationMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Create or resume the Samra-owned identity verification case
+ */
+export const useStartCustomerIdentityVerification = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCustomerIdentityVerification>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startCustomerIdentityVerification>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getStartCustomerIdentityVerificationMutationOptions(options),
+  );
+};
+
+export const getGetCustomerIdentityCaseUrl = () => {
+  return `/api/v1/onboarding/identity`;
+};
+
+/**
+ * @summary Resume the authenticated customer identity verification case
+ */
+export const getCustomerIdentityCase = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerIdentityCase> => {
+  return customFetch<CustomerIdentityCase>(getGetCustomerIdentityCaseUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCustomerIdentityCaseQueryKey = () => {
+  return [`/api/v1/onboarding/identity`] as const;
+};
+
+export const getGetCustomerIdentityCaseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerIdentityCase>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerIdentityCase>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCustomerIdentityCaseQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerIdentityCase>>
+  > = ({ signal }) => getCustomerIdentityCase({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerIdentityCase>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerIdentityCaseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerIdentityCase>>
+>;
+export type GetCustomerIdentityCaseQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Resume the authenticated customer identity verification case
+ */
+
+export function useGetCustomerIdentityCase<
+  TData = Awaited<ReturnType<typeof getCustomerIdentityCase>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerIdentityCase>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerIdentityCaseQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListAccountsUrl = () => {
   return `/api/v1/accounts`;
@@ -1998,6 +2197,128 @@ export const useSelectDemoTransferScenario = <
   TContext
 > => {
   return useMutation(getSelectDemoTransferScenarioMutationOptions(options));
+};
+
+export const getAdvanceDemoCustomerIdentityUrl = (identityCaseId: string) => {
+  return `/api/v1/dev/onboarding/identity/${identityCaseId}/decision`;
+};
+
+/**
+ * Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+ * @summary Apply a deterministic fake Persona decision
+ */
+export const advanceDemoCustomerIdentity = async (
+  identityCaseId: string,
+  advanceDemoCustomerIdentityRequest: AdvanceDemoCustomerIdentityRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerIdentityProviderEventResult> => {
+  return customFetch<CustomerIdentityProviderEventResult>(
+    getAdvanceDemoCustomerIdentityUrl(identityCaseId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(advanceDemoCustomerIdentityRequest),
+    },
+  );
+};
+
+export const getAdvanceDemoCustomerIdentityMutationOptions = <
+  TError = ErrorType<
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof advanceDemoCustomerIdentity>>,
+    TError,
+    {
+      identityCaseId: string;
+      data: BodyType<AdvanceDemoCustomerIdentityRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof advanceDemoCustomerIdentity>>,
+  TError,
+  {
+    identityCaseId: string;
+    data: BodyType<AdvanceDemoCustomerIdentityRequest>;
+  },
+  TContext
+> => {
+  const mutationKey = ["advanceDemoCustomerIdentity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof advanceDemoCustomerIdentity>>,
+    {
+      identityCaseId: string;
+      data: BodyType<AdvanceDemoCustomerIdentityRequest>;
+    }
+  > = (props) => {
+    const { identityCaseId, data } = props ?? {};
+
+    return advanceDemoCustomerIdentity(identityCaseId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdvanceDemoCustomerIdentityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof advanceDemoCustomerIdentity>>
+>;
+export type AdvanceDemoCustomerIdentityMutationBody =
+  BodyType<AdvanceDemoCustomerIdentityRequest>;
+export type AdvanceDemoCustomerIdentityMutationError = ErrorType<
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Apply a deterministic fake Persona decision
+ */
+export const useAdvanceDemoCustomerIdentity = <
+  TError = ErrorType<
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof advanceDemoCustomerIdentity>>,
+    TError,
+    {
+      identityCaseId: string;
+      data: BodyType<AdvanceDemoCustomerIdentityRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof advanceDemoCustomerIdentity>>,
+  TError,
+  {
+    identityCaseId: string;
+    data: BodyType<AdvanceDemoCustomerIdentityRequest>;
+  },
+  TContext
+> => {
+  return useMutation(getAdvanceDemoCustomerIdentityMutationOptions(options));
 };
 
 export const getRunDemoReconciliationUrl = () => {

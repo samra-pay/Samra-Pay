@@ -92,6 +92,13 @@
       "when": 1787107808000,
       "tag": "0012_customer_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787112000000,
+      "tag": "0013_customer_identity_cases",
+      "breakpoints": true
     }
   ]
 }

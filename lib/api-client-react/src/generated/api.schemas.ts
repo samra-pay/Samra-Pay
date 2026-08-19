@@ -25,6 +25,69 @@ export const CustomerOnboardingState = {
   restricted: "restricted",
 } as const;
 
+export type CustomerIdentityCaseState =
+  (typeof CustomerIdentityCaseState)[keyof typeof CustomerIdentityCaseState];
+
+export const CustomerIdentityCaseState = {
+  created: "created",
+  pending: "pending",
+  review: "review",
+  approved: "approved",
+  declined: "declined",
+  error: "error",
+} as const;
+
+export type CustomerIdentityProviderDecision =
+  (typeof CustomerIdentityProviderDecision)[keyof typeof CustomerIdentityProviderDecision];
+
+export const CustomerIdentityProviderDecision = {
+  pending: "pending",
+  review: "review",
+  approved: "approved",
+  declined: "declined",
+  error: "error",
+} as const;
+
+export type CustomerIdentityProviderEventDisposition =
+  (typeof CustomerIdentityProviderEventDisposition)[keyof typeof CustomerIdentityProviderEventDisposition];
+
+export const CustomerIdentityProviderEventDisposition = {
+  applied: "applied",
+  ignored_stale: "ignored_stale",
+  conflict: "conflict",
+} as const;
+
+export type CustomerIdentityCaseProvider =
+  (typeof CustomerIdentityCaseProvider)[keyof typeof CustomerIdentityCaseProvider];
+
+export const CustomerIdentityCaseProvider = {
+  persona: "persona",
+} as const;
+
+export interface CustomerIdentityCase {
+  identityCaseId: string;
+  state: CustomerIdentityCaseState;
+  reasonFamily: string | null;
+  provider: CustomerIdentityCaseProvider;
+  synthetic: true;
+  /** @minimum 1 */
+  version: number;
+  decidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  nextAllowedActions: string[];
+}
+
+export interface AdvanceDemoCustomerIdentityRequest {
+  decision: CustomerIdentityProviderDecision;
+}
+
+export interface CustomerIdentityProviderEventResult {
+  identityCase: CustomerIdentityCase;
+  replayed: boolean;
+  disposition: CustomerIdentityProviderEventDisposition;
+}
+
 export type CustomerConsentType =
   (typeof CustomerConsentType)[keyof typeof CustomerConsentType];
 

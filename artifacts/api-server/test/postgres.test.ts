@@ -8,6 +8,7 @@ import {
   PostgresOperationsStore,
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
+  PostgresCustomerIdentityCaseStore,
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerIdentityConflictError,
   RandomIdGenerator,
@@ -689,6 +690,311 @@ test("customer onboarding rolls back every write after controlled mid-transactio
   assert.equal(retriedConsent.replayed, false);
   assert.equal(retriedConsent.snapshot.state, "identity_in_progress");
   assert.equal(retriedConsent.snapshot.version, 2);
+});
+
+test("identity cases survive concurrency and restart while provider replay, stale, conflict, rollback, and audit controls remain exact", async () => {
+  const first = createRuntime();
+  const second = createRuntime();
+  const issuer = `https://${randomUUID()}.identity.samra.test/`;
+  const subject = `auth0|${randomUUID()}`;
+  const onboardingStore = new PostgresCustomerOnboardingStore(first.context);
+  const started = await onboardingStore.startAuth0Onboarding({
+    issuer,
+    subject,
+    idempotencyKey: "identity-onboarding-start-001",
+  });
+  const decisions = ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+    (document) => ({
+      consentType: document.consentType,
+      documentVersion: document.documentVersion,
+      decision: "accepted" as const,
+    }),
+  );
+  await onboardingStore.recordAuth0ConsentBundle({
+    issuer,
+    subject,
+    idempotencyKey: "identity-consent-command-001",
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions,
+  });
+
+  const firstStore = new PostgresCustomerIdentityCaseStore(first.context);
+  const secondStore = new PostgresCustomerIdentityCaseStore(second.context);
+  const prepared = await Promise.all([
+    firstStore.prepareAuth0IdentityCase({
+      issuer,
+      subject,
+      idempotencyKey: "identity-case-start-001",
+    }),
+    secondStore.prepareAuth0IdentityCase({
+      issuer,
+      subject,
+      idempotencyKey: "identity-case-start-002",
+    }),
+  ]);
+  assert.deepEqual(prepared.map((result) => result.created).sort(), [
+    false,
+    true,
+  ]);
+  assert.equal(
+    prepared[0]!.snapshot.identityCaseId,
+    prepared[1]!.snapshot.identityCaseId,
+  );
+  assert.equal(
+    prepared[0]!.providerRequestKey,
+    prepared[1]!.providerRequestKey,
+  );
+  assert.equal(prepared[0]!.snapshot.state, "created");
+
+  const identityCaseId = prepared[0]!.snapshot.identityCaseId;
+  const providerRequestKey = prepared[0]!.providerRequestKey;
+  const providerInquiryRef = `inq_fake_${randomUUID()}`;
+  const attached = await Promise.all([
+    firstStore.attachProviderInquiry({
+      identityCaseId,
+      providerRequestKey,
+      providerInquiryRef,
+    }),
+    secondStore.attachProviderInquiry({
+      identityCaseId,
+      providerRequestKey,
+      providerInquiryRef,
+    }),
+  ]);
+  assert.deepEqual(
+    attached.map((snapshot) => snapshot.state),
+    ["pending", "pending"],
+  );
+  assert.equal(attached[0]!.version, 2);
+  assert.equal(attached[1]!.version, 2);
+
+  const restarted = new PostgresCustomerIdentityCaseStore(
+    createRuntime().context,
+  );
+  const durable = await restarted.getAuth0IdentityCase({ issuer, subject });
+  assert.equal(durable.identityCaseId, identityCaseId);
+  assert.equal(durable.state, "pending");
+
+  const reviewEventRef = `evt_review_${randomUUID()}`;
+  const reviewDigest = sha256("synthetic-review-evidence");
+  const reviewed = await firstStore.recordProviderEvent({
+    identityCaseId,
+    providerEventRef: reviewEventRef,
+    eventType: "inquiry.needs_review",
+    decision: "review",
+    payloadDigest: reviewDigest,
+  });
+  assert.equal(reviewed.disposition, "applied");
+  assert.equal(reviewed.snapshot.state, "review");
+  assert.equal(reviewed.snapshot.version, 3);
+  const replayedReview = await secondStore.recordProviderEvent({
+    identityCaseId,
+    providerEventRef: reviewEventRef,
+    eventType: "inquiry.needs_review",
+    decision: "review",
+    payloadDigest: reviewDigest,
+  });
+  assert.equal(replayedReview.replayed, true);
+  assert.equal(replayedReview.snapshot.version, 3);
+
+  const stale = await firstStore.recordProviderEvent({
+    identityCaseId,
+    providerEventRef: `evt_pending_${randomUUID()}`,
+    eventType: "inquiry.pending",
+    decision: "pending",
+    payloadDigest: sha256("late-pending-evidence"),
+  });
+  assert.equal(stale.disposition, "ignored_stale");
+  assert.equal(stale.snapshot.state, "review");
+  assert.equal(stale.snapshot.version, 3);
+
+  const triggerSuffix = randomUUID().replaceAll("-", "");
+  const functionName = `test_fail_identity_event_${triggerSuffix}`;
+  const triggerName = `test_fail_identity_event_${triggerSuffix}`;
+  const controlledEventRef = `evt_controlled_${randomUUID()}`;
+  await first.connection.pool.query(
+    `CREATE FUNCTION samra_core."${functionName}"()
+     RETURNS trigger
+     LANGUAGE plpgsql
+     AS $$
+     BEGIN
+       IF NEW.provider_event_ref = '${controlledEventRef}' THEN
+         RAISE EXCEPTION 'controlled identity event failure'
+           USING ERRCODE = 'P0001';
+       END IF;
+       RETURN NEW;
+     END;
+     $$`,
+  );
+  await first.connection.pool.query(
+    `CREATE TRIGGER "${triggerName}"
+     BEFORE INSERT ON samra_core.customer_identity_provider_events
+     FOR EACH ROW EXECUTE FUNCTION samra_core."${functionName}"()`,
+  );
+  try {
+    await assert.rejects(
+      firstStore.recordProviderEvent({
+        identityCaseId,
+        providerEventRef: controlledEventRef,
+        eventType: "inquiry.approved",
+        decision: "approved",
+        payloadDigest: sha256("controlled-approved-evidence"),
+      }),
+      /controlled identity event failure/i,
+    );
+    assert.equal(
+      (await firstStore.getAuth0IdentityCase({ issuer, subject })).state,
+      "review",
+    );
+    assert.equal(
+      (await onboardingStore.getAuth0Onboarding({ issuer, subject })).state,
+      "identity_review",
+    );
+  } finally {
+    await first.connection.pool.query(
+      `DROP TRIGGER IF EXISTS "${triggerName}"
+       ON samra_core.customer_identity_provider_events`,
+    );
+    await first.connection.pool.query(
+      `DROP FUNCTION IF EXISTS samra_core."${functionName}"()`,
+    );
+  }
+
+  const approved = await firstStore.recordProviderEvent({
+    identityCaseId,
+    providerEventRef: controlledEventRef,
+    eventType: "inquiry.approved",
+    decision: "approved",
+    payloadDigest: sha256("controlled-approved-evidence"),
+  });
+  assert.equal(approved.disposition, "applied");
+  assert.equal(approved.snapshot.state, "approved");
+  assert.equal(approved.snapshot.version, 4);
+  assert.equal(
+    (await onboardingStore.getAuth0Onboarding({ issuer, subject })).state,
+    "identity_approved",
+  );
+
+  const conflictEventRef = `evt_conflict_${randomUUID()}`;
+  const conflictDigest = sha256("contradictory-declined-evidence");
+  const conflict = await firstStore.recordProviderEvent({
+    identityCaseId,
+    providerEventRef: conflictEventRef,
+    eventType: "inquiry.declined",
+    decision: "declined",
+    payloadDigest: conflictDigest,
+  });
+  assert.equal(conflict.disposition, "conflict");
+  assert.equal(conflict.snapshot.state, "approved");
+  assert.equal(
+    (await onboardingStore.getAuth0Onboarding({ issuer, subject })).state,
+    "restricted",
+  );
+  const replayedConflict = await secondStore.recordProviderEvent({
+    identityCaseId,
+    providerEventRef: conflictEventRef,
+    eventType: "inquiry.declined",
+    decision: "declined",
+    payloadDigest: conflictDigest,
+  });
+  assert.equal(replayedConflict.replayed, true);
+  assert.equal(replayedConflict.disposition, "conflict");
+  await assert.rejects(
+    secondStore.recordProviderEvent({
+      identityCaseId,
+      providerEventRef: conflictEventRef,
+      eventType: "inquiry.declined",
+      decision: "declined",
+      payloadDigest: sha256("changed-evidence"),
+    }),
+    /provider event reference was already used/i,
+  );
+
+  const evidence = await first.connection.pool.query<{
+    cases: string;
+    case_transitions: string;
+    provider_events: string;
+    onboarding_state: string;
+    audit_document: string;
+    stored_payloads: string;
+    internal_case_id: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text FROM samra_core.customer_identity_cases
+         WHERE external_ref = $1) AS cases,
+       (SELECT count(*)::text
+          FROM samra_core.customer_identity_case_transitions transition
+          JOIN samra_core.customer_identity_cases identity_case
+            ON identity_case.id = transition.identity_case_id
+         WHERE identity_case.external_ref = $1) AS case_transitions,
+       (SELECT count(*)::text
+          FROM samra_core.customer_identity_provider_events provider_event
+          JOIN samra_core.customer_identity_cases identity_case
+            ON identity_case.id = provider_event.identity_case_id
+         WHERE identity_case.external_ref = $1) AS provider_events,
+       (SELECT state FROM samra_core.customer_onboardings WHERE id = $2::uuid)
+         AS onboarding_state,
+       (SELECT COALESCE(string_agg(event_key || metadata::text, ''), '')
+          FROM samra_core.audit_events
+         WHERE entity_type = 'customer_identity_case') AS audit_document,
+       (SELECT COALESCE(string_agg(payload_digest, ''), '')
+          FROM samra_core.customer_identity_provider_events provider_event
+          JOIN samra_core.customer_identity_cases identity_case
+            ON identity_case.id = provider_event.identity_case_id
+         WHERE identity_case.external_ref = $1) AS stored_payloads,
+       (SELECT id::text FROM samra_core.customer_identity_cases
+         WHERE external_ref = $1) AS internal_case_id`,
+    [identityCaseId, started.snapshot.onboardingId],
+  );
+  assert.deepEqual(
+    {
+      cases: evidence.rows[0]!.cases,
+      case_transitions: evidence.rows[0]!.case_transitions,
+      provider_events: evidence.rows[0]!.provider_events,
+      onboarding_state: evidence.rows[0]!.onboarding_state,
+    },
+    {
+      cases: "1",
+      case_transitions: "4",
+      provider_events: "4",
+      onboarding_state: "restricted",
+    },
+  );
+  assert.equal(evidence.rows[0]!.audit_document.includes(subject), false);
+  assert.equal(
+    evidence.rows[0]!.audit_document.includes("identity-case-start-001"),
+    false,
+  );
+  assert.equal(
+    evidence.rows[0]!.stored_payloads.includes("synthetic-review-evidence"),
+    false,
+  );
+  assert.match(evidence.rows[0]!.stored_payloads, /^[0-9a-f]+$/u);
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_identity_provider_events
+          SET payload_digest = payload_digest
+        WHERE identity_case_id = $1::uuid`,
+      [evidence.rows[0]!.internal_case_id],
+    ),
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `DELETE FROM samra_core.customer_identity_case_transitions
+        WHERE identity_case_id = $1::uuid`,
+      [evidence.rows[0]!.internal_case_id],
+    ),
+  );
+  await assert.rejects(
+    first.connection.pool.query(
+      `UPDATE samra_core.customer_identity_cases
+          SET provider_inquiry_ref = 'different', version = version + 1,
+              updated_at = now()
+        WHERE id = $1::uuid`,
+      [evidence.rows[0]!.internal_case_id],
+    ),
+  );
 });
 
 test("PostgreSQL is the durable source of truth across atomicity, concurrency, restart, ledger, refund, and reconciliation", async () => {

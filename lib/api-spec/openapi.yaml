@@ -158,6 +158,61 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /v1/onboarding/identity:
+    post:
+      operationId: startCustomerIdentityVerification
+      tags: [onboarding]
+      summary: Create or resume the Samra-owned identity verification case
+      description: Creates one durable identity case and idempotently starts the configured provider inquiry. The response contains normalized Samra state only and no provider payload or customer PII.
+      security:
+        - CustomerBearer: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Existing identity case resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerIdentityCase"
+        "201":
+          description: Identity case created and provider inquiry attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerIdentityCase"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    get:
+      operationId: getCustomerIdentityCase
+      tags: [onboarding]
+      summary: Resume the authenticated customer identity verification case
+      security:
+        - CustomerBearer: []
+      responses:
+        "200":
+          description: Current normalized identity case state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerIdentityCase"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
   /v1/accounts:
     get:
       operationId: listAccounts
@@ -538,6 +593,38 @@ paths:
           $ref: "#/components/responses/NotFoundProblem"
         "409":
           $ref: "#/components/responses/ConflictProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/dev/onboarding/identity/{identityCaseId}/decision:
+    parameters:
+      - $ref: "#/components/parameters/IdentityCaseId"
+    post:
+      operationId: advanceDemoCustomerIdentity
+      tags: [demo]
+      summary: Apply a deterministic fake Persona decision
+      description: Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceDemoCustomerIdentityRequest"
+      responses:
+        "200":
+          description: Provider evidence disposition and current identity case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerIdentityProviderEventResult"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -1049,6 +1136,14 @@ components:
       required: true
       schema:
         type: string
+    IdentityCaseId:
+      name: identityCaseId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
     ReconciliationExceptionId:
       name: exceptionId
       in: path
@@ -1117,6 +1212,81 @@ components:
         - funding_ready
         - activated
         - restricted
+
+    CustomerIdentityCaseState:
+      type: string
+      enum: [created, pending, review, approved, declined, error]
+
+    CustomerIdentityProviderDecision:
+      type: string
+      enum: [pending, review, approved, declined, error]
+
+    CustomerIdentityProviderEventDisposition:
+      type: string
+      enum: [applied, ignored_stale, conflict]
+
+    CustomerIdentityCase:
+      type: object
+      additionalProperties: false
+      properties:
+        identityCaseId:
+          type: string
+        state:
+          $ref: "#/components/schemas/CustomerIdentityCaseState"
+        reasonFamily:
+          anyOf: [{ type: string }, { type: "null" }]
+        provider:
+          type: string
+          enum: [persona]
+        synthetic:
+          type: boolean
+          const: true
+        version:
+          type: integer
+          minimum: 1
+        decidedAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        nextAllowedActions:
+          type: array
+          items:
+            type: string
+      required:
+        - identityCaseId
+        - state
+        - reasonFamily
+        - provider
+        - synthetic
+        - version
+        - decidedAt
+        - createdAt
+        - updatedAt
+        - nextAllowedActions
+
+    AdvanceDemoCustomerIdentityRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        decision:
+          $ref: "#/components/schemas/CustomerIdentityProviderDecision"
+      required: [decision]
+
+    CustomerIdentityProviderEventResult:
+      type: object
+      additionalProperties: false
+      properties:
+        identityCase:
+          $ref: "#/components/schemas/CustomerIdentityCase"
+        replayed:
+          type: boolean
+        disposition:
+          $ref: "#/components/schemas/CustomerIdentityProviderEventDisposition"
+      required: [identityCase, replayed, disposition]
 
     CustomerConsentType:
       type: string
