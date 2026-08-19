@@ -403,17 +403,18 @@ test("customer onboarding is atomic across first login, restart, consent replay,
        (SELECT count(*)::text FROM samra_core.customer_onboarding_transitions
          WHERE onboarding_id = $1) AS transition_rows,
        (SELECT count(*)::text FROM samra_core.audit_events
-         WHERE entity_type = 'customer_onboarding' AND entity_id = $1)
+         WHERE entity_type = 'customer_onboarding' AND entity_id = $1::text)
          AS audit_rows,
        (SELECT count(*)::text FROM samra_core.idempotency_records
-         WHERE resource_type = 'customer_onboarding' AND resource_id = $1)
+         WHERE resource_type = 'customer_onboarding'
+           AND resource_id = $1::text)
          AS idempotency_rows,
        (SELECT COALESCE(string_agg(idempotency_key, ''), '')
           FROM samra_core.customer_consents WHERE onboarding_id = $1)
          AS stored_keys,
        (SELECT COALESCE(string_agg(event_key || metadata::text, ''), '')
           FROM samra_core.audit_events
-         WHERE entity_type = 'customer_onboarding' AND entity_id = $1)
+         WHERE entity_type = 'customer_onboarding' AND entity_id = $1::text)
          AS audit_document`,
     [durable.onboardingId],
   );
@@ -642,10 +643,11 @@ test("customer onboarding rolls back every write after controlled mid-transactio
             FROM samra_core.customer_onboarding_transitions
            WHERE onboarding_id = $1) AS transitions,
          (SELECT count(*)::text FROM samra_core.audit_events
-           WHERE entity_type = 'customer_onboarding' AND entity_id = $1)
+           WHERE entity_type = 'customer_onboarding' AND entity_id = $1::text)
            AS audits,
          (SELECT count(*)::text FROM samra_core.idempotency_records
-           WHERE resource_type = 'customer_onboarding' AND resource_id = $1)
+           WHERE resource_type = 'customer_onboarding'
+             AND resource_id = $1::text)
            AS idempotency_records`,
       [consentStart.snapshot.onboardingId],
     );
