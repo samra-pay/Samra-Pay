@@ -24,6 +24,7 @@ import {
   useCreateQuote,
   useCreateTransfer,
   useRemittanceOptions,
+  useSamraCustomerAcquisition,
   useTransfer,
 } from "@workspace/samra-client/react";
 import { useColors } from "@workspace/samra-pay-ds/hooks/use-colors";
@@ -346,6 +347,7 @@ function TransferStatusView({
 
 export function ApiRemittanceScreen() {
   const colors = useColors("dark");
+  const acquisition = useSamraCustomerAcquisition();
   const insets = useSafeAreaInsets();
   const [screen, setScreen] = useState<Screen>("restoring");
   const [session, setSession] = useState<MobileRemittanceSession | null>(null);
@@ -476,6 +478,7 @@ export function ApiRemittanceScreen() {
     )
       return;
     setStorageError(null);
+    void acquisition.recordOnce("quote_started");
     try {
       const serverQuote = await quoteMutation.mutateAsync({
         sourceAccountId: account.id,
@@ -484,6 +487,7 @@ export function ApiRemittanceScreen() {
         fundingMethod: "samra_balance",
         deliveryMethod,
       });
+      void acquisition.recordOnce("quote_completed");
       await persistActiveQuote(serverQuote);
       const nextSession: MobileRemittanceSession = {
         version: 1,
@@ -660,7 +664,7 @@ export function ApiRemittanceScreen() {
             }
           />
         ) : null}
-        {transferMutation.error ?? storageError ? (
+        {(transferMutation.error ?? storageError) ? (
           <ErrorNotice
             error={transferMutation.error ?? storageError}
             onRetry={() => void confirmTransfer()}

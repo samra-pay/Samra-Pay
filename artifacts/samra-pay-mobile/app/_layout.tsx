@@ -14,6 +14,7 @@ import { useDesignSystemFonts } from "@workspace/samra-pay-ds/hooks/use-fonts";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useSamraCustomerAcquisition } from "@workspace/samra-client/react";
 
 // Configure the generated API client before any provider or screen can issue a
 // request. Invalid API-mode builds fail explicitly during application startup.
@@ -26,6 +27,11 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const { isReady, isSignedIn } = useAuth();
+  const acquisition = useSamraCustomerAcquisition();
+
+  useEffect(() => {
+    void acquisition.recordOnce("app_open");
+  }, [acquisition]);
 
   if (!isReady) return null;
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@workspace/samra-pay-ds/components/ui/toaster";
@@ -33,6 +33,7 @@ import { LanguageProvider } from "@/lib/i18n";
 import { SamraRuntimeProvider, useSamraDataMode } from "@/lib/samra-runtime";
 import { isUnavailableFinancialPreview } from "@/lib/dashboard-api-model";
 import { useParams } from "wouter";
+import { useSamraCustomerAcquisition } from "@workspace/samra-client/react";
 
 const queryClient = new QueryClient();
 const CustomerOnboardingPage = lazy(() => import("@/pages/onboarding"));
@@ -73,6 +74,14 @@ function DashboardRouter() {
 }
 
 function Router() {
+  const [location] = useLocation();
+  const acquisition = useSamraCustomerAcquisition();
+
+  useEffect(() => {
+    if (!isPublicMarketingRoute(location)) return;
+    void acquisition.recordOnce("landing_view");
+  }, [acquisition, location]);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Switch>
@@ -125,6 +134,17 @@ function Router() {
         </Route>
       </Switch>
     </div>
+  );
+}
+
+function isPublicMarketingRoute(location: string): boolean {
+  return (
+    location === "/" ||
+    location === "/remittance" ||
+    location === "/cards" ||
+    location.startsWith("/cards/") ||
+    location === "/social-house" ||
+    location === "/ask-samra"
   );
 }
 

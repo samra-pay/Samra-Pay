@@ -179,7 +179,9 @@ It records allowlisted low-trust interactions without PII and derives identity,
 activation, and first-through-fifth-send milestones only from canonical
 PostgreSQL state.
 
-The next build instruments the owned web and mobile journeys through the shared
-fail-open telemetry boundary. Crossmint remains blocked until the journey passes
+The owned web and mobile journeys now use the shared fail-open telemetry
+boundary. Web stores no acquisition value in browser-managed storage, mobile
+stores only the opaque session reference, and binding follows successful durable
+onboarding creation. Crossmint remains blocked until the journey passes
 correctness, recovery, accessibility, performance, and usability gates and live
 identity configuration is approved.

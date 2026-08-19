@@ -1,8 +1,8 @@
 # Customer funnel telemetry and acquisition attribution
 
-Status: synthetic PostgreSQL and API foundation. No production tracking,
-advertising SDK, customer PII, device fingerprint, provider credential, or live
-deployment is enabled by this change.
+Status: synthetic PostgreSQL, API, and owned-client instrumentation foundation.
+No production tracking, advertising SDK, customer PII, device fingerprint,
+provider credential, or live deployment is enabled by this change.
 
 ## Authority boundary
 
@@ -36,13 +36,13 @@ a validated Auth0 access token and an existing active Samra identity binding.
 
 ## Accepted low-trust events
 
-| Event | Meaning | Explicitly does not prove |
-| --- | --- | --- |
-| `landing_view` | An owned web landing experience rendered | unique person, ad impression, signup |
-| `app_open` | The owned mobile client opened | install, authenticated user, retained user |
-| `quote_started` | The customer began quote input | valid or server-priced quote |
-| `quote_completed` | The client displayed a quote result | accepted price, funding, transfer, ledger entry |
-| `signup_started` | The customer selected the signup/onboarding path | authentication or customer creation |
+| Event             | Meaning                                          | Explicitly does not prove                       |
+| ----------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `landing_view`    | An owned web landing experience rendered         | unique person, ad impression, signup            |
+| `app_open`        | The owned mobile client opened                   | install, authenticated user, retained user      |
+| `quote_started`   | The customer began quote input                   | valid or server-priced quote                    |
+| `quote_completed` | The client displayed a quote result              | accepted price, funding, transfer, ledger entry |
+| `signup_started`  | The customer selected the signup/onboarding path | authentication or customer creation             |
 
 No endpoint accepts raw URLs, referrers, query strings, IP addresses, user
 agents, device IDs, emails, phone numbers, names, identity evidence, amounts,
@@ -100,6 +100,30 @@ Each report read creates operator audit evidence. The operations portal Reports
 page consumes this generated API contract and performs no financial or
 conversion-state reconstruction in the browser.
 
+## Owned-client instrumentation
+
+The web and mobile products use one shared `CustomerAcquisitionTracker` and the
+generated OpenAPI transport. Instrumentation is enabled only in explicit API
+mode; mock mode receives a frozen no-op client.
+
+- Web derives a controlled first-touch classification once at application
+  startup. It recognizes only allowlisted UTM source/medium aliases, known
+  search and social referrer hosts, and the presence (never the value) of
+  `gclid` or `fbclid`. Raw query strings and referrer URLs are never sent or
+  persisted. Campaign is currently `null` because no production campaign
+  taxonomy has been approved.
+- Web continuity relies on the API's first-party `HttpOnly` session cookie. The
+  browser application does not read or persist that cookie value.
+- Mobile uses direct attribution until an approved install/deep-link policy
+  exists. It may persist only the validated opaque `acq_` session reference in
+  AsyncStorage; no PII, auth token, customer ID, or financial value is stored.
+- Landing/app-open, signup-start, quote-start, and successful server-quote
+  boundaries are record-once observations for the current application runtime.
+  Binding is attempted only after durable onboarding creation succeeds.
+- Capture, storage, and binding failures resolve to an internal failure result
+  and do not interrupt navigation, onboarding, quote creation, or remittance.
+  Retries reuse the original idempotency key.
+
 ## Required evidence
 
 The change is acceptable only when Linux CI proves:
@@ -133,8 +157,7 @@ The change is acceptable only when Linux CI proves:
 
 ## Next build
 
-Instrument the owned web and mobile journeys through a shared, fail-open
-telemetry adapter. Product functionality must continue when telemetry is
-unavailable. The client must sanitize campaign inputs before transmission,
-retry only with the same idempotency key, preserve only the opaque mobile
-session reference, and bind only after durable onboarding creation succeeds.
+Run the connected customer journey through accessibility, keyboard, screen
+reader, narrow-screen, failure-recovery, and performance gates. Production
+campaign taxonomy, consent, abuse controls, retention, and live analytics remain
+blocked governance decisions rather than guessed client configuration.

@@ -12,6 +12,7 @@ import {
   type ReactElement,
 } from "react";
 
+import type { CustomerAcquisitionClient } from "./acquisition";
 import type {
   ActivityQuery,
   CreateQuoteInput,
@@ -29,6 +30,8 @@ import type {
 } from "./onboarding";
 
 const DataSourceContext = createContext<SamraDataSource | null>(null);
+const CustomerAcquisitionContext =
+  createContext<CustomerAcquisitionClient | null>(null);
 
 type SamraOnboardingRuntime = Readonly<{
   mode: SamraDataMode;
@@ -59,6 +62,27 @@ export function useSamraDataSource(): SamraDataSource {
     );
   }
   return source;
+}
+
+export function SamraCustomerAcquisitionProvider({
+  client,
+  children,
+}: PropsWithChildren<{ client: CustomerAcquisitionClient }>): ReactElement {
+  return (
+    <CustomerAcquisitionContext.Provider value={client}>
+      {children}
+    </CustomerAcquisitionContext.Provider>
+  );
+}
+
+export function useSamraCustomerAcquisition(): CustomerAcquisitionClient {
+  const client = useContext(CustomerAcquisitionContext);
+  if (!client) {
+    throw new Error(
+      "SamraCustomerAcquisitionProvider is missing from the application boundary",
+    );
+  }
+  return client;
 }
 
 export function SamraOnboardingSourceProvider({

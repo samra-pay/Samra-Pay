@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./acquisition": "./src/acquisition.ts",
     "./generated-transport": "./src/generated-transport.ts",
     "./onboarding": "./src/onboarding.ts",
     "./react": "./src/react.tsx"
