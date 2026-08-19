@@ -126,6 +126,9 @@ function Router() {
                 <Route path="/terms">
                   <LegalPage kind="terms" />
                 </Route>
+                <Route path="/electronic-communications">
+                  <LegalPage kind="electronic-communications" />
+                </Route>
                 <Route component={NotFound} />
               </Switch>
             </RoutedErrorBoundary>

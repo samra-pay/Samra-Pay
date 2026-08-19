@@ -182,6 +182,24 @@ PostgreSQL state.
 The owned web and mobile journeys now use the shared fail-open telemetry
 boundary. Web stores no acquisition value in browser-managed storage, mobile
 stores only the opaque session reference, and binding follows successful durable
-onboarding creation. Crossmint remains blocked until the journey passes
-correctness, recovery, accessibility, performance, and usability gates and live
-identity configuration is approved.
+onboarding creation.
+
+The alpha experience also enforces these customer-facing boundaries:
+
+- every required consent has an owned, version-independent review route on web
+  and mobile before selection;
+- legal copy states current synthetic/non-production behavior and does not
+  imply that Auth0, Persona, wallet, bank-funding, or payment providers are
+  live;
+- onboarding and identity-query failures replace the state-changing journey
+  with an explicit retry boundary and never substitute local truth;
+- web stage changes move keyboard focus to the new heading, mobile stage
+  changes announce the new title and description, and status/error/progress
+  semantics are explicit;
+- identity approval does not route an API-mode customer into financial screens
+  while activation and wallet provisioning remain disabled; only mock mode may
+  continue into the synthetic dashboard.
+
+Crossmint remains blocked until artifact performance budgets, final manual
+keyboard/screen-reader/device evidence, and live identity configuration are
+approved.

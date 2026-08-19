@@ -7,6 +7,7 @@ const onboardingSource = read("../app/onboarding.tsx");
 const authSource = read("../context/AuthContext.tsx");
 const runtimeSource = read("../lib/samra-runtime.tsx");
 const layoutSource = read("../app/_layout.tsx");
+const legalRouteSource = read("../app/legal/[kind].tsx");
 const sharedJourneySource = read("../../../lib/samra-client/src/onboarding.ts");
 
 describe("mobile customer-onboarding trust boundary", () => {
@@ -36,12 +37,33 @@ describe("mobile customer-onboarding trust boundary", () => {
       /AsyncStorage|localStorage|sessionStorage/,
     );
     expect(sharedJourneySource).toContain("Nothing is preselected");
-    expect(onboardingSource).toContain("Wallet provisioning remains disabled");
+    expect(onboardingSource).toContain(
+      "Account activation and wallet provisioning remain disabled",
+    );
   });
 
   it("registers onboarding as a protected application route", () => {
     expect(layoutSource).toContain('<Stack.Screen name="onboarding"');
+    expect(layoutSource).toContain('<Stack.Screen name="legal/[kind]"');
     expect(layoutSource).toContain("isSignedIn");
+  });
+
+  it("lets customers review every legal choice without toggling consent", () => {
+    expect(onboardingSource).toContain("presentation.href");
+    expect(onboardingSource).toContain('accessibilityRole="link"');
+    expect(onboardingSource).toContain("`/legal/${legalKind}` as Href");
+    expect(legalRouteSource).toContain("getSamraLegalDocument");
+    expect(legalRouteSource).toContain('accessibilityRole="header"');
+  });
+
+  it("fails closed on query errors and does not expose a blocked API dashboard", () => {
+    expect(onboardingSource).toContain("MobileOnboardingFailure");
+    expect(onboardingSource).toContain("identityQuery.refetch()");
+    expect(onboardingSource).toContain('runtime.mode === "mock"');
+    expect(onboardingSource).toContain("Continue to synthetic dashboard");
+    expect(onboardingSource).toContain(
+      "AccessibilityInfo.announceForAccessibility",
+    );
   });
 });
 

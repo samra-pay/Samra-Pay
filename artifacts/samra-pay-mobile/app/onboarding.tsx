@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Pressable,
   ScrollView,
@@ -8,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   buildOnboardingJourneyView,
@@ -16,6 +17,7 @@ import {
   type CustomerConsentType,
   type CustomerIdentityProviderDecision,
 } from "@workspace/samra-client/onboarding";
+import { parseSamraLegalPath } from "@workspace/samra-client/legal";
 import {
   useAdvanceDemoCustomerIdentity,
   useCustomerIdentityCase,
@@ -63,6 +65,13 @@ export default function CustomerOnboardingScreen() {
   const startIdentity = useStartCustomerIdentityVerification();
   const advanceIdentity = useAdvanceDemoCustomerIdentity();
   const resetDemo = useResetDemoCustomerOnboarding();
+  const queryError = onboardingQuery.error ?? identityQuery.error;
+  const mutationError =
+    startOnboarding.error ??
+    submitConsents.error ??
+    startIdentity.error ??
+    advanceIdentity.error ??
+    resetDemo.error;
 
   useEffect(() => {
     void acquisition.recordOnce("signup_started");
@@ -72,27 +81,51 @@ export default function CustomerOnboardingScreen() {
     setAccepted({});
   }, [onboarding?.consentBundle.bundleVersion]);
 
+  useEffect(() => {
+    if (onboardingQuery.isLoading || queryError) return;
+    void AccessibilityInfo.announceForAccessibility(
+      `${journey.title}. ${journey.description}`,
+    );
+  }, [
+    journey.description,
+    journey.title,
+    onboardingQuery.isLoading,
+    queryError,
+  ]);
+
   const documents = onboarding?.consentBundle.documents ?? [];
   const allAccepted =
     documents.length > 0 &&
     documents.every((document) => accepted[document.consentType] === true);
-  const error =
-    onboardingQuery.error ??
-    identityQuery.error ??
-    startOnboarding.error ??
-    submitConsents.error ??
-    startIdentity.error ??
-    advanceIdentity.error ??
-    resetDemo.error;
-
   if (onboardingQuery.isLoading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+        <ActivityIndicator
+          accessibilityElementsHidden
+          color={colors.primary}
+          size="large"
+        />
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[styles.loadingText, { color: colors.mutedForeground }]}
+        >
           Resuming your onboarding…
         </Text>
       </View>
+    );
+  }
+
+  if (queryError) {
+    return (
+      <MobileOnboardingFailure
+        error={queryError}
+        retrying={onboardingQuery.isFetching || identityQuery.isFetching}
+        onRetry={() => {
+          const retries: Promise<unknown>[] = [onboardingQuery.refetch()];
+          if (identityQuery.error) retries.push(identityQuery.refetch());
+          void Promise.all(retries);
+        }}
+      />
     );
   }
 
@@ -156,6 +189,7 @@ export default function CustomerOnboardingScreen() {
 
           <Text
             accessibilityRole="header"
+            accessibilityLiveRegion="polite"
             style={[styles.title, { color: colors.foreground }]}
           >
             {journey.title}
@@ -164,9 +198,10 @@ export default function CustomerOnboardingScreen() {
             {journey.description}
           </Text>
 
-          {error ? (
+          {mutationError ? (
             <View
               accessibilityRole="alert"
+              accessibilityLiveRegion="assertive"
               style={[
                 styles.errorPanel,
                 {
@@ -186,12 +221,22 @@ export default function CustomerOnboardingScreen() {
                   { color: colors.destructiveForeground },
                 ]}
               >
-                {safeCustomerError(error)}
+                {safeCustomerError(mutationError)}
               </Text>
             </View>
           ) : null}
 
-          <View style={styles.stageContent}>
+          <View
+            accessibilityState={{
+              busy:
+                startOnboarding.isPending ||
+                submitConsents.isPending ||
+                startIdentity.isPending ||
+                advanceIdentity.isPending ||
+                resetDemo.isPending,
+            }}
+            style={styles.stageContent}
+          >
             {journey.stage === "welcome" ? (
               <Button
                 accessibilityLabel={
@@ -225,74 +270,114 @@ export default function CustomerOnboardingScreen() {
                   );
                   const checked = accepted[document.consentType] === true;
                   return (
-                    <Pressable
+                    <View
                       key={document.consentType}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked }}
-                      accessibilityLabel={`Accept ${presentation.title}`}
-                      onPress={() =>
-                        setAccepted((current) => ({
-                          ...current,
-                          [document.consentType]: !checked,
-                        }))
-                      }
-                      style={({ pressed }) => [
+                      style={[
                         styles.consentRow,
                         {
                           borderColor: checked ? colors.primary : colors.border,
                           backgroundColor: colors.background,
-                          opacity: pressed ? 0.8 : 1,
                         },
                       ]}
                     >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          {
-                            borderColor: checked
-                              ? colors.primary
-                              : colors.mutedForeground,
-                            backgroundColor: checked
-                              ? colors.primary
-                              : "transparent",
-                          },
+                      <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked }}
+                        accessibilityLabel={`Accept ${presentation.title}`}
+                        onPress={() =>
+                          setAccepted((current) => ({
+                            ...current,
+                            [document.consentType]: !checked,
+                          }))
+                        }
+                        style={({ pressed }) => [
+                          styles.consentChoice,
+                          { opacity: pressed ? 0.8 : 1 },
                         ]}
                       >
-                        {checked ? (
+                        <View
+                          style={[
+                            styles.checkbox,
+                            {
+                              borderColor: checked
+                                ? colors.primary
+                                : colors.mutedForeground,
+                              backgroundColor: checked
+                                ? colors.primary
+                                : "transparent",
+                            },
+                          ]}
+                        >
+                          {checked ? (
+                            <Feather
+                              name="check"
+                              size={14}
+                              color={colors.primaryForeground}
+                            />
+                          ) : null}
+                        </View>
+                        <View style={styles.consentCopy}>
+                          <Text
+                            style={[
+                              styles.consentTitle,
+                              { color: colors.foreground },
+                            ]}
+                          >
+                            I agree to the {presentation.title}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.consentSummary,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
+                            {presentation.summary}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.version,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
+                            Version {document.documentVersion}
+                          </Text>
+                        </View>
+                      </Pressable>
+                      {presentation.href ? (
+                        <Pressable
+                          accessibilityRole="link"
+                          accessibilityLabel={`Read ${presentation.title}`}
+                          accessibilityHint="Opens the non-production document"
+                          onPress={() => {
+                            const legalKind = parseSamraLegalPath(
+                              presentation.href,
+                            );
+                            if (legalKind) {
+                              router.push(`/legal/${legalKind}` as Href);
+                            }
+                          }}
+                          style={({ pressed }) => [
+                            styles.legalLink,
+                            { opacity: pressed ? 0.7 : 1 },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.legalLinkText,
+                              { color: colors.primary },
+                            ]}
+                          >
+                            Read the document
+                          </Text>
                           <Feather
-                            name="check"
-                            size={14}
-                            color={colors.primaryForeground}
+                            accessibilityElementsHidden
+                            name="arrow-up-right"
+                            size={15}
+                            color={colors.primary}
                           />
-                        ) : null}
-                      </View>
-                      <View style={styles.consentCopy}>
-                        <Text
-                          style={[
-                            styles.consentTitle,
-                            { color: colors.foreground },
-                          ]}
-                        >
-                          I agree to the {presentation.title}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.consentSummary,
-                            { color: colors.mutedForeground },
-                          ]}
-                        >
-                          {presentation.summary}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.version,
-                            { color: colors.mutedForeground },
-                          ]}
-                        >
-                          Version {document.documentVersion}
-                        </Text>
-                      </View>
-                    </Pressable>
+                        </Pressable>
+                      ) : null}
+                    </View>
                   );
                 })}
                 <BoundaryNotice />
@@ -448,15 +533,26 @@ export default function CustomerOnboardingScreen() {
 
             {journey.stage === "identity_approved" ? (
               <View style={styles.stack}>
-                <StatusNotice text="Identity evidence accepted. Wallet provisioning remains disabled." />
-                <Button
-                  accessibilityLabel="Continue to the synthetic Samra dashboard"
-                  variant="outline"
-                  size="lg"
-                  onPress={() => router.replace("/(tabs)")}
-                >
-                  Continue to demo dashboard
-                </Button>
+                <StatusNotice text="Identity evidence accepted. Account activation and wallet provisioning remain disabled." />
+                {runtime.mode === "mock" ? (
+                  <Button
+                    accessibilityLabel="Continue to the synthetic Samra dashboard"
+                    variant="outline"
+                    size="lg"
+                    onPress={() => router.replace("/(tabs)")}
+                  >
+                    Continue to synthetic dashboard
+                  </Button>
+                ) : (
+                  <Button
+                    accessibilityLabel="Return to Samra Pay"
+                    variant="outline"
+                    size="lg"
+                    onPress={() => router.replace("/login")}
+                  >
+                    Return to Samra Pay
+                  </Button>
+                )}
               </View>
             ) : null}
 
@@ -513,6 +609,7 @@ function StatusNotice({ text }: { text: string }) {
   return (
     <View
       accessibilityRole="summary"
+      accessibilityLiveRegion="polite"
       style={[
         styles.notice,
         { borderColor: colors.primary, backgroundColor: colors.background },
@@ -522,6 +619,50 @@ function StatusNotice({ text }: { text: string }) {
       <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
         {text}
       </Text>
+    </View>
+  );
+}
+
+function MobileOnboardingFailure({
+  error,
+  retrying,
+  onRetry,
+}: {
+  error: unknown;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  const colors = useColors("dark");
+  return (
+    <View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="assertive"
+      style={[styles.centered, { backgroundColor: colors.background }]}
+    >
+      <Feather
+        accessibilityElementsHidden
+        name="alert-triangle"
+        size={30}
+        color={colors.destructiveForeground}
+      />
+      <Text style={[styles.failureTitle, { color: colors.foreground }]}>
+        Could not resume onboarding
+      </Text>
+      <Text
+        style={[styles.failureDescription, { color: colors.mutedForeground }]}
+      >
+        {safeCustomerError(error)}
+      </Text>
+      <Button
+        accessibilityLabel="Retry onboarding"
+        variant="outline"
+        size="lg"
+        loading={retrying}
+        onPress={onRetry}
+        style={styles.retryButton}
+      >
+        Retry
+      </Button>
     </View>
   );
 }
@@ -634,6 +775,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
+  },
+  consentChoice: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
@@ -659,6 +803,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   version: { fontFamily: font.sans.regular, fontSize: 10, marginTop: 6 },
+  legalLink: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    marginLeft: 36,
+    marginTop: 6,
+  },
+  legalLinkText: {
+    fontFamily: font.sans.semibold,
+    fontSize: 12,
+    textDecorationLine: "underline",
+  },
   notice: {
     minHeight: 52,
     borderWidth: 1,
@@ -725,4 +883,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textDecorationLine: "underline",
   },
+  failureTitle: {
+    fontFamily: font.serif.semibold,
+    fontSize: 28,
+    lineHeight: 34,
+    marginTop: 18,
+    textAlign: "center",
+  },
+  failureDescription: {
+    fontFamily: font.sans.regular,
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 10,
+    maxWidth: 420,
+    textAlign: "center",
+  },
+  retryButton: { alignSelf: "stretch", marginTop: 22 },
 });

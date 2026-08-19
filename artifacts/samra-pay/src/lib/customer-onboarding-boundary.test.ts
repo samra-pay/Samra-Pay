@@ -6,6 +6,7 @@ const loginSource = read("../pages/login.tsx");
 const onboardingSource = read("../pages/onboarding.tsx");
 const runtimeSource = read("./samra-runtime.tsx");
 const appSource = read("../App.tsx");
+const legalPageSource = read("../pages/legal.tsx");
 const sharedJourneySource = read(
   "../../../../lib/samra-client/src/onboarding.ts",
 );
@@ -38,7 +39,11 @@ describe("web customer-onboarding trust boundary", () => {
     expect(onboardingSource).not.toMatch(
       /localStorage|sessionStorage|indexedDB/,
     );
-    expect(onboardingSource).toContain("Wallet provisioning remains disabled");
+    expect(onboardingSource).toMatch(
+      /Account activation and wallet\s+provisioning remain disabled/,
+    );
+    expect(appSource).toContain('path="/electronic-communications"');
+    expect(legalPageSource).toContain("getSamraLegalDocument");
   });
 
   it("loads the isolated onboarding route lazily", () => {
@@ -50,6 +55,20 @@ describe("web customer-onboarding trust boundary", () => {
 
   it("preserves a public remittance quote through synthetic onboarding", () => {
     expect(onboardingSource).toContain("consumePostLoginRedirect()");
+  });
+
+  it("keeps API identity approval out of financial routes and recovers both queries", () => {
+    expect(onboardingSource).toContain('runtime.mode === "mock"');
+    expect(onboardingSource).toContain("Continue to synthetic dashboard");
+    expect(onboardingSource).not.toContain(' : "/dashboard"');
+    expect(onboardingSource).toContain("identityQuery.refetch()");
+    expect(onboardingSource).toContain('role="alert"');
+    expect(onboardingSource).toContain("motion-reduce:animate-none");
+  });
+
+  it("uses link semantics without nesting a button inside an anchor", () => {
+    expect(onboardingSource).toContain("<Button asChild");
+    expect(onboardingSource).not.toMatch(/<Link[^>]*>[\s\S]{0,120}<Button/);
   });
 });
 
