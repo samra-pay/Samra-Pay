@@ -1,6 +1,12 @@
 import type { ErrorRequestHandler, Request } from "express";
 import { DomainError } from "@workspace/remittance";
 import { LedgerError } from "@workspace/ledger";
+import { UnauthorizedError } from "express-oauth2-jwt-bearer";
+import {
+  CustomerAccessRestrictedError,
+  CustomerAuthenticationRequiredError,
+  CustomerIdentityUnboundError,
+} from "./customer-auth-errors";
 
 export type FieldErrors = Readonly<Record<string, readonly string[]>>;
 
@@ -40,6 +46,9 @@ export class AuthorizationDeniedError extends Error {
 export const problemHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const mapped = mapError(error);
   const traceId = requestTraceId(req);
+  if (mapped.wwwAuthenticate) {
+    res.setHeader("WWW-Authenticate", mapped.wwwAuthenticate);
+  }
   res
     .status(mapped.status)
     .type("application/problem+json")
@@ -62,6 +71,7 @@ function mapError(error: unknown): Readonly<{
   title: string;
   detail: string;
   fieldErrors: FieldErrors;
+  wwwAuthenticate?: string;
 }> {
   if (error instanceof RequestValidationError) {
     return {
@@ -86,6 +96,37 @@ function mapError(error: unknown): Readonly<{
       status: 401,
       code: "AUTHENTICATION_REQUIRED",
       title: "Authentication required",
+      detail: error.message,
+      fieldErrors: {},
+    };
+  }
+  if (
+    error instanceof UnauthorizedError ||
+    error instanceof CustomerAuthenticationRequiredError
+  ) {
+    return {
+      status: 401,
+      code: "CUSTOMER_AUTHENTICATION_REQUIRED",
+      title: "Customer authentication required",
+      detail: "A valid customer access token is required.",
+      fieldErrors: {},
+      wwwAuthenticate: 'Bearer realm="samra-api"',
+    };
+  }
+  if (error instanceof CustomerIdentityUnboundError) {
+    return {
+      status: 403,
+      code: "CUSTOMER_IDENTITY_UNBOUND",
+      title: "Customer identity not linked",
+      detail: error.message,
+      fieldErrors: {},
+    };
+  }
+  if (error instanceof CustomerAccessRestrictedError) {
+    return {
+      status: 403,
+      code: "CUSTOMER_ACCESS_RESTRICTED",
+      title: "Customer access restricted",
       detail: error.message,
       fieldErrors: {},
     };

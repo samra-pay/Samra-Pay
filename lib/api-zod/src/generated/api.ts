@@ -22,7 +22,7 @@ export const ReadinessCheckResponse = zod.object({
 });
 
 /**
- * @summary Get the synthetic demo customer
+ * @summary Get the current Samra Pay customer
  */
 export const GetCurrentCustomerResponse = zod.object({
   id: zod.string(),

@@ -247,7 +247,7 @@ export const getGetCurrentCustomerUrl = () => {
 };
 
 /**
- * @summary Get the synthetic demo customer
+ * @summary Get the current Samra Pay customer
  */
 export const getCurrentCustomer = async (
   options?: Parameters<typeof customFetch>[1],
@@ -264,7 +264,9 @@ export const getGetCurrentCustomerQueryKey = () => {
 
 export const getGetCurrentCustomerQueryOptions = <
   TData = Awaited<ReturnType<typeof getCurrentCustomer>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getCurrentCustomer>>,
@@ -291,15 +293,19 @@ export const getGetCurrentCustomerQueryOptions = <
 export type GetCurrentCustomerQueryResult = NonNullable<
   Awaited<ReturnType<typeof getCurrentCustomer>>
 >;
-export type GetCurrentCustomerQueryError = ErrorType<UnavailableResponse>;
+export type GetCurrentCustomerQueryError = ErrorType<
+  UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+>;
 
 /**
- * @summary Get the synthetic demo customer
+ * @summary Get the current Samra Pay customer
  */
 
 export function useGetCurrentCustomer<
   TData = Awaited<ReturnType<typeof getCurrentCustomer>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getCurrentCustomer>>,
@@ -339,7 +345,9 @@ export const getListAccountsQueryKey = () => {
 
 export const getListAccountsQueryOptions = <
   TData = Awaited<ReturnType<typeof listAccounts>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof listAccounts>>,
@@ -366,7 +374,9 @@ export const getListAccountsQueryOptions = <
 export type ListAccountsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAccounts>>
 >;
-export type ListAccountsQueryError = ErrorType<UnavailableResponse>;
+export type ListAccountsQueryError = ErrorType<
+  UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+>;
 
 /**
  * @summary List ledger-derived customer accounts
@@ -374,7 +384,9 @@ export type ListAccountsQueryError = ErrorType<UnavailableResponse>;
 
 export function useListAccounts<
   TData = Awaited<ReturnType<typeof listAccounts>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof listAccounts>>,
@@ -427,7 +439,12 @@ export const getListActivityQueryKey = (params?: ListActivityParams) => {
 
 export const getListActivityQueryOptions = <
   TData = Awaited<ReturnType<typeof listActivity>>,
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
 >(
   params?: ListActivityParams,
   options?: {
@@ -458,7 +475,10 @@ export type ListActivityQueryResult = NonNullable<
   Awaited<ReturnType<typeof listActivity>>
 >;
 export type ListActivityQueryError = ErrorType<
-  ValidationProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
 >;
 
 /**
@@ -467,7 +487,12 @@ export type ListActivityQueryError = ErrorType<
 
 export function useListActivity<
   TData = Awaited<ReturnType<typeof listActivity>>,
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
 >(
   params?: ListActivityParams,
   options?: {
@@ -510,7 +535,9 @@ export const getListBeneficiariesQueryKey = () => {
 
 export const getListBeneficiariesQueryOptions = <
   TData = Awaited<ReturnType<typeof listBeneficiaries>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof listBeneficiaries>>,
@@ -537,7 +564,9 @@ export const getListBeneficiariesQueryOptions = <
 export type ListBeneficiariesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listBeneficiaries>>
 >;
-export type ListBeneficiariesQueryError = ErrorType<UnavailableResponse>;
+export type ListBeneficiariesQueryError = ErrorType<
+  UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+>;
 
 /**
  * @summary List active beneficiaries owned by the current actor
@@ -545,7 +574,9 @@ export type ListBeneficiariesQueryError = ErrorType<UnavailableResponse>;
 
 export function useListBeneficiaries<
   TData = Awaited<ReturnType<typeof listBeneficiaries>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof listBeneficiaries>>,
@@ -583,7 +614,12 @@ export const createBeneficiary = async (
 };
 
 export const getCreateBeneficiaryMutationOptions = <
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -625,14 +661,22 @@ export type CreateBeneficiaryMutationResult = NonNullable<
 >;
 export type CreateBeneficiaryMutationBody = BodyType<CreateBeneficiaryRequest>;
 export type CreateBeneficiaryMutationError = ErrorType<
-  ValidationProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
 >;
 
 /**
  * @summary Create a synthetic beneficiary for the current actor
  */
 export const useCreateBeneficiary = <
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -674,7 +718,12 @@ export const getGetBeneficiaryQueryKey = (beneficiaryId: string) => {
 
 export const getGetBeneficiaryQueryOptions = <
   TData = Awaited<ReturnType<typeof getBeneficiary>>,
-  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
 >(
   beneficiaryId: string,
   options?: {
@@ -711,7 +760,10 @@ export type GetBeneficiaryQueryResult = NonNullable<
   Awaited<ReturnType<typeof getBeneficiary>>
 >;
 export type GetBeneficiaryQueryError = ErrorType<
-  NotFoundProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | UnavailableResponse
 >;
 
 /**
@@ -720,7 +772,12 @@ export type GetBeneficiaryQueryError = ErrorType<
 
 export function useGetBeneficiary<
   TData = Awaited<ReturnType<typeof getBeneficiary>>,
-  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
 >(
   beneficiaryId: string,
   options?: {
@@ -763,7 +820,11 @@ export const updateBeneficiary = async (
 
 export const getUpdateBeneficiaryMutationOptions = <
   TError = ErrorType<
-    NotFoundProblemResponse | ValidationProblemResponse | UnavailableResponse
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
   >,
   TContext = unknown,
 >(options?: {
@@ -806,7 +867,11 @@ export type UpdateBeneficiaryMutationResult = NonNullable<
 >;
 export type UpdateBeneficiaryMutationBody = BodyType<UpdateBeneficiaryRequest>;
 export type UpdateBeneficiaryMutationError = ErrorType<
-  NotFoundProblemResponse | ValidationProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
 >;
 
 /**
@@ -814,7 +879,11 @@ export type UpdateBeneficiaryMutationError = ErrorType<
  */
 export const useUpdateBeneficiary = <
   TError = ErrorType<
-    NotFoundProblemResponse | ValidationProblemResponse | UnavailableResponse
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
   >,
   TContext = unknown,
 >(options?: {
@@ -852,7 +921,12 @@ export const deleteBeneficiary = async (
 };
 
 export const getDeleteBeneficiaryMutationOptions = <
-  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -894,14 +968,22 @@ export type DeleteBeneficiaryMutationResult = NonNullable<
 >;
 
 export type DeleteBeneficiaryMutationError = ErrorType<
-  NotFoundProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | UnavailableResponse
 >;
 
 /**
  * @summary Soft-delete an active beneficiary owned by the current actor
  */
 export const useDeleteBeneficiary = <
-  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -942,7 +1024,9 @@ export const getGetRemittanceOptionsQueryKey = () => {
 
 export const getGetRemittanceOptionsQueryOptions = <
   TData = Awaited<ReturnType<typeof getRemittanceOptions>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getRemittanceOptions>>,
@@ -969,7 +1053,9 @@ export const getGetRemittanceOptionsQueryOptions = <
 export type GetRemittanceOptionsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getRemittanceOptions>>
 >;
-export type GetRemittanceOptionsQueryError = ErrorType<UnavailableResponse>;
+export type GetRemittanceOptionsQueryError = ErrorType<
+  UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+>;
 
 /**
  * @summary List supported synthetic remittance options
@@ -977,7 +1063,9 @@ export type GetRemittanceOptionsQueryError = ErrorType<UnavailableResponse>;
 
 export function useGetRemittanceOptions<
   TData = Awaited<ReturnType<typeof getRemittanceOptions>>,
-  TError = ErrorType<UnavailableResponse>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getRemittanceOptions>>,
@@ -1015,7 +1103,12 @@ export const createRemittanceQuote = async (
 };
 
 export const getCreateRemittanceQuoteMutationOptions = <
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1057,14 +1150,22 @@ export type CreateRemittanceQuoteMutationResult = NonNullable<
 >;
 export type CreateRemittanceQuoteMutationBody = BodyType<CreateQuoteRequest>;
 export type CreateRemittanceQuoteMutationError = ErrorType<
-  ValidationProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
 >;
 
 /**
  * @summary Create an immutable server-calculated quote
  */
 export const useCreateRemittanceQuote = <
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1122,7 +1223,12 @@ export const getListRemittanceTransfersQueryKey = (
 
 export const getListRemittanceTransfersQueryOptions = <
   TData = Awaited<ReturnType<typeof listRemittanceTransfers>>,
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
 >(
   params?: ListRemittanceTransfersParams,
   options?: {
@@ -1155,7 +1261,10 @@ export type ListRemittanceTransfersQueryResult = NonNullable<
   Awaited<ReturnType<typeof listRemittanceTransfers>>
 >;
 export type ListRemittanceTransfersQueryError = ErrorType<
-  ValidationProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
 >;
 
 /**
@@ -1164,7 +1273,12 @@ export type ListRemittanceTransfersQueryError = ErrorType<
 
 export function useListRemittanceTransfers<
   TData = Awaited<ReturnType<typeof listRemittanceTransfers>>,
-  TError = ErrorType<ValidationProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
 >(
   params?: ListRemittanceTransfersParams,
   options?: {
@@ -1206,6 +1320,8 @@ export const createRemittanceTransfer = async (
 
 export const getCreateRemittanceTransferMutationOptions = <
   TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
     | ConflictProblemResponse
     | ExpiredProblemResponse
     | ValidationProblemResponse
@@ -1253,6 +1369,8 @@ export type CreateRemittanceTransferMutationResult = NonNullable<
 export type CreateRemittanceTransferMutationBody =
   BodyType<CreateTransferRequest>;
 export type CreateRemittanceTransferMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
   | ConflictProblemResponse
   | ExpiredProblemResponse
   | ValidationProblemResponse
@@ -1264,6 +1382,8 @@ export type CreateRemittanceTransferMutationError = ErrorType<
  */
 export const useCreateRemittanceTransfer = <
   TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
     | ConflictProblemResponse
     | ExpiredProblemResponse
     | ValidationProblemResponse
@@ -1310,7 +1430,12 @@ export const getGetRemittanceTransferQueryKey = (transferId: string) => {
 
 export const getGetRemittanceTransferQueryOptions = <
   TData = Awaited<ReturnType<typeof getRemittanceTransfer>>,
-  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
 >(
   transferId: string,
   options?: {
@@ -1348,7 +1473,10 @@ export type GetRemittanceTransferQueryResult = NonNullable<
   Awaited<ReturnType<typeof getRemittanceTransfer>>
 >;
 export type GetRemittanceTransferQueryError = ErrorType<
-  NotFoundProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | UnavailableResponse
 >;
 
 /**
@@ -1357,7 +1485,12 @@ export type GetRemittanceTransferQueryError = ErrorType<
 
 export function useGetRemittanceTransfer<
   TData = Awaited<ReturnType<typeof getRemittanceTransfer>>,
-  TError = ErrorType<NotFoundProblemResponse | UnavailableResponse>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
 >(
   transferId: string,
   options?: {
@@ -1400,7 +1533,11 @@ export const cancelRemittanceTransfer = async (
 
 export const getCancelRemittanceTransferMutationOptions = <
   TError = ErrorType<
-    NotFoundProblemResponse | ConflictProblemResponse | UnavailableResponse
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | UnavailableResponse
   >,
   TContext = unknown,
 >(options?: {
@@ -1443,7 +1580,11 @@ export type CancelRemittanceTransferMutationResult = NonNullable<
 >;
 
 export type CancelRemittanceTransferMutationError = ErrorType<
-  NotFoundProblemResponse | ConflictProblemResponse | UnavailableResponse
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | UnavailableResponse
 >;
 
 /**
@@ -1451,7 +1592,11 @@ export type CancelRemittanceTransferMutationError = ErrorType<
  */
 export const useCancelRemittanceTransfer = <
   TError = ErrorType<
-    NotFoundProblemResponse | ConflictProblemResponse | UnavailableResponse
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | UnavailableResponse
   >,
   TContext = unknown,
 >(options?: {

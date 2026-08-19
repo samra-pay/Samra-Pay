@@ -138,6 +138,8 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
       truth_balance_minor: string;
       quote_guard: string;
       resolution_columns: string;
+      customer_auth_identity_table: string;
+      customer_auth_identity_guard: string;
     }>(
       `SELECT
          (SELECT count(*) FROM samra_migrations.migration_history)::text AS migrations,
@@ -160,16 +162,25 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
           WHERE table_schema = 'samra_core'
             AND table_name = 'reconciliation_exceptions'
             AND column_name IN ('resolved_by','resolution_journal_id',
-                                'resolution_idempotency_key')) AS resolution_columns`,
+                                'resolution_idempotency_key')) AS resolution_columns,
+         (SELECT count(*)::text FROM information_schema.tables
+          WHERE table_schema = 'samra_core'
+            AND table_name = 'customer_auth_identities')
+           AS customer_auth_identity_table,
+         (SELECT count(*)::text FROM pg_trigger
+          WHERE tgname = 'customer_auth_identities_controlled_mutation'
+            AND NOT tgisinternal) AS customer_auth_identity_guard`,
     );
     assert.deepEqual(upgraded.rows[0], {
-      migrations: "11",
+      migrations: "12",
       customers: "2",
       opening_journals: "1",
       natural_balance_minor: "425000",
       truth_balance_minor: "425000",
       quote_guard: "1",
       resolution_columns: "3",
+      customer_auth_identity_table: "1",
+      customer_auth_identity_guard: "1",
     });
   } finally {
     if (target) await target.pool.end();

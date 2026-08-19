@@ -7,3 +7,4 @@ export * from "./reconciliation";
 export * from "./remittance";
 export * from "./workforce";
 export * from "./cases";
+export * from "./customer-auth";

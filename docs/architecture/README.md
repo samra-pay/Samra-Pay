@@ -1,6 +1,7 @@
 # Samra Pay Architecture Foundation
 
-Status: synthetic-data backend implementation. Production rails, authentication,
+Status: synthetic-data backend implementation with a disabled-by-default Auth0
+customer-authentication foundation. Production rails, live identity enablement,
 security hardening, and deployment remain out of scope.
 
 This foundation creates **functioning logic truth**, not financial truth. It is a
@@ -12,6 +13,7 @@ reconciliation before any live provider is connected.
 
 ```text
 web/mobile clients
+  -> optional Auth0 access-token boundary and Samra identity mapping
   -> /api/v1 Samra contract
   -> application/domain services
   -> Samra control ledger
@@ -39,9 +41,9 @@ remains useful for fast unit testing and resets on restart.
 `SAMRA_PERSISTENCE_MODE=postgres` uses the durable PostgreSQL repositories and
 transaction boundaries. Transfer progression is claimed through leased work
 items, retry state survives restart, expired leases recover, outbox publication
-is claimed idempotently, and retry exhaustion is visible to operations. No
-authentication, real customer data, live provider connection, or production
-deployment exists.
+is claimed idempotently, and retry exhaustion is visible to operations. The
+Auth0 code path is not live and has no tenant configuration. No real customer
+data, live provider connection, or production deployment exists.
 
 ## First vertical slice
 
@@ -76,6 +78,9 @@ Security hardening is deferred, but these controls are not security extras:
 | `SAMRA_PERSISTENCE_MODE`            | `memory`, `postgres` | `memory`   | Selects process-local or durable persistence      |
 | `SAMRA_RUN_WORKER`                  | `false`, `true`      | `false`    | Runs fake-provider workflow and outbox processing |
 | `SAMRA_INTERNAL_OPERATIONS_ENABLED` | `false`, `true`      | `false`    | Enables demo/PostgreSQL read-only operations APIs |
+| `SAMRA_CUSTOMER_AUTH_MODE`          | `disabled`, `auth0`  | `disabled` | Enables exact-issuer Auth0 customer access tokens |
+| `AUTH0_ISSUER_BASE_URL`             | HTTPS origin         | unset      | Exact Auth0 tenant or custom-domain issuer        |
+| `AUTH0_AUDIENCE`                    | API identifier       | unset      | Exact Samra API audience                          |
 | `VITE_SAMRA_DATA_MODE`              | `mock`, `api`        | `mock`     | Web data source                                   |
 | `VITE_SAMRA_OPERATIONS_ENABLED`     | `false`, `true`      | `false`    | Explicitly enables the private operations portal  |
 | `VITE_SAMRA_OPS_DATA_MODE`          | `mock`, `api`        | `mock`     | Selects fixture or durable operations data        |
@@ -93,5 +98,6 @@ passes its acceptance gate.
 - [Remittance lifecycle](./remittance.md)
 - [Frontend cutover](./frontend-cutover.md)
 - [Operations control plane](./operations-control-plane.md)
+- [Customer identity and Auth0 foundation](./customer-identity-auth0.md)
 - [Replit safety and release gates](./replit-runbook.md)
 - [Backend assurance release readiness](../testing/backend-assurance-release-readiness.md)

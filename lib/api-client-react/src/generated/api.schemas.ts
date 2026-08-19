@@ -886,12 +886,12 @@ export type NotFoundProblemResponse = ApiProblem;
 export type UnavailableResponse = ApiProblem;
 
 /**
- * Workforce authentication is required or invalid
+ * Customer bearer or workforce authentication is required or invalid
  */
 export type UnauthorizedProblemResponse = ApiProblem;
 
 /**
- * The authenticated workforce role lacks permission
+ * The authenticated customer identity is unbound or restricted, or the workforce role lacks permission
  */
 export type ForbiddenProblemResponse = ApiProblem;
 

@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type RequestHandler } from "express";
 import { createHealthRouter } from "./health";
 import type { ApiRuntimeConfig } from "../config";
 import { DemoRuntime } from "../domain/demo-runtime";
@@ -8,6 +8,9 @@ import { DomainError } from "@workspace/remittance";
 export function createApiRouter(
   config: ApiRuntimeConfig,
   demoRuntime?: DemoRuntime,
+  dependencies: Readonly<{
+    customerAccessTokenMiddleware?: RequestHandler;
+  }> = {},
 ): IRouter {
   const router: IRouter = Router();
   const runtime =
@@ -22,7 +25,9 @@ export function createApiRouter(
   }
   router.use(
     "/v1",
-    runtime ? createV1Router(runtime, config) : createUnavailableV1Router(),
+    runtime
+      ? createV1Router(runtime, config, dependencies)
+      : createUnavailableV1Router(),
   );
   return router;
 }
