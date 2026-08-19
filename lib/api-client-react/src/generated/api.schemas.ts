@@ -25,6 +25,139 @@ export const CustomerOnboardingState = {
   restricted: "restricted",
 } as const;
 
+export type CustomerAcquisitionEventType =
+  (typeof CustomerAcquisitionEventType)[keyof typeof CustomerAcquisitionEventType];
+
+export const CustomerAcquisitionEventType = {
+  landing_view: "landing_view",
+  app_open: "app_open",
+  quote_started: "quote_started",
+  quote_completed: "quote_completed",
+  signup_started: "signup_started",
+} as const;
+
+export type CustomerAcquisitionChannel =
+  (typeof CustomerAcquisitionChannel)[keyof typeof CustomerAcquisitionChannel];
+
+export const CustomerAcquisitionChannel = {
+  direct: "direct",
+  organic_search: "organic_search",
+  organic_social: "organic_social",
+  paid_search: "paid_search",
+  paid_social: "paid_social",
+  referral: "referral",
+  email: "email",
+  partner: "partner",
+  offline: "offline",
+  unknown: "unknown",
+} as const;
+
+export interface CustomerAcquisitionAttribution {
+  channel: CustomerAcquisitionChannel;
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+}
+
+export type RecordCustomerAcquisitionEventRequestPlatform =
+  (typeof RecordCustomerAcquisitionEventRequestPlatform)[keyof typeof RecordCustomerAcquisitionEventRequestPlatform];
+
+export const RecordCustomerAcquisitionEventRequestPlatform = {
+  web: "web",
+  mobile: "mobile",
+} as const;
+
+export interface RecordCustomerAcquisitionEventRequest {
+  /** @pattern ^acq_[0-9a-f]{32}$ */
+  sessionId?: string;
+  eventType: CustomerAcquisitionEventType;
+  platform: RecordCustomerAcquisitionEventRequestPlatform;
+  attribution: CustomerAcquisitionAttribution;
+}
+
+export interface CustomerAcquisitionEventReceipt {
+  sessionId: string;
+  eventType: CustomerAcquisitionEventType;
+  recorded: boolean;
+  recordedAt: string;
+  synthetic: true;
+}
+
+export interface BindCustomerAcquisitionSessionRequest {
+  /** @pattern ^acq_[0-9a-f]{32}$ */
+  sessionId?: string;
+}
+
+export interface CustomerAcquisitionLinkReceipt {
+  sessionId: string;
+  customerId: string;
+  linked: boolean;
+  linkedAt: string;
+  synthetic: true;
+}
+
+export type CustomerFunnelAttributionRow = CustomerAcquisitionAttribution & {
+  /** @minimum 0 */
+  customers: number;
+};
+
+export type CustomerFunnelReportEventSessions = {
+  /** @minimum 0 */
+  landing_view: number;
+  /** @minimum 0 */
+  app_open: number;
+  /** @minimum 0 */
+  quote_started: number;
+  /** @minimum 0 */
+  quote_completed: number;
+  /** @minimum 0 */
+  signup_started: number;
+};
+
+export type CustomerFunnelReportMilestones = {
+  /** @minimum 0 */
+  linked_customer: number;
+  /** @minimum 0 */
+  onboarding_started: number;
+  /** @minimum 0 */
+  consent_completed: number;
+  /** @minimum 0 */
+  identity_approved: number;
+  /** @minimum 0 */
+  activated: number;
+  /** @minimum 0 */
+  send_1_completed: number;
+  /** @minimum 0 */
+  send_2_completed: number;
+  /** @minimum 0 */
+  send_3_completed: number;
+  /** @minimum 0 */
+  send_4_completed: number;
+  /** @minimum 0 */
+  send_5_completed: number;
+};
+
+export type CustomerFunnelReportPrivacy = {
+  aggregateOnly: true;
+  containsCustomerIdentifiers: false;
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  acceptedDimensions: ["channel", "source", "medium", "campaign"];
+};
+
+export interface CustomerFunnelReport {
+  generatedAt: string;
+  cohortFrom: string;
+  cohortTo: string;
+  eventSessions: CustomerFunnelReportEventSessions;
+  milestones: CustomerFunnelReportMilestones;
+  firstTouch: CustomerFunnelAttributionRow[];
+  lastNonDirect: CustomerFunnelAttributionRow[];
+  privacy: CustomerFunnelReportPrivacy;
+}
+
 export type CustomerIdentityCaseState =
   (typeof CustomerIdentityCaseState)[keyof typeof CustomerIdentityCaseState];
 
@@ -1081,6 +1214,11 @@ export type ListRemittanceTransfersParams = {
    * @maximum 100
    */
   limit?: number;
+};
+
+export type GetOperationsCustomerFunnelParams = {
+  cohortFrom?: string;
+  cohortTo?: string;
 };
 
 export type ListOperationsTransfersParams = {

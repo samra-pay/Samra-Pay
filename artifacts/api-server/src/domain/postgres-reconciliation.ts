@@ -30,7 +30,7 @@ export class PostgresReconciliationStore implements ReconciliationStore {
       ],
     );
     const runId = inserted.rows[0]!.id;
-    for (const item of run.items) {
+    for (const [sequence, item] of run.items.entries()) {
       const transfer = await query.query<{ id: string }>(
         `SELECT id FROM samra_core.remittance_transfers WHERE external_ref = $1`,
         [item.matchKey],
@@ -52,7 +52,7 @@ export class PostgresReconciliationStore implements ReconciliationStore {
           item.externalAmount?.currency ?? null,
           item.internalAmount?.minorUnits ?? null,
           item.externalAmount?.minorUnits ?? null,
-          JSON.stringify({ classification: item.classification }),
+          JSON.stringify({ classification: item.classification, sequence }),
         ],
       );
       const itemId =
@@ -145,7 +145,12 @@ export class PostgresReconciliationStore implements ReconciliationStore {
       `SELECT match_key, result, internal_currency, provider_currency,
               internal_amount_minor, provider_amount_minor, details
        FROM samra_core.reconciliation_items WHERE run_id = $1
-       ORDER BY created_at, match_key`,
+       ORDER BY CASE
+                  WHEN jsonb_typeof(details->'sequence') = 'number'
+                    THEN (details->>'sequence')::integer
+                  ELSE NULL
+                END NULLS LAST,
+                created_at, match_key`,
       [row.id],
     );
     return Object.freeze({

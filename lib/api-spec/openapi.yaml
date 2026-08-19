@@ -11,6 +11,7 @@ tags:
   - name: health
   - name: customer
   - name: onboarding
+  - name: acquisition
   - name: accounts
   - name: activity
   - name: beneficiaries
@@ -70,6 +71,73 @@ paths:
           $ref: "#/components/responses/ForbiddenProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
+
+  /v1/acquisition/events:
+    post:
+      operationId: recordCustomerAcquisitionEvent
+      tags: [acquisition]
+      summary: Record one privacy-safe, low-trust acquisition event
+      description: Creates or resumes an opaque first-party acquisition session. The server accepts only allowlisted event types and normalized attribution slugs; it does not accept URLs, referrers, device fingerprints, customer identifiers, PII, financial state, or client timestamps.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordCustomerAcquisitionEventRequest"
+      responses:
+        "200":
+          description: Existing event safely replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAcquisitionEventReceipt"
+        "201":
+          description: Acquisition event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAcquisitionEventReceipt"
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/acquisition/bind:
+    post:
+      operationId: bindCustomerAcquisitionSession
+      tags: [acquisition]
+      summary: Bind an opaque acquisition session to the authenticated Samra customer
+      description: Links a session exactly once after the Auth0 subject has a durable Samra customer binding. The Auth0 subject and customer identifiers are not returned in funnel reports.
+      security:
+        - CustomerBearer: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BindCustomerAcquisitionSessionRequest"
+      responses:
+        "200":
+          description: Existing session link safely replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAcquisitionLinkReceipt"
+        "201":
+          description: Session linked to the authenticated Samra customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAcquisitionLinkReceipt"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "404": { $ref: "#/components/responses/NotFoundProblem" }
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+        "503": { $ref: "#/components/responses/Unavailable" }
 
   /v1/onboarding:
     post:
@@ -745,6 +813,36 @@ paths:
         "401": { $ref: "#/components/responses/UnauthorizedProblem" }
         "403": { $ref: "#/components/responses/ForbiddenProblem" }
 
+  /v1/internal/operations/customer-funnel:
+    get:
+      operationId: getOperationsCustomerFunnel
+      tags: [operations]
+      summary: Get aggregate customer funnel and acquisition attribution truth
+      description: Returns only aggregate, privacy-safe counts. Onboarding, identity, activation, and completed-send milestones are derived from Samra-owned PostgreSQL state; client events cannot claim those milestones.
+      security:
+        - WorkforceSession: []
+      parameters:
+        - name: cohortFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: cohortTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Aggregate acquisition and customer milestone report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerFunnelReport"
+        "401": { $ref: "#/components/responses/UnauthorizedProblem" }
+        "403": { $ref: "#/components/responses/ForbiddenProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+
   /v1/internal/operations/transfers:
     get:
       operationId: listOperationsTransfers
@@ -1212,6 +1310,149 @@ components:
         - funding_ready
         - activated
         - restricted
+
+    CustomerAcquisitionEventType:
+      type: string
+      enum: [landing_view, app_open, quote_started, quote_completed, signup_started]
+
+    CustomerAcquisitionChannel:
+      type: string
+      enum: [direct, organic_search, organic_social, paid_search, paid_social, referral, email, partner, offline, unknown]
+
+    CustomerAcquisitionAttribution:
+      type: object
+      additionalProperties: false
+      properties:
+        channel:
+          $ref: "#/components/schemas/CustomerAcquisitionChannel"
+        source:
+          anyOf:
+            - type: string
+              pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+            - type: "null"
+        medium:
+          anyOf:
+            - type: string
+              pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+            - type: "null"
+        campaign:
+          anyOf:
+            - type: string
+              pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+            - type: "null"
+      required: [channel, source, medium, campaign]
+
+    RecordCustomerAcquisitionEventRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        sessionId:
+          type: string
+          pattern: '^acq_[0-9a-f]{32}$'
+        eventType:
+          $ref: "#/components/schemas/CustomerAcquisitionEventType"
+        platform:
+          type: string
+          enum: [web, mobile]
+        attribution:
+          $ref: "#/components/schemas/CustomerAcquisitionAttribution"
+      required: [eventType, platform, attribution]
+
+    CustomerAcquisitionEventReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        sessionId: { type: string }
+        eventType:
+          $ref: "#/components/schemas/CustomerAcquisitionEventType"
+        recorded: { type: boolean }
+        recordedAt: { type: string, format: date-time }
+        synthetic: { type: boolean, const: true }
+      required: [sessionId, eventType, recorded, recordedAt, synthetic]
+
+    BindCustomerAcquisitionSessionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        sessionId:
+          type: string
+          pattern: '^acq_[0-9a-f]{32}$'
+
+    CustomerAcquisitionLinkReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        sessionId: { type: string }
+        customerId: { type: string }
+        linked: { type: boolean }
+        linkedAt: { type: string, format: date-time }
+        synthetic: { type: boolean, const: true }
+      required: [sessionId, customerId, linked, linkedAt, synthetic]
+
+    CustomerFunnelAttributionRow:
+      allOf:
+        - $ref: "#/components/schemas/CustomerAcquisitionAttribution"
+        - type: object
+          additionalProperties: false
+          properties:
+            customers: { type: integer, minimum: 0 }
+          required: [customers]
+
+    CustomerFunnelReport:
+      type: object
+      additionalProperties: false
+      properties:
+        generatedAt: { type: string, format: date-time }
+        cohortFrom: { type: string, format: date-time }
+        cohortTo: { type: string, format: date-time }
+        eventSessions:
+          type: object
+          additionalProperties: false
+          properties:
+            landing_view: { type: integer, minimum: 0 }
+            app_open: { type: integer, minimum: 0 }
+            quote_started: { type: integer, minimum: 0 }
+            quote_completed: { type: integer, minimum: 0 }
+            signup_started: { type: integer, minimum: 0 }
+          required: [landing_view, app_open, quote_started, quote_completed, signup_started]
+        milestones:
+          type: object
+          additionalProperties: false
+          properties:
+            linked_customer: { type: integer, minimum: 0 }
+            onboarding_started: { type: integer, minimum: 0 }
+            consent_completed: { type: integer, minimum: 0 }
+            identity_approved: { type: integer, minimum: 0 }
+            activated: { type: integer, minimum: 0 }
+            send_1_completed: { type: integer, minimum: 0 }
+            send_2_completed: { type: integer, minimum: 0 }
+            send_3_completed: { type: integer, minimum: 0 }
+            send_4_completed: { type: integer, minimum: 0 }
+            send_5_completed: { type: integer, minimum: 0 }
+          required: [linked_customer, onboarding_started, consent_completed, identity_approved, activated, send_1_completed, send_2_completed, send_3_completed, send_4_completed, send_5_completed]
+        firstTouch:
+          type: array
+          items: { $ref: "#/components/schemas/CustomerFunnelAttributionRow" }
+        lastNonDirect:
+          type: array
+          items: { $ref: "#/components/schemas/CustomerFunnelAttributionRow" }
+        privacy:
+          type: object
+          additionalProperties: false
+          properties:
+            aggregateOnly: { type: boolean, const: true }
+            containsCustomerIdentifiers: { type: boolean, const: false }
+            acceptedDimensions:
+              type: array
+              prefixItems:
+                - { type: string, const: channel }
+                - { type: string, const: source }
+                - { type: string, const: medium }
+                - { type: string, const: campaign }
+              minItems: 4
+              maxItems: 4
+          required: [aggregateOnly, containsCustomerIdentifiers, acceptedDimensions]
+      required: [generatedAt, cohortFrom, cohortTo, eventSessions, milestones, firstTouch, lastNonDirect, privacy]
 
     CustomerIdentityCaseState:
       type: string

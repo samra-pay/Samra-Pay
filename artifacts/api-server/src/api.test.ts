@@ -24,6 +24,7 @@ import {
   type CustomerOnboardingState,
   type CustomerOnboardingStore,
   type CustomerIdentityCaseStore,
+  type CustomerFunnelStore,
 } from "@workspace/db";
 
 const demoConfig: ApiRuntimeConfig = Object.freeze({
@@ -433,6 +434,181 @@ test("Auth0 onboarding starts and resumes before the financial-route authorizati
       assert.equal(consented.status, 200);
       assert.equal(consented.body["state"], "identity_in_progress");
       assert.equal(consented.body["version"], 2);
+    },
+    { customerAccessTokenMiddleware },
+  );
+});
+
+test("acquisition capture is public and privacy-safe while customer binding remains Auth0-gated", async () => {
+  const issuer = "https://samra-acquisition.us.auth0.com/";
+  const authConfig: ApiRuntimeConfig = Object.freeze({
+    ...demoConfig,
+    persistenceMode: "postgres",
+    customerAuth: Object.freeze({
+      mode: "auth0",
+      issuerBaseUrl: issuer,
+      audience: "https://api.samrapay.test",
+      tokenSigningAlgorithm: "RS256",
+    }),
+  });
+  const sessionId = "acq_00000000000000000000000000000001";
+  const observed: Array<Readonly<Record<string, unknown>>> = [];
+  const funnel: CustomerFunnelStore = {
+    async recordEvent(input) {
+      observed.push(input);
+      return Object.freeze({
+        sessionId,
+        eventType: input.eventType,
+        recorded: true,
+        recordedAt: "2026-08-19T12:00:00.000Z",
+        synthetic: true,
+      });
+    },
+    async bindAuth0Session(input) {
+      observed.push(input);
+      return Object.freeze({
+        sessionId: input.sessionId,
+        customerId: "customer_pending_001",
+        linked: true,
+        linkedAt: "2026-08-19T12:01:00.000Z",
+        synthetic: true,
+      });
+    },
+    async funnelReport() {
+      throw new Error("not used by this route test");
+    },
+  };
+  const identities = {
+    async resolveAuth0Identity() {
+      return Object.freeze({
+        identityId: "00000000-0000-4000-8000-000000000098",
+        identityState: "active" as const,
+        customerId: "00000000-0000-4000-8000-000000000097",
+        customerExternalRef: "customer_pending_001",
+        customerDisplayName: "Customer profile pending",
+        customerState: "active" as const,
+        onboardingState: "consent_pending" as const,
+      });
+    },
+  };
+  const resolver = new Auth0CustomerActorResolver(identities, issuer);
+  const runtime = new DemoRuntime({
+    actorResolver: resolver,
+    beneficiaryActorResolver: resolver,
+    customerAuthenticationMode: "auth0",
+    customerOnboardingStore: {
+      async startAuth0Onboarding() {
+        throw new Error("not used by this acquisition route test");
+      },
+      async getAuth0Onboarding() {
+        throw new Error("not used by this acquisition route test");
+      },
+      async recordAuth0ConsentBundle() {
+        throw new Error("not used by this acquisition route test");
+      },
+    },
+    customerIdentityVerificationService: unusedIdentityVerificationService(),
+    customerFunnelStore: funnel,
+  });
+  let authenticationCalls = 0;
+  const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
+    authenticationCalls += 1;
+    const authorization = req.header("authorization");
+    if (authorization !== "Bearer test:acquisition-subject") {
+      next(new UnauthorizedError());
+      return;
+    }
+    req.auth = {
+      header: { alg: "RS256" },
+      payload: {
+        iss: issuer,
+        sub: "auth0|acquisition-subject",
+        aud: "https://api.samrapay.test",
+        exp: Math.floor(Date.now() / 1_000) + 300,
+      },
+      token: authorization.slice("Bearer ".length),
+    };
+    next();
+  };
+
+  await withServer(
+    authConfig,
+    runtime,
+    async (origin) => {
+      const recorded = await request(origin, "/api/v1/acquisition/events", {
+        method: "POST",
+        headers: { "Idempotency-Key": "acquisition-event-001" },
+        body: {
+          eventType: "landing_view",
+          platform: "web",
+          attribution: {
+            channel: "paid_social",
+            source: "instagram",
+            medium: "paid_social",
+            campaign: "alpha_launch",
+          },
+        },
+      });
+      assert.equal(recorded.status, 201);
+      assert.equal(authenticationCalls, 0);
+      assert.equal(recorded.body["sessionId"], sessionId);
+      const cookie = recorded.headers.get("set-cookie") ?? "";
+      assert.match(cookie, /samra_acquisition_session=/);
+      assert.match(cookie, /HttpOnly/i);
+      assert.match(cookie, /SameSite=Lax/i);
+
+      const rawUrlRejected = await request(
+        origin,
+        "/api/v1/acquisition/events",
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": "acquisition-event-002" },
+          body: {
+            eventType: "landing_view",
+            platform: "web",
+            attribution: {
+              channel: "referral",
+              source: "https://example.test/private?email=user@example.test",
+              medium: null,
+              campaign: null,
+            },
+          },
+        },
+      );
+      assert.equal(rawUrlRejected.status, 422);
+      assert.equal(observed.length, 1);
+
+      const unauthenticatedBind = await request(
+        origin,
+        "/api/v1/acquisition/bind",
+        {
+          method: "POST",
+          headers: {
+            "Idempotency-Key": "acquisition-bind-001",
+            cookie: `samra_acquisition_session=${sessionId}`,
+          },
+          body: {},
+        },
+      );
+      assert.equal(unauthenticatedBind.status, 401);
+
+      const bound = await request(origin, "/api/v1/acquisition/bind", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer test:acquisition-subject",
+          "Idempotency-Key": "acquisition-bind-001",
+          cookie: `samra_acquisition_session=${sessionId}`,
+        },
+        body: {},
+      });
+      assert.equal(bound.status, 201);
+      assert.equal(bound.body["customerId"], "customer_pending_001");
+      assert.deepEqual(observed[1], {
+        issuer,
+        subject: "auth0|acquisition-subject",
+        sessionId,
+        idempotencyKey: "acquisition-bind-001",
+      });
     },
     { customerAccessTokenMiddleware },
   );

@@ -6,6 +6,7 @@ import {
   createOperationsCase,
   getOperationsCase,
   getOperationsSummary,
+  getOperationsCustomerFunnel,
   listOperationsCases,
   getOperationsTransfer,
   listOperationsAuditEvents,
@@ -22,6 +23,7 @@ import {
   type OperationsAuditEvent,
   type OperationsCustomer,
   type OperationsSummary,
+  type CustomerFunnelReport,
   type OperationsTransfer,
   type OperationsTransferDetail,
   type UpdateOperationsCaseRequest,
@@ -257,7 +259,11 @@ export class OpsApi {
   }
 
   async getReports(): Promise<AggregateReport[]> {
-    throw new EndpointUnavailable("reports");
+    return [
+      mapCustomerFunnelReport(
+        await getOperationsCustomerFunnel(undefined, OPERATOR_REQUEST),
+      ),
+    ];
   }
 
   async getReport(_id: string): Promise<AggregateReport> {
@@ -312,6 +318,61 @@ function mapSummary(summary: OperationsSummary): OpsMetric[] {
     unit: "records",
   });
   return metrics;
+}
+
+function mapCustomerFunnelReport(report: CustomerFunnelReport): AggregateReport {
+  const eventMetrics = Object.entries(report.eventSessions).map(
+    ([eventType, value]) => ({
+      source: "computed" as const,
+      label: eventType.replaceAll("_", " "),
+      value: String(value),
+      unit: "sessions",
+    }),
+  );
+  const milestoneMetrics = Object.entries(report.milestones).map(
+    ([milestone, value]) => ({
+      source: "computed" as const,
+      label: milestone.replaceAll("_", " "),
+      value: String(value),
+      unit: "customers",
+    }),
+  );
+  const attributionMetrics = (
+    model: "First touch" | "Last non-direct",
+    rows: CustomerFunnelReport["firstTouch"],
+  ) =>
+    rows.map((row) => ({
+      source: "computed" as const,
+      label: `${model} · ${attributionLabel(row)}`,
+      value: String(row.customers),
+      unit: "customers",
+    }));
+  return {
+    id: `customer-funnel-${report.cohortFrom.slice(0, 10)}`,
+    title: "Customer acquisition and five-send funnel",
+    period: `${report.cohortFrom} to ${report.cohortTo}`,
+    generatedAt: report.generatedAt,
+    sections: [
+      { title: "Top-of-funnel sessions", metrics: eventMetrics },
+      { title: "Samra-owned customer milestones", metrics: milestoneMetrics },
+      {
+        title: "First-touch attribution",
+        metrics: attributionMetrics("First touch", report.firstTouch),
+      },
+      {
+        title: "Last non-direct attribution",
+        metrics: attributionMetrics("Last non-direct", report.lastNonDirect),
+      },
+    ],
+  };
+}
+
+function attributionLabel(
+  row: CustomerFunnelReport["firstTouch"][number],
+): string {
+  return [row.channel, row.source, row.medium, row.campaign]
+    .filter((value): value is string => Boolean(value))
+    .join(" · ");
 }
 
 function mapCustomer(value: OperationsCustomer): Customer {

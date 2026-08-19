@@ -5,6 +5,7 @@ import type {
   PostgresOperationsStore,
   PostgresWorkforceAuthStore,
   PostgresOperationsCaseStore,
+  CustomerFunnelStore,
   CustomerOnboardingStore,
   WorkflowClaim,
 } from "@workspace/db";
@@ -155,6 +156,7 @@ export type DemoRuntimeDependencies = Readonly<{
   operationsCaseStore?: PostgresOperationsCaseStore;
   customerOnboardingStore?: CustomerOnboardingStore;
   customerIdentityVerificationService?: CustomerIdentityVerificationService;
+  customerFunnelStore?: CustomerFunnelStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   readiness?: () => Promise<void>;
   close?: () => Promise<void>;
@@ -178,6 +180,7 @@ export class DemoRuntime {
   readonly operationsCaseStore?: PostgresOperationsCaseStore;
   readonly customerOnboardingStore?: CustomerOnboardingStore;
   readonly customerIdentityVerificationService?: CustomerIdentityVerificationService;
+  readonly customerFunnelStore?: CustomerFunnelStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #beneficiaryStore: BeneficiaryStore;
@@ -207,6 +210,7 @@ export class DemoRuntime {
     this.customerOnboardingStore = dependencies.customerOnboardingStore;
     this.customerIdentityVerificationService =
       dependencies.customerIdentityVerificationService;
+    this.customerFunnelStore = dependencies.customerFunnelStore;
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
     this.#beneficiaryStore =

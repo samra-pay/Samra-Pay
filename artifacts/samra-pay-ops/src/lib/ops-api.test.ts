@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getOperationsSummary,
+  getOperationsCustomerFunnel,
   getOperationsTransfer,
   listOperationsAuditEvents,
   listOperationsCustomers,
@@ -11,6 +12,7 @@ import { opsApi } from "./ops-api";
 
 vi.mock("@workspace/api-client-react", () => ({
   getOperationsSummary: vi.fn(),
+  getOperationsCustomerFunnel: vi.fn(),
   getOperationsTransfer: vi.fn(),
   listOperationsAuditEvents: vi.fn(),
   listOperationsCustomers: vi.fn(),
@@ -214,5 +216,70 @@ describe("authorized operations API adapter", () => {
       "provider_evidence",
       "worker",
     ]);
+  });
+
+  it("maps privacy-safe server funnel truth into the reporting surface", async () => {
+    vi.mocked(getOperationsCustomerFunnel).mockResolvedValue({
+      generatedAt: "2026-08-19T10:00:00.000Z",
+      cohortFrom: "2026-08-01T00:00:00.000Z",
+      cohortTo: "2026-09-01T00:00:00.000Z",
+      eventSessions: {
+        landing_view: 12,
+        app_open: 3,
+        quote_started: 9,
+        quote_completed: 7,
+        signup_started: 6,
+      },
+      milestones: {
+        linked_customer: 5,
+        onboarding_started: 5,
+        consent_completed: 4,
+        identity_approved: 3,
+        activated: 0,
+        send_1_completed: 2,
+        send_2_completed: 1,
+        send_3_completed: 1,
+        send_4_completed: 0,
+        send_5_completed: 0,
+      },
+      firstTouch: [
+        {
+          channel: "paid_social",
+          source: "instagram",
+          medium: "paid_social",
+          campaign: "alpha_launch",
+          customers: 4,
+        },
+      ],
+      lastNonDirect: [
+        {
+          channel: "email",
+          source: "samra",
+          medium: "email",
+          campaign: "quote_followup",
+          customers: 3,
+        },
+      ],
+      privacy: {
+        aggregateOnly: true,
+        containsCustomerIdentifiers: false,
+        acceptedDimensions: ["channel", "source", "medium", "campaign"],
+      },
+    });
+
+    const [report] = await opsApi.getReports();
+
+    expect(getOperationsCustomerFunnel).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(report.sections[1]?.metrics).toContainEqual(
+      expect.objectContaining({
+        label: "send 1 completed",
+        value: "2",
+        unit: "customers",
+      }),
+    );
+    expect(report.sections[2]?.metrics[0]?.label).toContain("instagram");
   });
 });
