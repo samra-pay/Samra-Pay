@@ -277,7 +277,7 @@ if ! gcloud secrets describe "${SECRET_ID}" \
     --quiet
 fi
 
-for boundary in api migrations; do
+for boundary in api; do
   gcloud secrets add-iam-policy-binding "${SECRET_ID}" \
     --project="${PROJECT_ID}" \
     --member="serviceAccount:$(service_account_email "${boundary}")" \

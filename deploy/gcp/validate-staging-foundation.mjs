@@ -138,6 +138,17 @@ export function validateStagingFoundation(
     }
   }
 
+  const resourceBindings = foundation.resourceRoleBindings;
+  if (
+    resourceBindings.artifactRegistryWriter !== "build" ||
+    resourceBindings.artifactRegistryReader !== "deployer" ||
+    JSON.stringify(resourceBindings.databaseSecretAccessors) !==
+      JSON.stringify(["api"]) ||
+    resourceBindings.runtimeServiceAccountUser !== "deployer"
+  ) {
+    throw new Error("Resource-level trust boundaries changed");
+  }
+
   if (
     foundation.artifactRegistry.repository !== "samra-staging" ||
     foundation.artifactRegistry.format !== "docker" ||

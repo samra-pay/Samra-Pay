@@ -120,6 +120,11 @@ test("bounds retries for the documented service-account quota", () => {
 });
 
 test("creates only reviewed keyless staging foundation resources", () => {
+  assert.deepEqual(foundation.resourceRoleBindings.databaseSecretAccessors, [
+    "api",
+  ]);
+  assert.match(script, /for boundary in api; do/);
+  assert.doesNotMatch(script, /for boundary in api migrations; do/);
   for (const required of [
     "gcloud services enable",
     "--immutable-tags",

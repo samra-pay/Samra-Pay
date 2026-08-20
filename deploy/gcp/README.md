@@ -86,17 +86,17 @@ confirmed at the action boundary.
 
 ## Bounded target architecture
 
-| Workload                      | Google Cloud target      | Purpose                                                          |
-| ----------------------------- | ------------------------ | ---------------------------------------------------------------- |
-| `samra-api`                   | Cloud Run service        | Samra API and controlled synthetic worker                        |
-| `samra-customer-web`          | Cloud Run service        | Existing customer web UI plus same-origin `/api` proxy           |
-| `samra-operations-web`        | Cloud Run service        | Existing Operations Portal plus same-origin `/api` proxy         |
-| `samra-design-system-preview` | Cloud Run service        | Governed, commit-addressed design review browser                 |
-| `samra-migrations`            | Cloud Run job            | Reviewed, one-off forward database migrations                    |
-| PostgreSQL                    | Cloud SQL for PostgreSQL | Durable staging and later production persistence                 |
-| Container images              | Artifact Registry        | Immutable, commit-addressed release images                       |
-| Build pipeline                | Cloud Build              | Tests and image construction from the GitHub source              |
-| Secrets                       | Secret Manager           | `DATABASE_URL` and future credentials; never image layers or Git |
+| Workload                      | Google Cloud target      | Purpose                                                                         |
+| ----------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `samra-api`                   | Cloud Run service        | Samra API and controlled synthetic worker                                       |
+| `samra-customer-web`          | Cloud Run service        | Existing customer web UI plus same-origin `/api` proxy                          |
+| `samra-operations-web`        | Cloud Run service        | Existing Operations Portal plus same-origin `/api` proxy                        |
+| `samra-design-system-preview` | Cloud Run service        | Governed, commit-addressed design review browser                                |
+| `samra-migrations`            | Cloud Run job            | Reviewed, one-off forward database migrations                                   |
+| PostgreSQL                    | Cloud SQL for PostgreSQL | Durable staging and later production persistence                                |
+| Container images              | Artifact Registry        | Immutable, commit-addressed release images                                      |
+| Build pipeline                | Cloud Build              | Tests and image construction from the GitHub source                             |
+| Secrets                       | Secret Manager           | Separate runtime and migration `DATABASE_URL` values; never image layers or Git |
 
 The customer and Operations Portal containers preserve the existing browser
 interfaces. Their small Node server serves the compiled SPA and proxies `/api`
@@ -210,6 +210,25 @@ revision receives traffic. Its automated tests reject public unauthenticated
 services, default service accounts, browser access to database secrets,
 floating image tags, automatic migrations, live-provider values, and plaintext
 credentials.
+
+`staging-database-access.json` is the separate review-only trust contract for
+database activation. It forbids a shared runtime/migration credential. The API
+login inherits a non-owner runtime role with data access only; it cannot create
+roles, databases, or schemas and cannot own either Samra schema. The migration
+login is not accepted for runtime traffic and owns `samra_core` and
+`samra_migrations` only after the reviewed migration sequence.
+
+The only elevated database bootstrap principal is temporary. Acceptance
+requires deletion of its database user, secret version, Secret Manager metadata,
+and private bootstrap job. Both permanent Samra users must be non-superusers and
+must not inherit `cloudsqlsuperuser`. The existing
+`samra-staging-database-url` secret is reserved for the API runtime; migrations
+use the distinct `samra-staging-migration-database-url` secret.
+
+Each API instance is limited to five PostgreSQL pool connections. With the
+staging API capped at two Cloud Run instances, application traffic can consume
+at most ten pooled connections. Explicit test-only pool overrides remain
+available, but the production-shaped default is bounded in `@workspace/db`.
 
 The API service requires Cloud Run's injected `PORT` plus these explicit
 values:

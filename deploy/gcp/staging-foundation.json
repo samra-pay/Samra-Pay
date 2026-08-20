@@ -87,7 +87,7 @@
   "resourceRoleBindings": {
     "artifactRegistryWriter": "build",
     "artifactRegistryReader": "deployer",
-    "databaseSecretAccessors": ["api", "migrations"],
+    "databaseSecretAccessors": ["api"],
     "runtimeServiceAccountUser": "deployer"
   },
   "secret": {
