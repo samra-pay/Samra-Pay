@@ -42,8 +42,9 @@ test-case mapping change.
 [`qase-governance.json`](qase-governance.json) is the version-controlled map of
 the Qase project, execution environments, release plans, manual catalogs, and
 automated JUnit reports. The Linux quality gate validates that every required
-report is generated, uploaded, documented, and included in the run-completion
-condition.
+report is generated, documented, and present before the validated
+`test-results` directory is uploaded to Qase once. Run completion requires that
+single governed batch to succeed.
 
 Automated acceptance uses the Qase environment slug `github-ci-postgres`. It
 means an isolated PostgreSQL 16 service in GitHub Actions with synthetic data;
@@ -168,8 +169,10 @@ for the same reason.
 - The two GitHub test jobs remain authoritative for pass or fail. A Qase API
   outage is non-blocking for ordinary GitHub-triggered CI, but Qase-triggered runs
   fail if their reporting contract fails.
-- JUnit payloads must contain a non-empty standard test suite before a Qase run is
-  updated. A run is completed only after all 16 required result uploads succeed.
+- All 16 JUnit payloads must contain a non-empty standard test suite before a
+  Qase run is updated. GitHub validates every file, then sends the directory in
+  one Qase upload action. A run is completed only after that governed batch
+  succeeds.
 - Pull requests from forks do not receive the repository token and skip the Qase
   reporting job.
 - JUnit artifacts are retained in GitHub for 14 days as independent evidence.

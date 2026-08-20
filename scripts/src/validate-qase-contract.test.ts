@@ -6,8 +6,6 @@ const report = {
   id: "process-restart",
   source: "source.test.ts",
   report: "process.xml",
-  uploadStepId: "qase-upload-process",
-  requiredForCompletion: true,
 } as const;
 
 const csv = [
@@ -20,6 +18,11 @@ const csv = [
 const governance = {
   project: "SAMP",
   repositorySnapshot: { cases: 1, suites: 2 },
+  automatedReportUpload: {
+    stepId: "qase-upload-acceptance",
+    path: "test-results",
+    format: "junit",
+  },
   portableClientSuites: [
     { id: 26, title: "12 Portable Client Smoke", parentId: null },
     { id: 27, title: "12.01 Web", parentId: 26 },
@@ -42,8 +45,13 @@ const governance = {
 const workflow = [
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
   "test-results/process.xml",
-  "id: qase-upload-process",
-  "qase-upload-process.outcome == 'success'",
+  "- name: Upload automated acceptance results to Qase",
+  "  id: qase-upload-acceptance",
+  "  uses: qase-tms/gh-actions/report@v1",
+  "  with:",
+  "    format: junit",
+  "    path: test-results",
+  "qase-upload-acceptance.outcome == 'success'",
 ].join("\n");
 
 describe("parseCsv", () => {
@@ -71,10 +79,38 @@ describe("validateQaseContract", () => {
     expect(() =>
       validateQaseContract(
         governance,
-        workflow.replace("qase-upload-process.outcome == 'success'", ""),
+        workflow.replace("qase-upload-acceptance.outcome == 'success'", ""),
         "process.xml github-ci-postgres",
         (path) => (path === "catalog.csv" ? csv : "source"),
       ),
-    ).toThrow(/completion does not require qase-upload-process/);
+    ).toThrow(/completion does not require qase-upload-acceptance/);
+  });
+
+  it("rejects separate Qase upload actions for individual reports", () => {
+    expect(() =>
+      validateQaseContract(
+        governance,
+        `${workflow}\nuses: qase-tms/gh-actions/report@v1`,
+        "process.xml github-ci-postgres",
+        (path) => (path === "catalog.csv" ? csv : "source"),
+      ),
+    ).toThrow(/one batch; found 2 report actions/);
+  });
+
+  it("rejects a single-file upload that can omit governed reports", () => {
+    expect(() =>
+      validateQaseContract(
+        {
+          ...governance,
+          automatedReportUpload: {
+            ...governance.automatedReportUpload,
+            path: "test-results/process.xml",
+          },
+        },
+        workflow,
+        "process.xml github-ci-postgres",
+        (path) => (path === "catalog.csv" ? csv : "source"),
+      ),
+    ).toThrow(/one JUnit directory upload from test-results/);
   });
 });

@@ -6,6 +6,11 @@
     "cases": 114,
     "suites": 29
   },
+  "automatedReportUpload": {
+    "stepId": "qase-upload-acceptance",
+    "path": "test-results",
+    "format": "junit"
+  },
   "portableClientSuites": [
     {
       "id": 26,
@@ -101,114 +106,82 @@
     {
       "id": "persistence",
       "source": "artifacts/api-server/test/postgres.test.ts",
-      "report": "postgres-persistence.xml",
-      "uploadStepId": "qase-upload-persistence",
-      "requiredForCompletion": true
+      "report": "postgres-persistence.xml"
     },
     {
       "id": "http",
       "source": "artifacts/api-server/test/postgres-http.test.ts",
-      "report": "postgres-http.xml",
-      "uploadStepId": "qase-upload-http",
-      "requiredForCompletion": true
+      "report": "postgres-http.xml"
     },
     {
       "id": "daily-synthetic",
       "source": "artifacts/api-server/test/daily-synthetic-journeys.test.ts",
-      "report": "daily-synthetic-journeys.xml",
-      "uploadStepId": "qase-upload-daily-synthetic",
-      "requiredForCompletion": true
+      "report": "daily-synthetic-journeys.xml"
     },
     {
       "id": "process-restart",
       "source": "artifacts/api-server/test/process-startup-recovery.test.mjs",
-      "report": "postgres-process-restart.xml",
-      "uploadStepId": "qase-upload-process-restart",
-      "requiredForCompletion": true
+      "report": "postgres-process-restart.xml"
     },
     {
       "id": "ledger-journals",
       "source": "artifacts/api-server/test/ledger-journal-assurance.test.ts",
-      "report": "ledger-journal-assurance.xml",
-      "uploadStepId": "qase-upload-ledger-journals",
-      "requiredForCompletion": true
+      "report": "ledger-journal-assurance.xml"
     },
     {
       "id": "ledger-sweeps",
       "source": "artifacts/api-server/test/ledger-sweeps.test.ts",
-      "report": "ledger-sweeps.xml",
-      "uploadStepId": "qase-upload-ledger-sweeps",
-      "requiredForCompletion": true
+      "report": "ledger-sweeps.xml"
     },
     {
       "id": "ledger-reconciliation",
       "source": "artifacts/api-server/test/ledger-reconciliation-controls.test.ts",
-      "report": "ledger-reconciliation-controls.xml",
-      "uploadStepId": "qase-upload-ledger-reconciliation",
-      "requiredForCompletion": true
+      "report": "ledger-reconciliation-controls.xml"
     },
     {
       "id": "ledger-account-resolution",
       "source": "artifacts/api-server/test/ledger-account-resolution.test.ts",
-      "report": "ledger-account-resolution.xml",
-      "uploadStepId": "qase-upload-ledger-account-resolution",
-      "requiredForCompletion": true
+      "report": "ledger-account-resolution.xml"
     },
     {
       "id": "ledger-balances",
       "source": "artifacts/api-server/test/ledger-balance-computation.test.ts",
-      "report": "ledger-balance-computation.xml",
-      "uploadStepId": "qase-upload-ledger-balances",
-      "requiredForCompletion": true
+      "report": "ledger-balance-computation.xml"
     },
     {
       "id": "ledger-currency-precision",
       "source": "artifacts/api-server/test/ledger-currency-precision.test.ts",
-      "report": "ledger-currency-precision.xml",
-      "uploadStepId": "qase-upload-ledger-currency-precision",
-      "requiredForCompletion": true
+      "report": "ledger-currency-precision.xml"
     },
     {
       "id": "ledger-idempotency",
       "source": "artifacts/api-server/test/ledger-idempotency.test.ts",
-      "report": "ledger-idempotency.xml",
-      "uploadStepId": "qase-upload-ledger-idempotency",
-      "requiredForCompletion": true
+      "report": "ledger-idempotency.xml"
     },
     {
       "id": "ledger-holds",
       "source": "artifacts/api-server/test/ledger-holds-lifecycle.test.ts",
-      "report": "ledger-holds-lifecycle.xml",
-      "uploadStepId": "qase-upload-ledger-holds",
-      "requiredForCompletion": true
+      "report": "ledger-holds-lifecycle.xml"
     },
     {
       "id": "ledger-reversals",
       "source": "artifacts/api-server/test/ledger-reversals-refunds.test.ts",
-      "report": "ledger-reversals-refunds.xml",
-      "uploadStepId": "qase-upload-ledger-reversals",
-      "requiredForCompletion": true
+      "report": "ledger-reversals-refunds.xml"
     },
     {
       "id": "ledger-audit",
       "source": "artifacts/api-server/test/ledger-immutability-audit.test.ts",
-      "report": "ledger-immutability-audit.xml",
-      "uploadStepId": "qase-upload-ledger-audit",
-      "requiredForCompletion": true
+      "report": "ledger-immutability-audit.xml"
     },
     {
       "id": "ledger-concurrency",
       "source": "artifacts/api-server/test/ledger-concurrency-atomicity.test.ts",
-      "report": "ledger-concurrency-atomicity.xml",
-      "uploadStepId": "qase-upload-ledger-concurrency",
-      "requiredForCompletion": true
+      "report": "ledger-concurrency-atomicity.xml"
     },
     {
       "id": "ledger-materialized",
       "source": "artifacts/api-server/test/ledger-materialized-balances.test.ts",
-      "report": "ledger-materialized-balances.xml",
-      "uploadStepId": "qase-upload-ledger-materialized",
-      "requiredForCompletion": true
+      "report": "ledger-materialized-balances.xml"
     }
   ]
 }
