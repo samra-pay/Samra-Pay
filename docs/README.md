@@ -10,19 +10,19 @@ Samra Pay's Alpha is a synthetic-first remittance product with a Samra-owned
 customer record, double-entry control ledger, audit history, reconciliation,
 and PostgreSQL database.
 
-| Capability | Locked Alpha decision | Current state |
-| --- | --- | --- |
-| Customer authentication | Auth0 | Foundation implemented and tested; live tenant and clients not connected |
-| Identity verification | Persona | Provider-neutral case model and fake adapter implemented; live template and webhooks not connected |
-| Wallet | Crossmint-created USDC wallet | Architecture contract documented; live wallet creation not connected |
-| Wallet alternatives | Cybrid, Rain, or Bridge after Alpha | Evaluation only; no active integration or migration claim |
-| Bank funding | Unresolved | Do not imply Crossmint supports Plaid or bank-funded transactions |
-| Ethiopia payout | Unresolved | Synthetic payout only; no live corridor or remitter-of-record claim |
-| Financial truth | Samra control ledger and PostgreSQL | Durable fake-money implementation and assurance gates exist |
-| Cloud | Google Cloud | Staging foundation and private Cloud SQL exist; Cloud Run deployment is pending |
-| Mobile distribution | Firebase in the Google Cloud project | Project linked; mobile app registration and distribution are pending |
-| Quality evidence | GitHub Actions and Qase | GitHub is merge authority; Qase stores governed automated and manual evidence |
-| Replit | Temporary preview and rollback surface | Not a source of financial, design, database, or deployment truth |
+| Capability              | Locked Alpha decision                  | Current state                                                                                      |
+| ----------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Customer authentication | Auth0                                  | Foundation implemented and tested; live tenant and clients not connected                           |
+| Identity verification   | Persona                                | Provider-neutral case model and fake adapter implemented; live template and webhooks not connected |
+| Wallet                  | Crossmint-created USDC wallet          | Architecture contract documented; live wallet creation not connected                               |
+| Wallet alternatives     | Cybrid, Rain, or Bridge after Alpha    | Evaluation only; no active integration or migration claim                                          |
+| Bank funding            | Unresolved                             | Do not imply Crossmint supports Plaid or bank-funded transactions                                  |
+| Ethiopia payout         | Unresolved                             | Synthetic payout only; no live corridor or remitter-of-record claim                                |
+| Financial truth         | Samra control ledger and PostgreSQL    | Durable fake-money implementation and assurance gates exist                                        |
+| Cloud                   | Google Cloud                           | Staging foundation and private Cloud SQL exist; Cloud Run deployment is pending                    |
+| Mobile distribution     | Firebase in the Google Cloud project   | Project linked; mobile app registration and distribution are pending                               |
+| Quality evidence        | GitHub Actions and Qase                | GitHub is merge authority; Qase stores governed automated and manual evidence                      |
+| Replit                  | Temporary preview and rollback surface | Not a source of financial, design, database, or deployment truth                                   |
 
 Crossmint, Auth0, and Persona provide bounded capabilities. They do not own the
 Samra customer, authorization decision, balance, transaction state, ledger,
@@ -65,6 +65,21 @@ audit trail, reconciliation result, or provider-migration mapping.
   services, Cloud Run migration job, load balancer, or public application;
 - real customer data, production security, production compliance approval, or
   production provider traffic.
+
+## Documentation authority
+
+| Class         | Owns                                         | Rule                                                               |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| Current state | This page                                    | The only present-tense product and deployment summary              |
+| Architecture  | `architecture/` and `backend-persistence.md` | Durable decisions, trust boundaries, invariants, and hard stops    |
+| Runbook       | `deploy/gcp/` and Replit runbook             | Commands and environment-specific execution controls               |
+| Test contract | `testing/` JSON, CSV, and strategy documents | Cadence, mappings, stop conditions, and evidence requirements      |
+| Evidence      | Assurance and performance reports            | Proof for a named commit; never current status by implication      |
+| Design system | `artifacts/samra-pay-ds/`                    | Tokens, components, content, accessibility, and financial UI rules |
+
+When two documents repeat a fact, the owner above governs and the other must
+link to it. Historical PR descriptions, screenshots, fixture names, and Qase
+runs are evidence, not current architecture.
 
 ## Governing documentation
 
@@ -111,12 +126,14 @@ audit trail, reconciliation result, or provider-migration mapping.
 
 ## Reading paths
 
-**Head of Product:** this page, Alpha platform, onboarding, remittance, funnel,
-financial UI truth, Operations Portal, testing strategy, and open Alpha gates.
+**Ten-minute orientation:** this page, Alpha platform, architecture foundation,
+onboarding, remittance, Google Cloud current state, and testing strategy.
 
-**CTO:** this page, architecture foundation, Alpha platform, persistence,
-ledger, identity, wallet, operations access, Google Cloud, testing strategy,
-and release evidence.
+**Product and design:** add funnel attribution, financial UI truth,
+accessibility, Operations Portal, and the design-system current state.
+
+**Engineering and release:** add persistence, ledger, identity, wallet,
+operations access, Qase reporting, and release-candidate evidence.
 
 Detailed PR history and old screenshots are evidence, not governing product
 documentation. When a detailed document conflicts with this page, stop and

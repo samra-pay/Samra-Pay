@@ -1,156 +1,94 @@
 # Samra Pay testing strategy
 
-Status: GitHub Actions and Qase are the locked Alpha quality system. GitHub is
-the technical merge authority; Qase is the durable traceability, manual-test,
-and release-evidence record.
+GitHub Actions is the technical pass/fail and merge authority. Qase retains
+governed automated, manual, and release traceability. Neither system replaces
+PostgreSQL and the Samra control ledger as financial truth.
 
-## Decision
-
-Samra Pay uses risk-based test cadence instead of running every test at every
-moment. GitHub Actions is the technical merge authority. Qase is the durable
-traceability, manual-execution, and release-evidence system. PostgreSQL and the
-Samra control ledger remain the financial source of truth.
-
-The machine-readable contract is
-[`testing-cadence.json`](testing-cadence.json). The Linux quality gate validates
-that the workflows still implement that contract.
+The machine-readable cadence is
+[`testing-cadence.json`](testing-cadence.json). Workflow validation must fail
+when implementation drifts from that contract.
 
 ## Risk tiers
 
-| Tier | Scope                                                                                              | Required treatment                                                           |
-| ---- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| P0   | Money movement, ledger balance, idempotency, authorization, audit integrity, and reconciliation    | Pull request, merged `main`, daily, and release evidence; no manual override |
-| P1   | Critical customer and workforce journeys, recovery, refunds, reversals, and operational visibility | Affected pull request, merged `main`, daily smoke, and release evidence      |
-| P2   | Reporting, secondary workflows, visual behavior, and uncommon edge cases                           | Release evidence plus targeted manual or scheduled review                    |
+| Tier | Scope                                                                             | Required treatment                                                                     |
+| ---- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| P0   | Money movement, ledger balance, idempotency, authorization, audit, reconciliation | Pull request, merged `main`, daily, and exact-SHA release evidence; no manual override |
+| P1   | Critical customer/workforce journeys, recovery, refunds, reversals, visibility    | Affected pull request, merged `main`, daily smoke, and release evidence                |
+| P2   | Reporting, secondary flows, visual behavior, uncommon edges                       | Targeted automation plus release/manual review                                         |
 
-## Active automated cadences
+## Cadence
 
-| Cadence           | Trigger                      | Purpose                                                                                                    | Target runtime |
-| ----------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------: |
-| Pull request      | Every pull request to `main` | Prevent an unsafe change from entering `main`                                                              |     20 minutes |
-| Main              | Every push to `main`         | Prove the actual merge commit                                                                              |     20 minutes |
-| Daily             | `06:17 UTC` every day        | Detect time-dependent, dependency, build, restart, and cross-package regressions                           |     30 minutes |
-| Weekly ledger     | `06:17 UTC` every Sunday     | Enforce the 100,000/1,000,000-posting materialized-balance performance gate                                |     45 minutes |
-| Weekly resilience | `07:43 UTC` every Saturday   | Soak concurrency, replay seeded ledger sequences, inject controlled failures, and rehearse schema upgrades |     45 minutes |
-| Release candidate | Manual exact-SHA dispatch    | Retest one immutable `main` commit, report Qase gates, and retain a content-addressed evidence manifest    |     90 minutes |
+| Cadence           | Trigger                      | Purpose                                                                | Budget |
+| ----------------- | ---------------------------- | ---------------------------------------------------------------------- | -----: |
+| Pull request      | Every pull request to `main` | Prevent unsafe merge                                                   | 20 min |
+| Main              | Every push to `main`         | Prove the actual merge commit                                          | 20 min |
+| Daily             | `06:17 UTC`                  | Detect cross-package, restart, dependency, and build regressions       | 30 min |
+| Weekly ledger     | Sunday `06:17 UTC`           | Enforce 100K/1M-posting performance gates                              | 45 min |
+| Weekly resilience | Saturday `07:43 UTC`         | Soak concurrency, replay sequences, inject failures, rehearse upgrades | 45 min |
+| Release candidate | Manual exact-SHA dispatch    | Retest immutable `main` commit and retain evidence                     | 90 min |
 
-The schedules deliberately avoid the start of the hour, when hosted workflow
-queues are more likely to be delayed. Scheduled runs execute only from the
-default branch. A workflow change is therefore not active until it is merged.
-Feature-branch pushes do not create a second full CI or Qase run. The
-pull-request merge ref is the authoritative pre-merge result, and the later
-`main` push independently proves the actual merged commit.
+Scheduled workflows run from the default branch. Feature-branch pushes do not
+duplicate pull-request CI or Qase records. The merge-ref result is authoritative
+before merge; the later `main` run proves the resulting commit.
 
-## Product-stack coverage
+## Coverage ownership
 
-| Surface               | Continuous evidence                                                                                                 | Daily evidence                                             | Manual/release evidence                                            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
-| PostgreSQL and ledger | Migrations, repeatable seed, double entry, precision, holds, idempotency, immutability, concurrency, reconciliation | Full repeat on a fresh disposable database plus restart    | Exact journal and audit sampling                                   |
-| API and remittance    | Unit, contract, HTTP-to-PostgreSQL, and compiled-process restart                                                    | Full repeat against synthetic PostgreSQL                   | Candidate-SHA failure and recovery review                          |
-| Customer web          | Unit/component tests, typecheck, production build, explicit API failure behavior, raw/gzip artifact budgets         | Full repeat through workspace CI                           | Browser and quote-handoff smoke in Qase                            |
-| Mobile                | Unit/model tests, typecheck, portable API configuration, recovery, production bundle, raw/gzip artifact budgets     | Full repeat through workspace CI                           | iOS and Android device smoke in Qase                               |
-| Operations portal     | Unit/model tests, role restrictions, explicit unavailable states, production build, raw/gzip entry budget           | Full repeat through workspace CI                           | Administrator, CS, compliance, and auditor workflows in Qase       |
-| Design system         | Source boundary, token drift, contrast/accessibility tests, typecheck, preview build                                | Workspace build repeat                                     | Visual review across product surfaces                              |
-| GCP portability       | Docker and configuration contract tests                                                                             | Portability contract repeat                                | Deployment, migration, and rollback rehearsal only when authorized |
-| Vendor adapters       | Fake Auth0, Persona, Crossmint, funding, and payout contracts; replay, timeout, and redaction controls              | Synthetic onboarding and recovery repeat                   | Separate sandbox certification before any live credential          |
-| Commercial site       | Isolated typecheck and production build                                                                             | Separate daily job so it cannot weaken the financial gates | Visual review when included in a release                           |
+| Surface               | Continuous                                                                                         | Manual or release                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| PostgreSQL and ledger | Migration, seed, double entry, precision, holds, replay, immutability, concurrency, reconciliation | Journal, audit, recovery, and candidate-SHA sampling     |
+| API and remittance    | Unit, generated contract, HTTP/PostgreSQL, compiled restart                                        | Failure and recovery review                              |
+| Customer web          | Unit, typecheck, build, explicit API failure, artifact budget                                      | Browser and quote-handoff smoke                          |
+| Mobile                | Unit, typecheck, API configuration, recovery, production bundle, artifact budget                   | Physical iOS/Android smoke                               |
+| Operations Portal     | Unit, roles, unavailable states, build, artifact budget                                            | Administrator, CS, compliance, and auditor workflows     |
+| Design system         | Token drift, contrast, accessibility, typecheck, preview build                                     | Cross-surface visual review                              |
+| Google Cloud          | Container and configuration contracts                                                              | Authorized deployment, migration, and rollback rehearsal |
+| Vendor adapters       | Fake contracts, replay, timeout, redaction                                                         | Separate sandbox certification before credentials        |
+| Commercial site       | Isolated typecheck and build                                                                       | Release visual review when in scope                      |
 
-## Qase execution policy
+## Evidence contracts
 
-- Automated runs use `github-ci-postgres`, which means disposable PostgreSQL 16
-  and synthetic data. It is not a deployment environment.
-- Replit remains a manual synthetic preview environment. GitHub automation must
-  not depend on it.
-- Run titles identify cadence, branch, and exact commit.
-- Release candidates are identified as `rc-<first 12 SHA characters>` and can
-  only be dispatched with a full commit already contained in GitHub `main`.
-- GitHub validates every governed JUnit file and sends them to Qase in one
-  directory upload. A Qase run is completed only after that batch succeeds.
-- Manual plans never override a failed automated P0 control.
-- Scheduled manual runs require a named owner. A schedule that only creates an
-  unowned run should be reduced or removed.
+- [Qase CI reporting](qase-ci.md) owns upload behavior, environments, case
+  mappings, and manual-plan use.
+- [Immutable release-candidate evidence](release-candidate-evidence.md) owns the
+  exact-SHA workflow and its stop conditions.
+- [`release-evidence-contract.json`](release-evidence-contract.json) owns
+  required release files and retention.
+- [`experience-budgets.json`](experience-budgets.json) owns raw and gzip limits.
+- [Ledger performance baseline](ledger-performance-baseline.md) owns measured
+  thresholds and materialized-balance evidence.
+- The [Google Cloud runbook](../../deploy/gcp/README.md) owns portability and
+  staging cutover controls.
+
+GitHub validates every governed JUnit file before one batch upload. Release
+candidates retain content hashes for each evidence file. Budget or evidence
+contract changes require measured, reviewed changes; a build cannot evade a
+gate by omitting or renaming its expected artifact.
+
+Automated database acceptance uses the `github-ci-postgres` environment: a
+disposable PostgreSQL 16 service with synthetic data, not a deployment target.
 
 ## Merge and release stop conditions
 
-Stop the merge or release when any of the following is true:
+Stop a merge or release when:
 
-1. A required P0 test fails or is skipped without explicit release evidence.
-2. Migration, seed idempotency, restart, atomicity, or concurrency fails.
-3. A journal is unbalanced or reconciliation has an unexplained variance.
-4. A duplicate command can move money twice or changed replay evidence is
-   accepted.
-5. An API outage silently exposes mock financial data.
-6. The tested commit differs from the candidate commit.
-7. Qase environment attribution or required evidence is missing.
-8. A governed customer, mobile, or operations artifact is missing, ambiguous,
-   or exceeds its approved raw or gzip budget.
+1. a required P0 test fails, is skipped, or lacks required evidence;
+2. migration, restart, atomicity, idempotency, concurrency, or recovery fails;
+3. any journal is unbalanced or reconciliation has unexplained variance;
+4. replay can move money twice or accept changed command evidence;
+5. an outage silently exposes mock financial data;
+6. the tested commit differs from the candidate;
+7. Qase environment attribution or required release evidence is missing; or
+8. a governed web, mobile, or operations artifact is absent, ambiguous, or over
+   its approved size budget.
 
-## Controlled boundaries
+## Boundaries
 
-- Use only disposable databases and synthetic fixtures.
-- Do not automate against Replit, production, real providers, shared databases,
-  or real customer data.
-- Auth0, Persona, and Crossmint sandbox certification must use separate
-  environments, synthetic identities, credential redaction, bounded test data,
-  and an exact-SHA Qase plan; it does not replace provider or legal approval.
-- Browser and physical-device execution remains governed manual Qase evidence
-  until a separate automation phase is approved.
-- This cadence phase does not authorize GCP deployment, production identity,
-  secrets infrastructure, live payments, or provider connectivity.
+Automated acceptance uses disposable PostgreSQL and synthetic fixtures. It does
+not target Replit, production, shared databases, real providers, customer data,
+or public workloads. Browser and physical-device testing remains governed
+manual Qase evidence until separately approved automation exists.
 
-[`experience-budgets.json`](experience-budgets.json) defines fail-closed raw
-and gzip ceilings for the customer web entry, isolated onboarding chunk, web
-styles, Operations Portal entry, and both mobile production bundles. The Linux
-quality gate writes a retained JSON result after the build. Release candidates
-include that report in the immutable SHA-256 evidence manifest. Budget changes
-require their own measured and reviewed pull request; a build cannot evade a
-limit by omitting or duplicating the expected artifact.
-
-## Immutable release-candidate evidence
-
-[`release-evidence-contract.json`](release-evidence-contract.json) defines the
-required gates, files, retention, Qase attribution, and controlled boundaries.
-The manual workflow checks out the exact 40-character candidate SHA with no
-persisted Git credentials, verifies it is contained in GitHub `main`, and runs
-quality, commercial, migration, PostgreSQL, HTTP/restart, resilience, and
-million-posting performance gates. Persistence, HTTP/restart, resilience, and
-performance each use a separately migrated and seeded disposable PostgreSQL 16
-database so one suite cannot change another suite's financial baseline.
-
-Every required JUnit and performance result is SHA-256 hashed into
-`release-evidence-manifest.json`. GitHub retains the manifest, its independent
-hash record, Qase run identity, and raw evidence for 365 days. The workflow
-uploads evidence before enforcing stop conditions, so a failed candidate leaves
-an auditable failed record and cannot be converted into a pass by omission.
-
-## Container portability cadence
-
-The `Container portability` workflow builds the five Google Cloud-targeted
-images without publishing or deploying them. It runs on relevant pull requests
-and `main` changes, weekly for base-image drift, and by manual dispatch. Against
-disposable PostgreSQL 16 it executes the migration image, API health/readiness,
-customer and Operations Portal SPA/API proxy routes, the production operations-
-API denial, and the design-system review surface. Logs and probe responses are
-retained with JSON/JUnit summaries for 30 days. This proves container runtime
-portability; it does not prove Google Cloud provisioning, IAM, networking,
-deployment, or production security.
-
-The review-only staging runtime contract is part of the same platform suite. It
-fails if service exposure becomes unauthenticated, browser workloads gain
-database or secret access, identities collapse onto defaults, migration
-execution becomes concurrent or retrying, image identity floats, or the
-Operations Portal is promoted before its workforce-security blockers close.
-
-## Next testing slices
-
-The daily PostgreSQL job now publishes nine separately identifiable synthetic
-journeys for completion, provider rejection, timeout retry, cancellation,
-payout-failure refund, settlement reversal, restart/idempotency,
-reconciliation resolution, and cross-journey ledger/audit sweeps. Each result
-is independently visible in GitHub artifacts and Qase. The weekly resilience
-lane adds six stable controls without sending traffic to any deployed surface:
-one concurrency soak, one reproducible model-based sequence, three controlled
-fault boundaries, and one upgrade from migration `0007` to the current schema.
-
-1. Decide separately whether browser and device automation provides enough
-   value to introduce and maintain it.
+Auth0, Persona, and Crossmint sandbox certification requires isolated
+environments, synthetic identities, redacted credentials, bounded data, and an
+exact-SHA Qase plan. Technical evidence cannot substitute for provider, privacy,
+legal, corridor, or production approval.

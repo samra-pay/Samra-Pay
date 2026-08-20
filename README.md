@@ -1,60 +1,36 @@
 # Samra Pay
 
-Samra Pay is building an Alpha remittance product with a Samra-owned customer
-record, PostgreSQL operating database, double-entry control ledger, audit trail,
-reconciliation, customer applications, and an internal Operations Portal.
-
-The locked Alpha vendors are:
-
-- Auth0 for customer authentication;
-- Persona for KYC evidence;
-- Crossmint for an approved USDC wallet configuration;
-- Google Cloud for staging runtime and data infrastructure;
-- GitHub Actions and Qase for technical and governed test evidence.
-
-Funding and Ethiopia payout providers are unresolved. Cybrid, Rain, and Bridge
-are post-Alpha wallet-platform alternatives, not active integrations.
+Samra Pay is building a synthetic-first U.S.–Ethiopia remittance Alpha. Samra
+owns the customer relationship, PostgreSQL data, authorization decisions,
+transaction state, double-entry control ledger, reconciliation, audit history,
+provider mappings, and core product IP. External providers supply bounded,
+replaceable capabilities; they do not become financial or customer truth.
 
 ## Start here
 
-Read the [product and engineering documentation index](docs/README.md). It is
-the canonical current-state map and separates implemented, tested, deployed,
-and blocked capabilities.
-
-The two governing architecture documents are:
+Use the [product and engineering documentation index](docs/README.md) for the
+current implementation and deployment state. The governing architecture is:
 
 - [Alpha platform and vendor boundary](docs/architecture/alpha-platform.md)
 - [Architecture and financial invariants](docs/architecture/README.md)
 
+The locked Alpha vendors are Auth0 for authentication, Persona for identity
+verification, and Crossmint for an approved USDC wallet configuration. Funding
+and Ethiopia payout remain unresolved. No document, fixture, or preview may
+represent an unresolved provider or capability as live.
+
 ## Workspace map
 
-| Area | Location |
-| --- | --- |
-| Customer web | `artifacts/samra-pay/` |
-| Expo mobile | `artifacts/samra-pay-mobile/` |
-| Operations Portal | `artifacts/samra-pay-ops/` |
-| API service | `artifacts/api-server/` |
-| Design system | `artifacts/samra-pay-ds/` |
-| API contracts and clients | `lib/api-*` and `lib/samra-client/` |
-| Persistence | `lib/db/` |
-| Ledger | `lib/ledger/` |
-| Remittance | `lib/remittance/` |
-| Google Cloud controls | `deploy/gcp/` |
-| Quality and evidence tooling | `scripts/`, `.github/workflows/`, and `docs/testing/` |
+| Area                                 | Location                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| Customer web, mobile, and operations | `artifacts/samra-pay/`, `artifacts/samra-pay-mobile/`, `artifacts/samra-pay-ops/` |
+| API and shared contracts             | `artifacts/api-server/`, `lib/api-*`, `lib/samra-client/`                         |
+| Persistence, ledger, and remittance  | `lib/db/`, `lib/ledger/`, `lib/remittance/`                                       |
+| Design system                        | `artifacts/samra-pay-ds/`                                                         |
+| Cloud controls                       | `deploy/gcp/`                                                                     |
+| Tests and evidence tooling           | `scripts/`, `.github/workflows/`, `docs/testing/`                                 |
 
-## Non-negotiable boundaries
-
-- Samra's ledger is financial truth; clients and vendors are not.
-- Vendor IDs are mappings to Samra IDs, never primary customer or transaction
-  identity.
-- Webhooks are authenticated, persisted, deduplicated, normalized, and applied
-  under Samra transaction controls.
-- Real vendor traffic, customer data, public deployment, and production claims
-  require separate evidence and approval.
-- Replit is temporary preview infrastructure, not source, database, financial,
-  design, or deployment truth.
-- GitHub Actions is the technical merge authority; Qase stores governed manual
-  and automated evidence against the exact commit.
-
-Use pnpm and the frozen lockfile. Never commit credentials, database URLs,
-access tokens, customer PII, KYC evidence, or raw provider payloads.
+Use pnpm with the frozen lockfile. Never commit credentials, database URLs,
+tokens, customer PII, KYC evidence, or raw provider payloads. Replit is a
+temporary preview surface; GitHub is source and merge authority, Qase retains
+governed evidence, and Google Cloud is the target runtime and data platform.

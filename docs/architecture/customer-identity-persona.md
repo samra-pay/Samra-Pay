@@ -120,8 +120,10 @@ Linux CI must prove:
   Qase evidence;
 - any provider response directly granting financial capability.
 
-## Next build
+## Next gate
 
-Connect web and mobile onboarding to Auth0, onboarding resume, consent, and the
-normalized identity-case API. Use the fake Persona boundary for the complete
-happy path and recovery states before a sandbox credential is introduced.
+Web and mobile already consume onboarding resume, consent, and normalized fake
+identity-case state. Before a Persona sandbox credential is introduced, finish
+the connected journey's manual keyboard, screen-reader, device, failure, and
+recovery evidence; lock the live Auth0 configuration; and close every Persona
+privacy, webhook, retention, and support hard stop above.

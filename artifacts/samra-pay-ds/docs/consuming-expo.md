@@ -1,10 +1,9 @@
 # Consuming Samra Pay Design System in Expo apps
 
 Read `artifacts/samra-pay-ds/docs/AGENTS.md` first. React Native does
-not consume the web CSS or DOM components. It imports portable tokens, native
-theme/hooks, and native components directly from this package. If the Expo app
-still contains scaffolded or existing local theme/hooks/components, also read
-`artifacts/samra-pay-ds/docs/migrating-expo.md` before writing UI.
+not consume web CSS or DOM components. It imports portable tokens, native
+theme/hooks, and native components directly from this package. This guide also
+owns migration from scaffolded or local Expo design-system copies.
 
 ## Native theme and fonts
 
@@ -23,7 +22,7 @@ const radius = tokens.radius.endsWith("rem")
 Export `useColors` from `src/hooks/use-colors.tsx`. Export a font hook from
 `src/hooks/use-fonts.tsx` that loads every required weight through `useFonts` and
 returns `fontsLoaded` and `fontError`. Use exact registered names such as
-`Inter_400Regular`, not CSS family names.
+`Outfit_400Regular`, not CSS family names.
 
 For Amharic copy, also load Noto Serif Ethiopic (e.g. via
 `@expo-google-fonts/noto-serif-ethiopic`) in the same font hook and expose it
@@ -85,3 +84,17 @@ Import and render
 `@workspace/samra-pay-ds/components/native/button`, then run Expo
 typecheck and the development workflow. The import, native theme, and font hook
 must resolve before broader screen work begins.
+
+## Migrating an existing Expo app
+
+1. Inventory local colors, theme hooks, font loading, and product-agnostic
+   components before deleting anything.
+2. Rewrite theme, color, and font imports to the package paths above while
+   preserving root-layout SplashScreen gating.
+3. Replace local Buttons, typography, Inputs, Fields, Cards, Badges, Toggles,
+   Empty states, Spinners, and Skeletons with native package components. Keep
+   product-specific compositions local.
+4. Delete superseded theme/hooks/components and dependencies only after all
+   callers move. Do not leave compatibility re-exports.
+5. Search for old local import paths, run Expo typecheck and the development
+   workflow, then verify theme, fonts, and one package primitive on device.
