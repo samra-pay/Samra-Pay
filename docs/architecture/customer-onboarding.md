@@ -2,9 +2,17 @@
 
 ## Decision
 
-Samra Pay owns the customer ID, onboarding state, consent evidence, capability decisions, and audit trail. Auth0 proves that an external subject authenticated; it does not create a financial entitlement. Persona, Crossmint, Rain, Cybrid, Bridge, banks, and funding rails remain downstream adapters.
+Samra Pay owns the customer ID, onboarding state, consent evidence, capability
+decisions, and audit trail. Auth0 proves that an external subject authenticated;
+it does not create a financial entitlement. The locked Alpha sequence is Auth0
+authentication, Persona KYC, and Crossmint USDC wallet creation. Funding and
+Ethiopia payout remain unresolved. Cybrid, Rain, and Bridge are post-Alpha
+wallet alternatives, not active integrations.
 
-This foundation creates one durable customer and one onboarding aggregate across web and mobile. It does not configure Auth0, call Persona, create a wallet, fund an account, enable a deployment, or change Replit.
+This foundation creates one durable customer and one onboarding aggregate
+across web and mobile. It does not configure Auth0, call Persona or Crossmint,
+fund an account, enable a deployment, or change Replit. See
+[Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Runtime boundary
 

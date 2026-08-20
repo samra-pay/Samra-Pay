@@ -1,5 +1,10 @@
 # Synthetic Remittance Lifecycle
 
+Status: implemented and tested with deterministic fake adapters. Crossmint is
+the locked Alpha USDC wallet provider, not an approved funding or Ethiopia
+payout rail. Those two rails and the remitter-of-record structure remain
+unresolved. Provider names in historical fixtures do not govern this lifecycle.
+
 ## Quote
 
 The server calculates and stores an immutable quote snapshot containing:
@@ -32,7 +37,7 @@ created -> funds_reserved -> submitted -> in_transit
 Failure branches:
 
 ```text
-submitted -> failed (Caliza rejects; reservation released)
+submitted -> failed (movement provider rejects; reservation released)
 in_transit -> refund_pending -> refunded
 payout_pending -> refund_pending -> refunded
 completed -> reversal_pending -> reversed
@@ -71,8 +76,8 @@ A timeout remains pending. It is not converted into failure.
 ## Deterministic scenarios
 
 - happy path;
-- Caliza rejection;
-- Chapa payout failure followed by refund;
+- movement-provider rejection;
+- payout-provider failure followed by refund;
 - post-completion payout reversal followed by refund;
 - provider timeout followed by retry;
 - duplicate provider event;

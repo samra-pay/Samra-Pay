@@ -59,16 +59,22 @@ This document inventories all assets in the design system, their source, intende
 
 **Recommendation:** Same as ShebaMiles — replace with fictional airline name in demos.
 
-### Payment Providers (Rain, Caliza, Chapa)
+### Legacy provider labels
 | Item | Location | Context | Status |
 |------|----------|---------|--------|
-| "Rain" | src/preview/pages/applied-remittance.tsx | Demo payment provider name | ℹ️ Demo only |
-| "Caliza" | src/preview/pages/applied-remittance.tsx | Demo payment provider name | ℹ️ Demo only |
-| "Chapa" | src/preview/pages/applied-remittance.tsx | Demo payment provider name | ℹ️ Demo only |
+| "Rain" | src/preview/pages/applied-remittance.tsx | Legacy demo provider label | ℹ️ Demo only |
+| "Caliza" | src/preview/pages/applied-remittance.tsx | Legacy demo provider label | ℹ️ Demo only |
+| "Chapa" | src/preview/pages/applied-remittance.tsx | Legacy demo provider label | ℹ️ Demo only |
 
-**Detail:** These are real company names. In demo context they are used as fictional data. Using real company names in demos is generally acceptable but should not imply partnership.
+**Detail:** These are real company names and are not the current Alpha vendor
+architecture. Their appearance is legacy fixture data and must not imply a
+partnership, active integration, or product decision. Auth0, Persona, and
+Crossmint are also third-party marks; use their names only in factual internal
+architecture documentation until marketing and trademark use is approved.
 
-**Recommendation:** Add a disclaimer on the preview page: "Provider names used in demos are for illustration only and do not imply partnership."
+**Recommendation:** Replace public-facing fixture labels with fictional names.
+Keep real vendor names only in controlled documentation and integration status
+surfaces.
 
 ---
 
@@ -90,7 +96,7 @@ This document inventories all assets in the design system, their source, intende
 |----------|------|--------|
 | 🔴 High | Mastercard-style card mark in bank-card.tsx | Review with legal — obtain acceptance mark license or replace with abstract design |
 | 🟡 Medium | ShebaMiles / Ethiopian Airlines in demos | Replace with fictional names before any public demo or marketing use |
-| 🟡 Medium | Rain / Caliza / Chapa in demos | Add disclaimer or replace with fully fictional names |
+| 🟡 Medium | Real vendor names in demos | Replace with fictional names before public use |
 | 🟢 Low | Font licensing | None required — all OFL |
 | 🟢 Low | Ethiopian patterns | None required — CSS-generated |
 | 🟢 Low | Samra Pay logos | None — project-owned |

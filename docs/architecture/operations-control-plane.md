@@ -1,10 +1,14 @@
 # Samra Pay synthetic operations control plane
 
+Status: implemented and tested for synthetic data. PostgreSQL workforce
+sessions and server-enforced roles supersede the former demo-operator headers.
+The portal is not approved for real employee or customer data.
+
 ## Purpose
 
 The operations control plane gives Samra Pay staff a durable, read-only view of synthetic remittance execution without weakening ledger authority. It is designed for transaction search, customer-support troubleshooting, reconciliation review, retry visibility, audit review, and later operational reporting.
 
-It is not production-ready authentication or authorization. It is available only when all of these conditions are explicit:
+It is available only when all of these conditions are explicit:
 
 - `SAMRA_BACKEND_MODE=demo`
 - `SAMRA_PROVIDER_MODE=fake`
@@ -12,7 +16,11 @@ It is not production-ready authentication or authorization. It is available only
 - `SAMRA_INTERNAL_OPERATIONS_ENABLED=true`
 - `NODE_ENV` is not `production`
 
-The temporary synthetic operator contract requires `X-Demo-Operator-Id: demo_cs_agent_001` and `X-Demo-Operator-Role: support_readonly`. These headers are a test boundary, not an identity system. Production auth, real staff identities, PII access, retention, deployment, and security hardening remain separate work.
+Access requires the revocable PostgreSQL session and role boundary defined in
+[Workforce access](../operations/workforce-access.md). The former
+`X-Demo-Operator-*` headers are rejected. Production workforce federation, MFA,
+employee lifecycle automation, PII policy, retention, deployment, and security
+hardening remain separate work.
 
 ## Durable execution model
 
@@ -50,9 +58,15 @@ The transfer detail response combines canonical transfer state, exact money stri
 
 `artifacts/samra-pay-ops` is the independently deployable **Samra Pay Operations Portal** imported from the Replit workspace. The customer application does not contain an employee or admin route. The portal remains disabled by default and requires `VITE_SAMRA_OPERATIONS_ENABLED=true`; `VITE_SAMRA_OPS_DATA_MODE=api` selects the durable backend and `VITE_SAMRA_API_ORIGIN` identifies the separate private API preview.
 
-The current employee surface includes durable customer counts and search, transaction search and status filtering, exact-money transfer detail, workflow and provider evidence, reconciliation exceptions, the immutable audit explorer, and an explicit locked-controls boundary. Requests use the temporary demo operator headers above, and reads are not automatically polled because each read creates audit evidence. Refresh is explicit.
+The current employee surface includes durable customer counts and search,
+transaction search and status filtering, exact-money transfer detail, workflow
+and provider evidence, reconciliation exceptions, the immutable audit explorer,
+case management, and an explicit locked-controls boundary. Requests use an
+HTTP-only workforce session cookie. Reads are not automatically polled because
+each sensitive read creates audit evidence; refresh is explicit.
 
-For a private synthetic Replit preview, enable the server and browser gates together:
+For a private synthetic preview, provision a synthetic workforce identity and
+enable the server and browser gates together:
 
 ```text
 SAMRA_BACKEND_MODE=demo
@@ -64,7 +78,12 @@ VITE_SAMRA_OPS_DATA_MODE=api
 VITE_SAMRA_API_ORIGIN=<private API preview origin>
 ```
 
-The portal must not be published as a production admin system. The temporary headers are not authentication, the synthetic names are not real customer PII, and the current API CORS policy is not a production trust boundary. Before any real staff or customer data is used, the portal requires authenticated workforce identity, server-enforced RBAC, an explicit origin allowlist, session controls, audit retention policy, and privacy review.
+The portal must not be published as a production admin system. Local workforce
+credentials are a controlled synthetic boundary, not enterprise employee
+identity. Before real staff or customer data is used, the portal requires
+federated workforce identity, MFA, joiner/mover/leaver automation, centralized
+secrets, an explicit origin allowlist, reviewed sessions and RBAC, audit
+retention, alerting, and privacy approval.
 
 ## Control rules for later interventions
 

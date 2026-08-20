@@ -1,5 +1,9 @@
 # Backend assurance release readiness
 
+Status: historical evidence for the durable-backend assurance milestone. It is
+not the current Alpha release certificate; use the immutable release-candidate
+workflow for the exact SHA under consideration.
+
 ## Conclusion
 
 The functional baseline for the bounded durable-backend and ledger-assurance
@@ -66,7 +70,8 @@ PostgreSQL gates and must not be used to override a failed automated invariant.
 
 The following remain deliberately unimplemented or unapproved:
 
-- real Rain, Caliza, Chapa, bank, card-network, or settlement traffic;
+- live Auth0, Persona, Crossmint, bank-funding, payout, card-network, or
+  settlement traffic;
 - real customer PII or production money;
 - production identity federation, MFA, lifecycle automation, and secret
   management;
@@ -92,8 +97,7 @@ sequence is:
 2. run the Qase operations-portal smoke plan against the current synthetic
    browser environment;
 3. record defects without changing financial invariants to accommodate any UI;
-4. decide whether to authorize a production-readiness phase covering identity,
-   secrets, database operations, observability, backup/restore, and provider
-   contracts;
-5. connect real providers only after that phase and the legal corridor gates
-   pass.
+4. complete the locked Alpha sequence for Auth0, Persona, and Crossmint behind
+   provider-neutral contracts;
+5. authorize live providers only after security, privacy, database,
+   observability, backup/restore, legal-corridor, and Qase release gates pass.

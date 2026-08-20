@@ -1,5 +1,9 @@
 # Customer identity case and Persona boundary
 
+Status: Persona is the locked Alpha KYC vendor. The Samra case model and
+deterministic fake adapter are implemented and tested; no live Persona account,
+template, credential, PII, or webhook is connected.
+
 ## Decision
 
 Samra Pay owns the identity case, normalized state, onboarding capability gate,
@@ -10,6 +14,9 @@ payload never writes a customer capability directly.
 This slice is synthetic only. It does not configure Persona, accept a real
 webhook, store identity documents, collect PII, create a wallet, change Replit,
 or enable a deployment.
+
+The complete Alpha sequence is governed by
+[Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Durable model
 

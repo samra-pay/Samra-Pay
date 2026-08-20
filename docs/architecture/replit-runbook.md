@@ -1,5 +1,11 @@
 # Replit Safety and Release Gates
 
+> **Status:** Replit is a temporary visual and manual-testing surface. GitHub
+> remains the source of truth, Google Cloud is the Alpha target platform, and
+> real Auth0, Persona, and Crossmint traffic is not authorized through Replit.
+> See the [documentation index](../README.md) and
+> [Alpha platform architecture](./alpha-platform.md).
+
 ## Preserved runtime contract
 
 - API service remains on port 8080 behind `/api`.

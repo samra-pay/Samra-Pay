@@ -1,5 +1,9 @@
 # Workforce access boundary
 
+Status: this is the governing current synthetic Operations Portal access
+contract and supersedes all demo-operator header instructions. It is not a
+production workforce identity system.
+
 The Samra Pay Operations Portal is read-only and denies access unless PostgreSQL resolves a valid workforce session. The former `X-Demo-Operator-*` headers are not accepted.
 
 ## Roles

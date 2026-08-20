@@ -1,5 +1,9 @@
 # Samra Pay testing strategy
 
+Status: GitHub Actions and Qase are the locked Alpha quality system. GitHub is
+the technical merge authority; Qase is the durable traceability, manual-test,
+and release-evidence record.
+
 ## Decision
 
 Samra Pay uses risk-based test cadence instead of running every test at every
@@ -45,6 +49,7 @@ default branch. A workflow change is therefore not active until it is merged.
 | Operations portal     | Unit/model tests, role restrictions, explicit unavailable states, production build, raw/gzip entry budget           | Full repeat through workspace CI                           | Administrator, CS, compliance, and auditor workflows in Qase       |
 | Design system         | Source boundary, token drift, contrast/accessibility tests, typecheck, preview build                                | Workspace build repeat                                     | Visual review across product surfaces                              |
 | GCP portability       | Docker and configuration contract tests                                                                             | Portability contract repeat                                | Deployment, migration, and rollback rehearsal only when authorized |
+| Vendor adapters       | Fake Auth0, Persona, Crossmint, funding, and payout contracts; replay, timeout, and redaction controls              | Synthetic onboarding and recovery repeat                   | Separate sandbox certification before any live credential          |
 | Commercial site       | Isolated typecheck and production build                                                                             | Separate daily job so it cannot weaken the financial gates | Visual review when included in a release                           |
 
 ## Qase execution policy
@@ -81,6 +86,9 @@ Stop the merge or release when any of the following is true:
 - Use only disposable databases and synthetic fixtures.
 - Do not automate against Replit, production, real providers, shared databases,
   or real customer data.
+- Auth0, Persona, and Crossmint sandbox certification must use separate
+  environments, synthetic identities, credential redaction, bounded test data,
+  and an exact-SHA Qase plan; it does not replace provider or legal approval.
 - Browser and physical-device execution remains governed manual Qase evidence
   until a separate automation phase is approved.
 - This cadence phase does not authorize GCP deployment, production identity,

@@ -1,115 +1,54 @@
-# Testing — Samra Pay Design System
+# Design-system testing
 
-This document describes the test suite, how to run tests, and test results.
+The design system uses Node's built-in test runner. Current CI results and the
+exact commit are evidence; copied pass counts in documentation are not.
 
----
+## Automated gates
 
-## Test Suite Overview
+| Gate | Proves |
+| --- | --- |
+| `tokens.test.mjs` | Required token groups, aliases, and generated-file boundaries |
+| `contrast.test.mjs` | Required palette-pair WCAG contrast |
+| `a11y.test.mjs` | Touch targets, status text requirements, and interaction defaults |
+| `docs.test.mjs` | Required governing documents and supported references |
+| source-boundary check | ZIPs, generated output, and foreign design artifacts cannot become source truth |
+| package typecheck and build | Web/native exports and the review browser compile |
+| experience-budget gate | Customer, operations, and mobile artifacts remain within reviewed ceilings |
 
-Tests use the Node.js built-in test runner (`node:test` + `node:assert`). No additional test framework is needed.
+Run the package gates from the repository root:
 
-| Test file | Description |
-|-----------|-------------|
-| `src/tests/tokens.test.mjs` | Token structure, alias resolution, required groups |
-| `src/tests/contrast.test.mjs` | WCAG AA contrast for all color pairs |
-| `src/tests/a11y.test.mjs` | Accessibility token values |
-| `src/tests/docs.test.mjs` | Required docs exist, no broken `.md` links |
-
-## Running Tests
-
-```bash
-# All tests
-pnpm test
-
-# Accessibility tests only
-pnpm test:a11y
-
-# Individual test file
-node --test src/tests/tokens.test.mjs
+```sh
+pnpm --filter @workspace/samra-pay-ds test
+pnpm --filter @workspace/samra-pay-ds typecheck
+pnpm --filter @workspace/samra-pay-ds build
+node artifacts/samra-pay-ds/scripts/check-source-boundary.mjs
 ```
 
----
+## Required manual evidence
 
-## Test Results
+Automated tests do not prove:
 
-Results recorded after Phase 11 implementation. See "Latest Run" below.
+- VoiceOver and TalkBack behavior;
+- maximum Dynamic Type and Android font scaling;
+- Ethiopic font and keyboard rendering;
+- touch gestures, toast placement, notches, or Dynamic Island behavior;
+- reduced-motion behavior on real devices;
+- OLED/LCD appearance or cross-browser visual fidelity;
+- complete Auth0, Persona, Crossmint, failure, recovery, and restricted-customer journeys.
 
-### Latest Run
+Record manual cases and results in Qase against the exact GitHub commit. Never
+place credentials, access tokens, customer PII, identity evidence, or raw
+provider payloads in Qase attachments.
 
-```
-tokens.test.mjs:
-  ✅ tokens.json is valid JSON
-  ✅ Required top-level groups are present (color, typography, textStyle, interaction, layout, motion, elevation, status)
-  ✅ Generated tokens.tsx starts with GENERATED comment
-  ✅ Generated semantic-tokens.tsx starts with GENERATED comment
-  ✅ All color alias references resolve
+## Open gaps
 
-contrast.test.mjs:
-  ✅ [light] background/foreground: 17.27:1 (≥ 4.5)
-  ✅ [light] card/cardForeground: 18.21:1 (≥ 4.5)
-  ✅ [light] primary/primaryForeground: 8.53:1 (≥ 4.5)
-  ✅ [light] secondary/secondaryForeground: 15.38:1 (≥ 4.5)
-  ✅ [light] muted/mutedForeground: 4.98:1 (≥ 4.5)
-  ✅ [light] accent/accentForeground: 5.07:1 (≥ 4.5)
-  ✅ [light] destructive/destructiveForeground: 5.93:1 (≥ 4.5)
-  ✅ [light] coffee/coffeeForeground: 6.86:1 (≥ 4.5)
-  ✅ [light] berbere/berbereForeground: 5.46:1 (≥ 4.5)
-  ✅ [light] eucalyptus/eucalyptusForeground: 5.69:1 (≥ 4.5)
-  ✅ [light] injera/injeraForeground: 8.81:1 (≥ 4.5)
-  ✅ [dark] background/foreground: 18.16:1 (≥ 4.5)
-  ✅ [dark] card/cardForeground: 17.58:1 (≥ 4.5)
-  ✅ [dark] primary/primaryForeground: 8.53:1 (≥ 4.5)
-  ✅ [dark] secondary/secondaryForeground: 15.96:1 (≥ 4.5)
-  ✅ [dark] muted/mutedForeground: 7.34:1 (≥ 4.5)
-  ✅ [dark] accent/accentForeground: 8.51:1 (≥ 4.5)
-  ✅ [dark] destructive/destructiveForeground: 8.05:1 (≥ 4.5)
-  ✅ [dark] coffee/coffeeForeground: 4.71:1 (≥ 4.5)
-  ✅ [dark] berbere/berbereForeground: 5.04:1 (≥ 4.5)
-  ✅ [dark] eucalyptus/eucalyptusForeground: 5.64:1 (≥ 4.5)
-  ✅ [dark] injera/injeraForeground: 11.31:1 (≥ 4.5)
+Before Alpha experience acceptance:
 
-a11y.test.mjs:
-  ✅ interaction.touchTarget.ios >= 44
-  ✅ interaction.touchTarget.android >= 48
-  ✅ All status entries have textRequired: true
-  ✅ Every status entry has accessibilityNote
-  ✅ interaction.disabledOpacity <= 0.5
-  ✅ interaction.pressedOpacity < 1.0
+1. extend contrast testing to every status foreground/background pair;
+2. complete representative iOS and Android device checks;
+3. add screenshot or visual-regression evidence only after its ownership and
+   false-positive policy are defined.
 
-docs.test.mjs:
-  ✅ docs/current-state-audit.md exists
-  ✅ docs/financial-ui-truth.md exists
-  ✅ docs/accessibility.md exists
-  ✅ docs/content-and-voice.md exists
-  ✅ docs/semantic-tokens.md exists
-  ✅ docs/asset-rights.md exists
-  ✅ docs/AGENTS.md exists
-  ✅ docs/references/native-component-inventory.md exists
-  ✅ CHANGELOG.md exists
-  ✅ No broken .md component references found in docs/
-```
-
----
-
-## Platform Limitations
-
-The following accessibility and visual claims are based on specification only and require physical device validation:
-
-- VoiceOver behavior on iOS (requires iPhone/iPad with VoiceOver enabled)
-- TalkBack behavior on Android (requires Android device with TalkBack enabled)
-- Dynamic Type scaling at maximum size (requires iOS device)
-- Android font size at maximum scale (requires Android device)
-- Noto Serif Ethiopic rendering on real device keyboards/fonts
-- BottomSheet PanResponder behavior on actual touch screens
-- Toast positioning on notched / Dynamic Island devices
-- Reduced motion behavior on iOS and Android system settings
-- Contrast appearance on OLED vs LCD displays at various brightness levels
-
----
-
-## Future Test Additions
-
-See `docs/open-decisions.md` for pending decisions on:
-- Status token contrast validation (new hex values not yet WCAG-tested programmatically)
-- Native component snapshot tests
-- Visual regression tests for web components
+See [open design decisions](open-decisions.md),
+[accessibility](accessibility.md), and the repository
+[testing strategy](../../../docs/testing/testing-strategy.md).
