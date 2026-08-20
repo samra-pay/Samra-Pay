@@ -66,11 +66,17 @@ test("limits database and secret access to API and migration identities", () => 
     assert.equal(service.databaseAccess, shouldAccessDatabase);
     assert.deepEqual(
       service.secretAccess,
-      shouldAccessDatabase ? ["database-url"] : [],
+      shouldAccessDatabase ? ["runtime-database-url"] : [],
     );
   }
   assert.equal(contract.migrationJob.databaseAccess, true);
-  assert.deepEqual(contract.migrationJob.secretAccess, ["database-url"]);
+  assert.deepEqual(contract.migrationJob.secretAccess, [
+    "migration-database-url",
+  ]);
+  assert.notEqual(
+    contract.database.runtimeSecretReference,
+    contract.database.migrationSecretReference,
+  );
 });
 
 test("pins the private cost-bounded staging database substrate", () => {
@@ -147,6 +153,11 @@ test("locks the API to durable synthetic mode with explicit health checks", () =
   });
   assert.equal(api.startupProbe, "/api/readyz");
   assert.equal(api.livenessProbe, "/api/healthz");
+  assert.deepEqual(api.databasePool, {
+    maxConnections: 5,
+    idleTimeoutMilliseconds: 30000,
+    connectionTimeoutMilliseconds: 10000,
+  });
 });
 
 test("keeps migrations reviewed, serial, bounded, and non-retrying", () => {
@@ -188,8 +199,12 @@ test("keeps the operations portal blocked until staff security is real", () => {
 
 test("contains references only, never credentials or live-provider values", () => {
   assert.match(
-    contract.database.secretReference,
+    contract.database.runtimeSecretReference,
     /^projects\/PROJECT_ID\/secrets\/samra-staging-database-url\/versions\/latest$/,
+  );
+  assert.match(
+    contract.database.migrationSecretReference,
+    /^projects\/PROJECT_ID\/secrets\/samra-staging-migration-database-url\/versions\/latest$/,
   );
   assert.doesNotMatch(
     source,

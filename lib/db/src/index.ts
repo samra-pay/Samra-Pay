@@ -5,6 +5,12 @@ import { assertPostgresRuntimeReady } from "./postgres-readiness";
 
 const { Pool } = pg;
 
+export const DATABASE_POOL_DEFAULTS = Object.freeze({
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+});
+
 export type SamraDatabase = NodePgDatabase<typeof schema>;
 
 export interface DatabaseConnection {
@@ -39,6 +45,7 @@ export function createDatabase(
   options: CreateDatabaseOptions = {},
 ): DatabaseConnection {
   const pool = new Pool({
+    ...DATABASE_POOL_DEFAULTS,
     ...options.poolConfig,
     connectionString: requireConnectionString(options.connectionString),
   });

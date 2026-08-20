@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "status": "review-only",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "activationAuthorized": false,
+  "project": {
+    "id": "samra-pay-staging",
+    "organizationId": "614833350075",
+    "region": "us-east4"
+  },
+  "database": {
+    "instance": "samra-staging-postgres",
+    "name": "samra_staging",
+    "network": "samra-staging-vpc",
+    "privateIpRequired": true,
+    "publicIpAllowed": false
+  },
+  "principals": {
+    "bootstrap": {
+      "name": "samra_bootstrap_staging",
+      "lifecycle": "ephemeral",
+      "purpose": "create and verify the permanent least-privilege PostgreSQL roles only",
+      "deletedBeforeAcceptance": true
+    },
+    "migrationRole": {
+      "name": "samra_migrator",
+      "login": false,
+      "superuser": false,
+      "createDatabase": false,
+      "createRole": false,
+      "replication": false,
+      "bypassRowLevelSecurity": false
+    },
+    "migrationUser": {
+      "name": "samra_migrations_staging",
+      "memberOf": "samra_migrator",
+      "login": true,
+      "superuser": false,
+      "createDatabase": false,
+      "createRole": false,
+      "replication": false,
+      "bypassRowLevelSecurity": false,
+      "runtimeTrafficAllowed": false
+    },
+    "runtimeRole": {
+      "name": "samra_runtime",
+      "login": false,
+      "superuser": false,
+      "createDatabase": false,
+      "createRole": false,
+      "replication": false,
+      "bypassRowLevelSecurity": false
+    },
+    "runtimeUser": {
+      "name": "samra_runtime_staging",
+      "memberOf": "samra_runtime",
+      "login": true,
+      "superuser": false,
+      "createDatabase": false,
+      "createRole": false,
+      "replication": false,
+      "bypassRowLevelSecurity": false,
+      "schemaOwnershipAllowed": false,
+      "ddlAllowed": false
+    }
+  },
+  "databasePrivileges": {
+    "publicSchemaCreateRevoked": true,
+    "runtime": {
+      "database": ["CONNECT"],
+      "schemas": ["USAGE"],
+      "tables": ["SELECT", "INSERT", "UPDATE"],
+      "sequences": [],
+      "functions": [],
+      "futureObjectsCoveredByOwnerDefaultPrivileges": true
+    },
+    "migrations": {
+      "database": ["CONNECT", "CREATE"],
+      "ownsSchemas": ["samra_core", "samra_migrations"],
+      "manualExecutionOnly": true
+    }
+  },
+  "secrets": {
+    "runtime": {
+      "id": "samra-staging-database-url",
+      "consumer": "samra-api-staging",
+      "enabledVersionsAfterInitialActivation": 1
+    },
+    "migrations": {
+      "id": "samra-staging-migration-database-url",
+      "consumer": "samra-migrations-staging",
+      "enabledVersionsAfterInitialActivation": 1
+    },
+    "bootstrap": {
+      "id": "samra-staging-bootstrap-database-url",
+      "temporary": true,
+      "versionsAfterAcceptance": 0,
+      "metadataDeletedBeforeAcceptance": true
+    }
+  },
+  "runtimePool": {
+    "maxConnectionsPerInstance": 5,
+    "cloudRunMaxInstances": 2,
+    "maximumApplicationConnections": 10,
+    "idleTimeoutMilliseconds": 30000,
+    "connectionTimeoutMilliseconds": 10000
+  },
+  "activationOrder": [
+    "independently audit the private Cloud SQL substrate and zero pre-existing database secret versions",
+    "create temporary bootstrap credential and private bootstrap job",
+    "create permanent non-superuser roles and login users",
+    "create separate runtime and migration secret versions",
+    "run the reviewed migration job exactly once with the migration credential",
+    "apply and verify current-object and future-object runtime grants",
+    "delete the bootstrap database user, secret version, secret metadata, and bootstrap job",
+    "prove runtime DML succeeds and runtime DDL and role creation fail",
+    "independently audit roles, grants, schemas, secret consumers, and bootstrap cleanup",
+    "deploy the API at zero traffic only after the database-access audit passes"
+  ],
+  "apply": {
+    "authorizationSentinel": "AUTHORIZED_STAGING_DATABASE_ACCESS",
+    "fixedGitShaRequired": true,
+    "resumableOnlyWhenObservedStateMatches": true,
+    "passwordBytesMinimum": 32,
+    "credentialsMayAppearInOutput": false,
+    "creates": [
+      "two permanent least-privilege PostgreSQL login users",
+      "two permanent PostgreSQL group roles",
+      "one additional migration secret metadata object",
+      "one enabled runtime secret version",
+      "one enabled migration secret version"
+    ],
+    "temporaryCreates": [
+      "one bootstrap PostgreSQL user",
+      "one bootstrap secret and version",
+      "one private bootstrap Cloud Run job"
+    ],
+    "doesNotCreate": [
+      "public database access",
+      "Cloud Run application service",
+      "application traffic",
+      "real provider integration",
+      "customer data",
+      "production resource",
+      "Replit change"
+    ]
+  },
+  "acceptance": {
+    "bootstrapArtifactsRemaining": 0,
+    "runtimeAndMigrationCredentialsDiffer": true,
+    "secretIamExact": true,
+    "permanentCloudSqlSuperusers": 0,
+    "runtimeCanCreateSchema": false,
+    "runtimeCanCreateRole": false,
+    "runtimeOwnsSchema": false,
+    "migrationHistoryPresent": true,
+    "requiredRuntimeRelationsPresent": true,
+    "syntheticOnly": true
+  },
+  "forbidden": [
+    "shared runtime and migration credential",
+    "permanent bootstrap credential",
+    "cloudsqlsuperuser on a permanent Samra principal",
+    "runtime schema ownership",
+    "runtime DDL",
+    "runtime DELETE privilege without an approved product requirement",
+    "plaintext credential in Git, logs, command output, image, or build argument",
+    "automatic migration",
+    "public IP or authorized network",
+    "production or customer data"
+  ]
+}

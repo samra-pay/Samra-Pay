@@ -10,6 +10,7 @@
   "scripts": {
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "test": "node --import tsx --test src/*.test.ts",
     "test:migrate": "node --import tsx src/test-migrate.ts",
     "test:seed": "node --import tsx src/test-seed.ts",
     "workforce:provision": "node --import tsx src/workforce-provision.ts"

@@ -48,7 +48,9 @@
     "deletionProtectionRequired": true,
     "automaticMigrationAllowed": false,
     "seedPolicy": "manual-idempotent-synthetic-only",
-    "secretReference": "projects/PROJECT_ID/secrets/samra-staging-database-url/versions/latest"
+    "accessContract": "deploy/gcp/staging-database-access.json",
+    "runtimeSecretReference": "projects/PROJECT_ID/secrets/samra-staging-database-url/versions/latest",
+    "migrationSecretReference": "projects/PROJECT_ID/secrets/samra-staging-migration-database-url/versions/latest"
   },
   "services": {
     "samra-api": {
@@ -61,7 +63,12 @@
       "maxInstances": 2,
       "concurrency": 10,
       "databaseAccess": true,
-      "secretAccess": ["database-url"],
+      "secretAccess": ["runtime-database-url"],
+      "databasePool": {
+        "maxConnections": 5,
+        "idleTimeoutMilliseconds": 30000,
+        "connectionTimeoutMilliseconds": 10000
+      },
       "environment": {
         "NODE_ENV": "production",
         "SAMRA_BACKEND_MODE": "demo",
@@ -127,7 +134,7 @@
     "timeoutSeconds": 600,
     "manualExecutionOnly": true,
     "databaseAccess": true,
-    "secretAccess": ["database-url"]
+    "secretAccess": ["migration-database-url"]
   },
   "releaseOrder": [
     "verify immutable image digests and release evidence",
