@@ -193,7 +193,11 @@ inputs are 24 concurrency rounds, 96 deterministic ledger steps using seed
 `23063`, and eight controlled fault rounds. The migration test creates and
 drops its own database inside the disposable PostgreSQL service, upgrades a
 seeded migration-`0007` snapshot to current, and proves current migration and
-seed replay are idempotent. The four JUnit files are retained for 90 days.
+seed replay are idempotent. The four validated JUnit files are sent to Qase in
+one directory upload and retained in GitHub for 90 days. Pull requests run this
+lane only when the resilience workflow, package command, or weekly test sources
+change; documentation and shared governance changes remain in the normal CI
+lane.
 
 ## Release-candidate reporting
 

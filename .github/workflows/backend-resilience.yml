@@ -26,8 +26,6 @@ on:
       - ".github/workflows/backend-resilience.yml"
       - "artifacts/api-server/package.json"
       - "artifacts/api-server/test/weekly-*.ts"
-      - "docs/testing/**"
-      - "scripts/src/validate-testing-cadence*"
   schedule:
     - cron: "43 7 * * 6"
 
@@ -167,8 +165,8 @@ jobs:
           title: Samra Pay weekly backend resilience — ${{ github.ref_name }} @ ${{ github.sha }}
           description: Bounded concurrency soak, seeded ledger model, controlled fault injection, and migration compatibility against disposable PostgreSQL 16.
 
-      - name: Upload concurrency result to Qase
-        id: qase-upload-concurrency
+      - name: Upload weekly resilience results to Qase
+        id: qase-upload-resilience
         if: steps.qase-run-create.outputs.id != ''
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/report@v1
@@ -176,49 +174,13 @@ jobs:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run-create.outputs.id }}
           format: junit
-          path: test-results/weekly-concurrency-soak.xml
-
-      - name: Upload randomized ledger result to Qase
-        id: qase-upload-randomized
-        if: steps.qase-run-create.outputs.id != ''
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}
-          format: junit
-          path: test-results/weekly-randomized-ledger.xml
-
-      - name: Upload fault-injection result to Qase
-        id: qase-upload-faults
-        if: steps.qase-run-create.outputs.id != ''
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}
-          format: junit
-          path: test-results/weekly-fault-injection.xml
-
-      - name: Upload migration-compatibility result to Qase
-        id: qase-upload-migrations
-        if: steps.qase-run-create.outputs.id != ''
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}
-          format: junit
-          path: test-results/weekly-migration-compatibility.xml
+          path: test-results
 
       - name: Complete Qase weekly resilience run
         if: >-
           always() &&
           steps.qase-run-create.outputs.id != '' &&
-          steps.qase-upload-concurrency.outcome == 'success' &&
-          steps.qase-upload-randomized.outcome == 'success' &&
-          steps.qase-upload-faults.outcome == 'success' &&
-          steps.qase-upload-migrations.outcome == 'success'
+          steps.qase-upload-resilience.outcome == 'success'
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-complete@v1
         with:

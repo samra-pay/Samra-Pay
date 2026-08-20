@@ -277,6 +277,38 @@ export function validateTestingCadence(
     );
   }
 
+  const resilienceWorkflow =
+    workflows[".github/workflows/backend-resilience.yml"]!;
+  const resilienceReportActionCount = (
+    resilienceWorkflow.match(/uses:\s+qase-tms\/gh-actions\/report@v1/g) ?? []
+  ).length;
+  if (resilienceReportActionCount !== 1) {
+    throw new Error(
+      `Weekly resilience must upload its Qase evidence in one batch; found ${resilienceReportActionCount} report actions.`,
+    );
+  }
+  for (const requiredControl of [
+    "id: qase-upload-resilience",
+    "path: test-results",
+    "qase-upload-resilience.outcome == 'success'",
+  ]) {
+    if (!resilienceWorkflow.includes(requiredControl)) {
+      throw new Error(
+        `Weekly resilience workflow is missing batch control ${requiredControl}.`,
+      );
+    }
+  }
+  for (const duplicateTrigger of [
+    '      - "docs/testing/**"',
+    '      - "scripts/src/validate-testing-cadence*"',
+  ]) {
+    if (resilienceWorkflow.includes(duplicateTrigger)) {
+      throw new Error(
+        `Weekly resilience PR trigger duplicates CI governance coverage: ${duplicateTrigger.trim()}.`,
+      );
+    }
+  }
+
   const allPaths: string[] = [];
   for (const surface of policy.surfaces) {
     const risk = policy.riskTiers.find(({ id }) => id === surface.risk);
