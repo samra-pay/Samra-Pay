@@ -90,7 +90,7 @@ export function validateReleaseCandidateContract(
     "if: steps.qase_payload.outcome == 'success' && !cancelled()",
     "release-evidence -- manifest",
     "release-evidence -- verify --require-passing",
-    "uses: actions/upload-artifact@v4",
+    "uses: actions/upload-artifact@v7",
     `retention-days: ${contract.retentionDays}`,
     "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
     "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",

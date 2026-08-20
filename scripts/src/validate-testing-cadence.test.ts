@@ -357,6 +357,34 @@ describe("validateTestingCadence", () => {
     ).toThrow(/Weekly resilience PR trigger duplicates CI governance coverage/);
   });
 
+  it("rejects legacy GitHub actions that still target Node 20", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/container-portability.yml":
+            "uses: actions/download-artifact@v4",
+        },
+        documentation,
+      ),
+    ).toThrow(/legacy GitHub action actions\/download-artifact@v4/);
+  });
+
+  it("rejects a legacy pnpm setup action across non-cadence workflows", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/design-system-preview.yml":
+            "uses: pnpm/action-setup@v4",
+        },
+        documentation,
+      ),
+    ).toThrow(/legacy GitHub action pnpm\/action-setup@v4/);
+  });
+
   it("rejects policy that omits the experience budget stop condition", () => {
     expect(() =>
       validateTestingCadence(

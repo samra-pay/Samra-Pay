@@ -87,7 +87,7 @@ jobs:
 
     steps:
       - name: Check out the exact candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.candidate_sha }}
           fetch-depth: 0
@@ -103,13 +103,13 @@ jobs:
           git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -288,7 +288,7 @@ jobs:
 
       - name: Preserve immutable release evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: samra-${{ steps.identity.outputs.release_id }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
