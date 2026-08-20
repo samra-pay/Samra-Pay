@@ -117,7 +117,7 @@ test("keeps the portability job isolated, recurring, and evidence-producing", ()
     "permissions:",
     "contents: read",
     "if: always()",
-    "uses: actions/upload-artifact@v4",
+    "uses: actions/upload-artifact@v7",
     "retention-days: 30",
     '"attached_assets/**"',
     "Initialize container runtime evidence",
