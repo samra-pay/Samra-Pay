@@ -353,7 +353,7 @@ jobs:
       QASE_TESTOPS_ENVIRONMENT: ${{ inputs.qase_environment || 'github-ci-postgres' }}
       QASE_TESTOPS_RUN_ID: ${{ inputs.qase_run_id }}
       QASE_TESTOPS_RUN_COMPLETE: ${{ inputs.qase_run_complete || 'true' }}
-      QASE_RUN_SOURCE: ${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}
+      QASE_RUN_SOURCE: "${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}"
 
     steps:
       - name: Link a Qase-triggered workflow run

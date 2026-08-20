@@ -245,6 +245,17 @@ export function validateTestingCadence(
       `CI feature-branch push triggers duplicate pull-request evidence: ${featurePushBranches.join(", ")}.`,
     );
   }
+  const qaseRunSourceLine = ciWorkflow
+    .split("\n")
+    .find((line) => line.includes("QASE_RUN_SOURCE:"));
+  if (
+    !qaseRunSourceLine ||
+    !/^\s*QASE_RUN_SOURCE:\s+"\$\{\{.+\}\}"\s*$/.test(qaseRunSourceLine)
+  ) {
+    throw new Error(
+      "CI QASE_RUN_SOURCE expression must be fully quoted so YAML preserves hash characters.",
+    );
+  }
   for (const requiredControl of [
     "pnpm run test:testing-cadence",
     "pnpm run test:release-contract",

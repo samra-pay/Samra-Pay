@@ -25,6 +25,7 @@ const workflow = [
   "    if: github.event_name == 'schedule' || inputs.run_commercial == 'true'",
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+  "QASE_RUN_SOURCE: \"${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}\"",
   "pnpm run test:testing-cadence",
   "pnpm run test:release-contract",
   "pnpm run test:gcp-platform",
@@ -301,6 +302,22 @@ describe("validateTestingCadence", () => {
         documentation,
       ),
     ).toThrow(/feature-branch push triggers duplicate pull-request evidence/);
+  });
+
+  it("rejects an unquoted Qase source expression containing a YAML hash", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/ci.yml": workflow.replace(
+            'QASE_RUN_SOURCE: "${{',
+            "QASE_RUN_SOURCE: ${{",
+          ),
+        },
+        documentation,
+      ),
+    ).toThrow(/QASE_RUN_SOURCE expression must be fully quoted/);
   });
 
   it("rejects policy that omits the experience budget stop condition", () => {
