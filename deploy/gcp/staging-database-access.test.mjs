@@ -11,6 +11,15 @@ const source = await readFile(
   "deploy/gcp/staging-database-access.json",
   "utf8",
 );
+const activate = await readFile(
+  "deploy/gcp/activate-staging-database-access.sh",
+  "utf8",
+);
+const audit = await readFile(
+  "deploy/gcp/audit-staging-database-access.sh",
+  "utf8",
+);
+const runner = await readFile("lib/db/src/staging-database-access.ts", "utf8");
 
 test("validates the review-only staging database access contract", () => {
   assert.deepEqual(validateStagingDatabaseAccess(contract), {
@@ -149,5 +158,95 @@ test("rejects privilege, secret, pool, and cleanup drift", () => {
         value.acceptance.bootstrapArtifactsRemaining = 1;
       }),
     ),
+  );
+});
+
+test("separates plan, live review, fresh apply, and controlled resume", () => {
+  assert.match(activate, /--plan\|--review\|--apply\|--resume/);
+  assert.match(activate, /AUTHORIZED_STAGING_DATABASE_ACCESS/);
+  assert.match(activate, /source commit does not match the authorized SHA/);
+  assert.match(activate, /source working tree is not clean/);
+  assert.match(activate, /IMAGE_DIGEST.*sha256:\[0-9a-f\]\{64\}/);
+  assert.match(activate, /IMAGE_BASE}:\${EXPECTED_SHA}/);
+  assert.match(activate, /authorized source tag does not resolve/);
+  assert.match(
+    activate,
+    /apply requires a fresh zero-version credential boundary/,
+  );
+  assert.match(activate, /recoverable bootstrap payload/);
+  assert.match(activate, /REVIEW COMPLETE — NO CLOUD CHANGES/);
+});
+
+test("activates roles, secrets, migrations, grants, cleanup, and audits in order", () => {
+  const ordered = [
+    'gcloud sql users create "${BOOTSTRAP_USER}"',
+    "SAMRA_DATABASE_ACCESS_BOOTSTRAP_JSON bootstrap",
+    'gcloud secrets versions add "${MIGRATION_SECRET}"',
+    "\nrun_migration_job\n",
+    '"${MIGRATION_SECRET}" DATABASE_URL finalize',
+    'gcloud sql users delete "${BOOTSTRAP_USER}"',
+    'gcloud secrets delete "${BOOTSTRAP_SECRET}"',
+    '"${MIGRATION_SECRET}" DATABASE_URL audit-migration',
+    '"${RUNTIME_SECRET}" DATABASE_URL audit-runtime',
+  ].map((needle) => activate.lastIndexOf(needle));
+  assert.ok(ordered.every((index) => index >= 0));
+  assert.deepEqual(
+    [...ordered].sort((a, b) => a - b),
+    ordered,
+  );
+
+  for (const control of [
+    '--network="${NETWORK}"',
+    '--subnet="${SUBNET}"',
+    "--vpc-egress=private-ranges-only",
+    "--tasks=1",
+    "--parallelism=1",
+    "--max-retries=0",
+    "--task-timeout=10m",
+    "trap cleanup_job EXIT",
+  ]) {
+    assert.ok(activate.includes(control), control);
+  }
+});
+
+test("implements runtime DML without DELETE, DDL, ownership, or elevation", () => {
+  assert.match(
+    runner,
+    /GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA samra_core TO samra_runtime/,
+  );
+  assert.match(runner, /REVOKE CREATE ON SCHEMA public FROM PUBLIC/);
+  assert.match(runner, /A permanent Samra login inherited cloudsqlsuperuser/);
+  assert.doesNotMatch(runner, /GRANT cloudsqlsuperuser TO samra_/);
+  assert.match(runner, /DELETE FROM samra_core\.audit_events WHERE false/);
+  assert.match(runner, /CREATE SCHEMA samra_runtime_forbidden_probe/);
+  assert.match(runner, /CREATE ROLE samra_runtime_forbidden_probe/);
+  assert.match(runner, /CREATE TEMPORARY TABLE samra_runtime_forbidden_probe/);
+  assert.doesNotMatch(
+    runner,
+    /GRANT[^;]*(?:DELETE|CREATE|TRUNCATE|REFERENCES|TRIGGER)[^;]*TO samra_runtime[;\n]/i,
+  );
+});
+
+test("independent audit proves exact secret IAM and bootstrap cleanup", () => {
+  for (const evidence of [
+    "bootstrap secret remains",
+    "bootstrap database user remains",
+    "bootstrap Cloud Run job remains",
+    "runtime secret version drift",
+    "migration secret version drift",
+    "secret metadata or regional replication drift",
+    "project-level Secret Manager accessor grant",
+    "accessor IAM drift",
+    "AUTHORIZED_STAGING_DATABASE_ACCESS_AUDIT",
+    "audit-migration",
+    "audit-runtime",
+    "STAGING DATABASE ACCESS INDEPENDENT AUDIT PASS",
+  ]) {
+    assert.ok(audit.includes(evidence), evidence);
+  }
+  assert.match(audit, /trap cleanup_job EXIT/);
+  assert.doesNotMatch(
+    `${activate}\n${audit}`,
+    /gcloud run deploy|--allow-unauthenticated|--authorized-networks|worf\.replit|12345678/i,
   );
 });

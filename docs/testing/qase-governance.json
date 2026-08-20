@@ -104,6 +104,11 @@
   ],
   "automatedReports": [
     {
+      "id": "staging-database-access",
+      "source": "lib/db/src/staging-database-access-integration.ts",
+      "report": "staging-database-access.xml"
+    },
+    {
       "id": "persistence",
       "source": "artifacts/api-server/test/postgres.test.ts",
       "report": "postgres-persistence.xml"

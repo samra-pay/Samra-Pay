@@ -193,13 +193,16 @@ jobs:
       - name: Apply explicit test migrations
         run: pnpm --filter @workspace/db run test:migrate
 
+      - name: Prepare JUnit results directory
+        run: mkdir -p artifacts/api-server/test-results
+
+      - name: Prove staging database least-privilege activation
+        run: pnpm --filter @workspace/db run test:staging-access:junit
+
       - name: Prove seed idempotency
         run: |
           pnpm --filter @workspace/db run test:seed
           pnpm --filter @workspace/db run test:seed
-
-      - name: Prepare JUnit results directory
-        run: mkdir -p artifacts/api-server/test-results
 
       - name: Run PostgreSQL acceptance tests
         run: pnpm --filter @workspace/api-server run test:postgres:junit
@@ -247,6 +250,7 @@ jobs:
           name: postgres-persistence-junit
           path: |
             artifacts/api-server/test-results/postgres-persistence.xml
+            artifacts/api-server/test-results/staging-database-access.xml
             artifacts/api-server/test-results/ledger-journal-assurance.xml
             artifacts/api-server/test-results/ledger-account-resolution.xml
             artifacts/api-server/test-results/ledger-currency-precision.xml
@@ -371,6 +375,7 @@ jobs:
         run: |
           for report in \
             test-results/postgres-persistence.xml \
+            test-results/staging-database-access.xml \
             test-results/ledger-journal-assurance.xml \
             test-results/ledger-account-resolution.xml \
             test-results/ledger-currency-precision.xml \

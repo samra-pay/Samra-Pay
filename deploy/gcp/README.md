@@ -225,6 +225,28 @@ must not inherit `cloudsqlsuperuser`. The existing
 `samra-staging-database-url` secret is reserved for the API runtime; migrations
 use the distinct `samra-staging-migration-database-url` secret.
 
+`activate-staging-database-access.sh` implements that boundary as four separate
+gates: offline `--plan`, authenticated read-only `--review`, fresh `--apply`,
+and fail-closed `--resume` for a previously observed partial activation. Apply
+and resume require the exact clean Git SHA, an immutable migration image digest,
+and the explicit `AUTHORIZED_STAGING_DATABASE_ACCESS` sentinel. No command
+prints a connection URL or password.
+
+The activation uses Direct VPC egress from one temporary Cloud Run job name.
+The bootstrap execution receives one temporary Secret Manager payload and
+creates the two permanent non-superuser logins. Subsequent migration,
+grant-finalization, and positive/negative probes recreate that temporary job
+with the applicable least-privilege identity and secret. The bootstrap database
+user, secret, version, IAM grant, and job are deleted before acceptance.
+
+`audit-staging-database-access.sh --review` then proves regional secret metadata,
+permanent version counts, exact resource-level consumers, absence of bypassing
+project-level secret access, and bootstrap cleanup without creating cloud state.
+Its separately authorized `--execute` mode uses two temporary, private audit-job
+executions to re-prove migration ownership and runtime permissions, then deletes
+the audit job. Qase receives this through the existing CI acceptance report; it
+does not create a redundant manual case family.
+
 Each API instance is limited to five PostgreSQL pool connections. With the
 staging API capped at two Cloud Run instances, application traffic can consume
 at most ten pooled connections. Explicit test-only pool overrides remain

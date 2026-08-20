@@ -11,6 +11,7 @@ used by the reporting job.
 
 | GitHub gate                   | Source                                                                  | Qase result source                        |
 | ----------------------------- | ----------------------------------------------------------------------- | ----------------------------------------- |
+| Staging database access       | `lib/db/src/staging-database-access-integration.ts`                     | `staging-database-access.xml`             |
 | PostgreSQL persistence        | `artifacts/api-server/test/postgres.test.ts`                            | `postgres-persistence.xml`                |
 | Compiled process restart      | `artifacts/api-server/test/process-startup-recovery.test.mjs`           | `postgres-process-restart.xml`            |
 | Ledger journal assurance      | `artifacts/api-server/test/ledger-journal-assurance.test.ts`            | `ledger-journal-assurance.xml`            |
@@ -169,7 +170,7 @@ for the same reason.
 - The two GitHub test jobs remain authoritative for pass or fail. A Qase API
   outage is non-blocking for ordinary GitHub-triggered CI, but Qase-triggered runs
   fail if their reporting contract fails.
-- All 16 JUnit payloads must contain a non-empty standard test suite before a
+- All 17 JUnit payloads must contain a non-empty standard test suite before a
   Qase run is updated. GitHub validates every file, then sends the directory in
   one Qase upload action. A run is completed only after that governed batch
   succeeds.
