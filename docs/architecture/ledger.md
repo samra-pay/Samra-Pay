@@ -1,5 +1,10 @@
 # Control Ledger v0
 
+Status: implemented and tested for synthetic USD product balances. The Alpha
+wallet decision is Crossmint USDC, but the custody, token-versus-USD accounting,
+funding, and payout structure must be approved before this chart is promoted to
+live financial accounting.
+
 ## Model
 
 The ledger is double-entry, append-only and single-currency per journal.
@@ -22,7 +27,7 @@ rebuildable source of truth.
 
 | Code                                | Name                          | Type      | Normal side | Currency |
 | ----------------------------------- | ----------------------------- | --------- | ----------- | -------- |
-| `rain.usd.control`                  | Rain USD control asset        | asset     | debit       | USD      |
+| `rain.usd.control`                  | Legacy synthetic source asset | asset     | debit       | USD      |
 | `customer.usd.available`            | Customer available liability  | liability | credit      | USD      |
 | `remittance.usd.principal_clearing` | Remittance principal clearing | liability | credit      | USD      |
 | `remittance.usd.deferred_fee`       | Deferred remittance fee       | liability | credit      | USD      |
@@ -32,12 +37,18 @@ Customer liability accounts are instantiated per synthetic customer. Do not
 create a fictional ETB cash or custody account until written provider structure
 shows that Samra owns or prefunds an ETB balance.
 
+`rain.usd.control` is retained only because it is an implemented schema and
+fixture identifier. Rain is not the Alpha provider decision. Rename or replace
+the code through a reviewed migration only after the Crossmint custody and
+accounting structure is confirmed; documentation must not disguise a schema
+change that has not occurred.
+
 ## Example journals
 
 Opening USD 4,250.00:
 
 ```text
-Debit   Rain USD control asset                425000
+Debit   Legacy synthetic source asset         425000
 Credit  Customer available liability         425000
 ```
 
@@ -50,7 +61,7 @@ Posted customer balance                     425000
 Available customer balance                  414700
 ```
 
-Fake Caliza accepts:
+Fake movement adapter accepts:
 
 ```text
 Debit   Customer available liability          10300
@@ -60,14 +71,14 @@ Credit  Deferred remittance fee                  300
 
 The acceptance journal and hold capture are one operation.
 
-Fake settlement debits the Rain source:
+Fake settlement debits the synthetic source:
 
 ```text
 Debit   Remittance principal clearing         10000
-Credit  Rain USD control asset                 10000
+Credit  Legacy synthetic source asset          10000
 ```
 
-Fake Chapa confirms payout:
+Fake payout adapter confirms payout:
 
 ```text
 Debit   Deferred remittance fee                  300
@@ -76,7 +87,8 @@ Credit  Remittance fee revenue                    300
 
 ## Failure rules
 
-- Caliza rejection before capture releases the hold and creates no journal.
+- Movement-provider rejection before capture releases the hold and creates no
+  journal.
 - Failure after capture but before settlement reverses the capture journal.
 - Failure after settlement moves to `refund_pending`; it does not fabricate
   restored customer funds.

@@ -1,5 +1,9 @@
 # Customer identity and Auth0 foundation
 
+Status: Auth0 is the locked Alpha customer-authentication vendor. The
+provider-neutral foundation is implemented and tested but disabled by default;
+no live tenant, application, credential, or customer token is connected.
+
 ## Decision
 
 Auth0 is the customer authentication provider. Samra Pay remains the authority for customer identity, lifecycle state, authorization, KYC state, wallets, accounts, balances, transactions, and audit evidence.
@@ -21,7 +25,11 @@ This foundation delivers:
 - stable 401, unbound-identity 403, and restricted-customer 403 problem responses;
 - tests for configuration, route enforcement, spoof resistance, binding concurrency, idempotency, conflict, and audit redaction.
 
-It does not create or configure an Auth0 tenant, enable production traffic, provision real customers, ingest Auth0 logs, implement account recovery, connect Persona, create Crossmint wallets, change Replit, or store real customer data.
+It does not create or configure an Auth0 tenant, enable production traffic,
+provision real customers, ingest Auth0 logs, implement account recovery,
+connect Persona, create Crossmint wallets, change Replit, or store real
+customer data. The wider Alpha sequence is governed by
+[Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Runtime contract
 

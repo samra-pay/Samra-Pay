@@ -1,5 +1,12 @@
 # Backend persistence operating boundary
 
+> **Status:** Implemented and tested in synthetic modes. PostgreSQL is Samra's
+> financial and operational source of truth; vendor systems are integrations,
+> not ledgers. The Google Cloud staging database foundation is separate from
+> application deployment and real-provider activation. See the
+> [documentation index](README.md) and
+> [Alpha platform architecture](architecture/alpha-platform.md).
+
 The default runtime remains in-memory demo mode. Durable mode is explicit:
 
 ```text

@@ -1,5 +1,8 @@
 # Qase CI reporting
 
+Status: Qase is the locked Alpha test-management and evidence system. GitHub
+Actions remains the technical pass/fail and merge authority.
+
 GitHub Actions reports the durable backend acceptance suites to the Qase project
 `SAMP`. The encrypted repository secret `QASE_API_TOKEN` is the only credential
 used by the reporting job.

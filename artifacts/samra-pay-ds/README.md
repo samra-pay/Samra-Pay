@@ -1,5 +1,11 @@
 # Samra Pay design system
 
+> **Alpha role:** This package governs the web, mobile, and operations visual
+> language. It does not decide financial truth or vendor behavior. See the
+> [current-state audit](docs/current-state-audit.md), the repository
+> [documentation index](../../docs/README.md), and the
+> [Alpha platform architecture](../../docs/architecture/alpha-platform.md).
+
 This package is the authoritative, code-first design system for Samra Pay web
 and native experiences. GitHub source, semantic tokens, governed components,
 financial patterns, documentation, and tests define the approved system.

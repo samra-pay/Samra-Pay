@@ -1,11 +1,32 @@
-# Google Cloud portability foundation
+# Google Cloud staging and portability foundation
 
-This directory makes the Samra Pay runtime portable to Google Cloud without
-changing Replit or provisioning cloud resources. GitHub remains the source of
-truth. Replit can remain available as a temporary preview and rollback surface
-until a separately approved cutover.
+Google Cloud is the locked Alpha hosting and database platform. This directory
+contains reviewed contracts, tests, container definitions, and guarded scripts
+for separately authorized staging phases. GitHub remains the source of truth;
+Replit remains a temporary preview and bounded rollback surface until cutover.
 
-## Proposed foundation target
+## Current verified staging state
+
+The authorized synthetic staging foundation now contains:
+
+- project and data-classification labels, approved APIs, and seven distinct
+  keyless Samra service accounts;
+- one immutable Artifact Registry repository;
+- Firebase project linkage without Firebase Auth, Firestore, Hosting, or a
+  registered mobile app;
+- one private VPC, subnet, Private Services Access allocation, and PostgreSQL 16
+  Cloud SQL instance;
+- the empty `samra_staging` database with backups, seven-day point-in-time
+  recovery, storage bounds, and deletion protection;
+- database-secret metadata with zero credential versions.
+
+Cloud Run services and jobs, database users and credentials, schema migrations,
+application images, public endpoints, live vendors, real customer data, and
+production resources do not exist in this phase. The
+[product documentation index](../../docs/README.md) separates this live cloud
+substrate from future application deployment.
+
+## Foundation contract
 
 `staging-foundation.json` records the first bounded Google Cloud target:
 
@@ -23,8 +44,8 @@ browser API key and two provider-managed service-account patterns, adds the
 `firebase:enabled` label, and enables the provider-managed baseline APIs listed
 in `firebase.providerManagedEffects`. Those effects are distinct from the 14
 APIs and seven service accounts explicitly managed by Samra's bootstrap. The
-provider-managed baseline does not itself configure a Firebase app, Analytics,
-Firebase Authentication, Firestore database, or Hosting site.
+provider-managed baseline does not itself configure a Firebase app, Firebase
+Authentication, Firestore database, or Hosting site.
 
 The plan is executable only through `bootstrap-staging-foundation.sh --apply`
 with the exact reviewed project, organization, region, operator domain, and an
@@ -95,15 +116,20 @@ generated client accepts one validated `EXPO_PUBLIC_SAMRA_API_ORIGIN` for iOS,
 Android, and Expo web. Replit-specific Expo preview convenience may remain during
 transition, but it is not part of the backend hosting contract.
 
-## What this foundation does not do
+## Automatic-action boundary
 
-- create or modify a Google Cloud project;
-- create Cloud SQL, Cloud Run, Artifact Registry, IAM, DNS, or secrets;
-- deploy an image or application;
-- run a migration against any database;
-- change Replit files, workflows, secrets, ports, or deployments;
-- enable real providers, production data, or production security claims;
-- change the existing visual design.
+Checking out, testing, or building this directory changes no cloud resource.
+The guarded foundation and database scripts mutate only their reviewed phase
+after an explicit apply authorization. No current path automatically:
+
+- creates or modifies the Google Cloud project or billing relationship;
+- creates Cloud Run, DNS, a public endpoint, or a Firebase application;
+- deploys an image or application;
+- creates a database credential, secret version, or application user;
+- runs a migration against the staging database;
+- changes Replit files, workflows, secrets, ports, or deployments;
+- enables real providers, production data, or production security claims; or
+- changes the existing visual design.
 
 ## Build contract
 
