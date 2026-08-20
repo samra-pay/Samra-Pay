@@ -111,7 +111,7 @@
     "create temporary bootstrap credential and private bootstrap job",
     "create permanent non-superuser roles and login users",
     "create separate runtime and migration secret versions",
-    "run the reviewed migration job exactly once with the migration credential",
+    "run the reviewed forward-only migration job to idempotent completion with the migration credential",
     "apply and verify current-object and future-object runtime grants",
     "delete the bootstrap database user, secret version, secret metadata, and bootstrap job",
     "prove runtime DML succeeds and runtime DDL and role creation fail",

@@ -174,6 +174,7 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://samra_release_persistence:samra_release_persistence@127.0.0.1:5432/samra_release_persistence
         run: |
+          pnpm --filter @workspace/db run test:staging-access:junit
           pnpm --filter @workspace/api-server run test:postgres:junit
           pnpm --filter @workspace/api-server run test:ledger-journals:junit
           pnpm --filter @workspace/api-server run test:ledger-account-resolution:junit
@@ -299,6 +300,7 @@ jobs:
             artifacts/release-candidate/release-evidence-manifest.sha256
             artifacts/release-candidate/experience-budget-report.json
             artifacts/api-server/test-results/postgres-persistence.xml
+            artifacts/api-server/test-results/staging-database-access.xml
             artifacts/api-server/test-results/postgres-http.xml
             artifacts/api-server/test-results/daily-synthetic-journeys.xml
             artifacts/api-server/test-results/postgres-process-restart.xml

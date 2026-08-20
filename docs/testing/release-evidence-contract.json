@@ -68,6 +68,7 @@
     "artifacts/release-candidate/qase-run.json",
     "artifacts/release-candidate/experience-budget-report.json",
     "artifacts/api-server/test-results/postgres-persistence.xml",
+    "artifacts/api-server/test-results/staging-database-access.xml",
     "artifacts/api-server/test-results/postgres-http.xml",
     "artifacts/api-server/test-results/daily-synthetic-journeys.xml",
     "artifacts/api-server/test-results/postgres-process-restart.xml",

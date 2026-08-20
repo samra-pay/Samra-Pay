@@ -11,6 +11,9 @@
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
     "test": "node --import tsx --test src/*.test.ts",
+    "staging:access": "node --import tsx src/staging-database-access-cli.ts",
+    "test:staging-access": "node --import tsx --test src/staging-database-access-integration.ts",
+    "test:staging-access:junit": "node ../../artifacts/api-server/test/run-with-junit.mjs ../../artifacts/api-server/test-results/staging-database-access.xml 'Staging database least-privilege access' src/staging-database-access-integration.ts",
     "test:migrate": "node --import tsx src/test-migrate.ts",
     "test:seed": "node --import tsx src/test-seed.ts",
     "workforce:provision": "node --import tsx src/workforce-provision.ts"
