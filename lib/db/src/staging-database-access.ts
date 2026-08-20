@@ -141,58 +141,75 @@ export async function bootstrapPermanentDatabasePrincipals(
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
       ["samra-staging-database-access-v1"],
     );
-    await client.query(`
-      DO $samra$
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'samra_migrator') THEN
-          CREATE ROLE samra_migrator NOLOGIN NOCREATEDB NOCREATEROLE;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'samra_runtime') THEN
-          CREATE ROLE samra_runtime NOLOGIN NOCREATEDB NOCREATEROLE;
-        END IF;
-      END
-      $samra$;
-
-      ALTER ROLE samra_migrator NOLOGIN NOCREATEDB NOCREATEROLE;
-      ALTER ROLE samra_runtime NOLOGIN NOCREATEDB NOCREATEROLE;
-    `);
-
-    await client.query(
-      "SELECT set_config('samra.migration_password', $1, true), set_config('samra.runtime_password', $2, true)",
-      [migrationPassword, runtimePassword],
+    const permanentRoles = await client.query<{ role_count: string }>(
+      `SELECT count(*)::text AS role_count
+         FROM pg_roles
+        WHERE rolname = ANY($1::text[])`,
+      [
+        [
+          STAGING_DATABASE_ACCESS.migrationRole,
+          STAGING_DATABASE_ACCESS.migrationUser,
+          STAGING_DATABASE_ACCESS.runtimeRole,
+          STAGING_DATABASE_ACCESS.runtimeUser,
+        ],
+      ],
     );
-    await client.query(`
-      DO $samra$
-      DECLARE
-        migration_password text := current_setting('samra.migration_password');
-        runtime_password text := current_setting('samra.runtime_password');
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'samra_migrations_staging') THEN
+
+    if (permanentRoles.rows[0]?.role_count === "0") {
+      const systemMembership = await client.query<{ can_set: boolean }>(`
+        SELECT EXISTS (
+          SELECT 1
+            FROM pg_auth_members membership
+            JOIN pg_roles parent ON parent.oid = membership.roleid
+            JOIN pg_roles member ON member.oid = membership.member
+           WHERE parent.rolname = 'cloudsqlsuperuser'
+             AND member.rolname = session_user
+             AND membership.set_option
+        ) AS can_set
+      `);
+      if (systemMembership.rows[0]?.can_set !== true) {
+        throw new Error(
+          "The bootstrap user cannot SET ROLE to cloudsqlsuperuser",
+        );
+      }
+
+      await client.query("SET ROLE cloudsqlsuperuser");
+      await client.query(
+        "SELECT set_config('samra.migration_password', $1, true), set_config('samra.runtime_password', $2, true)",
+        [migrationPassword, runtimePassword],
+      );
+      await client.query(`
+        CREATE ROLE samra_migrator
+          NOLOGIN NOCREATEDB NOCREATEROLE;
+        CREATE ROLE samra_runtime
+          NOLOGIN NOCREATEDB NOCREATEROLE;
+      `);
+      await client.query(`
+        DO $samra$
+        DECLARE
+          migration_password text := current_setting('samra.migration_password');
+          runtime_password text := current_setting('samra.runtime_password');
+        BEGIN
           EXECUTE format(
             'CREATE ROLE samra_migrations_staging LOGIN INHERIT PASSWORD %L NOCREATEDB NOCREATEROLE',
             migration_password
           );
-        ELSE
-          EXECUTE format('ALTER ROLE samra_migrations_staging PASSWORD %L', migration_password);
-        END IF;
-
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'samra_runtime_staging') THEN
           EXECUTE format(
             'CREATE ROLE samra_runtime_staging LOGIN INHERIT PASSWORD %L NOCREATEDB NOCREATEROLE',
             runtime_password
           );
-        ELSE
-          EXECUTE format('ALTER ROLE samra_runtime_staging PASSWORD %L', runtime_password);
-        END IF;
-      END
-      $samra$;
+        END
+        $samra$;
 
-      ALTER ROLE samra_migrations_staging LOGIN INHERIT NOCREATEDB NOCREATEROLE;
-      ALTER ROLE samra_runtime_staging LOGIN INHERIT NOCREATEDB NOCREATEROLE;
+        GRANT samra_migrator TO samra_migrations_staging;
+        GRANT samra_runtime TO samra_runtime_staging;
+        RESET ROLE;
+      `);
+    } else if (permanentRoles.rows[0]?.role_count !== "4") {
+      throw new Error("Permanent Samra roles are partially initialized");
+    }
 
-      GRANT samra_migrator TO samra_migrations_staging;
-      GRANT samra_runtime TO samra_runtime_staging;
-
+    await client.query(`
       DO $samra$
       BEGIN
         IF EXISTS (
@@ -215,9 +232,29 @@ export async function bootstrapPermanentDatabasePrincipals(
             JOIN pg_roles parent ON parent.oid = membership.roleid
             JOIN pg_roles member ON member.oid = membership.member
            WHERE parent.rolname = 'cloudsqlsuperuser'
-             AND member.rolname IN ('samra_migrations_staging', 'samra_runtime_staging')
+             AND member.rolname IN (
+               'samra_migrator',
+               'samra_migrations_staging',
+               'samra_runtime',
+               'samra_runtime_staging'
+             )
         ) THEN
-          RAISE EXCEPTION 'A permanent Samra login inherited cloudsqlsuperuser';
+          RAISE EXCEPTION 'A permanent Samra role inherited cloudsqlsuperuser';
+        END IF;
+
+        IF EXISTS (
+          SELECT 1
+            FROM pg_auth_members membership
+            JOIN pg_roles parent ON parent.oid = membership.roleid
+            JOIN pg_roles member ON member.oid = membership.member
+            JOIN pg_roles grantor ON grantor.oid = membership.grantor
+           WHERE grantor.rolname = 'samra_bootstrap_staging'
+              OR (
+                member.rolname = 'samra_bootstrap_staging'
+                AND parent.rolname <> 'cloudsqlsuperuser'
+              )
+        ) THEN
+          RAISE EXCEPTION 'The temporary bootstrap role remains in a membership ownership chain';
         END IF;
       END
       $samra$;
@@ -314,7 +351,9 @@ export async function auditMigrationDatabaseAccess(
     );
     assertCondition(!role.rolreplication, `${role.rolname} must not replicate`);
     assertCondition(!role.rolbypassrls, `${role.rolname} must not bypass RLS`);
-    const shouldLogin = role.rolname.endsWith("_staging");
+    const shouldLogin =
+      role.rolname === STAGING_DATABASE_ACCESS.migrationUser ||
+      role.rolname === STAGING_DATABASE_ACCESS.runtimeUser;
     assertCondition(
       role.rolcanlogin === shouldLogin,
       `${role.rolname} login state drifted`,
@@ -324,32 +363,67 @@ export async function auditMigrationDatabaseAccess(
   const memberships = await client.query<{
     role_name: string;
     member_name: string;
+    grantor_name: string;
+    admin_option: boolean;
   }>(`
-    SELECT parent.rolname AS role_name, member.rolname AS member_name
+    SELECT parent.rolname AS role_name,
+           member.rolname AS member_name,
+           grantor.rolname AS grantor_name,
+           membership.admin_option
      FROM pg_auth_members membership
       JOIN pg_roles parent ON parent.oid = membership.roleid
       JOIN pg_roles member ON member.oid = membership.member
-     WHERE member.rolname IN (
+      JOIN pg_roles grantor ON grantor.oid = membership.grantor
+     WHERE parent.rolname IN (
        'samra_migrator',
-       'samra_migrations_staging',
-       'samra_runtime',
-       'samra_runtime_staging'
+       'samra_runtime'
      )
      ORDER BY parent.rolname, member.rolname
   `);
+  const membershipShape = memberships.rows.map(
+    ({ role_name, member_name, admin_option }) => ({
+      role_name,
+      member_name,
+      admin_option,
+    }),
+  );
   assertCondition(
-    JSON.stringify(memberships.rows) ===
+    JSON.stringify(membershipShape) ===
       JSON.stringify([
         {
           role_name: STAGING_DATABASE_ACCESS.migrationRole,
+          member_name: "cloudsqlsuperuser",
+          admin_option: true,
+        },
+        {
+          role_name: STAGING_DATABASE_ACCESS.migrationRole,
           member_name: STAGING_DATABASE_ACCESS.migrationUser,
+          admin_option: false,
+        },
+        {
+          role_name: STAGING_DATABASE_ACCESS.runtimeRole,
+          member_name: "cloudsqlsuperuser",
+          admin_option: true,
         },
         {
           role_name: STAGING_DATABASE_ACCESS.runtimeRole,
           member_name: STAGING_DATABASE_ACCESS.runtimeUser,
+          admin_option: false,
         },
       ]),
     "Permanent role memberships drifted",
+  );
+  assertCondition(
+    memberships.rows[1]?.grantor_name === "cloudsqlsuperuser" &&
+      memberships.rows[3]?.grantor_name === "cloudsqlsuperuser",
+    "Permanent user memberships have the wrong grantor",
+  );
+  assertCondition(
+    memberships.rows[0]?.grantor_name !==
+      STAGING_DATABASE_ACCESS.bootstrapUser &&
+      memberships.rows[2]?.grantor_name !==
+        STAGING_DATABASE_ACCESS.bootstrapUser,
+    "The bootstrap user owns a permanent role membership",
   );
 
   const elevated = await client.query<{ member_name: string }>(`
@@ -358,11 +432,31 @@ export async function auditMigrationDatabaseAccess(
       JOIN pg_roles parent ON parent.oid = membership.roleid
       JOIN pg_roles member ON member.oid = membership.member
      WHERE parent.rolname = 'cloudsqlsuperuser'
-       AND member.rolname IN ('samra_migrations_staging', 'samra_runtime_staging')
+       AND member.rolname IN (
+         'samra_migrator',
+         'samra_migrations_staging',
+         'samra_runtime',
+         'samra_runtime_staging'
+       )
   `);
   assertCondition(
     elevated.rows.length === 0,
-    "A permanent Samra user inherited cloudsqlsuperuser",
+    "A permanent Samra role inherited cloudsqlsuperuser",
+  );
+
+  const bootstrapDependencies = await client.query<{
+    dependency_count: string;
+  }>(`
+    SELECT count(*)::text AS dependency_count
+      FROM pg_auth_members membership
+      JOIN pg_roles member ON member.oid = membership.member
+      JOIN pg_roles grantor ON grantor.oid = membership.grantor
+     WHERE member.rolname = 'samra_bootstrap_staging'
+        OR grantor.rolname = 'samra_bootstrap_staging'
+  `);
+  assertCondition(
+    bootstrapDependencies.rows[0]?.dependency_count === "0",
+    "The bootstrap role remains in a membership ownership chain",
   );
 
   const schemas = await client.query<{ nspname: string; owner: string }>(`

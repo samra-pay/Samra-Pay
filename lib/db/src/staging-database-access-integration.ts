@@ -53,6 +53,7 @@ test("staging database access isolates permanent identities and runtime privileg
       STAGING_DATABASE_ACCESS.runtimeRole,
       STAGING_DATABASE_ACCESS.migrationRole,
       STAGING_DATABASE_ACCESS.bootstrapUser,
+      "cloudsqlsuperuser",
     ]) {
       await admin.query(`DROP ROLE IF EXISTS ${role}`);
     }
@@ -61,8 +62,14 @@ test("staging database access isolates permanent identities and runtime privileg
   try {
     await dropTestState();
     await admin.query(
+      "CREATE ROLE cloudsqlsuperuser NOLOGIN CREATEROLE CREATEDB",
+    );
+    await admin.query(
       `CREATE ROLE ${STAGING_DATABASE_ACCESS.bootstrapUser}
-         LOGIN CREATEROLE CREATEDB PASSWORD '${bootstrapPassword}'`,
+         LOGIN PASSWORD '${bootstrapPassword}'`,
+    );
+    await admin.query(
+      `GRANT cloudsqlsuperuser TO ${STAGING_DATABASE_ACCESS.bootstrapUser}`,
     );
     await admin.query(
       `CREATE DATABASE ${STAGING_DATABASE_ACCESS.database}

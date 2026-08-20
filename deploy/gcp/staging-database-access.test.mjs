@@ -215,7 +215,12 @@ test("implements runtime DML without DELETE, DDL, ownership, or elevation", () =
     /GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA samra_core TO samra_runtime/,
   );
   assert.match(runner, /REVOKE CREATE ON SCHEMA public FROM PUBLIC/);
-  assert.match(runner, /A permanent Samra login inherited cloudsqlsuperuser/);
+  assert.match(runner, /A permanent Samra role inherited cloudsqlsuperuser/);
+  assert.match(runner, /SET ROLE cloudsqlsuperuser/);
+  assert.match(
+    runner,
+    /temporary bootstrap role remains in a membership ownership chain/i,
+  );
   assert.doesNotMatch(runner, /GRANT cloudsqlsuperuser TO samra_/);
   assert.match(runner, /DELETE FROM samra_core\.audit_events WHERE false/);
   assert.match(runner, /CREATE SCHEMA samra_runtime_forbidden_probe/);

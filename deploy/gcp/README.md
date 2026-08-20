@@ -234,7 +234,10 @@ prints a connection URL or password.
 
 The activation uses Direct VPC egress from one temporary Cloud Run job name.
 The bootstrap execution receives one temporary Secret Manager payload and
-creates the two permanent non-superuser logins. Subsequent migration,
+creates the two permanent non-superuser logins. The permanent Cloud SQL-managed
+`cloudsqlsuperuser` system role owns the two group-membership grants so deleting
+the temporary bootstrap user cannot leave a PostgreSQL grant dependency. No
+permanent Samra principal inherits that system role. Subsequent migration,
 grant-finalization, and positive/negative probes recreate that temporary job
 with the applicable least-privilege identity and secret. The bootstrap database
 user, secret, version, IAM grant, and job are deleted before acceptance.
