@@ -46,12 +46,19 @@ const performanceWorkflow = [
 
 const resilienceWorkflow = [
   "on:",
+  "  pull_request:",
+  "    paths:",
+  '      - ".github/workflows/backend-resilience.yml"',
   "  schedule:",
   '    - cron: "43 7 * * 6"',
   "jobs:",
   "  resilience:",
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+  "id: qase-upload-resilience",
+  "uses: qase-tms/gh-actions/report@v1",
+  "path: test-results",
+  "qase-upload-resilience.outcome == 'success'",
 ].join("\n");
 
 const releaseWorkflow = [
@@ -318,6 +325,36 @@ describe("validateTestingCadence", () => {
         documentation,
       ),
     ).toThrow(/QASE_RUN_SOURCE expression must be fully quoted/);
+  });
+
+  it("rejects multiple weekly resilience Qase report actions", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/backend-resilience.yml": `${resilienceWorkflow}\nuses: qase-tms/gh-actions/report@v1`,
+        },
+        documentation,
+      ),
+    ).toThrow(/Weekly resilience must upload its Qase evidence in one batch/);
+  });
+
+  it("rejects broad weekly resilience triggers already covered by CI", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/backend-resilience.yml":
+            resilienceWorkflow.replace(
+              '      - ".github/workflows/backend-resilience.yml"',
+              '      - ".github/workflows/backend-resilience.yml"\n      - "docs/testing/**"',
+            ),
+        },
+        documentation,
+      ),
+    ).toThrow(/Weekly resilience PR trigger duplicates CI governance coverage/);
   });
 
   it("rejects policy that omits the experience budget stop condition", () => {
