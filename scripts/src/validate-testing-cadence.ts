@@ -152,6 +152,17 @@ export function validateTestingCadence(
     throw new Error("Testing authorities are incomplete or unsafe.");
   }
 
+  const deprecatedArtifactAction =
+    /actions\/(?:upload-artifact@v[1-6]|download-artifact@v[1-7])\b/;
+  for (const [workflowPath, workflow] of Object.entries(workflows)) {
+    const match = deprecatedArtifactAction.exec(workflow);
+    if (match) {
+      throw new Error(
+        `${workflowPath} uses legacy GitHub artifact action ${match[0]}; use the Node 24 release.`,
+      );
+    }
+  }
+
   assertUnique(
     policy.riskTiers.map(({ id }) => id),
     "Risk tier IDs",
@@ -371,11 +382,15 @@ function main(): void {
   const policy = JSON.parse(
     fs.readFileSync(POLICY_PATH, "utf8"),
   ) as TestingCadencePolicy;
-  const workflowPaths = new Set(
-    policy.cadences.map(({ workflow }) => workflow),
-  );
+  const workflowDirectory = path.join(WORKSPACE_ROOT, ".github/workflows");
+  const workflowPaths = fs
+    .readdirSync(workflowDirectory)
+    .filter(
+      (filename) => filename.endsWith(".yml") || filename.endsWith(".yaml"),
+    )
+    .map((filename) => `.github/workflows/${filename}`);
   const workflows = Object.fromEntries(
-    [...workflowPaths].map((relativePath) => [
+    workflowPaths.map((relativePath) => [
       relativePath,
       fs.readFileSync(path.join(WORKSPACE_ROOT, relativePath), "utf8"),
     ]),
