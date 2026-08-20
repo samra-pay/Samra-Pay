@@ -65,6 +65,28 @@ function escapeRegularExpression(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function triggerBranches(workflow: string, trigger: string): readonly string[] {
+  const triggerMatch = new RegExp(`^  ${trigger}:\\s*$`, "m").exec(workflow);
+  if (!triggerMatch || triggerMatch.index === undefined) return [];
+
+  const remainder = workflow.slice(triggerMatch.index + triggerMatch[0].length);
+  const nextTrigger = /^  [a-zA-Z0-9_-]+:\s*$/m.exec(remainder);
+  const section = nextTrigger
+    ? remainder.slice(0, nextTrigger.index)
+    : remainder;
+  const lines = section.split("\n");
+  const branchesIndex = lines.findIndex((line) => line === "    branches:");
+  if (branchesIndex === -1) return [];
+
+  const branches: string[] = [];
+  for (const line of lines.slice(branchesIndex + 1)) {
+    const branch = /^      -\s+(.+?)\s*$/.exec(line);
+    if (!branch) break;
+    branches.push(branch[1]!.replace(/^['\"]|['\"]$/g, ""));
+  }
+  return branches;
+}
+
 function assertWorkflowJob(
   workflow: string,
   job: string,
@@ -215,6 +237,14 @@ export function validateTestingCadence(
   }
 
   const ciWorkflow = workflows[".github/workflows/ci.yml"]!;
+  const featurePushBranches = triggerBranches(ciWorkflow, "push").filter(
+    (branch) => branch !== "main",
+  );
+  if (featurePushBranches.length > 0) {
+    throw new Error(
+      `CI feature-branch push triggers duplicate pull-request evidence: ${featurePushBranches.join(", ")}.`,
+    );
+  }
   for (const requiredControl of [
     "pnpm run test:testing-cadence",
     "pnpm run test:release-contract",

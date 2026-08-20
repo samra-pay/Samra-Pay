@@ -36,7 +36,6 @@ on:
   push:
     branches:
       - main
-      - "codex/**"
   schedule:
     - cron: "17 6 * * *"
 
@@ -354,6 +353,7 @@ jobs:
       QASE_TESTOPS_ENVIRONMENT: ${{ inputs.qase_environment || 'github-ci-postgres' }}
       QASE_TESTOPS_RUN_ID: ${{ inputs.qase_run_id }}
       QASE_TESTOPS_RUN_COMPLETE: ${{ inputs.qase_run_complete || 'true' }}
+      QASE_RUN_SOURCE: ${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}
 
     steps:
       - name: Link a Qase-triggered workflow run
@@ -400,7 +400,7 @@ jobs:
         with:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: ${{ github.event_name == 'schedule' && 'Samra Pay daily backend acceptance' || 'Samra Pay automated backend acceptance' }} — ${{ github.ref_name }} @ ${{ github.sha }}
+          title: ${{ github.event_name == 'schedule' && 'Samra Pay daily backend acceptance' || 'Samra Pay automated backend acceptance' }} — ${{ env.QASE_RUN_SOURCE }} @ ${{ github.sha }}
           description: PostgreSQL durability and HTTP-to-ledger acceptance from ${{ github.event_name }} GitHub Actions.
 
       - name: Resolve Qase run

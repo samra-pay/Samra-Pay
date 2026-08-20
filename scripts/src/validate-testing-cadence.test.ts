@@ -287,6 +287,22 @@ describe("validateTestingCadence", () => {
     ).toThrow(/test:experience-budgets/);
   });
 
+  it("rejects feature-branch push triggers that duplicate pull-request evidence", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/ci.yml": workflow.replace(
+            "      - main",
+            '      - main\n      - "codex/**"',
+          ),
+        },
+        documentation,
+      ),
+    ).toThrow(/feature-branch push triggers duplicate pull-request evidence/);
+  });
+
   it("rejects policy that omits the experience budget stop condition", () => {
     expect(() =>
       validateTestingCadence(
