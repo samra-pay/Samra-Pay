@@ -34,7 +34,7 @@ const observed = {
     ipConfiguration: {
       ipv4Enabled: false,
       privateNetwork:
-        "/projects/samra-pay-staging/global/networks/samra-staging-vpc",
+        "projects/samra-pay-staging/global/networks/samra-staging-vpc",
     },
     backupConfiguration: {
       enabled: true,
@@ -96,6 +96,15 @@ test("accepts only an exact runnable private Cloud SQL observation", () => {
   const checks = validateObservedSqlInstance(observed, contract);
   assert.ok(Object.values(checks).every(Boolean));
 
+  const legacyNetworkPath = structuredClone(observed);
+  legacyNetworkPath.settings.ipConfiguration.privateNetwork =
+    `/${legacyNetworkPath.settings.ipConfiguration.privateNetwork}`;
+  assert.ok(
+    Object.values(validateObservedSqlInstance(legacyNetworkPath, contract)).every(
+      Boolean,
+    ),
+  );
+
   for (const mutate of [
     (copy) => copy.ipAddresses.push({ type: "PRIMARY", ipAddress: "34.1.2.3" }),
     (copy) => (copy.settings.ipConfiguration.ipv4Enabled = true),
@@ -103,6 +112,12 @@ test("accepts only an exact runnable private Cloud SQL observation", () => {
       (copy.settings.backupConfiguration.pointInTimeRecoveryEnabled = false),
     (copy) => (copy.settings.deletionProtectionEnabled = false),
     (copy) => (copy.settings.tier = "db-custom-2-7680"),
+    (copy) =>
+      (copy.settings.ipConfiguration.privateNetwork =
+        "projects/samra-pay-staging/global/networks/not-samra-staging-vpc"),
+    (copy) =>
+      (copy.settings.ipConfiguration.privateNetwork =
+        "//projects/samra-pay-staging/global/networks/samra-staging-vpc"),
   ]) {
     const copy = structuredClone(observed);
     mutate(copy);

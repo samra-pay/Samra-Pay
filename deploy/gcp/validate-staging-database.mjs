@@ -212,7 +212,8 @@ export function validateObservedSqlInstance(
   const ip = settings.ipConfiguration ?? {};
   const backup = settings.backupConfiguration ?? {};
   const retention = backup.backupRetentionSettings ?? {};
-  const expectedNetwork = `/projects/${contract.project.id}/global/networks/${contract.network.name}`;
+  const expectedNetwork = `projects/${contract.project.id}/global/networks/${contract.network.name}`;
+  const observedNetwork = ip.privateNetwork?.replace(/^\/(?=projects\/)/, "");
   const publicAddresses = (observed.ipAddresses ?? []).filter(
     (entry) => entry.type === "PRIMARY",
   );
@@ -230,7 +231,7 @@ export function validateObservedSqlInstance(
     autoResizeLimit:
       Number(settings.storageAutoResizeLimit) ===
       desired.storageAutoResizeLimitGb,
-    privateNetwork: ip.privateNetwork === expectedNetwork,
+    privateNetwork: observedNetwork === expectedNetwork,
     publicIpDisabled: ip.ipv4Enabled === false && publicAddresses.length === 0,
     dataApiAccessDisabled:
       (settings.dataApiAccess ?? observed.dataApiAccess) !== "ALLOW_DATA_API",
