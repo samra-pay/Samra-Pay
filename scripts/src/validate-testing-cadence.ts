@@ -152,13 +152,13 @@ export function validateTestingCadence(
     throw new Error("Testing authorities are incomplete or unsafe.");
   }
 
-  const deprecatedArtifactAction =
-    /actions\/(?:upload-artifact@v[1-6]|download-artifact@v[1-7])\b/;
+  const legacyNodeAction =
+    /(?:actions\/(?:checkout@v[1-6]|setup-node@v[1-6]|upload-artifact@v[1-6]|download-artifact@v[1-7])|pnpm\/action-setup@v[1-5])\b/;
   for (const [workflowPath, workflow] of Object.entries(workflows)) {
-    const match = deprecatedArtifactAction.exec(workflow);
+    const match = legacyNodeAction.exec(workflow);
     if (match) {
       throw new Error(
-        `${workflowPath} uses legacy GitHub artifact action ${match[0]}; use the Node 24 release.`,
+        `${workflowPath} uses legacy GitHub action ${match[0]}; use the Node 24 release.`,
       );
     }
   }
