@@ -15,8 +15,12 @@ type AutomatedReport = Readonly<{
   id: string;
   source: string;
   report: string;
-  uploadStepId: string;
-  requiredForCompletion: boolean;
+}>;
+
+type AutomatedReportUpload = Readonly<{
+  stepId: string;
+  path: string;
+  format: "junit";
 }>;
 
 type ManualCatalog = Readonly<{
@@ -31,6 +35,7 @@ type ManualCatalog = Readonly<{
 type Governance = Readonly<{
   project: string;
   repositorySnapshot: Readonly<{ cases: number; suites: number }>;
+  automatedReportUpload: AutomatedReportUpload;
   portableClientSuites: readonly Readonly<{
     id: number;
     title: string;
@@ -96,6 +101,10 @@ function assertUnique(values: readonly string[], label: string): void {
   if (duplicates.length > 0) {
     throw new Error(`${label} contains duplicates: ${duplicates.join(", ")}`);
   }
+}
+
+function escapeRegularExpression(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function validateQaseContract(
@@ -167,29 +176,40 @@ export function validateQaseContract(
     governance.automatedReports.map(({ report }) => report),
     "JUnit report names",
   );
-  assertUnique(
-    governance.automatedReports.map(({ uploadStepId }) => uploadStepId),
-    "Qase upload step IDs",
+
+  const upload = governance.automatedReportUpload;
+  if (upload.format !== "junit" || upload.path !== "test-results") {
+    throw new Error(
+      "Automated Qase results must use one JUnit directory upload from test-results.",
+    );
+  }
+  const reportActionCount = (
+    workflow.match(/uses:\s+qase-tms\/gh-actions\/report@v1/g) ?? []
+  ).length;
+  if (reportActionCount !== 1) {
+    throw new Error(
+      `CI must upload automated Qase acceptance in one batch; found ${reportActionCount} report actions.`,
+    );
+  }
+  const uploadStepPattern = new RegExp(
+    `id:\\s+${escapeRegularExpression(upload.stepId)}[\\s\\S]{0,600}?uses:\\s+qase-tms/gh-actions/report@v1[\\s\\S]{0,600}?format:\\s+${escapeRegularExpression(upload.format)}[\\s\\S]{0,300}?path:\\s+${escapeRegularExpression(upload.path)}(?:\\s|$)`,
   );
+  if (!uploadStepPattern.test(workflow)) {
+    throw new Error(
+      `Workflow is missing governed Qase batch upload ${upload.stepId}.`,
+    );
+  }
+  if (!workflow.includes(`${upload.stepId}.outcome == 'success'`)) {
+    throw new Error(
+      `Qase completion does not require ${upload.stepId} to succeed.`,
+    );
+  }
 
   for (const report of governance.automatedReports) {
     readFile(report.source);
     const reportPath = `test-results/${report.report}`;
     if (!workflow.includes(reportPath)) {
       throw new Error(`Workflow does not validate/upload ${reportPath}.`);
-    }
-    if (!workflow.includes(`id: ${report.uploadStepId}`)) {
-      throw new Error(
-        `Workflow is missing upload step ${report.uploadStepId}.`,
-      );
-    }
-    if (
-      report.requiredForCompletion &&
-      !workflow.includes(`${report.uploadStepId}.outcome == 'success'`)
-    ) {
-      throw new Error(
-        `Qase completion does not require ${report.uploadStepId} to succeed.`,
-      );
     }
     if (!documentation.includes(report.report)) {
       throw new Error(`Qase documentation is missing ${report.report}.`);

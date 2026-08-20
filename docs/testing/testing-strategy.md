@@ -64,7 +64,8 @@ pull-request merge ref is the authoritative pre-merge result, and the later
 - Run titles identify cadence, branch, and exact commit.
 - Release candidates are identified as `rc-<first 12 SHA characters>` and can
   only be dispatched with a full commit already contained in GitHub `main`.
-- A Qase run is completed only after every governed JUnit upload succeeds.
+- GitHub validates every governed JUnit file and sends them to Qase in one
+  directory upload. A Qase run is completed only after that batch succeeds.
 - Manual plans never override a failed automated P0 control.
 - Scheduled manual runs require a named owner. A schedule that only creates an
   unowned run should be reduced or removed.

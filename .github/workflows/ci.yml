@@ -418,8 +418,8 @@ jobs:
             echo "Qase reporting skipped because no run ID was available."
           fi
 
-      - name: Upload PostgreSQL durability results to Qase
-        id: qase-upload-persistence
+      - name: Upload automated acceptance results to Qase
+        id: qase-upload-acceptance
         if: steps.qase-run.outputs.available == 'true'
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/report@v1
@@ -427,193 +427,13 @@ jobs:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run.outputs.id }}
           format: junit
-          path: test-results/postgres-persistence.xml
-
-      - name: Upload HTTP-to-ledger results to Qase
-        id: qase-upload-http
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/postgres-http.xml
-
-      - name: Upload daily synthetic journey results to Qase
-        id: qase-upload-daily-synthetic
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/daily-synthetic-journeys.xml
-
-      - name: Upload compiled process restart results to Qase
-        id: qase-upload-process-restart
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/postgres-process-restart.xml
-
-      - name: Upload ledger journal assurance results to Qase
-        id: qase-upload-ledger-journals
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-journal-assurance.xml
-
-      - name: Upload global ledger sweep results to Qase
-        id: qase-upload-ledger-sweeps
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-sweeps.xml
-
-      - name: Upload reconciliation resolution results to Qase
-        id: qase-upload-ledger-reconciliation
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-reconciliation-controls.xml
-
-      - name: Upload ledger account resolution results to Qase
-        id: qase-upload-ledger-account-resolution
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-account-resolution.xml
-
-      - name: Upload ledger balance computation results to Qase
-        id: qase-upload-ledger-balances
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-balance-computation.xml
-
-      - name: Upload ledger currency and precision results to Qase
-        id: qase-upload-ledger-currency-precision
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-currency-precision.xml
-
-      - name: Upload ledger idempotency results to Qase
-        id: qase-upload-ledger-idempotency
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-idempotency.xml
-
-      - name: Upload ledger hold lifecycle results to Qase
-        id: qase-upload-ledger-holds
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-holds-lifecycle.xml
-
-      - name: Upload ledger reversal and refund results to Qase
-        id: qase-upload-ledger-reversals
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-reversals-refunds.xml
-
-      - name: Upload ledger immutability and audit results to Qase
-        id: qase-upload-ledger-audit
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-immutability-audit.xml
-
-      - name: Upload ledger concurrency and atomicity results to Qase
-        id: qase-upload-ledger-concurrency
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-concurrency-atomicity.xml
-
-      - name: Upload materialized ledger balance results to Qase
-        id: qase-upload-ledger-materialized
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
-        with:
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results/ledger-materialized-balances.xml
+          path: test-results
 
       - name: Complete Qase run
         if: >-
           always() &&
           steps.qase-run.outputs.available == 'true' &&
-          steps.qase-upload-persistence.outcome == 'success' &&
-          steps.qase-upload-http.outcome == 'success' &&
-          steps.qase-upload-daily-synthetic.outcome == 'success' &&
-          steps.qase-upload-process-restart.outcome == 'success' &&
-          steps.qase-upload-ledger-journals.outcome == 'success' &&
-          steps.qase-upload-ledger-sweeps.outcome == 'success' &&
-          steps.qase-upload-ledger-reconciliation.outcome == 'success' &&
-          steps.qase-upload-ledger-account-resolution.outcome == 'success' &&
-          steps.qase-upload-ledger-balances.outcome == 'success' &&
-          steps.qase-upload-ledger-currency-precision.outcome == 'success' &&
-          steps.qase-upload-ledger-idempotency.outcome == 'success' &&
-          steps.qase-upload-ledger-holds.outcome == 'success' &&
-          steps.qase-upload-ledger-reversals.outcome == 'success' &&
-          steps.qase-upload-ledger-audit.outcome == 'success' &&
-          steps.qase-upload-ledger-concurrency.outcome == 'success' &&
-          steps.qase-upload-ledger-materialized.outcome == 'success' &&
+          steps.qase-upload-acceptance.outcome == 'success' &&
           (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         uses: qase-tms/gh-actions/run-complete@v1
