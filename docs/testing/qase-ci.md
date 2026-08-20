@@ -159,8 +159,10 @@ for the same reason.
 
 ## Run behavior
 
-- Pull requests and pushes create a Qase automated run after both PostgreSQL jobs
-  finish.
+- Pull requests and pushes to `main` create a Qase automated run after both
+  PostgreSQL jobs finish. Feature-branch pushes do not create a second CI or
+  Qase record; the pull-request merge-ref run is the authoritative pre-merge
+  result.
 - A run started from Qase supplies its run ID through `workflow_dispatch`; the
   workflow links to and updates that run instead of creating another one.
 - The two GitHub test jobs remain authoritative for pass or fail. A Qase API

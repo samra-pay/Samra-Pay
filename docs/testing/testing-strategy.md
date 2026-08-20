@@ -37,6 +37,9 @@ that the workflows still implement that contract.
 The schedules deliberately avoid the start of the hour, when hosted workflow
 queues are more likely to be delayed. Scheduled runs execute only from the
 default branch. A workflow change is therefore not active until it is merged.
+Feature-branch pushes do not create a second full CI or Qase run. The
+pull-request merge ref is the authoritative pre-merge result, and the later
+`main` push independently proves the actual merged commit.
 
 ## Product-stack coverage
 

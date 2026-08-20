@@ -179,6 +179,7 @@
     "Use disposable PostgreSQL and synthetic fixtures only.",
     "Do not send automated test traffic to Replit, production, real providers, or shared databases.",
     "GitHub Actions remains the merge authority; Qase records traceability and manual evidence.",
+    "Feature-branch pushes do not duplicate pull-request CI or Qase evidence.",
     "Browser and physical-device execution remains manual until a separately approved automation phase."
   ]
 }
