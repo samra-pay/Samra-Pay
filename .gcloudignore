@@ -1,3 +1,9 @@
 .gcloudignore
 .gitignore
 #!include:.dockerignore
+!.gcloudignore
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/container-portability.yml
