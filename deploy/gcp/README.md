@@ -169,25 +169,31 @@ Required Cloud Build substitutions and built-in source identity:
 | `_BUILD_SERVICE_ACCOUNT` | `samra-cloud-build-staging@<staging-project>.iam.gserviceaccount.com`    |
 | `PROJECT_ID`             | Dedicated Google Cloud project ID containing the `staging` boundary word |
 
-Example for a future authorized build from Cloud Shell:
+`publish-staging-images.sh` is the controlled entry point for a future
+authorized build. Its offline `--plan` mode reads no cloud state. `--review`
+binds a clean full Git SHA to the exact staging project, organization, region,
+labels, immutable repository, dedicated keyless build identity, and exact IAM.
+It also requires every target full-SHA tag to be absent so immutable-tag
+collisions cannot create a partial or ambiguous release.
+
+Only `--apply` can submit `cloudbuild.yaml`, and it additionally requires the
+exact `AUTHORIZED_STAGING_IMAGE_PUBLICATION` value. A successful apply records
+the Cloud Build ID and all five immutable digests. It still cannot deploy a
+service, run a migration, route traffic, read a secret, modify IAM, touch
+Replit, or use production data.
+
+Review example from an authenticated, fixed-source Cloud Shell checkout:
 
 ```sh
-SAMRA_CANDIDATE_SHA="$(git rev-parse HEAD)"
-SAMRA_STAGING_PROJECT="replace-with-approved-staging-project"
-
-gcloud builds submit \
-  --project="${SAMRA_STAGING_PROJECT}" \
-  --config deploy/gcp/cloudbuild.yaml \
-  --substitutions COMMIT_SHA="${SAMRA_CANDIDATE_SHA}",_ENVIRONMENT=staging,_REGION=us-east1,_REPOSITORY=samra-staging,_IMAGE_TAG="${SAMRA_CANDIDATE_SHA}",_BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${SAMRA_STAGING_PROJECT}.iam.gserviceaccount.com" \
-  .
+SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
+SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash deploy/gcp/publish-staging-images.sh --review
 ```
 
-This command must not be run until the project, billing account, region,
-Artifact Registry repository, and least-privilege Cloud Build service account
-have been approved. The repository must enforce immutable image tags. The
-build service account must have only the permissions required to read source,
-write the staging repository, and emit build logs/provenance; it is not the
-runtime, migration, or deployment identity.
+The apply mode must not be run until the build cost and exact source SHA are
+approved. The build service account is limited to writing the staging
+repository and emitting logs/provenance; it is not the runtime, migration, or
+deployment identity.
 
 ## Staging runtime contract
 
