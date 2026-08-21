@@ -178,9 +178,15 @@ collisions cannot create a partial or ambiguous release.
 
 Only `--apply` can submit `cloudbuild.yaml`, and it additionally requires the
 exact `AUTHORIZED_STAGING_IMAGE_PUBLICATION` value. A successful apply records
-the Cloud Build ID and all five immutable digests. It still cannot deploy a
-service, run a migration, route traffic, read a secret, modify IAM, touch
-Replit, or use production data.
+the Cloud Build ID and all five immutable digests. The upload is explicitly
+filtered by the repository's `.gcloudignore`, which reuses the reviewed Docker
+source boundary and excludes credentials, local state, dependencies, test
+artifacts, and unreviewed assets. Cloud Build creates a build record, stores
+logs and provenance, uploads a filtered source archive, and on first use may
+create its Google-managed source-staging bucket. Those build-plane artifacts
+are the only side effects beyond the five images. The controller still cannot
+deploy a service, run a migration, route traffic, read a secret, modify IAM,
+touch Replit, or use production data.
 
 Review example from an authenticated, fixed-source Cloud Shell checkout:
 
