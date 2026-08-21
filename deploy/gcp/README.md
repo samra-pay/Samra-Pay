@@ -173,8 +173,13 @@ Required Cloud Build substitutions and built-in source identity:
 authorized build. Its offline `--plan` mode reads no cloud state. `--review`
 binds a clean full Git SHA to the exact staging project, organization, region,
 labels, immutable repository, dedicated keyless build identity, and exact IAM.
-It also requires every target full-SHA tag to be absent so immutable-tag
-collisions cannot create a partial or ambiguous release.
+It also requires the build identity to have exactly
+`roles/storage.objectViewer` on only the existing
+`gs://samra-pay-staging_cloudbuild` source bucket, rejects public bucket IAM,
+and requires every target full-SHA tag to be absent so immutable-tag collisions
+cannot create a partial or ambiguous release. The source-bucket check runs
+before the image-tag checks and build submission, preventing another source
+upload when the build identity cannot read it.
 
 Only `--apply` can submit `cloudbuild.yaml`, and it additionally requires the
 exact `AUTHORIZED_STAGING_IMAGE_PUBLICATION` value. A successful apply records
@@ -187,7 +192,7 @@ reviewed Docker source boundary and excludes credentials, local state,
 dependencies, test artifacts, and unreviewed assets. Cloud Build creates a
 build record, stores
 logs and provenance, uploads a filtered source archive, and on first use may
-create its Google-managed source-staging bucket. Those build-plane artifacts
+create its project-owned source-staging bucket. Those build-plane artifacts
 are the only side effects beyond the five images. The controller still cannot
 deploy a service, run a migration, route traffic, read a secret, modify IAM,
 touch Replit, or use production data.
@@ -201,9 +206,28 @@ SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
 ```
 
 The apply mode must not be run until the build cost and exact source SHA are
-approved. The build service account is limited to writing the staging
-repository and emitting logs/provenance; it is not the runtime, migration, or
-deployment identity.
+approved. The build service account is limited to reading the exact source
+bucket, writing the staging repository, and emitting logs/provenance; it is not
+the runtime, migration, or deployment identity.
+
+The source-bucket permission is a separate, one-time activation gate.
+`activate-staging-build-source-access.sh --review` verifies the exact existing
+bucket, keyless build identity, current project roles, non-public bucket policy,
+and whether the one reviewed bucket binding is absent or already exact. Only
+`--apply` with `AUTHORIZED_STAGING_BUILD_SOURCE_ACCESS` may add that binding.
+It cannot grant project-level storage access or submit a build. Run the
+independent `audit-staging-build-source-access.sh` after activation and before
+authorizing another image publication.
+
+```sh
+SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
+SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash deploy/gcp/activate-staging-build-source-access.sh --review
+```
+
+Failed image-publication attempts may leave filtered source archives in the
+Cloud Build-created source bucket. This controller does not delete
+them; deletion is a separate destructive action and requires separate review.
 
 ## Staging runtime contract
 

@@ -25,6 +25,8 @@ OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${PROJECT_ID}.iam.gserviceaccount.com"
 BUILD_SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SERVICE_ACCOUNT}"
+SOURCE_BUCKET="${PROJECT_ID}_cloudbuild"
+SOURCE_BUCKET_ROLE="roles/storage.objectViewer"
 IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 AUTHORIZATION="AUTHORIZED_STAGING_IMAGE_PUBLICATION"
 IMAGE_NAMES=(
@@ -57,7 +59,7 @@ The staging image publication review will:
   1. bind the source to one clean full Git SHA;
   2. verify the exact staging project, organization, region, billing, and labels;
   3. verify the immutable Artifact Registry repository and dedicated keyless build identity;
-  4. prove the build identity has only its reviewed project, repository, and impersonation grants;
+  4. prove the build identity has only its reviewed project, repository, source-bucket, and impersonation grants;
   5. require all five full-SHA tags to be absent before publication; and
   6. submit the already-reviewed Cloud Build definition only after an explicit apply authorization.
 
@@ -164,6 +166,34 @@ gcloud iam service-accounts get-iam-policy "${BUILD_SERVICE_ACCOUNT}" \
     }
   ' "${OPERATOR}"
 
+BUCKET_NAME="$(gcloud storage buckets describe "gs://${SOURCE_BUCKET}" --format='value(name)')"
+[[ "${BUCKET_NAME}" == "${SOURCE_BUCKET}" || "${BUCKET_NAME}" == "projects/_/buckets/${SOURCE_BUCKET}" ]] || {
+  echo "STOP: exact Cloud Build source bucket is missing" >&2
+  exit 1
+}
+
+gcloud storage buckets get-iam-policy "gs://${SOURCE_BUCKET}" --format=json | \
+  node -e '
+    const fs = require("fs");
+    const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+    const expectedMember = `serviceAccount:${process.argv[1]}`;
+    const expectedRole = process.argv[2];
+    const publicMembers = new Set(["allUsers", "allAuthenticatedUsers"]);
+    const bindings = policy.bindings || [];
+    if (bindings.some((binding) => (binding.members || []).some((member) => publicMembers.has(member)))) {
+      process.stderr.write("STOP: Cloud Build source bucket has public IAM\n");
+      process.exit(1);
+    }
+    const actual = bindings
+      .filter((binding) => (binding.members || []).includes(expectedMember))
+      .map((binding) => ({ role: binding.role, condition: binding.condition ?? null }));
+    const expected = [{ role: expectedRole, condition: null }];
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      process.stderr.write("STOP: build identity source-bucket IAM is missing, broader than reviewed, or otherwise drifted\n");
+      process.exit(1);
+    }
+  ' "${BUILD_SERVICE_ACCOUNT}" "${SOURCE_BUCKET_ROLE}"
+
 for name in "${IMAGE_NAMES[@]}"; do
   image="${IMAGE_BASE}/${name}:${EXPECTED_SHA}"
   if gcloud artifacts docker images describe "${image}" \
@@ -177,6 +207,7 @@ echo "READ-ONLY STAGING IMAGE PUBLICATION REVIEW PASS"
 echo "Source: ${EXPECTED_SHA}"
 echo "Images: 5 full-SHA tags are absent"
 echo "Build identity: dedicated, keyless, and exact-IAM"
+echo "Build source access: exact bucket-level read-only"
 
 if [[ "${MODE}" == "--review" ]]; then
   echo "REVIEW COMPLETE — NO CLOUD CHANGES"
