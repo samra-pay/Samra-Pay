@@ -6,6 +6,7 @@
 .turbo
 **/node_modules
 **/dist
+**/*.tsbuildinfo
 **/test-results
 **/coverage
 attached_assets/*

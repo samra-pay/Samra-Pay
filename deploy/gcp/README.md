@@ -189,7 +189,10 @@ dedicated build identity as the fully qualified
 and status lookup is pinned to the same regional build location. The upload is
 explicitly filtered by the repository's `.gcloudignore`, which reuses the
 reviewed Docker source boundary and excludes credentials, local state,
-dependencies, test artifacts, and unreviewed assets. It re-includes only the
+dependencies, generated TypeScript build metadata, test artifacts, and
+unreviewed assets. This prevents an earlier Cloud Build typecheck from adding
+`.tsbuildinfo` files to a later Docker context in the shared build workspace.
+It re-includes only the
 non-secret `.gcloudignore` manifest and container-portability workflow required
 by the pre-publication contract suite; the Docker boundary continues to exclude
 both from runtime image contexts. Cloud Build creates a build record, stores

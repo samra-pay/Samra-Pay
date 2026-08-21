@@ -32,6 +32,7 @@ test("excludes credentials, local state, dependencies, and unreviewed assets", (
     ".turbo",
     "**/node_modules",
     "**/dist",
+    "**/*.tsbuildinfo",
     "**/test-results",
     "**/coverage",
     "attached_assets/*",
