@@ -250,6 +250,18 @@ test("independent audit proves exact secret IAM and bootstrap cleanup", () => {
     assert.ok(audit.includes(evidence), evidence);
   }
   assert.match(audit, /trap cleanup_job EXIT/);
+  assert.match(
+    activate,
+    /versions\.filter\(\(version\) => version\.state === "ENABLED"\)/,
+  );
+  assert.match(
+    audit,
+    /versions\.filter\(\(version\) => version\.state === "ENABLED"\)/,
+  );
+  assert.doesNotMatch(
+    `${activate}\n${audit}`,
+    /--filter=['"]state:ENABLED['"]/,
+  );
   assert.doesNotMatch(
     `${activate}\n${audit}`,
     /gcloud run deploy|--allow-unauthenticated|--authorized-networks|worf\.replit|12345678/i,

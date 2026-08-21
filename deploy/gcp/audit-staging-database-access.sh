@@ -88,7 +88,17 @@ fi
 
 enabled_versions() {
   gcloud secrets versions list "$1" --project="${PROJECT_ID}" \
-    --filter='state:ENABLED' --format='value(name)' | wc -l | tr -d ' '
+    --format=json | node -e '
+      const fs = require("fs");
+      const versions = JSON.parse(fs.readFileSync(0, "utf8"));
+      if (!Array.isArray(versions)) {
+        process.stderr.write("STOP: secret version inventory is invalid\n");
+        process.exit(1);
+      }
+      process.stdout.write(String(
+        versions.filter((version) => version.state === "ENABLED").length,
+      ));
+    '
 }
 [[ "$(enabled_versions "${RUNTIME_SECRET}")" == "1" ]] || { echo "STOP: runtime secret version drift" >&2; exit 1; }
 [[ "$(enabled_versions "${MIGRATION_SECRET}")" == "1" ]] || { echo "STOP: migration secret version drift" >&2; exit 1; }
