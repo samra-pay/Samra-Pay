@@ -69,7 +69,8 @@ test("submits only the reviewed build contract and records all five digests", ()
   for (const evidence of [
     '--config="${ROOT_DIR}/deploy/gcp/cloudbuild.yaml"',
     '--region="${REGION}"',
-    '--service-account="${BUILD_SERVICE_ACCOUNT}"',
+    'BUILD_SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SERVICE_ACCOUNT}"',
+    '--service-account="${BUILD_SERVICE_ACCOUNT_RESOURCE}"',
     '--ignore-file="${ROOT_DIR}/.gcloudignore"',
     "COMMIT_SHA=${EXPECTED_SHA}",
     "_ENVIRONMENT=staging",
@@ -93,6 +94,25 @@ test("submits only the reviewed build contract and records all five digests", ()
   ]) {
     assert.ok(controller.includes(image), image);
   }
+});
+
+test("uses the fully qualified build identity and regional build lookup", () => {
+  assert.doesNotMatch(
+    controller,
+    /--service-account="\$\{BUILD_SERVICE_ACCOUNT\}"/,
+  );
+
+  const describeStart = controller.indexOf(
+    'gcloud builds describe "${BUILD_ID}"',
+  );
+  const describeEnd = controller.indexOf("]] || {", describeStart);
+  const describeCommand = controller.slice(describeStart, describeEnd);
+
+  assert.ok(describeStart >= 0);
+  assert.ok(describeEnd > describeStart);
+  assert.ok(describeCommand.includes('--project="${PROJECT_ID}"'));
+  assert.ok(describeCommand.includes('--region="${REGION}"'));
+  assert.ok(describeCommand.includes("--format='value(status)'"));
 });
 
 test("contains no deployment, migration, secret-read, IAM-write, or Replit bypass", () => {
