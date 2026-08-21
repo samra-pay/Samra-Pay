@@ -54,6 +54,7 @@
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "containeranalysis.googleapis.com",
     "compute.googleapis.com",
     "firebase.googleapis.com",
     "iam.googleapis.com",

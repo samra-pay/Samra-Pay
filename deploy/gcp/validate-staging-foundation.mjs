@@ -109,6 +109,11 @@ export function validateStagingFoundation(
       "The Samra-managed API allowlist contains an invalid or duplicate value",
     );
   }
+  if (!apis.includes("containeranalysis.googleapis.com")) {
+    throw new Error(
+      "Container Analysis is required for verified Cloud Build provenance",
+    );
+  }
 
   const accounts = Object.values(foundation.serviceAccounts);
   if (
