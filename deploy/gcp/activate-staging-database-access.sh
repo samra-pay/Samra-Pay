@@ -136,7 +136,17 @@ secret_version_count() {
     return
   fi
   gcloud secrets versions list "$1" --project="${PROJECT_ID}" \
-    --filter='state:ENABLED' --format='value(name)' | wc -l | tr -d ' '
+    --format=json | node -e '
+      const fs = require("fs");
+      const versions = JSON.parse(fs.readFileSync(0, "utf8"));
+      if (!Array.isArray(versions)) {
+        process.stderr.write("STOP: secret version inventory is invalid\n");
+        process.exit(1);
+      }
+      process.stdout.write(String(
+        versions.filter((version) => version.state === "ENABLED").length,
+      ));
+    '
 }
 
 RUNTIME_VERSION_COUNT="$(secret_version_count "${RUNTIME_SECRET}")"
