@@ -25,6 +25,7 @@ OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${PROJECT_ID}.iam.gserviceaccount.com"
 BUILD_SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SERVICE_ACCOUNT}"
+REQUIRED_VERIFICATION_API="containeranalysis.googleapis.com"
 SOURCE_BUCKET="${PROJECT_ID}_cloudbuild"
 SOURCE_BUCKET_ROLE="roles/storage.objectViewer"
 IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
@@ -60,8 +61,9 @@ The staging image publication review will:
   2. verify the exact staging project, organization, region, billing, and labels;
   3. verify the immutable Artifact Registry repository and dedicated keyless build identity;
   4. prove the build identity has only its reviewed project, repository, source-bucket, and impersonation grants;
-  5. require all five full-SHA tags to be absent before publication; and
-  6. submit the already-reviewed Cloud Build definition only after an explicit apply authorization.
+  5. require Container Analysis and exact Cloud Build service-agent IAM for provenance verification;
+  6. require all five full-SHA tags to be absent before publication; and
+  7. submit the already-reviewed Cloud Build definition only after an explicit apply authorization.
 
 Apply uploads only the .gcloudignore-filtered source, creates a Cloud Build record,
 stores logs and provenance, may create or reuse Google-managed source-staging
@@ -90,6 +92,9 @@ command -v gcloud >/dev/null 2>&1 || {
 [[ "$(gcloud projects describe "${PROJECT_ID}" --format='value(parent.type)')" == "organization" ]] || { echo "STOP: project parent is not an organization" >&2; exit 1; }
 [[ "$(gcloud projects describe "${PROJECT_ID}" --format='value(parent.id)')" == "${ORGANIZATION_ID}" ]] || { echo "STOP: wrong organization" >&2; exit 1; }
 [[ "$(gcloud billing projects describe "${PROJECT_ID}" --format='value(billingEnabled)')" == "True" ]] || { echo "STOP: billing is not enabled" >&2; exit 1; }
+PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+[[ "${PROJECT_NUMBER}" =~ ^[0-9]+$ ]] || { echo "STOP: project number is missing" >&2; exit 1; }
+CLOUD_BUILD_SERVICE_AGENT="service-${PROJECT_NUMBER}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
 [[ "$(git -C "${ROOT_DIR}" rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "STOP: source commit does not match the reviewed SHA" >&2; exit 1; }
 [[ -z "$(git -C "${ROOT_DIR}" status --porcelain)" ]] || { echo "STOP: source working tree is not clean" >&2; exit 1; }
 
@@ -194,6 +199,30 @@ gcloud storage buckets get-iam-policy "gs://${SOURCE_BUCKET}" --format=json | \
     }
   ' "${BUILD_SERVICE_ACCOUNT}" "${SOURCE_BUCKET_ROLE}"
 
+ENABLED_VERIFICATION_API="$(gcloud services list --enabled \
+  --project="${PROJECT_ID}" \
+  --filter="config.name=${REQUIRED_VERIFICATION_API}" \
+  --format='value(config.name)')"
+[[ "${ENABLED_VERIFICATION_API}" == "${REQUIRED_VERIFICATION_API}" ]] || {
+  echo "STOP: Container Analysis API is not enabled for verified build provenance" >&2
+  exit 1
+}
+
+gcloud projects get-iam-policy "${PROJECT_ID}" --format=json | \
+  node -e '
+    const fs = require("fs");
+    const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+    const expectedMember = `serviceAccount:${process.argv[1]}`;
+    const actual = (policy.bindings || [])
+      .filter((binding) => (binding.members || []).includes(expectedMember))
+      .map((binding) => ({ role: binding.role, condition: binding.condition ?? null }));
+    const expected = [{ role: "roles/cloudbuild.serviceAgent", condition: null }];
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      process.stderr.write("STOP: Cloud Build service-agent IAM drifted\n");
+      process.exit(1);
+    }
+  ' "${CLOUD_BUILD_SERVICE_AGENT}"
+
 for name in "${IMAGE_NAMES[@]}"; do
   image="${IMAGE_BASE}/${name}:${EXPECTED_SHA}"
   if gcloud artifacts docker images describe "${image}" \
@@ -208,6 +237,7 @@ echo "Source: ${EXPECTED_SHA}"
 echo "Images: 5 full-SHA tags are absent"
 echo "Build identity: dedicated, keyless, and exact-IAM"
 echo "Build source access: exact bucket-level read-only"
+echo "Build verification: Container Analysis API and exact service-agent IAM"
 
 if [[ "${MODE}" == "--review" ]]; then
   echo "REVIEW COMPLETE — NO CLOUD CHANGES"

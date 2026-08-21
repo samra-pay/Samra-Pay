@@ -173,6 +173,11 @@ Required Cloud Build substitutions and built-in source identity:
 authorized build. Its offline `--plan` mode reads no cloud state. `--review`
 binds a clean full Git SHA to the exact staging project, organization, region,
 labels, immutable repository, dedicated keyless build identity, and exact IAM.
+Before inspecting tags or uploading source, it requires the Container Analysis
+API and proves the Google-managed Cloud Build service agent retains exactly its
+unconditioned `roles/cloudbuild.serviceAgent` binding. This prevents a build
+from creating all five images and then failing Google's requested provenance
+verification.
 It also requires the build identity to have exactly
 `roles/storage.objectViewer` on only the existing
 `gs://samra-pay-staging_cloudbuild` source bucket, rejects public bucket IAM,
@@ -228,6 +233,21 @@ authorizing another image publication.
 SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
 SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
   bash deploy/gcp/activate-staging-build-source-access.sh --review
+```
+
+Verified provenance has a separate, one-time API activation gate.
+`activate-staging-build-verification.sh --review` confirms the exact project,
+source SHA, Container Analysis API state, and Cloud Build service-agent IAM.
+Only `--apply` with `AUTHORIZED_STAGING_BUILD_VERIFICATION` may enable
+`containeranalysis.googleapis.com`; the controller cannot modify IAM or submit
+a build. Run the independent `audit-staging-build-verification.sh` after the
+activation. The Cloud Build service agent role is provider-managed and must not
+be copied to the custom build worker or any human principal.
+
+```sh
+SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
+SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash deploy/gcp/activate-staging-build-verification.sh --review
 ```
 
 Failed image-publication attempts may leave filtered source archives in the

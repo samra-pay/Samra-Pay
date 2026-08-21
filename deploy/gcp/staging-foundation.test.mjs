@@ -22,7 +22,7 @@ test("locks one review-only synthetic staging identity", () => {
     region: "us-east4",
     repository: "samra-staging",
     budgetAlertUsd: 50,
-    samraManagedApiCount: 14,
+    samraManagedApiCount: 15,
     firebaseManagedApiCount: 15,
     samraServiceAccountCount: 7,
     firebaseManagedServiceAccountPatternCount: 2,
@@ -120,6 +120,9 @@ test("bounds retries for the documented service-account quota", () => {
 });
 
 test("creates only reviewed keyless staging foundation resources", () => {
+  assert.ok(
+    foundation.samraManagedApis.includes("containeranalysis.googleapis.com"),
+  );
   assert.deepEqual(foundation.resourceRoleBindings.databaseSecretAccessors, [
     "api",
   ]);
@@ -149,6 +152,19 @@ test("creates only reviewed keyless staging foundation resources", () => {
   assert.doesNotMatch(
     script,
     /service-accounts keys create|secrets versions add|gcloud\s+(?:beta\s+)?sql\s+instances\s+create|gcloud\s+run\s+deploy|allow-unauthenticated|worf\.replit|postgres(?:ql)?:\/\//i,
+  );
+});
+
+test("rejects a foundation without the provenance verification API", () => {
+  const withoutContainerAnalysis = structuredClone(foundation);
+  withoutContainerAnalysis.samraManagedApis =
+    withoutContainerAnalysis.samraManagedApis.filter(
+      (api) => api !== "containeranalysis.googleapis.com",
+    );
+
+  assert.throws(
+    () => validateStagingFoundation(withoutContainerAnalysis),
+    /Container Analysis/,
   );
 });
 
