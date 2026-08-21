@@ -12,7 +12,7 @@ const controller = await readFile(
 test("uses one explicit Cloud Build upload boundary", () => {
   assert.equal(
     gcloudIgnore,
-    ".gcloudignore\n.gitignore\n#!include:.dockerignore\n",
+    ".gcloudignore\n.gitignore\n#!include:.dockerignore\n!.gcloudignore\n!/.github/\n/.github/*\n!/.github/workflows/\n/.github/workflows/*\n!/.github/workflows/container-portability.yml\n",
   );
   assert.ok(controller.includes('--ignore-file="${ROOT_DIR}/.gcloudignore"'));
   assert.equal(
@@ -26,6 +26,7 @@ test("excludes credentials, local state, dependencies, and unreviewed assets", (
   for (const pattern of [
     ".git",
     ".github",
+    ".gcloudignore",
     ".replit",
     ".cache",
     ".turbo",

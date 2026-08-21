@@ -1,5 +1,6 @@
 .git
 .github
+.gcloudignore
 .replit
 .cache
 .turbo
