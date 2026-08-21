@@ -60,9 +60,11 @@ The staging image publication review will:
   5. require all five full-SHA tags to be absent before publication; and
   6. submit the already-reviewed Cloud Build definition only after an explicit apply authorization.
 
-Apply publishes five immutable images and records their digests. It cannot deploy
-Cloud Run, execute a migration, route traffic, read a secret, change IAM, expose
-an endpoint, enable a provider, modify Replit, or touch production.
+Apply uploads only the .gcloudignore-filtered source, creates a Cloud Build record,
+stores logs and provenance, may create or reuse Google-managed source-staging
+storage, publishes five immutable images, and records their digests. It cannot
+deploy Cloud Run, execute a migration, route traffic, read a secret, change IAM,
+expose an endpoint, enable a provider, modify Replit, or touch production.
 
 Expected source: ${EXPECTED_SHA}
 Expected registry: ${IMAGE_BASE}
@@ -189,6 +191,7 @@ BUILD_ID="$(gcloud builds submit \
   --project="${PROJECT_ID}" \
   --region="${REGION}" \
   --service-account="${BUILD_SERVICE_ACCOUNT}" \
+  --ignore-file="${ROOT_DIR}/.gcloudignore" \
   --config="${ROOT_DIR}/deploy/gcp/cloudbuild.yaml" \
   --substitutions="COMMIT_SHA=${EXPECTED_SHA},_ENVIRONMENT=staging,_REGION=${REGION},_REPOSITORY=${REPOSITORY},_IMAGE_TAG=${EXPECTED_SHA},_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}" \
   --format='value(id)' \
@@ -224,4 +227,5 @@ echo "Build ID: ${BUILD_ID}"
 for name in "${IMAGE_NAMES[@]}"; do
   printf '%s: %s\n' "${name}" "$(resolve_digest "${name}")"
 done
+echo "Build source was filtered by .gcloudignore; Cloud Build staging storage, records, logs, and provenance may remain."
 echo "No service was deployed and no traffic was changed."

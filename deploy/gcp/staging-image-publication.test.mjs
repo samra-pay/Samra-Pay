@@ -23,7 +23,7 @@ test("plans one bounded five-image staging publication offline", () => {
 
   assert.match(output, /Plan only\. No Google Cloud state was read or changed/);
   assert.match(output, /publishes five immutable images/);
-  assert.match(output, /cannot deploy[\s\S]*Cloud Run/);
+  assert.match(output, /cannot\s+deploy Cloud Run/);
   assert.match(output, /AUTHORIZED_STAGING_IMAGE_PUBLICATION/);
 });
 
@@ -70,6 +70,7 @@ test("submits only the reviewed build contract and records all five digests", ()
     '--config="${ROOT_DIR}/deploy/gcp/cloudbuild.yaml"',
     '--region="${REGION}"',
     '--service-account="${BUILD_SERVICE_ACCOUNT}"',
+    '--ignore-file="${ROOT_DIR}/.gcloudignore"',
     "COMMIT_SHA=${EXPECTED_SHA}",
     "_ENVIRONMENT=staging",
     "_REGION=${REGION}",
@@ -78,6 +79,7 @@ test("submits only the reviewed build contract and records all five digests", ()
     "_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}",
     "gcloud builds describe",
     "STAGING IMAGE PUBLICATION PASS",
+    "Cloud Build staging storage, records, logs, and provenance may remain.",
     "No service was deployed and no traffic was changed.",
   ]) {
     assert.ok(controller.includes(evidence), evidence);
