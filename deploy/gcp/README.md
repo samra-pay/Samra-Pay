@@ -211,6 +211,22 @@ services, default service accounts, browser access to database secrets,
 floating image tags, automatic migrations, live-provider values, and plaintext
 credentials.
 
+`review-staging-runtime.sh` is the next bounded gate. Its offline `--plan` mode
+validates the runtime contract without reading cloud state. Its authenticated
+`--review` mode binds the review to one clean full Git SHA, confirms all five
+image tags resolve to immutable digests, proves the seven dedicated service
+accounts have no user-managed keys, re-runs the read-only database-access
+post-audit, and requires the four target services plus migration and temporary
+database jobs to be absent. The review prints image digests as deployment
+evidence but never reads a secret value.
+
+This controller intentionally has no apply mode. A runtime deployment remains
+blocked until the load-balancer and IAP policy, service-to-service
+authentication, logging and alerts, rollback owner, cost boundary, executable
+database-access audit, and critical Qase release evidence are approved. The
+Operations Portal remains separately blocked by workforce authentication,
+staff-access lifecycle controls, and operations API security promotion.
+
 `staging-database-access.json` is the separate review-only trust contract for
 database activation. It forbids a shared runtime/migration credential. The API
 login inherits a non-owner runtime role with data access only; it cannot create
