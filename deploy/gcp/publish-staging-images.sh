@@ -24,6 +24,7 @@ REPOSITORY="${SAMRA_GCP_REPOSITORY}"
 OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${PROJECT_ID}.iam.gserviceaccount.com"
+BUILD_SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SERVICE_ACCOUNT}"
 IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 AUTHORIZATION="AUTHORIZED_STAGING_IMAGE_PUBLICATION"
 IMAGE_NAMES=(
@@ -190,7 +191,7 @@ fi
 BUILD_ID="$(gcloud builds submit \
   --project="${PROJECT_ID}" \
   --region="${REGION}" \
-  --service-account="${BUILD_SERVICE_ACCOUNT}" \
+  --service-account="${BUILD_SERVICE_ACCOUNT_RESOURCE}" \
   --ignore-file="${ROOT_DIR}/.gcloudignore" \
   --config="${ROOT_DIR}/deploy/gcp/cloudbuild.yaml" \
   --substitutions="COMMIT_SHA=${EXPECTED_SHA},_ENVIRONMENT=staging,_REGION=${REGION},_REPOSITORY=${REPOSITORY},_IMAGE_TAG=${EXPECTED_SHA},_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}" \
@@ -198,7 +199,10 @@ BUILD_ID="$(gcloud builds submit \
   "${ROOT_DIR}")"
 
 [[ -n "${BUILD_ID}" ]] || { echo "STOP: Cloud Build did not return a build ID" >&2; exit 1; }
-[[ "$(gcloud builds describe "${BUILD_ID}" --project="${PROJECT_ID}" --format='value(status)')" == "SUCCESS" ]] || {
+[[ "$(gcloud builds describe "${BUILD_ID}" \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --format='value(status)')" == "SUCCESS" ]] || {
   echo "STOP: Cloud Build ${BUILD_ID} did not complete successfully" >&2
   exit 1
 }
