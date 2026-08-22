@@ -4,6 +4,7 @@ import {
   parseBootstrapPayload,
   STAGING_DATABASE_ACCESS,
 } from "./staging-database-access";
+import { parseStagingDatabaseAccessActionArguments } from "./staging-database-access-cli-arguments";
 
 const password = "a".repeat(64);
 const url = (user: string, host = "10.41.0.3") =>
@@ -68,4 +69,19 @@ test("rejects weak, shared, cross-instance, and wrong-user credentials", () => {
     mutate(candidate);
     assert.throws(() => parseBootstrapPayload(JSON.stringify(candidate)));
   }
+});
+
+test("parses direct and pnpm-separated staging access actions", () => {
+  assert.equal(
+    parseStagingDatabaseAccessActionArguments(["bootstrap"]),
+    "bootstrap",
+  );
+  assert.equal(
+    parseStagingDatabaseAccessActionArguments(["--", "audit-runtime"]),
+    "audit-runtime",
+  );
+  assert.throws(() => parseStagingDatabaseAccessActionArguments([]));
+  assert.throws(() =>
+    parseStagingDatabaseAccessActionArguments(["bootstrap", "finalize"]),
+  );
 });

@@ -219,6 +219,16 @@ test("activates roles, secrets, migrations, grants, cleanup, and audits in order
   ]) {
     assert.ok(activate.includes(control), control);
   }
+
+  assert.match(
+    activate,
+    /--args=--filter,@workspace\/db,run,staging:access,"\$\{action\}"/,
+  );
+  assert.match(
+    audit,
+    /--args=--filter,@workspace\/db,run,staging:access,"\$\{action\}"/,
+  );
+  assert.doesNotMatch(`${activate}\n${audit}`, /staging:access,--/);
 });
 
 test("implements runtime DML without DELETE, DDL, ownership, or elevation", () => {
