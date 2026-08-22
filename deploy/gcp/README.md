@@ -314,6 +314,13 @@ and the explicit `AUTHORIZED_STAGING_DATABASE_ACCESS` sentinel. No command
 prints a connection URL or password.
 
 The activation uses Direct VPC egress from one temporary Cloud Run job name.
+Its generated private-IP PostgreSQL URLs explicitly request libpq-compatible
+`sslmode=require` behavior. This keeps transport encrypted without implying a
+CA or hostname-verification policy that the staging foundation does not
+configure. The parsed URL contract always contains both parameters so a driver
+upgrade cannot silently change the connection policy. The controlled
+resume path accepts the single pre-contract bootstrap payload already created
+in staging, normalizes it in memory, and writes only explicit permanent URLs.
 The bootstrap execution receives one temporary Secret Manager payload and
 creates the two permanent non-superuser logins. The permanent Cloud SQL-managed
 `cloudsqlsuperuser` system role owns the two group-membership grants so deleting

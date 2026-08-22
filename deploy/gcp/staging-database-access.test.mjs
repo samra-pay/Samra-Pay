@@ -189,6 +189,18 @@ test("parses the private Cloud SQL address from version-stable JSON", () => {
   assert.doesNotMatch(activate, /ipAddresses\.filter\(type:PRIVATE\)/);
 });
 
+test("makes encrypted private-IP libpq TLS semantics explicit", () => {
+  assert.equal(
+    (activate.match(/sslmode=require&uselibpqcompat=true/g) ?? []).length,
+    3,
+  );
+  assert.match(
+    runner,
+    /parsed\.searchParams\.set\("uselibpqcompat", "true"\)/,
+  );
+  assert.match(activate, /recoverable bootstrap URL has an invalid TLS policy/);
+});
+
 test("activates roles, secrets, migrations, grants, cleanup, and audits in order", () => {
   const ordered = [
     'gcloud sql users create "${BOOTSTRAP_USER}"',
