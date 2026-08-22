@@ -1,0 +1,112 @@
+name: Staging image publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run a read-only review or publish the five immutable staging images
+        required: true
+        default: review
+        type: choice
+        options:
+          - review
+          - publish
+      authorization:
+        description: For publish only, enter AUTHORIZED_STAGING_IMAGE_PUBLICATION
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: staging-image-publication-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  SAMRA_GCP_PROJECT_ID: samra-pay-staging
+  SAMRA_GCP_PROJECT_NUMBER: "934122615631"
+  SAMRA_GCP_ORGANIZATION_ID: "614833350075"
+  SAMRA_GCP_REGION: us-east4
+  SAMRA_GCP_OPERATOR_ACCOUNT: samra-github-staging@samra-pay-staging.iam.gserviceaccount.com
+  SAMRA_GCP_EXPECTED_SHA: ${{ github.sha }}
+  SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER: projects/934122615631/locations/global/workloadIdentityPools/samra-github-staging/providers/samra-pay-main
+  SAMRA_GCP_PUBLISHER_SERVICE_ACCOUNT: samra-github-staging@samra-pay-staging.iam.gserviceaccount.com
+  SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
+  SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
+
+jobs:
+  publication:
+    name: Review or publish immutable staging images
+    if: >-
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: staging-image-publication
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the exact main commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify source and workflow boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
+          [[ -z "$(git status --porcelain)" ]]
+          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]]
+          [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
+          if [[ "${SAMRA_WORKFLOW_MODE}" == "publish" ]]; then
+            [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_IMAGE_PUBLICATION" ]] || {
+              echo "Publish mode requires the exact publication authorization." >&2
+              exit 1
+            }
+          fi
+
+      - name: Obtain short-lived Google credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SAMRA_GCP_PUBLISHER_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: ">= 540.0.0"
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+
+      - name: Verify federated caller
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(gcloud config get-value account 2>/dev/null)" == "${SAMRA_GCP_PUBLISHER_SERVICE_ACCOUNT}" ]]
+          [[ "$(gcloud config get-value project 2>/dev/null)" == "${SAMRA_GCP_PROJECT_ID}" ]]
+          [[ -z "$(gcloud iam service-accounts keys list \
+            --iam-account="${SAMRA_GCP_PUBLISHER_SERVICE_ACCOUNT}" \
+            --project="${SAMRA_GCP_PROJECT_ID}" \
+            --managed-by=user --format='value(name)')" ]]
+
+      - name: Run read-only image publication review
+        shell: bash
+        run: bash deploy/gcp/publish-staging-images.sh --review
+
+      - name: Publish the reviewed images
+        if: inputs.mode == 'publish'
+        shell: bash
+        env:
+          SAMRA_GCP_IMAGE_BUILD_APPLY: AUTHORIZED_STAGING_IMAGE_PUBLICATION
+        run: |
+          set -euo pipefail
+          [[ "$(gcloud config get-value account 2>/dev/null)" == "${SAMRA_GCP_PUBLISHER_SERVICE_ACCOUNT}" ]]
+          bash deploy/gcp/publish-staging-images.sh --apply

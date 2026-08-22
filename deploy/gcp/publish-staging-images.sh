@@ -23,8 +23,17 @@ REGION="${SAMRA_GCP_REGION}"
 REPOSITORY="${SAMRA_GCP_REPOSITORY}"
 OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
+HUMAN_OPERATOR="me@davidhaile.com"
+PUBLISHER_SERVICE_ACCOUNT="samra-github-staging@${PROJECT_ID}.iam.gserviceaccount.com"
 BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${PROJECT_ID}.iam.gserviceaccount.com"
 BUILD_SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SERVICE_ACCOUNT}"
+PUBLISHER_CUSTOM_ROLE_ID="samraStagingImagePublisher"
+PUBLISHER_CUSTOM_ROLE_PERMISSIONS="artifactregistry.dockerimages.get,artifactregistry.repositories.get,artifactregistry.repositories.getIamPolicy,billing.resourceAssociations.list,cloudbuild.builds.create,cloudbuild.builds.get,iam.roles.get,iam.serviceAccountKeys.list,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.workloadIdentityPoolProviders.get,iam.workloadIdentityPools.get,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,serviceusage.services.list,serviceusage.services.use,storage.buckets.get,storage.buckets.getIamPolicy"
+WORKLOAD_IDENTITY_POOL_ID="samra-github-staging"
+WORKLOAD_IDENTITY_PROVIDER_ID="samra-pay-main"
+WORKLOAD_IDENTITY_LOCATION="global"
+WORKLOAD_IDENTITY_ATTRIBUTE_MAPPING="attribute.environment=assertion.environment,attribute.event_name=assertion.event_name,attribute.ref=assertion.ref,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.workflow=assertion.workflow,attribute.workflow_ref=assertion.workflow_ref,google.subject=assertion.sub"
+WORKLOAD_IDENTITY_ATTRIBUTE_CONDITION="assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging image publication' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-image-publication.yml@refs/heads/main' && assertion.environment=='staging-image-publication'"
 REQUIRED_VERIFICATION_API="containeranalysis.googleapis.com"
 SOURCE_BUCKET="${PROJECT_ID}_cloudbuild"
 SOURCE_BUCKET_ROLE="roles/storage.objectViewer"
@@ -83,8 +92,8 @@ command -v gcloud >/dev/null 2>&1 || {
   exit 1
 }
 
-[[ -n "${OPERATOR}" && "${OPERATOR}" =~ ^[^@[:space:]]+@davidhaile\.com$ ]] || {
-  echo "STOP: SAMRA_GCP_OPERATOR_ACCOUNT must be a davidhaile.com administrator" >&2
+[[ "${OPERATOR}" == "${HUMAN_OPERATOR}" || "${OPERATOR}" == "${PUBLISHER_SERVICE_ACCOUNT}" ]] || {
+  echo "STOP: caller must be the reviewed human operator or keyless GitHub publisher" >&2
   exit 1
 }
 [[ "$(gcloud config get-value account 2>/dev/null)" == "${OPERATOR}" ]] || { echo "STOP: wrong Google account" >&2; exit 1; }
@@ -95,6 +104,8 @@ command -v gcloud >/dev/null 2>&1 || {
 PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
 [[ "${PROJECT_NUMBER}" =~ ^[0-9]+$ ]] || { echo "STOP: project number is missing" >&2; exit 1; }
 CLOUD_BUILD_SERVICE_AGENT="service-${PROJECT_NUMBER}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
+PUBLISHER_CUSTOM_ROLE="projects/${PROJECT_ID}/roles/${PUBLISHER_CUSTOM_ROLE_ID}"
+PUBLISHER_FEDERATED_MEMBER="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/${WORKLOAD_IDENTITY_LOCATION}/workloadIdentityPools/${WORKLOAD_IDENTITY_POOL_ID}/attribute.repository_id/1335175962"
 [[ "$(git -C "${ROOT_DIR}" rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "STOP: source commit does not match the reviewed SHA" >&2; exit 1; }
 [[ -z "$(git -C "${ROOT_DIR}" status --porcelain)" ]] || { echo "STOP: source working tree is not clean" >&2; exit 1; }
 
@@ -122,6 +133,87 @@ USER_KEYS="$(gcloud iam service-accounts keys list \
   --iam-account="${BUILD_SERVICE_ACCOUNT}" --project="${PROJECT_ID}" \
   --managed-by=user --format='value(name)')"
 [[ -z "${USER_KEYS}" ]] || { echo "STOP: build identity has a user-managed key" >&2; exit 1; }
+
+if [[ "${OPERATOR}" == "${PUBLISHER_SERVICE_ACCOUNT}" ]]; then
+  gcloud iam service-accounts describe "${PUBLISHER_SERVICE_ACCOUNT}" \
+    --project="${PROJECT_ID}" >/dev/null
+  PUBLISHER_USER_KEYS="$(gcloud iam service-accounts keys list \
+    --iam-account="${PUBLISHER_SERVICE_ACCOUNT}" --project="${PROJECT_ID}" \
+    --managed-by=user --format='value(name)')"
+  [[ -z "${PUBLISHER_USER_KEYS}" ]] || { echo "STOP: publisher identity has a user-managed key" >&2; exit 1; }
+
+  gcloud iam roles describe "${PUBLISHER_CUSTOM_ROLE_ID}" \
+    --project="${PROJECT_ID}" --format=json | node -e '
+      const fs = require("fs");
+      const role = JSON.parse(fs.readFileSync(0, "utf8"));
+      const actual = [...(role.includedPermissions || [])].sort();
+      const expected = process.argv[1].split(",").sort();
+      if (role.deleted === true || role.stage !== "GA" || JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher custom role drifted\n");
+        process.exit(1);
+      }
+    ' "${PUBLISHER_CUSTOM_ROLE_PERMISSIONS}"
+
+  gcloud iam workload-identity-pools describe "${WORKLOAD_IDENTITY_POOL_ID}" \
+    --project="${PROJECT_ID}" --location="${WORKLOAD_IDENTITY_LOCATION}" \
+    --format=json | node -e '
+      const fs = require("fs");
+      const pool = JSON.parse(fs.readFileSync(0, "utf8"));
+      if (pool.state !== "ACTIVE") {
+        process.stderr.write("STOP: workload identity pool is not active\n");
+        process.exit(1);
+      }
+    '
+
+  gcloud iam workload-identity-pools providers describe "${WORKLOAD_IDENTITY_PROVIDER_ID}" \
+    --project="${PROJECT_ID}" --location="${WORKLOAD_IDENTITY_LOCATION}" \
+    --workload-identity-pool="${WORKLOAD_IDENTITY_POOL_ID}" --format=json | node -e '
+      const fs = require("fs");
+      const provider = JSON.parse(fs.readFileSync(0, "utf8"));
+      const expectedMapping = Object.fromEntries(process.argv[1].split(",").map((entry) => {
+        const index = entry.indexOf("=");
+        return [entry.slice(0, index), entry.slice(index + 1)];
+      }));
+      const canonical = (value) => JSON.stringify(Object.fromEntries(Object.entries(value).sort()));
+      if (
+        provider.state !== "ACTIVE" ||
+        provider.oidc?.issuerUri !== "https://token.actions.githubusercontent.com" ||
+        canonical(provider.attributeMapping || {}) !== canonical(expectedMapping) ||
+        provider.attributeCondition !== process.argv[2]
+      ) {
+        process.stderr.write("STOP: workload identity provider drifted\n");
+        process.exit(1);
+      }
+    ' "${WORKLOAD_IDENTITY_ATTRIBUTE_MAPPING}" "${WORKLOAD_IDENTITY_ATTRIBUTE_CONDITION}"
+
+  gcloud projects get-iam-policy "${PROJECT_ID}" --format=json | \
+    node -e '
+      const fs = require("fs");
+      const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+      const member = `serviceAccount:${process.argv[1]}`;
+      const actual = (policy.bindings || [])
+        .filter((binding) => (binding.members || []).includes(member))
+        .map((binding) => ({ role: binding.role, condition: binding.condition ?? null }));
+      const expected = [{ role: process.argv[2], condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher project IAM drifted\n");
+        process.exit(1);
+      }
+    ' "${PUBLISHER_SERVICE_ACCOUNT}" "${PUBLISHER_CUSTOM_ROLE}"
+
+  gcloud iam service-accounts get-iam-policy "${PUBLISHER_SERVICE_ACCOUNT}" \
+    --project="${PROJECT_ID}" --format=json | node -e '
+      const fs = require("fs");
+      const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+      const actual = (policy.bindings || [])
+        .flatMap((binding) => (binding.members || []).map((member) => ({ role: binding.role, member, condition: binding.condition ?? null })));
+      const expected = [{ role: "roles/iam.workloadIdentityUser", member: process.argv[1], condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher federation IAM drifted\n");
+        process.exit(1);
+      }
+    ' "${PUBLISHER_FEDERATED_MEMBER}"
+fi
 
 gcloud projects get-iam-policy "${PROJECT_ID}" --format=json | \
   node -e '
@@ -160,22 +252,42 @@ gcloud iam service-accounts get-iam-policy "${BUILD_SERVICE_ACCOUNT}" \
   node -e '
     const fs = require("fs");
     const policy = JSON.parse(fs.readFileSync(0, "utf8"));
-    const expected = `user:${process.argv[1]}`;
     const members = (policy.bindings || [])
       .filter((binding) => binding.role === "roles/iam.serviceAccountUser")
       .flatMap((binding) => binding.members || [])
       .sort();
-    if (JSON.stringify(members) !== JSON.stringify([expected])) {
+    const expected = [
+      `user:${process.argv[1]}`,
+      `serviceAccount:${process.argv[2]}`,
+    ].sort();
+    if (JSON.stringify(members) !== JSON.stringify(expected)) {
       process.stderr.write("STOP: build identity impersonation IAM drifted\n");
       process.exit(1);
     }
-  ' "${OPERATOR}"
+  ' "${HUMAN_OPERATOR}" "${PUBLISHER_SERVICE_ACCOUNT}"
 
 BUCKET_NAME="$(gcloud storage buckets describe "gs://${SOURCE_BUCKET}" --format='value(name)')"
 [[ "${BUCKET_NAME}" == "${SOURCE_BUCKET}" || "${BUCKET_NAME}" == "projects/_/buckets/${SOURCE_BUCKET}" ]] || {
   echo "STOP: exact Cloud Build source bucket is missing" >&2
   exit 1
 }
+
+if [[ "${OPERATOR}" == "${PUBLISHER_SERVICE_ACCOUNT}" ]]; then
+  gcloud storage buckets get-iam-policy "gs://${SOURCE_BUCKET}" --format=json | \
+    node -e '
+      const fs = require("fs");
+      const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+      const member = `serviceAccount:${process.argv[1]}`;
+      const actual = (policy.bindings || [])
+        .filter((binding) => (binding.members || []).includes(member))
+        .map((binding) => ({ role: binding.role, condition: binding.condition ?? null }));
+      const expected = [{ role: "roles/storage.objectCreator", condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher source-bucket IAM drifted\n");
+        process.exit(1);
+      }
+    ' "${PUBLISHER_SERVICE_ACCOUNT}"
+fi
 
 gcloud storage buckets get-iam-policy "gs://${SOURCE_BUCKET}" --format=json | \
   node -e '
@@ -234,6 +346,7 @@ done
 
 echo "READ-ONLY STAGING IMAGE PUBLICATION REVIEW PASS"
 echo "Source: ${EXPECTED_SHA}"
+echo "Caller: ${OPERATOR}"
 echo "Images: 5 full-SHA tags are absent"
 echo "Build identity: dedicated, keyless, and exact-IAM"
 echo "Build source access: exact bucket-level read-only"

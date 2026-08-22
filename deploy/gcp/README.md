@@ -235,6 +235,66 @@ SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
   bash deploy/gcp/activate-staging-build-source-access.sh --review
 ```
 
+### Keyless GitHub-to-Google publication
+
+`staging-github-federation.json` locks the GitHub publication boundary to the
+private `haileleuld87/Samra-Pay` repository by both name and stable numeric
+repository and owner IDs. Google accepts only an OIDC token for a manual
+`.github/workflows/staging-image-publication.yml` invocation on
+`refs/heads/main` using the protected `staging-image-publication` environment.
+Pull requests, pushes, schedules, forks, other repositories, other branches,
+other workflow files, a renamed workflow, and jobs outside that environment
+fail the provider condition before they can impersonate a Google identity.
+
+`activate-staging-github-federation.sh` is the guarded one-time trust bootstrap.
+Its offline `--plan` mode reads no Google or GitHub state. `--review` verifies
+the exact staging project, organization, labels, clean source SHA, APIs, pool,
+provider, custom role, keyless publisher, and IAM state. Only `--apply` with
+`AUTHORIZED_STAGING_GITHUB_FEDERATION` may enable IAM Credentials and Security
+Token Service, create the reviewed pool/provider and
+`samra-github-staging` identity, or add these three resource boundaries:
+
+- the exact custom read-and-build-submit role on the staging project;
+- `roles/storage.objectCreator` on only the Cloud Build source bucket; and
+- `roles/iam.serviceAccountUser` on only the existing staging build identity.
+
+The repository-specific Workload Identity principal receives only
+`roles/iam.workloadIdentityUser` on the publisher identity. Neither the
+publisher nor the build identity may have a user-managed key. Run
+`audit-staging-github-federation.sh` after activation; it independently rechecks
+the provider condition, exact permissions and bindings, non-public source
+bucket, and absence of publisher keys without changing cloud state.
+
+`.github/workflows/staging-image-publication.yml` uses commit-pinned releases
+of `google-github-actions/auth` v3, `setup-gcloud` v3, and `actions/checkout`
+v7. The generated short-lived credential file is excluded from Git and
+all container contexts. One protected job performs the read-only review and,
+only when explicitly requested, continues to publication without repeating
+checkout, authentication, SDK setup, or environment approval. Publication
+requires all of the following:
+
+1. a manual run from the current `main` ref in the exact private repository;
+2. a successful read-only review for the same Git SHA and federated session;
+3. selection of `publish` plus the exact image-publication authorization; and
+4. approval through the `staging-image-publication` GitHub environment.
+
+Before enabling publication, that environment must be configured with at least
+one required reviewer, self-review prevention, and deployment restricted to
+`main`. Until those repository settings are independently verified, use only
+the workflow's `review` mode. The workflow reuses
+`publish-staging-images.sh`; it does not introduce a second image build path and
+contains no service deployment, traffic, migration, secret-value, provider,
+production, or Replit command.
+
+One-time review example from the exact merged source in Cloud Shell:
+
+```sh
+SAMRA_GCP_PROJECT_NUMBER="934122615631" \
+SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
+SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash deploy/gcp/activate-staging-github-federation.sh --review
+```
+
 Verified provenance has a separate, one-time API activation gate.
 `activate-staging-build-verification.sh --review` confirms the exact project,
 source SHA, Container Analysis API state, and Cloud Build service-agent IAM.

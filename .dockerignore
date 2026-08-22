@@ -50,3 +50,4 @@ work
 *.pfx
 credentials*.json
 service-account*.json
+gha-creds-*.json

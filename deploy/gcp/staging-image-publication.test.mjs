@@ -42,6 +42,7 @@ test("requires exact source, staging boundary, immutable registry, and keyless b
     "build identity project IAM drifted",
     "build identity repository IAM drifted",
     "build identity impersonation IAM drifted",
+    "caller must be the reviewed human operator or keyless GitHub publisher",
     "immutable image tag already exists",
     "READ-ONLY STAGING IMAGE PUBLICATION REVIEW PASS",
     "REVIEW COMPLETE — NO CLOUD CHANGES",
@@ -63,6 +64,7 @@ test("places an exact authorization after every read-only preflight", () => {
   assert.ok(authorization > review);
   assert.ok(submit > authorization);
   assert.match(controller, /AUTHORIZED_STAGING_IMAGE_PUBLICATION/);
+  assert.match(controller, /samra-github-staging@\$\{PROJECT_ID\}/);
 });
 
 test("submits only the reviewed build contract and records all five digests", () => {
