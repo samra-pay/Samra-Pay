@@ -14,8 +14,9 @@ The approved sequence is:
 2. connect Auth0 staging authentication using public SPA identifiers and API
    issuer/audience values;
 3. activate Persona sandbox only after its data and support controls pass;
-4. keep the deterministic Crossmint adapter until the live sandbox adapter and
-   wallet operating model pass independently.
+4. keep the deterministic Crossmint adapter active until the dormant sandbox
+   adapter, credential scope, wallet configuration, and operating model pass an
+   independent activation review.
 
 ## Samra-owned truth
 
@@ -82,20 +83,32 @@ Activation remains blocked on the Persona inventory, approved PII field map and
 retention policy, support and appeal workflow, zero-traffic synthetic webhook
 evidence, restart evidence, and independent post-audit.
 
-## Crossmint preparation gate
+## Crossmint dormant sandbox adapter
 
-Crossmint remains the deterministic fake adapter. The dormant server-only
-credential contract reserves:
+Crossmint remains the deterministic fake adapter in every runtime. A
+server-only sandbox adapter is implemented for controlled activation later,
+but no runtime imports it, no environment mode selects it, and the PostgreSQL
+wallet store rejects its non-synthetic result shape. This is an intentional
+three-layer fail-closed barrier.
+
+The dormant credential contract reserves:
 
 ```text
 CROSSMINT_SERVER_API_KEY -> samra-staging-crossmint-server-api-key:<numeric-version>
 ```
 
 The reviewed sandbox API origin is
-`https://staging.crossmint.com/api/2025-06-09`. Crossmint documents the server
-key in the `X-API-KEY` header and supports an idempotency key for wallet create.
-The key must never appear in web or mobile code. The live adapter is not yet
-implemented and no API service IAM is authorized for this reserved secret.
+`https://staging.crossmint.com/api/2025-06-09`. The adapter pins that version,
+uses the documented `X-API-KEY` server header and `x-idempotency-key`, and sends
+only `userId:customer_<opaque-id>` as the owner. It supports explicitly
+configured EVM smart wallets with a server or external-wallet admin signer and
+EVM MPC wallets. It does not choose among those custody models. Response
+address, owner, chain, wallet type, and signer evidence must match exactly.
+
+The server key must have only the reviewed create-wallet scope and must never
+appear in web or mobile code. No secret object, secret version, API service
+IAM, runtime configuration, provider call, wallet, or public route is
+authorized by this implementation.
 
 Before sandbox activation, approve the exact USDC test asset and network,
 wallet type, custody and signer model, recovery, credential scopes, webhook
@@ -123,7 +136,8 @@ References:
   bundles, Firebase, logs, screenshots, Qase, or support systems;
 - partial Auth0 public configuration;
 - Persona production mode or real customer PII;
-- Crossmint live adapter, wallet creation, token movement, or balance display;
+- Crossmint sandbox-adapter activation, wallet creation, token movement, or
+  balance display;
 - public unauthenticated Cloud Run service or direct default URL;
 - provider status directly granting a wallet, funding, remittance, card, or
   ledger capability;

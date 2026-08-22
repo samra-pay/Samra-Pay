@@ -115,6 +115,13 @@ test("rejects public, mutable, elevated, and automatic runtime drift", () => {
   assert.throws(() =>
     validateStagingRuntime(
       mutate((value) => {
+        value.vendorReadiness.crossmint.sandboxAdapterImplemented = false;
+      }),
+    ),
+  );
+  assert.throws(() =>
+    validateStagingRuntime(
+      mutate((value) => {
         value.vendorReadiness.crossmint.liveAdapterImplemented = true;
       }),
     ),
