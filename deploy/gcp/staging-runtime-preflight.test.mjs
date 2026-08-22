@@ -105,6 +105,28 @@ test("rejects public, mutable, elevated, and automatic runtime drift", () => {
       }),
     ),
   );
+  assert.throws(() =>
+    validateStagingRuntime(
+      mutate((value) => {
+        value.vendorReadiness.persona.secretAccessAuthorized = true;
+      }),
+    ),
+  );
+  assert.throws(() =>
+    validateStagingRuntime(
+      mutate((value) => {
+        value.vendorReadiness.crossmint.liveAdapterImplemented = true;
+      }),
+    ),
+  );
+  assert.throws(() =>
+    validateStagingRuntime(
+      mutate((value) => {
+        value.vendorReadiness.persona.secretMappings.PERSONA_API_KEY.version =
+          "latest";
+      }),
+    ),
+  );
 });
 
 test("plans locally without reading or changing Google Cloud", () => {

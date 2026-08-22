@@ -64,6 +64,7 @@
       "concurrency": 10,
       "databaseAccess": true,
       "secretAccess": ["runtime-database-url"],
+      "requiredRuntimeEnvironment": ["AUTH0_ISSUER_BASE_URL", "AUTH0_AUDIENCE"],
       "databasePool": {
         "maxConnections": 5,
         "idleTimeoutMilliseconds": 30000,
@@ -75,7 +76,9 @@
         "SAMRA_PROVIDER_MODE": "fake",
         "SAMRA_PERSISTENCE_MODE": "postgres",
         "SAMRA_RUN_WORKER": "true",
-        "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false"
+        "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false",
+        "SAMRA_CUSTOMER_AUTH_MODE": "auth0",
+        "SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE": "fake"
       },
       "startupProbe": "/api/readyz",
       "livenessProbe": "/api/healthz"
@@ -91,7 +94,13 @@
       "concurrency": 20,
       "databaseAccess": false,
       "secretAccess": [],
-      "requiredRuntimeEnvironment": ["SAMRA_API_ORIGIN"]
+      "requiredRuntimeEnvironment": [
+        "SAMRA_API_ORIGIN",
+        "SAMRA_PUBLIC_DATA_MODE",
+        "SAMRA_PUBLIC_AUTH0_DOMAIN",
+        "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
+        "SAMRA_PUBLIC_AUTH0_AUDIENCE"
+      ]
     },
     "samra-operations-web": {
       "image": "samra-operations-web:FULL_GIT_SHA",
@@ -136,6 +145,79 @@
     "databaseAccess": true,
     "secretAccess": ["migration-database-url"]
   },
+  "vendorReadiness": {
+    "auth0": {
+      "status": "required-before-staging-deployment",
+      "apiMode": "auth0",
+      "apiRuntimeEnvironment": ["AUTH0_ISSUER_BASE_URL", "AUTH0_AUDIENCE"],
+      "customerWebRuntimeEnvironment": [
+        "SAMRA_PUBLIC_AUTH0_DOMAIN",
+        "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
+        "SAMRA_PUBLIC_AUTH0_AUDIENCE"
+      ],
+      "customerWebSecrets": [],
+      "tokenAlgorithm": "RS256",
+      "tokenStorage": "memory-only",
+      "refreshTokensEnabled": false,
+      "clientSecretAllowed": false
+    },
+    "persona": {
+      "status": "prepared-not-authorized",
+      "mode": "persona-sandbox",
+      "serviceAccount": "api",
+      "nonSecretRuntimeEnvironment": [
+        "PERSONA_INQUIRY_TEMPLATE_ID",
+        "PERSONA_ENVIRONMENT_ID"
+      ],
+      "secretMappings": {
+        "PERSONA_API_KEY": {
+          "secret": "samra-staging-persona-api-key",
+          "version": "PINNED_INTEGER",
+          "required": true
+        },
+        "PERSONA_WEBHOOK_SECRET": {
+          "secret": "samra-staging-persona-webhook-secret",
+          "version": "PINNED_INTEGER",
+          "required": true
+        },
+        "PERSONA_WEBHOOK_SECRET_PREVIOUS": {
+          "secret": "samra-staging-persona-webhook-secret-previous",
+          "version": "PINNED_INTEGER",
+          "required": false,
+          "rotationOnly": true
+        }
+      },
+      "secretAccessAuthorized": false,
+      "activationBlockedOn": [
+        "approved Persona sandbox account and immutable inquiry template inventory",
+        "approved PII field, purpose, retention, deletion, support, and appeal policy",
+        "exact secret versions and per-secret runtime IAM",
+        "zero-traffic synthetic webhook and restart evidence",
+        "independent post-activation audit"
+      ]
+    },
+    "crossmint": {
+      "status": "boundary-only-not-authorized",
+      "mode": "fake",
+      "serviceAccount": "api",
+      "stagingApiOrigin": "https://staging.crossmint.com/api/2025-06-09",
+      "serverCredential": {
+        "environment": "CROSSMINT_SERVER_API_KEY",
+        "secret": "samra-staging-crossmint-server-api-key",
+        "version": "PINNED_INTEGER"
+      },
+      "serverCredentialAllowedInClient": false,
+      "secretAccessAuthorized": false,
+      "liveAdapterImplemented": false,
+      "activationBlockedOn": [
+        "approved Crossmint sandbox account, USDC asset, test network, custody, signer, and recovery model",
+        "least-privilege server API key scopes and exact secret version",
+        "live adapter idempotency, timeout, replay, webhook, and restart evidence",
+        "approved customer disclosure and support workflow",
+        "independent ledger and provider-balance reconciliation gate"
+      ]
+    }
+  },
   "releaseOrder": [
     "verify immutable image digests and release evidence",
     "verify backup and point-in-time recovery state",
@@ -156,6 +238,8 @@
     "Secret Manager database reference with no plaintext credential",
     "approved load balancer and identity-aware access policy",
     "service-to-service authentication for API proxy calls",
+    "approved Auth0 tenant, API audience, callback, logout, and allowed-origin inventory",
+    "separate Persona and Crossmint activation reviews with pinned secret versions",
     "logging, alerts, rollback owner, and cost budget",
     "critical Qase regression with no unresolved severity-one or severity-two defect"
   ],
@@ -165,7 +249,7 @@
     "floating image tags",
     "automatic migrations",
     "public unauthenticated services",
-    "real providers",
+    "real KYC or wallet providers without a separate activation gate",
     "customer data",
     "production claims",
     "Replit runtime dependency"

@@ -32,6 +32,7 @@ import {
   SamraDataSourceProvider,
   SamraOnboardingSourceProvider,
 } from "@workspace/samra-client/react";
+import { resolveWebPublicEnvironment } from "./public-runtime-config";
 
 const DataModeContext = createContext<SamraDataMode | null>(null);
 
@@ -76,8 +77,10 @@ export function SamraRuntimeProvider({
 }: PropsWithChildren): ReactElement {
   const runtime = useMemo<RuntimeResolution>(() => {
     try {
+      const publicEnvironment = resolveWebPublicEnvironment(import.meta.env);
+      const configuredDataMode = publicEnvironment.VITE_SAMRA_DATA_MODE;
       const mode = parseSamraDataMode(
-        import.meta.env.VITE_SAMRA_DATA_MODE,
+        typeof configuredDataMode === "string" ? configuredDataMode : undefined,
         "VITE_SAMRA_DATA_MODE",
       );
       const source =

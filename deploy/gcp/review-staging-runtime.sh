@@ -24,8 +24,10 @@ The reviewed runtime preflight will:
   2. verify five full-SHA image tags resolve to immutable digests;
   3. verify all seven dedicated service accounts exist without user-managed keys;
   4. re-run the read-only database-access audit for split secrets and bootstrap cleanup;
-  5. require an empty target Cloud Run service and job surface; and
-  6. report the remaining load-balancer, IAP, service-authentication, observability,
+  5. verify Auth0 uses public runtime identifiers while Persona and Crossmint
+     remain separately gated with pinned future secret-version references;
+  6. require an empty target Cloud Run service and job surface; and
+  7. report the remaining load-balancer, IAP, service-authentication, observability,
      rollback-owner, and Qase release gates.
 
 This controller cannot deploy, migrate, route traffic, expose an endpoint,

@@ -122,8 +122,10 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
         SAMRA_PERSISTENCE_MODE: "postgres",
         SAMRA_RUN_WORKER: "true",
         SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
+        SAMRA_CUSTOMER_AUTH_MODE: "auth0",
+        SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
       }),
-    "API must remain durable synthetic staging with operations disabled",
+    "API must remain durable synthetic staging with Auth0 and vendor activation disabled",
   );
   assert(
     api.databaseAccess === true &&
@@ -134,6 +136,11 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
       api.livenessProbe === "/api/healthz",
     "API database or health boundary drifted",
   );
+  assert(
+    JSON.stringify(api.requiredRuntimeEnvironment) ===
+      JSON.stringify(["AUTH0_ISSUER_BASE_URL", "AUTH0_AUDIENCE"]),
+    "API must receive only the required non-secret Auth0 identifiers",
+  );
   for (const name of SERVICE_NAMES.filter((name) => name !== "samra-api")) {
     const service = contract.services[name];
     assert(
@@ -141,13 +148,27 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
       `${name} must not access the database or secrets`,
     );
   }
-  for (const name of ["samra-customer-web", "samra-operations-web"]) {
-    assert(
-      JSON.stringify(contract.services[name].requiredRuntimeEnvironment) ===
-        JSON.stringify(["SAMRA_API_ORIGIN"]),
-      `${name} must receive only the public API origin`,
-    );
-  }
+  assert(
+    JSON.stringify(
+      contract.services["samra-customer-web"].requiredRuntimeEnvironment,
+    ) ===
+      JSON.stringify([
+        "SAMRA_API_ORIGIN",
+        "SAMRA_PUBLIC_DATA_MODE",
+        "SAMRA_PUBLIC_AUTH0_DOMAIN",
+        "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
+        "SAMRA_PUBLIC_AUTH0_AUDIENCE",
+      ]),
+    "Customer web must receive only the API origin and public runtime identifiers",
+  );
+  assert(
+    JSON.stringify(
+      contract.services["samra-operations-web"].requiredRuntimeEnvironment,
+    ) === JSON.stringify(["SAMRA_API_ORIGIN"]),
+    "Operations web must receive only the public API origin",
+  );
+
+  validateVendorReadiness(contract);
 
   assert(
     contract.database.privateIpRequired === true &&
@@ -197,6 +218,8 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
   for (const gate of [
     "approved load balancer and identity-aware access policy",
     "service-to-service authentication for API proxy calls",
+    "approved Auth0 tenant, API audience, callback, logout, and allowed-origin inventory",
+    "separate Persona and Crossmint activation reviews with pinned secret versions",
     "logging, alerts, rollback owner, and cost budget",
     "critical Qase regression with no unresolved severity-one or severity-two defect",
   ]) {
@@ -208,7 +231,7 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     "floating image tags",
     "automatic migrations",
     "public unauthenticated services",
-    "real providers",
+    "real KYC or wallet providers without a separate activation gate",
     "customer data",
     "production claims",
     "Replit runtime dependency",
@@ -234,6 +257,112 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     operationsPortalBlocked: true,
     deploymentAuthorized: false,
   });
+}
+
+function validateVendorReadiness(contract) {
+  const readiness = contract.vendorReadiness;
+  assert(
+    JSON.stringify(Object.keys(readiness)) ===
+      JSON.stringify(["auth0", "persona", "crossmint"]),
+    "The reviewed vendor-readiness set changed",
+  );
+
+  const auth0 = readiness.auth0;
+  assert(
+    auth0.status === "required-before-staging-deployment" &&
+      auth0.apiMode === "auth0" &&
+      JSON.stringify(auth0.apiRuntimeEnvironment) ===
+        JSON.stringify(["AUTH0_ISSUER_BASE_URL", "AUTH0_AUDIENCE"]) &&
+      JSON.stringify(auth0.customerWebRuntimeEnvironment) ===
+        JSON.stringify([
+          "SAMRA_PUBLIC_AUTH0_DOMAIN",
+          "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
+          "SAMRA_PUBLIC_AUTH0_AUDIENCE",
+        ]) &&
+      auth0.customerWebSecrets.length === 0 &&
+      auth0.tokenAlgorithm === "RS256" &&
+      auth0.tokenStorage === "memory-only" &&
+      auth0.refreshTokensEnabled === false &&
+      auth0.clientSecretAllowed === false,
+    "Auth0 must remain public-client, PKCE-oriented, and secretless in customer web",
+  );
+
+  const persona = readiness.persona;
+  assert(
+    persona.status === "prepared-not-authorized" &&
+      persona.mode === "persona-sandbox" &&
+      persona.serviceAccount === "api" &&
+      JSON.stringify(persona.nonSecretRuntimeEnvironment) ===
+        JSON.stringify([
+          "PERSONA_INQUIRY_TEMPLATE_ID",
+          "PERSONA_ENVIRONMENT_ID",
+        ]) &&
+      persona.secretAccessAuthorized === false,
+    "Persona must remain sandbox-only and unauthorized",
+  );
+  assertSecretMappings(persona.secretMappings, {
+    PERSONA_API_KEY: ["samra-staging-persona-api-key", true, false],
+    PERSONA_WEBHOOK_SECRET: [
+      "samra-staging-persona-webhook-secret",
+      true,
+      false,
+    ],
+    PERSONA_WEBHOOK_SECRET_PREVIOUS: [
+      "samra-staging-persona-webhook-secret-previous",
+      false,
+      true,
+    ],
+  });
+  assert(
+    persona.activationBlockedOn.length === 5,
+    "Persona activation blockers drifted",
+  );
+
+  const crossmint = readiness.crossmint;
+  assert(
+    crossmint.status === "boundary-only-not-authorized" &&
+      crossmint.mode === "fake" &&
+      crossmint.serviceAccount === "api" &&
+      crossmint.stagingApiOrigin ===
+        "https://staging.crossmint.com/api/2025-06-09" &&
+      JSON.stringify(crossmint.serverCredential) ===
+        JSON.stringify({
+          environment: "CROSSMINT_SERVER_API_KEY",
+          secret: "samra-staging-crossmint-server-api-key",
+          version: "PINNED_INTEGER",
+        }) &&
+      crossmint.serverCredentialAllowedInClient === false &&
+      crossmint.secretAccessAuthorized === false &&
+      crossmint.liveAdapterImplemented === false &&
+      crossmint.activationBlockedOn.length === 5,
+    "Crossmint must remain a dormant server-only staging contract",
+  );
+
+  const vendorSource = JSON.stringify(readiness);
+  assert(
+    !/versions\/latest|worf\.replit|postgres(?:ql)?:\/\//i.test(vendorSource),
+    "Vendor readiness contains an unpinned secret, Replit endpoint, or database value",
+  );
+}
+
+function assertSecretMappings(actual, expected) {
+  assert(
+    JSON.stringify(Object.keys(actual)) ===
+      JSON.stringify(Object.keys(expected)),
+    "Persona secret mapping set drifted",
+  );
+  for (const [environment, [secret, required, rotationOnly]] of Object.entries(
+    expected,
+  )) {
+    const mapping = actual[environment];
+    assert(
+      mapping.secret === secret &&
+        mapping.version === "PINNED_INTEGER" &&
+        mapping.required === required &&
+        Boolean(mapping.rotationOnly) === rotationOnly,
+      `${environment} secret mapping drifted`,
+    );
+  }
 }
 
 export function validateRuntimeReviewEnvironment(

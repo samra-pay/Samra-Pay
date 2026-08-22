@@ -150,7 +150,13 @@ test("locks the API to durable synthetic mode with explicit health checks", () =
     SAMRA_PERSISTENCE_MODE: "postgres",
     SAMRA_RUN_WORKER: "true",
     SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
+    SAMRA_CUSTOMER_AUTH_MODE: "auth0",
+    SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
   });
+  assert.deepEqual(api.requiredRuntimeEnvironment, [
+    "AUTH0_ISSUER_BASE_URL",
+    "AUTH0_AUDIENCE",
+  ]);
   assert.equal(api.startupProbe, "/api/readyz");
   assert.equal(api.livenessProbe, "/api/healthz");
   assert.deepEqual(api.databasePool, {
@@ -158,6 +164,54 @@ test("locks the API to durable synthetic mode with explicit health checks", () =
     idleTimeoutMilliseconds: 30000,
     connectionTimeoutMilliseconds: 10000,
   });
+});
+
+test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
+  const { auth0, persona, crossmint } = contract.vendorReadiness;
+
+  assert.equal(auth0.status, "required-before-staging-deployment");
+  assert.deepEqual(auth0.customerWebSecrets, []);
+  assert.equal(auth0.clientSecretAllowed, false);
+  assert.equal(auth0.tokenAlgorithm, "RS256");
+  assert.equal(auth0.tokenStorage, "memory-only");
+  assert.equal(auth0.refreshTokensEnabled, false);
+  assert.deepEqual(
+    contract.services["samra-customer-web"].requiredRuntimeEnvironment,
+    [
+      "SAMRA_API_ORIGIN",
+      "SAMRA_PUBLIC_DATA_MODE",
+      "SAMRA_PUBLIC_AUTH0_DOMAIN",
+      "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
+      "SAMRA_PUBLIC_AUTH0_AUDIENCE",
+    ],
+  );
+
+  assert.equal(persona.status, "prepared-not-authorized");
+  assert.equal(persona.secretAccessAuthorized, false);
+  for (const mapping of Object.values(persona.secretMappings)) {
+    assert.equal(mapping.version, "PINNED_INTEGER");
+  }
+
+  assert.deepEqual(
+    {
+      status: crossmint.status,
+      mode: crossmint.mode,
+      origin: crossmint.stagingApiOrigin,
+      secretVersion: crossmint.serverCredential.version,
+      clientCredential: crossmint.serverCredentialAllowedInClient,
+      secretAccess: crossmint.secretAccessAuthorized,
+      liveAdapter: crossmint.liveAdapterImplemented,
+    },
+    {
+      status: "boundary-only-not-authorized",
+      mode: "fake",
+      origin: "https://staging.crossmint.com/api/2025-06-09",
+      secretVersion: "PINNED_INTEGER",
+      clientCredential: false,
+      secretAccess: false,
+      liveAdapter: false,
+    },
+  );
 });
 
 test("keeps migrations reviewed, serial, bounded, and non-retrying", () => {
@@ -216,7 +270,7 @@ test("contains references only, never credentials or live-provider values", () =
     "floating image tags",
     "automatic migrations",
     "public unauthenticated services",
-    "real providers",
+    "real KYC or wallet providers without a separate activation gate",
     "customer data",
     "production claims",
     "Replit runtime dependency",

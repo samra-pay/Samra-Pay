@@ -434,19 +434,42 @@ Each web service requires:
 SAMRA_API_ORIGIN=https://<samra-api-cloud-run-host>
 ```
 
-The customer-web image additionally accepts these public build arguments when
-the reviewed Auth0 staging application exists:
+The customer-web image is environment-portable. It loads
+`/samra-runtime-config.js` before the application bundle and the Cloud Run
+static server emits only these allowlisted public runtime values:
 
 ```text
-VITE_AUTH0_DOMAIN=<hostname-only>
-VITE_AUTH0_CLIENT_ID=<public-SPA-client-id>
-VITE_AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
+SAMRA_PUBLIC_DATA_MODE=api
+SAMRA_PUBLIC_AUTH0_DOMAIN=<hostname-only>
+SAMRA_PUBLIC_AUTH0_CLIENT_ID=<public-SPA-client-id>
+SAMRA_PUBLIC_AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
 ```
 
-They are not secrets. Omitting any value leaves API-mode customer sign-in
-fail-closed. Never pass an Auth0 client secret, access token, refresh token, or
-management credential into the browser image. Callback and logout URLs must
+They are not secrets. Omitting any Auth0 value leaves API-mode customer sign-in
+fail-closed. The endpoint is `no-store`, maps only the four reviewed public
+identifiers, and ignores every other process variable. Auth0 identifiers are no
+longer Docker build arguments, so one immutable image can move between reviewed
+environments without a rebuild. Never pass an Auth0 client secret, access token,
+refresh token, management credential, Persona value, or Crossmint value into
+the browser image or public runtime endpoint. Callback and logout URLs must
 exactly match the deployed customer-web application URI.
+
+The API runtime uses these non-secret Auth0 values when the reviewed staging
+tenant exists:
+
+```text
+SAMRA_CUSTOMER_AUTH_MODE=auth0
+AUTH0_ISSUER_BASE_URL=https://<tenant-or-custom-domain>/
+AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
+```
+
+Persona and Crossmint remain separately gated. Their future server credentials
+must use Secret Manager environment references pinned to numeric versions;
+Google recommends numeric version pinning for secrets injected as Cloud Run
+environment variables. The API service identity receives per-secret access only
+during a separately authorized activation. The customer web and mobile clients
+never receive those values. See
+`docs/operations/staging-vendor-runtime-readiness.md`.
 
 A controlled mobile staging bundle requires:
 
