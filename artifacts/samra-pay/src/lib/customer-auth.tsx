@@ -8,7 +8,7 @@ import {
   type PropsWithChildren,
   type ReactElement,
 } from "react";
-import { createAuth0Client, type Auth0Client } from "@auth0/auth0-spa-js";
+import type { Auth0Client } from "@auth0/auth0-spa-js";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { useLocation } from "wouter";
@@ -94,6 +94,7 @@ function Auth0SessionBridge({
     const initialize = async () => {
       let auth0: Auth0Client | null = null;
       try {
+        const { createAuth0Client } = await import("@auth0/auth0-spa-js");
         auth0 = await createAuth0Client({
           domain: config.domain,
           clientId: config.clientId,

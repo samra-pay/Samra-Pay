@@ -20,6 +20,10 @@ describe("web customer-onboarding trust boundary", () => {
     expect(loginSource).toContain("Continue with Auth0");
     expect(loginSource).not.toMatch(/localStorage|sessionStorage|indexedDB/);
     expect(authSource).toContain("createAuth0Client");
+    expect(authSource).toContain('await import("@auth0/auth0-spa-js")');
+    expect(authSource).toContain(
+      'import type { Auth0Client } from "@auth0/auth0-spa-js"',
+    );
     expect(authSource).toContain('cacheLocation: "memory"');
     expect(authSource).toContain("createAccessTokenGetter");
     expect(authSource).toContain("setAuthTokenGetter(");
