@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "status": "review-only",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "github": {
+    "owner": "haileleuld87",
+    "repository": "Samra-Pay",
+    "repositoryId": "1335175962",
+    "repositoryOwnerId": "237485986",
+    "defaultBranch": "main",
+    "allowedRef": "refs/heads/main",
+    "allowedEvent": "workflow_dispatch",
+    "workflowName": "Staging image publication",
+    "workflowPath": ".github/workflows/staging-image-publication.yml",
+    "protectedEnvironment": "staging-image-publication"
+  },
+  "googleCloud": {
+    "projectId": "samra-pay-staging",
+    "projectNumber": "934122615631",
+    "organizationId": "614833350075",
+    "region": "us-east4",
+    "workloadIdentityLocation": "global",
+    "workloadIdentityPoolId": "samra-github-staging",
+    "workloadIdentityProviderId": "samra-pay-main",
+    "publisherServiceAccountId": "samra-github-staging",
+    "buildServiceAccountId": "samra-cloud-build-staging",
+    "sourceBucket": "samra-pay-staging_cloudbuild",
+    "publisherCustomRoleId": "samraStagingImagePublisher"
+  },
+  "provider": {
+    "issuerUri": "https://token.actions.githubusercontent.com",
+    "attributeMapping": {
+      "google.subject": "assertion.sub",
+      "attribute.repository": "assertion.repository",
+      "attribute.repository_id": "assertion.repository_id",
+      "attribute.repository_owner_id": "assertion.repository_owner_id",
+      "attribute.ref": "assertion.ref",
+      "attribute.event_name": "assertion.event_name",
+      "attribute.workflow": "assertion.workflow",
+      "attribute.workflow_ref": "assertion.workflow_ref",
+      "attribute.environment": "assertion.environment"
+    },
+    "attributeCondition": "assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging image publication' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-image-publication.yml@refs/heads/main' && assertion.environment=='staging-image-publication'"
+  },
+  "iam": {
+    "publisherCustomRolePermissions": [
+      "artifactregistry.dockerimages.get",
+      "artifactregistry.repositories.get",
+      "artifactregistry.repositories.getIamPolicy",
+      "billing.resourceAssociations.list",
+      "cloudbuild.builds.create",
+      "cloudbuild.builds.get",
+      "iam.roles.get",
+      "iam.serviceAccountKeys.list",
+      "iam.serviceAccounts.get",
+      "iam.serviceAccounts.getIamPolicy",
+      "iam.workloadIdentityPoolProviders.get",
+      "iam.workloadIdentityPools.get",
+      "resourcemanager.projects.get",
+      "resourcemanager.projects.getIamPolicy",
+      "serviceusage.services.list",
+      "serviceusage.services.use",
+      "storage.buckets.get",
+      "storage.buckets.getIamPolicy"
+    ],
+    "publisherSourceBucketRole": "roles/storage.objectCreator",
+    "publisherBuildServiceAccountRole": "roles/iam.serviceAccountUser",
+    "federationServiceAccountRole": "roles/iam.workloadIdentityUser"
+  },
+  "workflow": {
+    "checkoutAction": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "authenticationAction": "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093",
+    "cloudSdkAction": "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db",
+    "permissions": {
+      "contents": "read",
+      "id-token": "write"
+    },
+    "publicationAuthorization": "AUTHORIZED_STAGING_IMAGE_PUBLICATION",
+    "automaticTriggers": false,
+    "serviceDeployment": false,
+    "trafficChange": false
+  },
+  "requiredApis": ["iamcredentials.googleapis.com", "sts.googleapis.com"],
+  "prohibited": [
+    "service-account key",
+    "stored Google credential secret",
+    "pull-request or push publication trigger",
+    "fork authentication",
+    "non-main branch authentication",
+    "Cloud Run deployment",
+    "traffic change",
+    "migration execution",
+    "secret-value access",
+    "production resource",
+    "real-provider integration",
+    "Replit change"
+  ]
+}
