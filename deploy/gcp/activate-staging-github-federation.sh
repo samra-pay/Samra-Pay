@@ -192,13 +192,16 @@ project_binding_state() {
     const actual = (policy.bindings || [])
       .filter((binding) => (binding.members || []).includes(member))
       .map((binding) => ({ role: binding.role, condition: binding.condition ?? null }));
-    if (actual.length === 0) return process.stdout.write("missing");
-    const expected = [{ role: process.argv[2], condition: null }];
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      process.stderr.write("STOP: publisher project IAM drifted\n");
-      process.exit(1);
+    if (actual.length === 0) {
+      process.stdout.write("missing");
+    } else {
+      const expected = [{ role: process.argv[2], condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher project IAM drifted\n");
+        process.exit(1);
+      }
+      process.stdout.write("ready");
     }
-    process.stdout.write("ready");
   ' "${PUBLISHER_SERVICE_ACCOUNT}" "${CUSTOM_ROLE_NAME}"
 }
 
@@ -215,13 +218,16 @@ bucket_binding_state() {
     const actual = (policy.bindings || [])
       .filter((binding) => (binding.members || []).includes(member))
       .map((binding) => ({ role: binding.role, condition: binding.condition ?? null }));
-    if (actual.length === 0) return process.stdout.write("missing");
-    const expected = [{ role: process.argv[2], condition: null }];
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      process.stderr.write("STOP: publisher source-bucket IAM drifted\n");
-      process.exit(1);
+    if (actual.length === 0) {
+      process.stdout.write("missing");
+    } else {
+      const expected = [{ role: process.argv[2], condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher source-bucket IAM drifted\n");
+        process.exit(1);
+      }
+      process.stdout.write("ready");
     }
-    process.stdout.write("ready");
   ' "${PUBLISHER_SERVICE_ACCOUNT}" "${SOURCE_BUCKET_ROLE}"
 }
 
@@ -241,13 +247,13 @@ build_impersonation_state() {
       .flatMap((binding) => binding.members || [])
       .sort();
     if (JSON.stringify(actual) === JSON.stringify([`user:${process.argv[1]}`])) {
-      return process.stdout.write("missing");
-    }
-    if (JSON.stringify(actual) !== JSON.stringify(allowed)) {
+      process.stdout.write("missing");
+    } else if (JSON.stringify(actual) !== JSON.stringify(allowed)) {
       process.stderr.write("STOP: build identity impersonation IAM drifted\n");
       process.exit(1);
+    } else {
+      process.stdout.write("ready");
     }
-    process.stdout.write("ready");
   ' "${OPERATOR}" "${PUBLISHER_SERVICE_ACCOUNT}"
 }
 
@@ -258,13 +264,16 @@ federation_binding_state() {
     const policy = JSON.parse(fs.readFileSync(0, "utf8"));
     const actual = (policy.bindings || [])
       .flatMap((binding) => (binding.members || []).map((member) => ({ role: binding.role, member, condition: binding.condition ?? null })));
-    if (actual.length === 0) return process.stdout.write("missing");
-    const expected = [{ role: process.argv[2], member: process.argv[1], condition: null }];
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      process.stderr.write("STOP: publisher federation IAM drifted\n");
-      process.exit(1);
+    if (actual.length === 0) {
+      process.stdout.write("missing");
+    } else {
+      const expected = [{ role: process.argv[2], member: process.argv[1], condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: publisher federation IAM drifted\n");
+        process.exit(1);
+      }
+      process.stdout.write("ready");
     }
-    process.stdout.write("ready");
   ' "${FEDERATED_MEMBER}" "${FEDERATION_ROLE}"
 }
 
