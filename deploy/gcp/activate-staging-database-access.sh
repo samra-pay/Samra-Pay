@@ -120,7 +120,17 @@ TAGGED_IMAGE="$(gcloud artifacts docker images describe "${IMAGE_BASE}:${EXPECTE
 }
 
 PRIVATE_IP="$(gcloud sql instances describe "${INSTANCE}" --project="${PROJECT_ID}" \
-  --format='value(ipAddresses.filter(type:PRIVATE).ipAddress)')"
+  --format=json | node -e '
+    const fs = require("fs");
+    const instance = JSON.parse(fs.readFileSync(0, "utf8"));
+    const addresses = Array.isArray(instance.ipAddresses)
+      ? instance.ipAddresses
+      : [];
+    const address = addresses.find((candidate) => candidate.type === "PRIVATE");
+    if (typeof address?.ipAddress === "string") {
+      process.stdout.write(address.ipAddress);
+    }
+  ')"
 [[ "${PRIVATE_IP}" =~ ^10\.41\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || {
   echo "STOP: reviewed private database address was not found" >&2
   exit 1

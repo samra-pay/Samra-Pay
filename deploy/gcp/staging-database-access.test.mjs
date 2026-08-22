@@ -177,6 +177,18 @@ test("separates plan, live review, fresh apply, and controlled resume", () => {
   assert.match(activate, /REVIEW COMPLETE — NO CLOUD CHANGES/);
 });
 
+test("parses the private Cloud SQL address from version-stable JSON", () => {
+  assert.match(
+    activate,
+    /PRIVATE_IP="\$\(gcloud sql instances describe "\$\{INSTANCE\}"[\s\S]{0,200}--format=json \| node -e/,
+  );
+  assert.match(
+    activate,
+    /addresses\.find\(\(candidate\) => candidate\.type === "PRIVATE"\)/,
+  );
+  assert.doesNotMatch(activate, /ipAddresses\.filter\(type:PRIVATE\)/);
+});
+
 test("activates roles, secrets, migrations, grants, cleanup, and audits in order", () => {
   const ordered = [
     'gcloud sql users create "${BOOTSTRAP_USER}"',
