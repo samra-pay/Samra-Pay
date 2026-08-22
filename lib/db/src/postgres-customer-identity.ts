@@ -363,6 +363,7 @@ export class PostgresCustomerIdentityCaseStore {
 
   async recordProviderEvent(input: {
     identityCaseId: string;
+    providerInquiryRef?: string;
     providerEventRef: string;
     eventType: string;
     decision: CustomerIdentityProviderDecision;
@@ -380,6 +381,14 @@ export class PostgresCustomerIdentityCaseStore {
       1,
       255,
     );
+    const providerInquiryRef = input.providerInquiryRef
+      ? normalizeVisibleValue(
+          input.providerInquiryRef,
+          "provider inquiry reference",
+          1,
+          255,
+        )
+      : undefined;
     const eventType = normalizeVisibleValue(
       input.eventType,
       "provider event type",
@@ -412,6 +421,24 @@ export class PostgresCustomerIdentityCaseStore {
         true,
       );
       if (!identityCase) throw new CustomerIdentityCaseNotFoundError();
+      if (
+        providerInquiryRef !== undefined &&
+        identityCase.provider_inquiry_ref !== providerInquiryRef
+      ) {
+        throw new DomainError(
+          "CONFLICT",
+          "The provider event does not belong to this identity inquiry.",
+        );
+      }
+      if (
+        providerInquiryRef === undefined &&
+        !identityCase.provider_inquiry_ref?.startsWith("inq_fake_")
+      ) {
+        throw new DomainError(
+          "INVALID_ARGUMENT",
+          "A provider inquiry reference is required for non-synthetic events.",
+        );
+      }
       const existing = await this.#context
         .query()
         .query<ExistingProviderEventRow>(

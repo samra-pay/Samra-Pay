@@ -24,6 +24,7 @@ import {
   CustomerIdentityVerificationService,
   DeterministicFakePersonaAdapter,
 } from "./customer-identity";
+import { PersonaSandboxAdapter, PersonaWebhookService } from "./persona";
 import {
   CustomerWalletProvisioningService,
   DeterministicFakeCrossmintAdapter,
@@ -50,6 +51,10 @@ export function createConfiguredDemoRuntime(
           config.customerAuth.issuerBaseUrl,
         )
       : undefined;
+  const customerIdentityProvider =
+    config.customerIdentityProvider?.mode === "persona-sandbox"
+      ? new PersonaSandboxAdapter(config.customerIdentityProvider)
+      : new DeterministicFakePersonaAdapter();
   return new DemoRuntime({
     repository: new PostgresRemittanceRepository(context),
     ledger: new PostgresLedgerControl(context),
@@ -72,7 +77,15 @@ export function createConfiguredDemoRuntime(
       config.customerAuth.mode === "auth0"
         ? new CustomerIdentityVerificationService({
             store: customerIdentityCaseStore,
-            provider: new DeterministicFakePersonaAdapter(),
+            provider: customerIdentityProvider,
+          })
+        : undefined,
+    personaWebhookService:
+      config.customerAuth.mode === "auth0" &&
+      config.customerIdentityProvider?.mode === "persona-sandbox"
+        ? new PersonaWebhookService({
+            store: customerIdentityCaseStore,
+            webhookSecrets: config.customerIdentityProvider.webhookSecrets,
           })
         : undefined,
     customerWalletProvisioningService:

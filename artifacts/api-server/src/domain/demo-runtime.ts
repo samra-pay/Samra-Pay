@@ -24,6 +24,7 @@ import {
   type LedgerControlPort,
 } from "@workspace/remittance";
 import type { CustomerIdentityVerificationService } from "./customer-identity";
+import type { PersonaWebhookService } from "./persona";
 import type { CustomerWalletProvisioningService } from "./customer-wallet";
 import { DemoLedgerAdapter, DEMO_LEDGER_ACCOUNT_IDS } from "./demo-ledger";
 import { publicTransferStatus, serializeMoney } from "./serializers";
@@ -157,6 +158,7 @@ export type DemoRuntimeDependencies = Readonly<{
   operationsCaseStore?: PostgresOperationsCaseStore;
   customerOnboardingStore?: CustomerOnboardingStore;
   customerIdentityVerificationService?: CustomerIdentityVerificationService;
+  personaWebhookService?: PersonaWebhookService;
   customerWalletProvisioningService?: CustomerWalletProvisioningService;
   customerFunnelStore?: CustomerFunnelStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
@@ -182,6 +184,7 @@ export class DemoRuntime {
   readonly operationsCaseStore?: PostgresOperationsCaseStore;
   readonly customerOnboardingStore?: CustomerOnboardingStore;
   readonly customerIdentityVerificationService?: CustomerIdentityVerificationService;
+  readonly personaWebhookService?: PersonaWebhookService;
   readonly customerWalletProvisioningService?: CustomerWalletProvisioningService;
   readonly customerFunnelStore?: CustomerFunnelStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
@@ -213,6 +216,7 @@ export class DemoRuntime {
     this.customerOnboardingStore = dependencies.customerOnboardingStore;
     this.customerIdentityVerificationService =
       dependencies.customerIdentityVerificationService;
+    this.personaWebhookService = dependencies.personaWebhookService;
     this.customerWalletProvisioningService =
       dependencies.customerWalletProvisioningService;
     this.customerFunnelStore = dependencies.customerFunnelStore;

@@ -78,6 +78,7 @@ test("provider-start failure is durably recorded and returned as unavailable", a
   });
   const provider: CustomerIdentityProvider = {
     provider: "persona",
+    environment: "fake",
     async createInquiry() {
       throw new Error("synthetic outage");
     },
@@ -116,6 +117,7 @@ test("a concurrent successful provider start wins over a failing caller", async 
   });
   const provider: CustomerIdentityProvider = {
     provider: "persona",
+    environment: "fake",
     async createInquiry() {
       throw new Error("one concurrent provider call failed");
     },
@@ -143,6 +145,7 @@ test("an already-started identity case resumes without another provider call", a
   });
   const provider: CustomerIdentityProvider = {
     provider: "persona",
+    environment: "fake",
     async createInquiry() {
       providerCalls += 1;
       return { providerInquiryRef: "must-not-be-used" };

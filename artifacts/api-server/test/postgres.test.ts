@@ -128,10 +128,10 @@ test("customer funnel attribution is append-only, concurrent, privacy-safe, and 
       },
     }),
   ]);
-  assert.deepEqual(
-    concurrentEvents.map((receipt) => receipt.recorded).sort(),
-    [false, true],
-  );
+  assert.deepEqual(concurrentEvents.map((receipt) => receipt.recorded).sort(), [
+    false,
+    true,
+  ]);
   assert.equal(
     concurrentEvents[0]!.recordedAt,
     concurrentEvents[1]!.recordedAt,
@@ -199,13 +199,15 @@ test("customer funnel attribution is append-only, concurrent, privacy-safe, and 
     subject: newSubject,
     idempotencyKey: "funnel-identity-start-001",
   });
+  const providerInquiryRef = `inq_${randomUUID()}`;
   await identityCases.attachProviderInquiry({
     identityCaseId: prepared.snapshot.identityCaseId,
     providerRequestKey: prepared.providerRequestKey,
-    providerInquiryRef: `inq_${randomUUID()}`,
+    providerInquiryRef,
   });
   await identityCases.recordProviderEvent({
     identityCaseId: prepared.snapshot.identityCaseId,
+    providerInquiryRef,
     providerEventRef: `evt_${randomUUID()}`,
     eventType: "inquiry.approved",
     decision: "approved",
@@ -226,14 +228,11 @@ test("customer funnel attribution is append-only, concurrent, privacy-safe, and 
       idempotencyKey: "funnel-bind-concurrent-002",
     }),
   ]);
-  assert.deepEqual(
-    concurrentLinks.map((receipt) => receipt.linked).sort(),
-    [false, true],
-  );
-  assert.equal(
-    concurrentLinks[0]!.customerId,
-    concurrentLinks[1]!.customerId,
-  );
+  assert.deepEqual(concurrentLinks.map((receipt) => receipt.linked).sort(), [
+    false,
+    true,
+  ]);
+  assert.equal(concurrentLinks[0]!.customerId, concurrentLinks[1]!.customerId);
 
   const legacyIssuer = `https://${randomUUID()}.legacy-funnel.samra.test/`;
   const legacySubject = `auth0|${randomUUID()}`;
@@ -1056,12 +1055,25 @@ test("identity cases survive concurrency and restart while provider replay, stal
   assert.equal(durable.identityCaseId, identityCaseId);
   assert.equal(durable.state, "pending");
 
+  await assert.rejects(
+    firstStore.recordProviderEvent({
+      identityCaseId,
+      providerInquiryRef: `inq_other_${randomUUID()}`,
+      providerEventRef: `evt_wrong_inquiry_${randomUUID()}`,
+      eventType: "inquiry.approved",
+      decision: "approved",
+      payloadDigest: sha256("wrong inquiry evidence"),
+    }),
+    /provider event does not belong to this identity inquiry/i,
+  );
+
   const reviewEventRef = `evt_review_${randomUUID()}`;
   const reviewDigest = sha256("synthetic-review-evidence");
   const reviewed = await firstStore.recordProviderEvent({
     identityCaseId,
+    providerInquiryRef,
     providerEventRef: reviewEventRef,
-    eventType: "inquiry.needs_review",
+    eventType: "inquiry.marked-for-review",
     decision: "review",
     payloadDigest: reviewDigest,
   });
@@ -1070,8 +1082,9 @@ test("identity cases survive concurrency and restart while provider replay, stal
   assert.equal(reviewed.snapshot.version, 3);
   const replayedReview = await secondStore.recordProviderEvent({
     identityCaseId,
+    providerInquiryRef,
     providerEventRef: reviewEventRef,
-    eventType: "inquiry.needs_review",
+    eventType: "inquiry.marked-for-review",
     decision: "review",
     payloadDigest: reviewDigest,
   });
@@ -1080,6 +1093,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
 
   const stale = await firstStore.recordProviderEvent({
     identityCaseId,
+    providerInquiryRef,
     providerEventRef: `evt_pending_${randomUUID()}`,
     eventType: "inquiry.pending",
     decision: "pending",
@@ -1116,6 +1130,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
     await assert.rejects(
       firstStore.recordProviderEvent({
         identityCaseId,
+        providerInquiryRef,
         providerEventRef: controlledEventRef,
         eventType: "inquiry.approved",
         decision: "approved",
@@ -1143,6 +1158,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
 
   const approved = await firstStore.recordProviderEvent({
     identityCaseId,
+    providerInquiryRef,
     providerEventRef: controlledEventRef,
     eventType: "inquiry.approved",
     decision: "approved",
@@ -1160,6 +1176,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
   const conflictDigest = sha256("contradictory-declined-evidence");
   const conflict = await firstStore.recordProviderEvent({
     identityCaseId,
+    providerInquiryRef,
     providerEventRef: conflictEventRef,
     eventType: "inquiry.declined",
     decision: "declined",
@@ -1173,6 +1190,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
   );
   const replayedConflict = await secondStore.recordProviderEvent({
     identityCaseId,
+    providerInquiryRef,
     providerEventRef: conflictEventRef,
     eventType: "inquiry.declined",
     decision: "declined",
@@ -1183,6 +1201,7 @@ test("identity cases survive concurrency and restart while provider replay, stal
   await assert.rejects(
     secondStore.recordProviderEvent({
       identityCaseId,
+      providerInquiryRef,
       providerEventRef: conflictEventRef,
       eventType: "inquiry.declined",
       decision: "declined",
@@ -1375,7 +1394,10 @@ test("PostgreSQL is the durable source of truth across atomicity, concurrency, r
   const expectedCompletedBalance = (
     BigInt(accountBaseline.bookBalance.minorUnits) - 10_300n
   ).toString();
-  assert.equal(completedBalance.bookBalance.minorUnits, expectedCompletedBalance);
+  assert.equal(
+    completedBalance.bookBalance.minorUnits,
+    expectedCompletedBalance,
+  );
   assert.equal(
     completedBalance.availableBalance.minorUnits,
     expectedCompletedBalance,
