@@ -205,7 +205,7 @@ run_audit_job() {
     --network="${NETWORK}" --subnet="${SUBNET}" --vpc-egress=private-ranges-only \
     --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=10m \
     --set-secrets="DATABASE_URL=${secret}:latest" \
-    --command=pnpm --args=--filter,@workspace/db,run,staging:access,--,"${action}" \
+    --command=pnpm --args=--filter,@workspace/db,run,staging:access,"${action}" \
     --labels=environment=staging,data_classification=synthetic,application=samra-pay,git-sha="${EXPECTED_SHA}" \
     --quiet >/dev/null
   job_exists=true

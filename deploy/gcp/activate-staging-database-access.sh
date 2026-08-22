@@ -275,7 +275,7 @@ run_access_job() {
     --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=10m \
     --set-secrets="${environment_name}=${secret}:latest" \
     --command=pnpm \
-    --args=--filter,@workspace/db,run,staging:access,--,"${action}" \
+    --args=--filter,@workspace/db,run,staging:access,"${action}" \
     --labels=environment=staging,data_classification=synthetic,application=samra-pay,git-sha="${EXPECTED_SHA}" \
     --quiet >/dev/null
   job_exists=true
