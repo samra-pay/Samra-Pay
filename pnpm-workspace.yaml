@@ -115,6 +115,9 @@ autoInstallPeers: false
 
 allowBuilds:
   '@swc/core': true
+  # Auth0 ships this transitive dependency prebuilt. Its postinstall is not
+  # required at runtime and remains denied by the workspace supply-chain gate.
+  browser-tabs-lock: false
   esbuild: true
   msw: true
   unrs-resolver: true

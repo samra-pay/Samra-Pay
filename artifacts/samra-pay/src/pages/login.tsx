@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { Loader2, ShieldCheck } from "lucide-react";
@@ -6,15 +6,35 @@ import { Link, useLocation } from "wouter";
 import { SamraLogo } from "@/components/samra-logo";
 import { consumePostLoginRedirect } from "@/lib/remittance-handoff";
 import { useSamraDataMode } from "@/lib/samra-runtime";
+import { useCustomerAuth } from "@/lib/customer-auth";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
+  const [signInFailed, setSignInFailed] = useState(false);
   const [, setLocation] = useLocation();
   const mode = useSamraDataMode();
+  const auth = useCustomerAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (mode === "api" && auth.status === "authenticated") {
+      setLocation("/onboarding", { replace: true });
+    }
+  }, [auth.status, mode, setLocation]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === "api") return;
+    if (mode === "api") {
+      setIsLoading(true);
+      setSignInFailed(false);
+      try {
+        await auth.signIn();
+      } catch {
+        setSignInFailed(true);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
     setIsLoading(true);
 
     setTimeout(() => {
@@ -62,22 +82,40 @@ export default function Login() {
                 <p className="text-sm leading-6 text-muted-foreground">
                   {mode === "mock"
                     ? "No email, password, or real account is used. All onboarding data in this mode is synthetic and resets locally."
-                    : "Direct password entry is disabled. Auth0 Universal Login must be configured before connected sign-in is enabled."}
+                    : "Your credentials are entered only in Auth0 Universal Login. Samra Pay does not collect or store your password or browser token."}
                 </p>
               </div>
+
+              {mode === "api" && (auth.status === "error" || signInFailed) ? (
+                <p
+                  role="alert"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                >
+                  Secure sign-in could not be completed. Please retry.
+                </p>
+              ) : null}
 
               <Button
                 type="submit"
                 variant="gold"
                 className="h-12 w-full text-base font-medium"
-                disabled={isLoading || mode === "api"}
+                disabled={
+                  isLoading ||
+                  (mode === "api" &&
+                    (auth.status === "loading" ||
+                      auth.status === "authenticated"))
+                }
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : mode === "mock" ? (
                   "Start synthetic onboarding"
+                ) : auth.status === "loading" ? (
+                  "Checking secure session"
+                ) : auth.status === "authenticated" ? (
+                  "Continuing securely"
                 ) : (
-                  "Auth0 sign-in not configured"
+                  "Continue with Auth0"
                 )}
               </Button>
             </form>

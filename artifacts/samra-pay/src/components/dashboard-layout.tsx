@@ -20,6 +20,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useSamraDataMode } from "@/lib/samra-runtime";
 import { useCurrentCustomer } from "@workspace/samra-client/react";
 import { customerInitials } from "@/lib/dashboard-api-model";
+import { useCustomerAuth } from "@/lib/customer-auth";
 
 function MockDashboardIdentity() {
   return (
@@ -61,6 +62,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { t, langClass, langAttr } = useLanguage();
   const dataMode = useSamraDataMode();
+  const customerAuth = useCustomerAuth();
 
   const navLinks = [
     { icon: LayoutDashboard, label: t("dash.overview"), href: "/dashboard" },
@@ -136,18 +138,33 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               {t("dash.settings")}
             </div>
           </Link>
-          <Link href="/">
-            <div
-              lang={langAttr}
+          {dataMode === "api" ? (
+            <button
+              type="button"
+              onClick={() => void customerAuth.signOut()}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive",
+                "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-destructive/80 transition-colors hover:bg-destructive/10 hover:text-destructive",
                 langClass,
               )}
+              lang={langAttr}
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="h-5 w-5" />
               {t("dash.signOut")}
-            </div>
-          </Link>
+            </button>
+          ) : (
+            <Link href="/">
+              <div
+                lang={langAttr}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive",
+                  langClass,
+                )}
+              >
+                <LogOut className="w-5 h-5" />
+                {t("dash.signOut")}
+              </div>
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -191,6 +208,20 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="px-4 pt-4">
               <LanguageToggle />
             </div>
+            {dataMode === "api" ? (
+              <button
+                type="button"
+                onClick={() => void customerAuth.signOut()}
+                className={cn(
+                  "mx-4 flex min-h-11 items-center gap-3 rounded-xl px-4 py-3 text-base font-medium text-destructive/80",
+                  langClass,
+                )}
+                lang={langAttr}
+              >
+                <LogOut className="h-5 w-5" />
+                {t("dash.signOut")}
+              </button>
+            ) : null}
           </div>
         </div>
       )}

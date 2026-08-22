@@ -31,6 +31,7 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { ApiModeUnavailable } from "@/pages/api-mode-unavailable";
 import { LanguageProvider } from "@/lib/i18n";
 import { SamraRuntimeProvider, useSamraDataMode } from "@/lib/samra-runtime";
+import { CustomerAuthGuard, CustomerAuthProvider } from "@/lib/customer-auth";
 import { isUnavailableFinancialPreview } from "@/lib/dashboard-api-model";
 import { useParams } from "wouter";
 import { useSamraCustomerAcquisition } from "@workspace/samra-client/react";
@@ -88,23 +89,29 @@ function Router() {
         {/* No navbar/footer on login */}
         <Route path="/login" component={Login} />
         <Route path="/onboarding">
-          <RoutedErrorBoundary>
-            <Suspense fallback={<OnboardingRouteFallback />}>
-              <CustomerOnboardingPage />
-            </Suspense>
-          </RoutedErrorBoundary>
+          <CustomerAuthGuard>
+            <RoutedErrorBoundary>
+              <Suspense fallback={<OnboardingRouteFallback />}>
+                <CustomerOnboardingPage />
+              </Suspense>
+            </RoutedErrorBoundary>
+          </CustomerAuthGuard>
         </Route>
 
         {/* Dashboard Routes - simplified for demo */}
         <Route path="/dashboard">
-          <DashboardLayout>
-            <DashboardRouter />
-          </DashboardLayout>
+          <CustomerAuthGuard>
+            <DashboardLayout>
+              <DashboardRouter />
+            </DashboardLayout>
+          </CustomerAuthGuard>
         </Route>
         <Route path="/dashboard/:page">
-          <DashboardLayout>
-            <DashboardRouter />
-          </DashboardLayout>
+          <CustomerAuthGuard>
+            <DashboardLayout>
+              <DashboardRouter />
+            </DashboardLayout>
+          </CustomerAuthGuard>
         </Route>
 
         {/* Public Shell */}
@@ -169,16 +176,18 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SamraRuntimeProvider>
-        <TooltipProvider>
-          <LanguageProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </LanguageProvider>
-        </TooltipProvider>
-      </SamraRuntimeProvider>
+      <CustomerAuthProvider>
+        <SamraRuntimeProvider>
+          <TooltipProvider>
+            <LanguageProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </LanguageProvider>
+          </TooltipProvider>
+        </SamraRuntimeProvider>
+      </CustomerAuthProvider>
     </QueryClientProvider>
   );
 }

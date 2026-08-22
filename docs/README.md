@@ -12,7 +12,7 @@ and PostgreSQL database.
 
 | Capability              | Locked Alpha decision                  | Current state                                                                                                                  |
 | ----------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Customer authentication | Auth0                                  | Foundation implemented and tested; live tenant and clients not connected                                                       |
+| Customer authentication | Auth0                                  | Backend and customer-web integration implemented; live tenant, public app identifiers, and native mobile client not connected  |
 | Identity verification   | Persona                                | Provider-neutral case model and fake adapter implemented; live template and webhooks not connected                             |
 | Wallet                  | Crossmint-created USDC wallet          | Durable synthetic wallet, consent, mapping, state, and fake-adapter foundation implemented; live wallet creation not connected |
 | Wallet alternatives     | Cybrid, Rain, or Bridge after Alpha    | Evaluation only; no active integration or migration claim                                                                      |
@@ -37,7 +37,8 @@ audit trail, reconciliation result, or provider-migration mapping.
 - double-entry journals, holds, reversals, balance projections, reconciliation,
   audit events, idempotency, and concurrency controls;
 - synthetic remittance state and deterministic failure scenarios;
-- Auth0 token and durable identity-binding boundary, disabled by default;
+- Auth0 token, durable identity-binding, guarded customer-web Universal Login,
+  and memory-only bearer-token bridge, disabled by default;
 - durable onboarding, consent, and Persona-style identity-case boundaries;
 - durable synthetic Crossmint-style wallet provisioning, immutable provider
   mapping, consent, restart, concurrency, failure, and audit boundaries;

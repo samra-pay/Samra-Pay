@@ -434,6 +434,20 @@ Each web service requires:
 SAMRA_API_ORIGIN=https://<samra-api-cloud-run-host>
 ```
 
+The customer-web image additionally accepts these public build arguments when
+the reviewed Auth0 staging application exists:
+
+```text
+VITE_AUTH0_DOMAIN=<hostname-only>
+VITE_AUTH0_CLIENT_ID=<public-SPA-client-id>
+VITE_AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
+```
+
+They are not secrets. Omitting any value leaves API-mode customer sign-in
+fail-closed. Never pass an Auth0 client secret, access token, refresh token, or
+management credential into the browser image. Callback and logout URLs must
+exactly match the deployed customer-web application URI.
+
 A controlled mobile staging bundle requires:
 
 ```text
