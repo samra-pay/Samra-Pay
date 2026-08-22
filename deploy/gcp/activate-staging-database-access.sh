@@ -314,9 +314,9 @@ if [[ "${BOOTSTRAP_VERSION_COUNT}" == "0" && "${RUNTIME_VERSION_COUNT}" == "0" ]
   BOOTSTRAP_PASSWORD="$(openssl rand -hex 32)"
   MIGRATION_PASSWORD="$(openssl rand -hex 32)"
   RUNTIME_PASSWORD="$(openssl rand -hex 32)"
-  BOOTSTRAP_URL="postgresql://${BOOTSTRAP_USER}:${BOOTSTRAP_PASSWORD}@${PRIVATE_IP}:5432/${DATABASE}?sslmode=require"
-  MIGRATION_URL="postgresql://samra_migrations_staging:${MIGRATION_PASSWORD}@${PRIVATE_IP}:5432/${DATABASE}?sslmode=require"
-  RUNTIME_URL="postgresql://samra_runtime_staging:${RUNTIME_PASSWORD}@${PRIVATE_IP}:5432/${DATABASE}?sslmode=require"
+  BOOTSTRAP_URL="postgresql://${BOOTSTRAP_USER}:${BOOTSTRAP_PASSWORD}@${PRIVATE_IP}:5432/${DATABASE}?sslmode=require&uselibpqcompat=true"
+  MIGRATION_URL="postgresql://samra_migrations_staging:${MIGRATION_PASSWORD}@${PRIVATE_IP}:5432/${DATABASE}?sslmode=require&uselibpqcompat=true"
+  RUNTIME_URL="postgresql://samra_runtime_staging:${RUNTIME_PASSWORD}@${PRIVATE_IP}:5432/${DATABASE}?sslmode=require&uselibpqcompat=true"
 
   gcloud sql users create "${BOOTSTRAP_USER}" --project="${PROJECT_ID}" --instance="${INSTANCE}" \
     --password="${BOOTSTRAP_PASSWORD}" --database-roles=cloudsqlsuperuser --quiet >/dev/null
@@ -327,10 +327,25 @@ if [[ "${BOOTSTRAP_VERSION_COUNT}" == "0" && "${RUNTIME_VERSION_COUNT}" == "0" ]
     gcloud secrets versions add "${BOOTSTRAP_SECRET}" --project="${PROJECT_ID}" --data-file=- >/dev/null
 elif [[ "${BOOTSTRAP_VERSION_COUNT}" == "1" ]]; then
   BOOTSTRAP_PAYLOAD="$(gcloud secrets versions access latest --secret="${BOOTSTRAP_SECRET}" --project="${PROJECT_ID}")"
+  BOOTSTRAP_PAYLOAD="$(printf '%s' "${BOOTSTRAP_PAYLOAD}" | node -e '
+    const fs = require("fs");
+    const value = JSON.parse(fs.readFileSync(0, "utf8"));
+    for (const key of ["bootstrapDatabaseUrl", "migrationDatabaseUrl", "runtimeDatabaseUrl"]) {
+      const url = new URL(value[key]);
+      const compatibility = url.searchParams.get("uselibpqcompat");
+      if (url.searchParams.get("sslmode") !== "require" || (compatibility !== null && compatibility !== "true")) {
+        process.stderr.write("STOP: recoverable bootstrap URL has an invalid TLS policy\n");
+        process.exit(1);
+      }
+      url.searchParams.set("uselibpqcompat", "true");
+      value[key] = url.toString();
+    }
+    process.stdout.write(JSON.stringify(value));
+  ')"
   BOOTSTRAP_URL="$(printf '%s' "${BOOTSTRAP_PAYLOAD}" | node -e 'const value = JSON.parse(require("fs").readFileSync(0, "utf8")); process.stdout.write(value.bootstrapDatabaseUrl);')"
   MIGRATION_URL="$(printf '%s' "${BOOTSTRAP_PAYLOAD}" | node -e 'const value = JSON.parse(require("fs").readFileSync(0, "utf8")); process.stdout.write(value.migrationDatabaseUrl);')"
   RUNTIME_URL="$(printf '%s' "${BOOTSTRAP_PAYLOAD}" | node -e 'const value = JSON.parse(require("fs").readFileSync(0, "utf8")); process.stdout.write(value.runtimeDatabaseUrl);')"
-  BOOTSTRAP_PASSWORD="$(node -e 'process.stdout.write(decodeURIComponent(new URL(process.argv[1]).password))' "${BOOTSTRAP_URL}")"
+  BOOTSTRAP_PASSWORD="$(printf '%s' "${BOOTSTRAP_URL}" | node -e 'process.stdout.write(decodeURIComponent(new URL(require("fs").readFileSync(0, "utf8")).password))')"
   if [[ "${BOOTSTRAP_USER_EXISTS}" == false ]]; then
     gcloud sql users create "${BOOTSTRAP_USER}" --project="${PROJECT_ID}" --instance="${INSTANCE}" \
       --password="${BOOTSTRAP_PASSWORD}" --database-roles=cloudsqlsuperuser --quiet >/dev/null

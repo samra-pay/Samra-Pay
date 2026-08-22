@@ -51,6 +51,8 @@ function requireDatabaseUrl(
     /^10\.41\.(\d{1,3})\.(\d{1,3})$/u,
   );
 
+  const libpqCompatibility = parsed.searchParams.get("uselibpqcompat");
+
   if (
     parsed.protocol !== "postgresql:" ||
     decodeURIComponent(parsed.username) !== expectedUser ||
@@ -60,13 +62,17 @@ function requireDatabaseUrl(
     Number(privateAddress[1]) > 255 ||
     Number(privateAddress[2]) > 255 ||
     parsed.searchParams.get("sslmode") !== "require" ||
+    (libpqCompatibility !== null && libpqCompatibility !== "true") ||
     !parsed.password ||
     Buffer.byteLength(decodeURIComponent(parsed.password), "utf8") < 32
   ) {
     throw new Error(`${field} does not match the staging access contract`);
   }
 
-  return value;
+  // Accept the one recoverable pre-contract bootstrap secret, but always
+  // return the explicit connection policy consumed by node-postgres.
+  parsed.searchParams.set("uselibpqcompat", "true");
+  return parsed.toString();
 }
 
 export function parseBootstrapPayload(raw: string): BootstrapPayload {
