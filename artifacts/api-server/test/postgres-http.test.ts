@@ -1291,9 +1291,9 @@ test("the Auth0 HTTP onboarding boundary creates one customer, resumes after res
                   WHERE consent.id = wallet.wallet_consent_id
                     AND consent.consent_type = 'wallet_provisioning') AS consent_count,
                 (SELECT count(*)::text
-                   FROM samra_core.audit_events audit
-                  WHERE audit.entity_type = 'customer_wallet'
-                    AND audit.entity_id = wallet.id) AS audit_count
+                  FROM samra_core.audit_events audit
+                 WHERE audit.entity_type = 'customer_wallet'
+                    AND audit.entity_id = wallet.id::text) AS audit_count
            FROM samra_core.customer_wallets wallet
           WHERE wallet.external_ref = $1`,
         [String(walletA["walletId"])],
