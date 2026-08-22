@@ -73,6 +73,42 @@ export type CustomerIdentityCaseSnapshot = Readonly<{
   nextAllowedActions: readonly string[];
 }>;
 
+export type CustomerWalletState =
+  "created" | "provisioning" | "ready" | "restricted" | "error";
+
+export type StartCustomerWalletProvisioningInput = Readonly<{
+  bundleVersion: "alpha-wallet-non-production-v1";
+  documentVersion: "alpha-wallet-non-production-v1";
+  locale: "en-US";
+  decision: "accepted";
+}>;
+
+export const SYNTHETIC_WALLET_PROVISIONING_INPUT: StartCustomerWalletProvisioningInput =
+  Object.freeze({
+    bundleVersion: "alpha-wallet-non-production-v1",
+    documentVersion: "alpha-wallet-non-production-v1",
+    locale: "en-US",
+    decision: "accepted",
+  });
+
+export type CustomerWalletSnapshot = Readonly<{
+  walletId: string;
+  state: CustomerWalletState;
+  reasonFamily: string | null;
+  provider: "crossmint";
+  asset: "USDC";
+  network: string | null;
+  custodyModel: string | null;
+  publicAddress: string | null;
+  configurationVersion: "crossmint-synthetic-v1";
+  synthetic: true;
+  version: number;
+  readyAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  nextAllowedActions: readonly string[];
+}>;
+
 export type SubmitCustomerConsentBundleInput = Readonly<{
   bundleVersion: string;
   locale: string;
@@ -125,6 +161,11 @@ export interface SamraOnboardingSource {
   startIdentityVerification(
     idempotencyKey: string,
   ): Promise<CustomerIdentityCaseSnapshot>;
+  getWallet(): Promise<CustomerWalletSnapshot | null>;
+  startWalletProvisioning(
+    input: StartCustomerWalletProvisioningInput,
+    idempotencyKey: string,
+  ): Promise<CustomerWalletSnapshot>;
 }
 
 export interface SamraOnboardingDemoControls {
@@ -145,6 +186,10 @@ export type OnboardingJourneyStage =
   | "identity_approved"
   | "identity_declined"
   | "identity_error"
+  | "wallet_consent"
+  | "wallet_provisioning"
+  | "wallet_ready"
+  | "wallet_error"
   | "account_setup"
   | "complete"
   | "restricted";
@@ -211,7 +256,7 @@ const JOURNEY_COPY: Readonly<
     eyebrow: "Step 3 of 4",
     title: "Identity verified",
     description:
-      "Verification is complete. Wallet and funding setup are intentionally not enabled in this alpha build.",
+      "Verification is complete. Review the wallet disclosure before any synthetic provisioning begins.",
     statusTone: "success",
   },
   identity_declined: {
@@ -228,6 +273,38 @@ const JOURNEY_COPY: Readonly<
     title: "Verification is temporarily unavailable",
     description:
       "Your progress is saved. Retry when you are ready; a provider outage cannot erase your Samra onboarding record.",
+    statusTone: "danger",
+  },
+  wallet_consent: {
+    step: 3,
+    eyebrow: "Step 3 of 4",
+    title: "Create your synthetic USDC wallet",
+    description:
+      "Crossmint is isolated behind a Samra-owned adapter. This alpha step records your disclosure decision and creates no real funds or financial access.",
+    statusTone: "neutral",
+  },
+  wallet_provisioning: {
+    step: 3,
+    eyebrow: "Wallet setup",
+    title: "Your wallet is being prepared",
+    description:
+      "Your progress is durable. You can leave and return while Samra safely resumes the provider result.",
+    statusTone: "progress",
+  },
+  wallet_ready: {
+    step: 3,
+    eyebrow: "Step 3 of 4 complete",
+    title: "Your synthetic wallet is ready",
+    description:
+      "The wallet record is ready. Funding, balances, remittance access, and live USDC remain disabled until their separate gates are approved.",
+    statusTone: "success",
+  },
+  wallet_error: {
+    step: 3,
+    eyebrow: "Wallet setup",
+    title: "Wallet setup is temporarily unavailable",
+    description:
+      "Your disclosure and Samra record are saved. Retry safely; a provider failure cannot create a second wallet.",
     statusTone: "danger",
   },
   account_setup: {
@@ -259,8 +336,9 @@ const JOURNEY_COPY: Readonly<
 export function buildOnboardingJourneyView(
   onboarding: CustomerOnboardingSnapshot | null,
   identityCase: CustomerIdentityCaseSnapshot | null,
+  wallet: CustomerWalletSnapshot | null = null,
 ): OnboardingJourneyView {
-  const stage = resolveJourneyStage(onboarding, identityCase);
+  const stage = resolveJourneyStage(onboarding, identityCase, wallet);
   const copy = JOURNEY_COPY[stage];
   return Object.freeze({
     stage,
@@ -273,6 +351,7 @@ export function buildOnboardingJourneyView(
 function resolveJourneyStage(
   onboarding: CustomerOnboardingSnapshot | null,
   identityCase: CustomerIdentityCaseSnapshot | null,
+  wallet: CustomerWalletSnapshot | null,
 ): OnboardingJourneyStage {
   if (!onboarding || onboarding.state === "not_started") return "welcome";
   if (
@@ -287,7 +366,21 @@ function resolveJourneyStage(
       : "restricted";
   }
   if (onboarding.state === "identity_review") return "identity_review";
-  if (onboarding.state === "identity_approved") return "identity_approved";
+  if (wallet?.state === "restricted") return "restricted";
+  if (wallet?.state === "error") return "wallet_error";
+  if (wallet?.state === "provisioning" || wallet?.state === "created") {
+    return "wallet_provisioning";
+  }
+  if (wallet?.state === "ready" || onboarding.state === "wallet_ready") {
+    return "wallet_ready";
+  }
+  if (onboarding.state === "wallet_provisioning") return "wallet_provisioning";
+  if (
+    onboarding.state === "identity_approved" ||
+    onboarding.state === "wallet_consent_pending"
+  ) {
+    return "wallet_consent";
+  }
   if (onboarding.state === "identity_in_progress") {
     if (!identityCase || identityCase.state === "created") {
       return "identity_start";
@@ -339,8 +432,10 @@ export class SyntheticSamraOnboardingSource
     string,
     Replay<CustomerIdentityCaseSnapshot>
   >();
+  readonly #walletReplays = new Map<string, Replay<CustomerWalletSnapshot>>();
   #onboarding: CustomerOnboardingSnapshot | null = null;
   #identityCase: CustomerIdentityCaseSnapshot | null = null;
+  #wallet: CustomerWalletSnapshot | null = null;
 
   constructor(clock: () => string = () => new Date().toISOString()) {
     this.#clock = clock;
@@ -446,6 +541,60 @@ export class SyntheticSamraOnboardingSource
     return this.#identityCase;
   }
 
+  async getWallet(): Promise<CustomerWalletSnapshot | null> {
+    return this.#wallet;
+  }
+
+  async startWalletProvisioning(
+    input: StartCustomerWalletProvisioningInput,
+    idempotencyKey: string,
+  ): Promise<CustomerWalletSnapshot> {
+    assertIdempotencyKey(idempotencyKey);
+    const onboarding = this.#requireOnboarding();
+    const fingerprint = JSON.stringify(input);
+    const replay = this.#walletReplays.get(idempotencyKey);
+    if (replay) {
+      if (replay.fingerprint !== fingerprint) throw idempotencyConflict();
+      return replay.response;
+    }
+    validateWalletProvisioningInput(input);
+    if (this.#wallet) return this.#wallet;
+    if (onboarding.state !== "identity_approved") {
+      throw new Error(
+        "Wallet provisioning can begin only after identity approval.",
+      );
+    }
+    const now = this.#clock();
+    this.#wallet = freezeWallet({
+      walletId: "wallet_0123456789abcdef0123456789abcdef",
+      state: "ready",
+      reasonFamily: null,
+      provider: "crossmint",
+      asset: "USDC",
+      network: "synthetic",
+      custodyModel: null,
+      publicAddress: null,
+      configurationVersion: "crossmint-synthetic-v1",
+      synthetic: true,
+      version: 2,
+      readyAt: now,
+      createdAt: now,
+      updatedAt: now,
+      nextAllowedActions: ["review_wallet", "exit_onboarding"],
+    });
+    this.#onboarding = updateSyntheticOnboarding(onboarding, {
+      state: "wallet_ready",
+      latestCompletedStep: "wallet_ready",
+      reasonFamily: null,
+      now,
+    });
+    this.#walletReplays.set(
+      idempotencyKey,
+      Object.freeze({ fingerprint, response: this.#wallet }),
+    );
+    return this.#wallet;
+  }
+
   async advanceIdentity(
     identityCaseId: string,
     decision: CustomerIdentityProviderDecision,
@@ -538,8 +687,10 @@ export class SyntheticSamraOnboardingSource
   async reset(): Promise<void> {
     this.#onboarding = null;
     this.#identityCase = null;
+    this.#wallet = null;
     this.#onboardingReplays.clear();
     this.#identityReplays.clear();
+    this.#walletReplays.clear();
   }
 
   #requireOnboarding(): CustomerOnboardingSnapshot {
@@ -574,6 +725,7 @@ function updateSyntheticOnboarding(
 function onboardingActions(state: CustomerOnboardingState): readonly string[] {
   if (state === "identity_review") return ["await_identity_review", "sign_out"];
   if (state === "identity_approved") return ["continue_to_wallet_setup"];
+  if (state === "wallet_ready") return ["review_wallet", "sign_out"];
   if (state === "restricted") return ["contact_support", "sign_out"];
   return ["resume_onboarding", "sign_out"];
 }
@@ -618,6 +770,22 @@ function validateConsentBundle(
   }
 }
 
+function validateWalletProvisioningInput(
+  input: StartCustomerWalletProvisioningInput,
+): void {
+  if (
+    input.bundleVersion !== SYNTHETIC_WALLET_PROVISIONING_INPUT.bundleVersion ||
+    input.documentVersion !==
+      SYNTHETIC_WALLET_PROVISIONING_INPUT.documentVersion ||
+    input.locale !== SYNTHETIC_WALLET_PROVISIONING_INPUT.locale ||
+    input.decision !== SYNTHETIC_WALLET_PROVISIONING_INPUT.decision
+  ) {
+    throw new Error(
+      "The wallet provisioning disclosure does not match the current catalog.",
+    );
+  }
+}
+
 function assertIdempotencyKey(value: string): void {
   if (
     value.length < 8 ||
@@ -649,6 +817,15 @@ function freezeOnboarding(
 function freezeIdentityCase(
   snapshot: CustomerIdentityCaseSnapshot,
 ): CustomerIdentityCaseSnapshot {
+  return Object.freeze({
+    ...snapshot,
+    nextAllowedActions: Object.freeze([...snapshot.nextAllowedActions]),
+  });
+}
+
+function freezeWallet(
+  snapshot: CustomerWalletSnapshot,
+): CustomerWalletSnapshot {
   return Object.freeze({
     ...snapshot,
     nextAllowedActions: Object.freeze([...snapshot.nextAllowedActions]),

@@ -14,19 +14,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   buildOnboardingJourneyView,
   getCustomerConsentPresentation,
+  SYNTHETIC_WALLET_PROVISIONING_INPUT,
   type CustomerConsentType,
   type CustomerIdentityProviderDecision,
+  type CustomerWalletSnapshot,
 } from "@workspace/samra-client/onboarding";
 import { parseSamraLegalPath } from "@workspace/samra-client/legal";
 import {
   useAdvanceDemoCustomerIdentity,
   useCustomerIdentityCase,
   useCustomerOnboarding,
+  useCustomerWallet,
   useResetDemoCustomerOnboarding,
   useSamraCustomerAcquisition,
   useSamraOnboardingRuntime,
   useStartCustomerIdentityVerification,
   useStartCustomerOnboarding,
+  useStartCustomerWalletProvisioning,
   useSubmitCustomerConsents,
 } from "@workspace/samra-client/react";
 import { Button } from "@workspace/samra-pay-ds/components/native";
@@ -42,6 +46,14 @@ const IDENTITY_STATES = new Set([
   "restricted",
 ]);
 
+const WALLET_STATES = new Set([
+  "identity_approved",
+  "wallet_consent_pending",
+  "wallet_provisioning",
+  "wallet_ready",
+  "restricted",
+]);
+
 export default function CustomerOnboardingScreen() {
   const colors = useColors("dark");
   const insets = useSafeAreaInsets();
@@ -54,22 +66,31 @@ export default function CustomerOnboardingScreen() {
     Boolean(onboarding && IDENTITY_STATES.has(onboarding.state)),
   );
   const identityCase = identityQuery.data ?? null;
-  const journey = buildOnboardingJourneyView(onboarding, identityCase);
+  const walletQuery = useCustomerWallet(
+    Boolean(onboarding && WALLET_STATES.has(onboarding.state)),
+  );
+  const wallet = walletQuery.data ?? null;
+  const journey = buildOnboardingJourneyView(onboarding, identityCase, wallet);
   const [accepted, setAccepted] = useState<
     Partial<Record<CustomerConsentType, boolean>>
   >({});
+  const [walletDisclosureAccepted, setWalletDisclosureAccepted] =
+    useState(false);
   const commandKeys = useRef(new Map<string, string>());
 
   const startOnboarding = useStartCustomerOnboarding();
   const submitConsents = useSubmitCustomerConsents();
   const startIdentity = useStartCustomerIdentityVerification();
+  const startWallet = useStartCustomerWalletProvisioning();
   const advanceIdentity = useAdvanceDemoCustomerIdentity();
   const resetDemo = useResetDemoCustomerOnboarding();
-  const queryError = onboardingQuery.error ?? identityQuery.error;
+  const queryError =
+    onboardingQuery.error ?? identityQuery.error ?? walletQuery.error;
   const mutationError =
     startOnboarding.error ??
     submitConsents.error ??
     startIdentity.error ??
+    startWallet.error ??
     advanceIdentity.error ??
     resetDemo.error;
 
@@ -82,7 +103,12 @@ export default function CustomerOnboardingScreen() {
   }, [onboarding?.consentBundle.bundleVersion]);
 
   useEffect(() => {
-    if (onboardingQuery.isLoading || queryError) return;
+    setWalletDisclosureAccepted(false);
+  }, [wallet?.walletId]);
+
+  useEffect(() => {
+    if (onboardingQuery.isLoading || walletQuery.isLoading || queryError)
+      return;
     void AccessibilityInfo.announceForAccessibility(
       `${journey.title}. ${journey.description}`,
     );
@@ -91,13 +117,14 @@ export default function CustomerOnboardingScreen() {
     journey.title,
     onboardingQuery.isLoading,
     queryError,
+    walletQuery.isLoading,
   ]);
 
   const documents = onboarding?.consentBundle.documents ?? [];
   const allAccepted =
     documents.length > 0 &&
     documents.every((document) => accepted[document.consentType] === true);
-  if (onboardingQuery.isLoading) {
+  if (onboardingQuery.isLoading || walletQuery.isLoading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
         <ActivityIndicator
@@ -119,10 +146,15 @@ export default function CustomerOnboardingScreen() {
     return (
       <MobileOnboardingFailure
         error={queryError}
-        retrying={onboardingQuery.isFetching || identityQuery.isFetching}
+        retrying={
+          onboardingQuery.isFetching ||
+          identityQuery.isFetching ||
+          walletQuery.isFetching
+        }
         onRetry={() => {
           const retries: Promise<unknown>[] = [onboardingQuery.refetch()];
           if (identityQuery.error) retries.push(identityQuery.refetch());
+          if (walletQuery.error) retries.push(walletQuery.refetch());
           void Promise.all(retries);
         }}
       />
@@ -232,6 +264,7 @@ export default function CustomerOnboardingScreen() {
                 startOnboarding.isPending ||
                 submitConsents.isPending ||
                 startIdentity.isPending ||
+                startWallet.isPending ||
                 advanceIdentity.isPending ||
                 resetDemo.isPending,
             }}
@@ -531,9 +564,82 @@ export default function CustomerOnboardingScreen() {
               </Button>
             ) : null}
 
-            {journey.stage === "identity_approved" ? (
+            {journey.stage === "wallet_consent" ? (
               <View style={styles.stack}>
-                <StatusNotice text="Identity evidence accepted. Account activation and wallet provisioning remain disabled." />
+                <WalletDisclosureNotice
+                  accepted={walletDisclosureAccepted}
+                  onAcceptedChange={setWalletDisclosureAccepted}
+                />
+                <Button
+                  accessibilityLabel="Create synthetic USDC wallet"
+                  accessibilityHint="Records the non-production wallet disclosure and starts idempotent synthetic provisioning"
+                  size="lg"
+                  disabled={!walletDisclosureAccepted}
+                  loading={startWallet.isPending}
+                  onPress={() => {
+                    const key = commandKey(commandKeys.current, "wallet-start");
+                    startWallet.mutate(
+                      {
+                        input: SYNTHETIC_WALLET_PROVISIONING_INPUT,
+                        idempotencyKey: key,
+                      },
+                      {
+                        onSuccess: () =>
+                          commandKeys.current.delete("wallet-start"),
+                      },
+                    );
+                  }}
+                >
+                  Create synthetic wallet
+                </Button>
+              </View>
+            ) : null}
+
+            {journey.stage === "wallet_provisioning" ? (
+              <View style={styles.stack}>
+                <StatusNotice text="The durable Samra wallet record is waiting for its normalized provider result. No balance or funding access exists." />
+                <Button
+                  accessibilityLabel="Refresh wallet status"
+                  variant="outline"
+                  size="lg"
+                  loading={walletQuery.isFetching}
+                  onPress={() => {
+                    void Promise.all([
+                      onboardingQuery.refetch(),
+                      walletQuery.refetch(),
+                    ]);
+                  }}
+                >
+                  Refresh wallet status
+                </Button>
+              </View>
+            ) : null}
+
+            {journey.stage === "wallet_error" ? (
+              <View style={styles.stack}>
+                <StatusNotice text="No second wallet was created. Retry reuses the same safe command after the temporary failure clears." />
+                <Button
+                  accessibilityLabel="Retry synthetic wallet setup"
+                  size="lg"
+                  loading={startWallet.isPending}
+                  onPress={() =>
+                    startWallet.mutate({
+                      input: SYNTHETIC_WALLET_PROVISIONING_INPUT,
+                      idempotencyKey: commandKey(
+                        commandKeys.current,
+                        "wallet-start",
+                      ),
+                    })
+                  }
+                >
+                  Retry wallet setup
+                </Button>
+              </View>
+            ) : null}
+
+            {journey.stage === "wallet_ready" && wallet ? (
+              <View style={styles.stack}>
+                <WalletStatusSummary wallet={wallet} />
                 {runtime.mode === "mock" ? (
                   <Button
                     accessibilityLabel="Continue to the synthetic Samra dashboard"
@@ -599,6 +705,115 @@ function BoundaryNotice() {
       <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
         This non-production flow creates no account, wallet, balance, or
         transfer access.
+      </Text>
+    </View>
+  );
+}
+
+function WalletDisclosureNotice({
+  accepted,
+  onAcceptedChange,
+}: {
+  accepted: boolean;
+  onAcceptedChange: (accepted: boolean) => void;
+}) {
+  const colors = useColors("dark");
+  return (
+    <View style={styles.stack}>
+      <View
+        style={[
+          styles.notice,
+          { borderColor: colors.border, backgroundColor: colors.background },
+        ]}
+      >
+        <Feather name="shield" size={18} color={colors.primary} />
+        <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
+          Crossmint is isolated behind Samra’s adapter. This alpha creates a
+          synthetic USDC record only—no tokens, public address, balance,
+          funding, remittance, withdrawal, or live financial access.
+        </Text>
+      </View>
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: accepted }}
+        accessibilityLabel="I understand this is a synthetic wallet"
+        accessibilityHint="Records disclosure version alpha-wallet-non-production-v1"
+        onPress={() => onAcceptedChange(!accepted)}
+        style={({ pressed }) => [
+          styles.walletDisclosure,
+          {
+            borderColor: accepted ? colors.primary : colors.border,
+            backgroundColor: colors.background,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.checkbox,
+            {
+              borderColor: accepted ? colors.primary : colors.mutedForeground,
+              backgroundColor: accepted ? colors.primary : "transparent",
+            },
+          ]}
+        >
+          {accepted ? (
+            <Feather name="check" size={14} color={colors.primaryForeground} />
+          ) : null}
+        </View>
+        <View style={styles.consentCopy}>
+          <Text style={[styles.consentTitle, { color: colors.foreground }]}>
+            I understand this is a synthetic wallet
+          </Text>
+          <Text
+            style={[styles.consentSummary, { color: colors.mutedForeground }]}
+          >
+            Record the versioned disclosure and begin idempotent synthetic
+            provisioning.
+          </Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+function WalletStatusSummary({ wallet }: { wallet: CustomerWalletSnapshot }) {
+  const colors = useColors("dark");
+  return (
+    <View style={styles.stack}>
+      <StatusNotice
+        text={`Synthetic wallet ${wallet.walletId.slice(-8)} is ready. Samra owns its normalized state and provider mapping.`}
+      />
+      <View
+        accessibilityLabel={`${wallet.asset} synthetic wallet. Provider ${wallet.provider}. Financial access disabled.`}
+        style={[
+          styles.walletSummary,
+          { borderColor: colors.border, backgroundColor: colors.background },
+        ]}
+      >
+        <WalletSummaryRow label="Asset configuration" value={wallet.asset} />
+        <WalletSummaryRow label="Provider adapter" value={wallet.provider} />
+        <WalletSummaryRow
+          label="Environment"
+          value={wallet.network ?? "synthetic"}
+        />
+        <WalletSummaryRow label="Financial access" value="Disabled" />
+      </View>
+    </View>
+  );
+}
+
+function WalletSummaryRow({ label, value }: { label: string; value: string }) {
+  const colors = useColors("dark");
+  return (
+    <View style={styles.walletSummaryRow}>
+      <Text
+        style={[styles.walletSummaryLabel, { color: colors.mutedForeground }]}
+      >
+        {label}
+      </Text>
+      <Text style={[styles.walletSummaryValue, { color: colors.foreground }]}>
+        {value}
       </Text>
     </View>
   );
@@ -791,6 +1006,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   consentCopy: { flex: 1 },
+  walletDisclosure: {
+    minHeight: 76,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
   consentTitle: {
     fontFamily: font.sans.semibold,
     fontSize: 14,
@@ -831,6 +1055,29 @@ const styles = StyleSheet.create({
     fontFamily: font.sans.regular,
     fontSize: 12,
     lineHeight: 18,
+  },
+  walletSummary: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+  },
+  walletSummaryRow: {
+    minHeight: 28,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+  },
+  walletSummaryLabel: {
+    flex: 1,
+    fontFamily: font.sans.regular,
+    fontSize: 12,
+  },
+  walletSummaryValue: {
+    fontFamily: font.sans.semibold,
+    fontSize: 12,
+    textTransform: "capitalize",
   },
   errorPanel: {
     marginTop: 18,

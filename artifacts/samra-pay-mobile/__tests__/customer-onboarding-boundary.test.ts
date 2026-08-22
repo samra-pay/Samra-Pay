@@ -38,8 +38,10 @@ describe("mobile customer-onboarding trust boundary", () => {
     );
     expect(sharedJourneySource).toContain("Nothing is preselected");
     expect(onboardingSource).toContain(
-      "Account activation and wallet provisioning remain disabled",
+      "I understand this is a synthetic wallet",
     );
+    expect(onboardingSource).toContain("SYNTHETIC_WALLET_PROVISIONING_INPUT");
+    expect(onboardingSource).toContain("no tokens");
   });
 
   it("registers onboarding as a protected application route", () => {
@@ -59,6 +61,7 @@ describe("mobile customer-onboarding trust boundary", () => {
   it("fails closed on query errors and does not expose a blocked API dashboard", () => {
     expect(onboardingSource).toContain("MobileOnboardingFailure");
     expect(onboardingSource).toContain("identityQuery.refetch()");
+    expect(onboardingSource).toContain("walletQuery.refetch()");
     expect(onboardingSource).toContain('runtime.mode === "mock"');
     expect(onboardingSource).toContain("Continue to synthetic dashboard");
     expect(onboardingSource).toContain(

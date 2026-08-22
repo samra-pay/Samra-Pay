@@ -120,8 +120,16 @@ Linux CI must prove:
   Qase evidence;
 - any provider response directly granting financial capability.
 
-## Next build
+## Connected client status and next build
 
-Connect web and mobile onboarding to Auth0, onboarding resume, consent, and the
-normalized identity-case API. Use the fake Persona boundary for the complete
-happy path and recovery states before a sandbox credential is introduced.
+Web and mobile now share onboarding resume, consent, normalized identity-case,
+and synthetic wallet flows. The fake Persona boundary covers pending, review,
+approval, decline, provider error, retry, and durable continuation into the
+versioned wallet disclosure. A provider decision still cannot enable a balance,
+funding, remittance, or activation capability.
+
+The next build is credential-gated Persona sandbox activation: approved
+template and environment inventory, server and webhook secrets in Secret
+Manager, signature and timestamp verification, normalized webhook replay, PII
+retention controls, and reviewed web/mobile support and appeal paths. No
+sandbox value is guessed or committed to source.

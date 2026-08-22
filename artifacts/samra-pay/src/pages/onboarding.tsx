@@ -2,18 +2,22 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   buildOnboardingJourneyView,
   getCustomerConsentPresentation,
+  SYNTHETIC_WALLET_PROVISIONING_INPUT,
   type CustomerConsentType,
   type CustomerIdentityProviderDecision,
+  type CustomerWalletSnapshot,
 } from "@workspace/samra-client/onboarding";
 import {
   useAdvanceDemoCustomerIdentity,
   useCustomerIdentityCase,
   useCustomerOnboarding,
+  useCustomerWallet,
   useResetDemoCustomerOnboarding,
   useSamraCustomerAcquisition,
   useSamraOnboardingRuntime,
   useStartCustomerIdentityVerification,
   useStartCustomerOnboarding,
+  useStartCustomerWalletProvisioning,
   useSubmitCustomerConsents,
 } from "@workspace/samra-client/react";
 import {
@@ -48,6 +52,14 @@ const IDENTITY_STATES = new Set([
   "restricted",
 ]);
 
+const WALLET_STATES = new Set([
+  "identity_approved",
+  "wallet_consent_pending",
+  "wallet_provisioning",
+  "wallet_ready",
+  "restricted",
+]);
+
 export default function CustomerOnboardingPage() {
   const runtime = useSamraOnboardingRuntime();
   const acquisition = useSamraCustomerAcquisition();
@@ -58,16 +70,23 @@ export default function CustomerOnboardingPage() {
     Boolean(onboarding && IDENTITY_STATES.has(onboarding.state)),
   );
   const identityCase = identityQuery.data ?? null;
-  const journey = buildOnboardingJourneyView(onboarding, identityCase);
+  const walletQuery = useCustomerWallet(
+    Boolean(onboarding && WALLET_STATES.has(onboarding.state)),
+  );
+  const wallet = walletQuery.data ?? null;
+  const journey = buildOnboardingJourneyView(onboarding, identityCase, wallet);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const commandKeys = useRef(new Map<string, string>());
   const [accepted, setAccepted] = useState<
     Partial<Record<CustomerConsentType, boolean>>
   >({});
+  const [walletDisclosureAccepted, setWalletDisclosureAccepted] =
+    useState(false);
 
   const startOnboarding = useStartCustomerOnboarding();
   const submitConsents = useSubmitCustomerConsents();
   const startIdentity = useStartCustomerIdentityVerification();
+  const startWallet = useStartCustomerWalletProvisioning();
   const advanceIdentity = useAdvanceDemoCustomerIdentity();
   const resetDemo = useResetDemoCustomerOnboarding();
 
@@ -83,6 +102,10 @@ export default function CustomerOnboardingPage() {
     setAccepted({});
   }, [onboarding?.consentBundle.bundleVersion]);
 
+  useEffect(() => {
+    setWalletDisclosureAccepted(false);
+  }, [wallet?.walletId]);
+
   const documents = onboarding?.consentBundle.documents ?? [];
   const allAccepted =
     documents.length > 0 &&
@@ -91,12 +114,14 @@ export default function CustomerOnboardingPage() {
     startOnboarding.error ??
     submitConsents.error ??
     startIdentity.error ??
+    startWallet.error ??
     advanceIdentity.error ??
     resetDemo.error;
   const isMutating =
     startOnboarding.isPending ||
     submitConsents.isPending ||
     startIdentity.isPending ||
+    startWallet.isPending ||
     advanceIdentity.isPending ||
     resetDemo.isPending;
 
@@ -325,13 +350,84 @@ export default function CustomerOnboardingPage() {
       );
     }
 
-    if (journey.stage === "identity_approved") {
+    if (journey.stage === "wallet_consent") {
       return (
         <div className="space-y-4">
-          <StatusPanel icon={CheckCircle2}>
-            Identity evidence accepted. Account activation and wallet
-            provisioning remain disabled.
+          <WalletDisclosure
+            accepted={walletDisclosureAccepted}
+            onAcceptedChange={setWalletDisclosureAccepted}
+          />
+          <PrimaryAction
+            disabled={!walletDisclosureAccepted}
+            loading={startWallet.isPending}
+            onClick={() => {
+              const key = commandKey(commandKeys.current, "wallet-start");
+              startWallet.mutate(
+                {
+                  input: SYNTHETIC_WALLET_PROVISIONING_INPUT,
+                  idempotencyKey: key,
+                },
+                { onSuccess: () => commandKeys.current.delete("wallet-start") },
+              );
+            }}
+          >
+            Create synthetic wallet
+          </PrimaryAction>
+        </div>
+      );
+    }
+
+    if (journey.stage === "wallet_provisioning") {
+      return (
+        <div className="space-y-4">
+          <StatusPanel icon={Clock3}>
+            The durable Samra wallet record is waiting for its normalized
+            provider result. No balance or funding capability exists yet.
           </StatusPanel>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-full"
+            onClick={() => {
+              void Promise.all([
+                onboardingQuery.refetch(),
+                walletQuery.refetch(),
+              ]);
+            }}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Refresh wallet status
+          </Button>
+        </div>
+      );
+    }
+
+    if (journey.stage === "wallet_error") {
+      return (
+        <div className="space-y-4">
+          <StatusPanel icon={TriangleAlert}>
+            No second wallet was created. The same command can be retried safely
+            after the temporary failure clears.
+          </StatusPanel>
+          <PrimaryAction
+            loading={startWallet.isPending}
+            onClick={() =>
+              startWallet.mutate({
+                input: SYNTHETIC_WALLET_PROVISIONING_INPUT,
+                idempotencyKey: commandKey(commandKeys.current, "wallet-start"),
+              })
+            }
+          >
+            Retry wallet setup
+          </PrimaryAction>
+        </div>
+      );
+    }
+
+    if (journey.stage === "wallet_ready" && wallet) {
+      return (
+        <div className="space-y-4">
+          <WalletSummary wallet={wallet} />
           {runtime.mode === "mock" ? (
             <Button
               type="button"
@@ -388,23 +484,33 @@ export default function CustomerOnboardingPage() {
     setLocation,
     startIdentity,
     startOnboarding,
+    startWallet,
     submitConsents,
+    wallet,
+    walletDisclosureAccepted,
+    walletQuery,
     allAccepted,
   ]);
 
-  if (onboardingQuery.isLoading) {
+  if (onboardingQuery.isLoading || walletQuery.isLoading) {
     return <OnboardingLoading />;
   }
 
-  const queryError = onboardingQuery.error ?? identityQuery.error;
+  const queryError =
+    onboardingQuery.error ?? identityQuery.error ?? walletQuery.error;
   if (queryError) {
     return (
       <OnboardingFailure
         error={queryError}
-        retrying={onboardingQuery.isFetching || identityQuery.isFetching}
+        retrying={
+          onboardingQuery.isFetching ||
+          identityQuery.isFetching ||
+          walletQuery.isFetching
+        }
         onRetry={() => {
           const retries: Promise<unknown>[] = [onboardingQuery.refetch()];
           if (identityQuery.error) retries.push(identityQuery.refetch());
+          if (walletQuery.error) retries.push(walletQuery.refetch());
           void Promise.all(retries);
         }}
       />
@@ -545,6 +651,95 @@ function BoundaryList() {
         or audit log.
       </li>
     </ul>
+  );
+}
+
+function WalletDisclosure({
+  accepted,
+  onAcceptedChange,
+}: {
+  accepted: boolean;
+  onAcceptedChange: (accepted: boolean) => void;
+}) {
+  const checkboxId = "wallet-disclosure";
+  return (
+    <div className="space-y-4">
+      <ul className="space-y-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm text-muted-foreground">
+        <li className="flex gap-3">
+          <ShieldCheck
+            aria-hidden="true"
+            className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+          />
+          Crossmint is isolated behind Samra’s wallet adapter and does not own
+          your onboarding or ledger record.
+        </li>
+        <li className="flex gap-3">
+          <LockKeyhole
+            aria-hidden="true"
+            className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+          />
+          This alpha creates a synthetic USDC wallet record only: no tokens,
+          public address, balance, funding, remittance, or withdrawal access.
+        </li>
+      </ul>
+      <div className="flex min-h-20 gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <Checkbox
+          id={checkboxId}
+          checked={accepted}
+          onCheckedChange={(checked) => onAcceptedChange(checked === true)}
+          className="mt-1"
+          aria-describedby={`${checkboxId}-description`}
+        />
+        <div>
+          <label
+            htmlFor={checkboxId}
+            className="cursor-pointer text-sm font-semibold text-foreground"
+          >
+            I understand this is a synthetic wallet
+          </label>
+          <p
+            id={`${checkboxId}-description`}
+            className="mt-1 text-sm leading-6 text-muted-foreground"
+          >
+            Record disclosure version alpha-wallet-non-production-v1 and begin
+            idempotent synthetic provisioning.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WalletSummary({ wallet }: { wallet: CustomerWalletSnapshot }) {
+  return (
+    <div className="space-y-4">
+      <StatusPanel icon={CheckCircle2}>
+        Synthetic wallet {wallet.walletId.slice(-8)} is ready. Its normalized
+        state is stored by Samra and can survive a provider migration.
+      </StatusPanel>
+      <dl className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Asset configuration</dt>
+          <dd className="mt-1 font-semibold text-foreground">{wallet.asset}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Provider adapter</dt>
+          <dd className="mt-1 font-semibold capitalize text-foreground">
+            {wallet.provider}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Environment</dt>
+          <dd className="mt-1 font-semibold capitalize text-foreground">
+            {wallet.network ?? "synthetic"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Financial access</dt>
+          <dd className="mt-1 font-semibold text-foreground">Disabled</dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
