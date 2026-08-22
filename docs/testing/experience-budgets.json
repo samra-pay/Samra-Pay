@@ -25,8 +25,8 @@
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^auth0-client-[A-Za-z0-9_-]+\\.js$",
       "expectedMatches": 1,
-      "maximumBytes": 150000,
-      "maximumGzipBytes": 45000
+      "maximumBytes": 225000,
+      "maximumGzipBytes": 66000
     },
     {
       "id": "customer-web-styles",

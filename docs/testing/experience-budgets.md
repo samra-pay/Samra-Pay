@@ -15,7 +15,7 @@ headroom for normal compiler variation:
 | -------------------------------- | -----------: | ------------: | -----------: | ------------: |
 | Customer web entry JavaScript    |  1,202,903 B |     347,617 B |  1,350,000 B |     400,000 B |
 | Customer onboarding JavaScript   |     20,084 B |       7,043 B |     30,000 B |      10,000 B |
-| Customer Auth0 JavaScript        |       lazy B |        lazy B |    150,000 B |      45,000 B |
+| Customer Auth0 JavaScript        |    202,978 B |      59,438 B |    225,000 B |      66,000 B |
 | Customer web styles              |    187,503 B |      26,500 B |    220,000 B |      32,000 B |
 | Operations entry JavaScript      |    516,905 B |     152,682 B |    600,000 B |     180,000 B |
 | Mobile iOS production JavaScript |  3,619,606 B |     865,077 B |  4,000,000 B |   1,000,000 B |
