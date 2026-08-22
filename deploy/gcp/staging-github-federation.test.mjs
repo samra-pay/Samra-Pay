@@ -147,6 +147,19 @@ test("plans the bounded federation offline before any cloud command", () => {
   );
 });
 
+test("keeps every inline Node validator compatible with the Cloud Shell runtime", () => {
+  const programs = [
+    ...activate.matchAll(/node -e '\n([\s\S]*?)\n\s*'(?=\s)/g),
+  ].map((match) => match[1]);
+  assert.equal(programs.length, 6);
+  for (const program of programs) {
+    execFileSync(process.execPath, ["--check"], {
+      input: program,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+  }
+});
+
 test("creates only the reviewed keyless trust and least-privilege bindings", () => {
   for (const evidence of [
     "gcloud iam workload-identity-pools create",
