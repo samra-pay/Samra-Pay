@@ -39,7 +39,6 @@ const EXPECTED_PERMISSIONS = Object.freeze([
   "artifactregistry.dockerimages.get",
   "artifactregistry.repositories.get",
   "artifactregistry.repositories.getIamPolicy",
-  "billing.resourceAssociations.list",
   "cloudbuild.builds.create",
   "cloudbuild.builds.get",
   "iam.roles.get",

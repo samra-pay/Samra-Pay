@@ -39,7 +39,7 @@ test("locks federation to the stable private-repository identity and staging bou
     providerId: "samra-pay-main",
     publisherServiceAccount:
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
-    permissionCount: 18,
+    permissionCount: 17,
   });
   assert.equal(contract.github.repositoryOwnerId, "237485986");
   assert.equal(contract.github.allowedEvent, "workflow_dispatch");
@@ -195,6 +195,22 @@ test("creates only the reviewed keyless trust and least-privilege bindings", () 
   assert.doesNotMatch(
     activate,
     /service-accounts keys create|roles\/(?:owner|editor|storage\.admin|storage\.objectAdmin)|gcloud builds submit|gcloud run deploy|gcloud run jobs execute|gcloud secrets versions access|allow-unauthenticated|worf\.replit|samra-pay-production/i,
+  );
+});
+
+test("keeps billing-account access out of the project publisher role", () => {
+  assert.equal(
+    contract.iam.publisherCustomRolePermissions.some((permission) =>
+      permission.startsWith("billing."),
+    ),
+    false,
+  );
+  assert.doesNotMatch(activate, /CUSTOM_ROLE_PERMISSIONS=.*billing\./);
+  assert.doesNotMatch(audit, /CUSTOM_ROLE_PERMISSIONS=.*billing\./);
+  assert.doesNotMatch(publish, /PUBLISHER_CUSTOM_ROLE_PERMISSIONS=.*billing\./);
+  assert.match(
+    publish,
+    /if \[\[ "\$\{OPERATOR\}" == "\$\{HUMAN_OPERATOR\}" \]\]; then\n\s+\[\[ "\$\(gcloud billing projects describe/,
   );
 });
 
