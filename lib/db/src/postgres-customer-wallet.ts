@@ -304,6 +304,18 @@ export class PostgresCustomerWalletStore {
     const result = normalizeProviderResult(input.result);
 
     return this.#context.run(async () => {
+      const locatedWallet = await selectWalletByExternalRef(
+        this.#context,
+        walletId,
+        false,
+      );
+      if (!locatedWallet) throw new CustomerWalletNotFoundError();
+      const onboarding = await selectOnboarding(
+        this.#context,
+        locatedWallet.onboarding_id,
+        true,
+      );
+      if (!onboarding) throw new CustomerOnboardingNotFoundError();
       const wallet = await selectWalletByExternalRef(
         this.#context,
         walletId,
@@ -363,12 +375,6 @@ export class PostgresCustomerWalletStore {
         reasonFamily: null,
         commandKey: `provider-wallet:${sha256(result.providerWalletRef)}`,
       });
-      const onboarding = await selectOnboarding(
-        this.#context,
-        wallet.onboarding_id,
-        true,
-      );
-      if (!onboarding) throw new CustomerOnboardingNotFoundError();
       if (onboarding.state !== "wallet_ready") {
         await transitionOnboarding(this.#context, onboarding, {
           state: "wallet_ready",
