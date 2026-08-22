@@ -2,9 +2,12 @@
 
 ## Status and decision
 
-Crossmint is the locked Alpha wallet provider. The live integration is not yet
-enabled. The Alpha scope is wallet creation and normalized lifecycle evidence
-for an approved USDC configuration; it does not assume bank funding, Plaid
+Crossmint is the locked Alpha wallet provider. The Samra-owned PostgreSQL
+wallet aggregate, explicit non-production consent, authenticated API contract,
+immutable provider mapping, deterministic fake adapter, and failure/replay
+controls are implemented. The live Crossmint integration is not enabled. The
+Alpha scope is wallet creation and normalized lifecycle evidence for an
+approved USDC configuration; it does not assume bank funding, Plaid
 compatibility, card issuing, Ethiopia payout, or unrestricted money movement.
 
 Samra Pay owns the customer-to-wallet relationship and all financial product
@@ -54,6 +57,35 @@ Wallet creation requires:
 
 Wallet creation does not create a balance, funding entitlement, remittance
 entitlement, card, or ledger journal. Activation is a separate Samra decision.
+
+## Implemented API and synthetic evidence
+
+| Endpoint                         | Purpose                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `POST /api/v1/onboarding/wallet` | Create or safely resume one synthetic wallet after Auth0 authentication and Persona-style identity approval |
+| `GET /api/v1/onboarding/wallet`  | Resume normalized Samra wallet state without exposing the provider reference                                |
+
+Both endpoints are present only in the Auth0 plus PostgreSQL runtime. Start
+requires `Idempotency-Key` and the exact non-production wallet disclosure. A
+changed command cannot replace an existing wallet.
+
+The implemented evidence covers:
+
+- one wallet per Samra customer and onboarding aggregate;
+- exact consent-to-wallet foreign-key evidence;
+- append-only lifecycle transitions and provider mapping;
+- deterministic fake Crossmint creation from opaque Samra identifiers only;
+- atomic mapping attachment and onboarding transition to `wallet_ready`;
+- restart-safe GET and replay-safe create;
+- provider timeout/failure persistence and conflicting-result restriction;
+- API responses that omit provider wallet references, Auth0 subjects, tokens,
+  credentials, and customer PII; and
+- readiness and migration-compatibility coverage for the new relations and
+  mutation guards.
+
+This proves the internal boundary. It does not prove a Crossmint account,
+sandbox call, asset/network choice, custody model, public address, webhook, or
+USDC movement.
 
 ## Events and accounting
 

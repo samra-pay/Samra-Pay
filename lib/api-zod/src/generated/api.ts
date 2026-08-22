@@ -428,6 +428,76 @@ export const GetCustomerIdentityCaseResponse = zod.object({
 });
 
 /**
+ * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
+ * @summary Create or resume the Samra-owned customer wallet record
+ */
+export const startCustomerWalletProvisioningHeaderIdempotencyKeyMin = 8;
+export const startCustomerWalletProvisioningHeaderIdempotencyKeyMax = 128;
+
+export const StartCustomerWalletProvisioningHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(startCustomerWalletProvisioningHeaderIdempotencyKeyMin)
+    .max(startCustomerWalletProvisioningHeaderIdempotencyKeyMax),
+});
+
+export const StartCustomerWalletProvisioningBody = zod.object({
+  bundleVersion: zod.literal("alpha-wallet-non-production-v1"),
+  documentVersion: zod.literal("alpha-wallet-non-production-v1"),
+  locale: zod.literal("en-US"),
+  decision: zod.literal("accepted"),
+});
+
+export const startCustomerWalletProvisioningResponseWalletIdRegExp = new RegExp(
+  "^wallet_[0-9a-f]{32}$",
+);
+
+export const StartCustomerWalletProvisioningResponse = zod.object({
+  walletId: zod
+    .string()
+    .regex(startCustomerWalletProvisioningResponseWalletIdRegExp),
+  state: zod.enum(["created", "provisioning", "ready", "restricted", "error"]),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  provider: zod.enum(["crossmint"]),
+  asset: zod.enum(["USDC"]),
+  network: zod.union([zod.string(), zod.null()]),
+  custodyModel: zod.union([zod.string(), zod.null()]),
+  publicAddress: zod.union([zod.string(), zod.null()]),
+  configurationVersion: zod.enum(["crossmint-synthetic-v1"]),
+  synthetic: zod.literal(true),
+  version: zod.number().int().min(1),
+  readyAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+});
+
+/**
+ * @summary Resume the authenticated customer's normalized wallet state
+ */
+export const getCustomerWalletResponseWalletIdRegExp = new RegExp(
+  "^wallet_[0-9a-f]{32}$",
+);
+
+export const GetCustomerWalletResponse = zod.object({
+  walletId: zod.string().regex(getCustomerWalletResponseWalletIdRegExp),
+  state: zod.enum(["created", "provisioning", "ready", "restricted", "error"]),
+  reasonFamily: zod.union([zod.string(), zod.null()]),
+  provider: zod.enum(["crossmint"]),
+  asset: zod.enum(["USDC"]),
+  network: zod.union([zod.string(), zod.null()]),
+  custodyModel: zod.union([zod.string(), zod.null()]),
+  publicAddress: zod.union([zod.string(), zod.null()]),
+  configurationVersion: zod.enum(["crossmint-synthetic-v1"]),
+  synthetic: zod.literal(true),
+  version: zod.number().int().min(1),
+  readyAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
+  createdAt: zod.string().datetime({ offset: true }),
+  updatedAt: zod.string().datetime({ offset: true }),
+  nextAllowedActions: zod.array(zod.string()),
+});
+
+/**
  * @summary List ledger-derived customer accounts
  */
 export const listAccountsResponseLast4RegExp = new RegExp("^[0-9]{4}$");

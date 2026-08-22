@@ -24,6 +24,7 @@ import {
   type LedgerControlPort,
 } from "@workspace/remittance";
 import type { CustomerIdentityVerificationService } from "./customer-identity";
+import type { CustomerWalletProvisioningService } from "./customer-wallet";
 import { DemoLedgerAdapter, DEMO_LEDGER_ACCOUNT_IDS } from "./demo-ledger";
 import { publicTransferStatus, serializeMoney } from "./serializers";
 import {
@@ -156,6 +157,7 @@ export type DemoRuntimeDependencies = Readonly<{
   operationsCaseStore?: PostgresOperationsCaseStore;
   customerOnboardingStore?: CustomerOnboardingStore;
   customerIdentityVerificationService?: CustomerIdentityVerificationService;
+  customerWalletProvisioningService?: CustomerWalletProvisioningService;
   customerFunnelStore?: CustomerFunnelStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   readiness?: () => Promise<void>;
@@ -180,6 +182,7 @@ export class DemoRuntime {
   readonly operationsCaseStore?: PostgresOperationsCaseStore;
   readonly customerOnboardingStore?: CustomerOnboardingStore;
   readonly customerIdentityVerificationService?: CustomerIdentityVerificationService;
+  readonly customerWalletProvisioningService?: CustomerWalletProvisioningService;
   readonly customerFunnelStore?: CustomerFunnelStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
@@ -210,6 +213,8 @@ export class DemoRuntime {
     this.customerOnboardingStore = dependencies.customerOnboardingStore;
     this.customerIdentityVerificationService =
       dependencies.customerIdentityVerificationService;
+    this.customerWalletProvisioningService =
+      dependencies.customerWalletProvisioningService;
     this.customerFunnelStore = dependencies.customerFunnelStore;
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();

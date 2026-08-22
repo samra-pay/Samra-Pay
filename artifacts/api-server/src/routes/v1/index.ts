@@ -24,6 +24,7 @@ import {
   CreateRemittanceTransferHeader,
   CreateRemittanceTransferResponse,
   GetCurrentCustomerResponse,
+  GetCustomerWalletResponse,
   GetCustomerIdentityCaseResponse,
   GetCustomerOnboardingResponse,
   GetWorkforceSessionResponse,
@@ -49,6 +50,9 @@ import {
   StartCustomerOnboardingResponse,
   StartCustomerIdentityVerificationHeader,
   StartCustomerIdentityVerificationResponse,
+  StartCustomerWalletProvisioningBody,
+  StartCustomerWalletProvisioningHeader,
+  StartCustomerWalletProvisioningResponse,
   SubmitCustomerConsentBundleBody,
   SubmitCustomerConsentBundleHeader,
   SubmitCustomerConsentBundleResponse,
@@ -97,6 +101,7 @@ import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import {
   CustomerIdentityCaseNotFoundError,
+  CustomerWalletNotFoundError,
   WorkforceAuthenticationError,
   CustomerOnboardingAccessRestrictedError,
   CustomerOnboardingNotFoundError,
@@ -112,6 +117,7 @@ import {
   type PublicReconciliationDemoScenario,
 } from "../../domain/demo-runtime";
 import { IdentityProviderUnavailableError } from "../../domain/customer-identity";
+import { WalletProviderUnavailableError } from "../../domain/customer-wallet";
 import { serializeQuote, serializeTransfer } from "../../domain/serializers";
 import {
   BackendUnavailableError,
@@ -234,8 +240,7 @@ export function createV1Router(
         const body = parseSchema(RecordCustomerAcquisitionEventBody, req.body);
         const receipt = await funnel.recordEvent({
           ...body,
-          sessionId:
-            body.sessionId ?? customerAcquisitionSessionToken(req),
+          sessionId: body.sessionId ?? customerAcquisitionSessionToken(req),
           idempotencyKey: header["Idempotency-Key"],
         });
         setCustomerAcquisitionSessionCookie(req, res, receipt.sessionId);
@@ -271,6 +276,12 @@ export function createV1Router(
       );
     }
     const identityVerification = runtime.customerIdentityVerificationService;
+    if (!runtime.customerWalletProvisioningService) {
+      throw new Error(
+        "Auth0 customer mode requires a durable wallet provisioning service.",
+      );
+    }
+    const walletProvisioning = runtime.customerWalletProvisioningService;
     const funnel = runtime.customerFunnelStore;
 
     router.post(
@@ -367,6 +378,47 @@ export function createV1Router(
           );
         } catch (error) {
           throw translateIdentityVerificationError(error);
+        }
+      }),
+    );
+
+    router.post(
+      "/onboarding/wallet",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        const header = parseSchema(StartCustomerWalletProvisioningHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        const body = parseSchema(StartCustomerWalletProvisioningBody, req.body);
+        try {
+          const result = await walletProvisioning.startAuth0Wallet({
+            ...identity,
+            idempotencyKey: header["Idempotency-Key"],
+            consent: body,
+          });
+          res
+            .status(result.created ? 201 : 200)
+            .json(
+              StartCustomerWalletProvisioningResponse.parse(result.snapshot),
+            );
+        } catch (error) {
+          throw translateWalletProvisioningError(error);
+        }
+      }),
+    );
+
+    router.get(
+      "/onboarding/wallet",
+      asyncRoute(async (req, res) => {
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        try {
+          res.json(
+            GetCustomerWalletResponse.parse(
+              await walletProvisioning.getAuth0Wallet(identity),
+            ),
+          );
+        } catch (error) {
+          throw translateWalletProvisioningError(error);
         }
       }),
     );
@@ -1378,6 +1430,18 @@ function translateIdentityVerificationError(error: unknown): unknown {
     return new DomainError("NOT_FOUND", error.message);
   }
   if (error instanceof IdentityProviderUnavailableError) {
+    return new BackendUnavailableError(error.message);
+  }
+  return error;
+}
+
+function translateWalletProvisioningError(error: unknown): unknown {
+  const translated = translateOnboardingAccessError(error);
+  if (translated !== error) return translated;
+  if (error instanceof CustomerWalletNotFoundError) {
+    return new DomainError("NOT_FOUND", error.message);
+  }
+  if (error instanceof WalletProviderUnavailableError) {
     return new BackendUnavailableError(error.message);
   }
   return error;

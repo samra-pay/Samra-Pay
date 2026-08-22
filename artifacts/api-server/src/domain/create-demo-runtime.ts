@@ -9,6 +9,7 @@ import {
   PostgresCustomerOnboardingStore,
   PostgresCustomerIdentityCaseStore,
   PostgresCustomerFunnelStore,
+  PostgresCustomerWalletStore,
   RandomIdGenerator,
   assertPostgresRuntimeReady,
   createDatabase,
@@ -23,6 +24,10 @@ import {
   CustomerIdentityVerificationService,
   DeterministicFakePersonaAdapter,
 } from "./customer-identity";
+import {
+  CustomerWalletProvisioningService,
+  DeterministicFakeCrossmintAdapter,
+} from "./customer-wallet";
 
 export function createConfiguredDemoRuntime(
   config: ApiRuntimeConfig,
@@ -37,6 +42,7 @@ export function createConfiguredDemoRuntime(
   const customerIdentityCaseStore = new PostgresCustomerIdentityCaseStore(
     context,
   );
+  const customerWalletStore = new PostgresCustomerWalletStore(context);
   const customerActorResolver =
     config.customerAuth.mode === "auth0"
       ? new Auth0CustomerActorResolver(
@@ -67,6 +73,13 @@ export function createConfiguredDemoRuntime(
         ? new CustomerIdentityVerificationService({
             store: customerIdentityCaseStore,
             provider: new DeterministicFakePersonaAdapter(),
+          })
+        : undefined,
+    customerWalletProvisioningService:
+      config.customerAuth.mode === "auth0"
+        ? new CustomerWalletProvisioningService({
+            store: customerWalletStore,
+            provider: new DeterministicFakeCrossmintAdapter(),
           })
         : undefined,
     ids: new RandomIdGenerator(),

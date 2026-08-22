@@ -36,6 +36,7 @@ import type {
   CustomerIdentityCase,
   CustomerIdentityProviderEventResult,
   CustomerOnboarding,
+  CustomerWallet,
   ExpiredProblemResponse,
   ForbiddenProblemResponse,
   GetOperationsCustomerFunnelParams,
@@ -64,6 +65,7 @@ import type {
   ResolveOperationsReconciliationExceptionRequest,
   RunReconciliationRequest,
   SelectScenarioRequest,
+  StartCustomerWalletProvisioningRequest,
   SubmitCustomerConsentBundleRequest,
   Transfer,
   TransferPage,
@@ -1018,6 +1020,204 @@ export function useGetCustomerIdentityCase<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCustomerIdentityCaseQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getStartCustomerWalletProvisioningUrl = () => {
+  return `/api/v1/onboarding/wallet`;
+};
+
+/**
+ * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
+ * @summary Create or resume the Samra-owned customer wallet record
+ */
+export const startCustomerWalletProvisioning = async (
+  startCustomerWalletProvisioningRequest: StartCustomerWalletProvisioningRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerWallet> => {
+  return customFetch<CustomerWallet>(getStartCustomerWalletProvisioningUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(startCustomerWalletProvisioningRequest),
+  });
+};
+
+export const getStartCustomerWalletProvisioningMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCustomerWalletProvisioning>>,
+    TError,
+    { data: BodyType<StartCustomerWalletProvisioningRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startCustomerWalletProvisioning>>,
+  TError,
+  { data: BodyType<StartCustomerWalletProvisioningRequest> },
+  TContext
+> => {
+  const mutationKey = ["startCustomerWalletProvisioning"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startCustomerWalletProvisioning>>,
+    { data: BodyType<StartCustomerWalletProvisioningRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startCustomerWalletProvisioning(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartCustomerWalletProvisioningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startCustomerWalletProvisioning>>
+>;
+export type StartCustomerWalletProvisioningMutationBody =
+  BodyType<StartCustomerWalletProvisioningRequest>;
+export type StartCustomerWalletProvisioningMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Create or resume the Samra-owned customer wallet record
+ */
+export const useStartCustomerWalletProvisioning = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCustomerWalletProvisioning>>,
+    TError,
+    { data: BodyType<StartCustomerWalletProvisioningRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startCustomerWalletProvisioning>>,
+  TError,
+  { data: BodyType<StartCustomerWalletProvisioningRequest> },
+  TContext
+> => {
+  return useMutation(
+    getStartCustomerWalletProvisioningMutationOptions(options),
+  );
+};
+
+export const getGetCustomerWalletUrl = () => {
+  return `/api/v1/onboarding/wallet`;
+};
+
+/**
+ * @summary Resume the authenticated customer's normalized wallet state
+ */
+export const getCustomerWallet = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerWallet> => {
+  return customFetch<CustomerWallet>(getGetCustomerWalletUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCustomerWalletQueryKey = () => {
+  return [`/api/v1/onboarding/wallet`] as const;
+};
+
+export const getGetCustomerWalletQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerWallet>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerWallet>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCustomerWalletQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerWallet>>
+  > = ({ signal }) => getCustomerWallet({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerWallet>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerWalletQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerWallet>>
+>;
+export type GetCustomerWalletQueryError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Resume the authenticated customer's normalized wallet state
+ */
+
+export function useGetCustomerWallet<
+  TData = Awaited<ReturnType<typeof getCustomerWallet>>,
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerWallet>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerWalletQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
