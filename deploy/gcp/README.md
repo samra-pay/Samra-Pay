@@ -223,12 +223,59 @@ deploy a service, run a migration, route traffic, read a secret, modify IAM,
 touch Replit, or use production data.
 
 The complete CI/CD stage authority, traceability requirements, zero-traffic
-deployment boundary, promotion gate, and exact-revision rollback model are
+deployment controller, promotion gate, and exact-revision rollback model are
 defined in
 [`docs/operations/staging-release-control-plane.md`](../../docs/operations/staging-release-control-plane.md)
 and machine-validated by `staging-release-control-plane.json`. Image publication
-is implemented. Cloud Run deployment, traffic promotion, and rollback automation
-remain separate future approval gates.
+and zero-traffic deployment are implemented as separate protected workflows.
+Neither the deployment federation nor any Cloud Run mutation is automatically
+authorized. Traffic promotion and rollback remain separate future approval
+gates.
+
+### Keyless zero-traffic Cloud Run deployment
+
+`staging-zero-traffic-deployment.json` defines a second keyless GitHub trust
+boundary. It uses a dedicated workload-identity pool containing exactly one
+provider, plus a distinct service account, protected environment, and custom
+role. The provider accepts only the exact manual workflow on `refs/heads/main`
+from the stable numeric private-repository identity. The isolated pool avoids
+depending on GitHub's evolving default OIDC subject format and prevents another
+staging provider from inheriting the deployer's repository-level principal-set
+binding. The deployer can read immutable images and create or update reviewed
+Cloud Run revisions. It cannot publish an image, read a secret payload, run a
+migration, mutate IAM, or operate traffic.
+
+`deploy-staging-zero-traffic.sh --review` verifies the fixed source, hashed
+publication evidence, exact image digest, runtime identity, required APIs,
+private ingress, disabled default URL, non-public IAM, pinned secret metadata,
+and same-release prerequisites. Only `--apply` under the keyless identity with
+`AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT` can deploy one revision. The
+controller passes `--no-traffic`, uses no revision tag, compares the complete
+traffic allocation before and after, and writes a hashed deployment manifest.
+
+API deployment requires same-release migration evidence plus approved Auth0
+public identifiers and a pinned database-secret version. Customer-web
+deployment requires same-release API zero-traffic evidence and approved service
+audience/Auth0 public identifiers. Persona and Crossmint remain dormant; no
+vendor secret is accepted by this workflow. The design-system preview is the
+only target without a runtime-service prerequisite.
+
+The one-time trust activation remains a separate human-admin action:
+
+```sh
+SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
+SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash deploy/gcp/activate-staging-zero-traffic-federation.sh --review
+```
+
+After an authorized activation, run
+`audit-staging-zero-traffic-federation.sh`. It independently verifies the
+dedicated pool and single provider, provider condition, exact custom role and
+resource bindings, provider-managed Cloud Run service-agent role, non-public
+Artifact Registry, and absence of user-managed keys without changing cloud
+state. GitHub must also have a protected `staging-zero-traffic-deployment`
+environment restricted to `main`; environment variables hold only reviewed
+non-secret identifiers and pinned secret version numbers.
 
 Review example from an authenticated, fixed-source Cloud Shell checkout:
 

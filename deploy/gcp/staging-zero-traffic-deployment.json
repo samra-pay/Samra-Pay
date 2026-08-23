@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-authorized",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "github": {
+    "owner": "haileleuld87",
+    "repository": "Samra-Pay",
+    "repositoryId": "1335175962",
+    "repositoryOwnerId": "237485986",
+    "allowedRef": "refs/heads/main",
+    "allowedEvent": "workflow_dispatch",
+    "workflowName": "Staging zero-traffic deployment",
+    "workflowPath": ".github/workflows/staging-zero-traffic-deployment.yml",
+    "protectedEnvironment": "staging-zero-traffic-deployment"
+  },
+  "googleCloud": {
+    "projectId": "samra-pay-staging",
+    "projectNumber": "934122615631",
+    "organizationId": "614833350075",
+    "region": "us-east4",
+    "artifactRepository": "samra-staging",
+    "workloadIdentityLocation": "global",
+    "workloadIdentityPoolId": "samra-zero-traffic-staging",
+    "workloadIdentityProviderId": "samra-pay-zero-traffic-main",
+    "deployerServiceAccountId": "samra-github-deployer-staging",
+    "deployerCustomRoleId": "samraStagingZeroTrafficDeployer",
+    "cloudRunServiceAgent": "service-934122615631@serverless-robot-prod.iam.gserviceaccount.com"
+  },
+  "provider": {
+    "issuerUri": "https://token.actions.githubusercontent.com",
+    "attributeMapping": {
+      "google.subject": "assertion.sub",
+      "attribute.repository": "assertion.repository",
+      "attribute.repository_id": "assertion.repository_id",
+      "attribute.repository_owner_id": "assertion.repository_owner_id",
+      "attribute.ref": "assertion.ref",
+      "attribute.event_name": "assertion.event_name",
+      "attribute.workflow": "assertion.workflow",
+      "attribute.workflow_ref": "assertion.workflow_ref",
+      "attribute.environment": "assertion.environment"
+    },
+    "attributeCondition": "assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging zero-traffic deployment' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-zero-traffic-deployment.yml@refs/heads/main' && assertion.environment=='staging-zero-traffic-deployment'"
+  },
+  "iam": {
+    "deployerCustomRolePermissions": [
+      "artifactregistry.dockerimages.get",
+      "artifactregistry.repositories.get",
+      "artifactregistry.repositories.getIamPolicy",
+      "compute.networks.get",
+      "compute.subnetworks.get",
+      "iam.roles.get",
+      "iam.serviceAccountKeys.list",
+      "iam.serviceAccounts.get",
+      "iam.serviceAccounts.getIamPolicy",
+      "iam.workloadIdentityPoolProviders.get",
+      "iam.workloadIdentityPools.get",
+      "resourcemanager.projects.get",
+      "resourcemanager.projects.getIamPolicy",
+      "run.operations.get",
+      "run.revisions.get",
+      "run.revisions.list",
+      "run.services.create",
+      "run.services.get",
+      "run.services.getIamPolicy",
+      "run.services.update",
+      "secretmanager.secrets.get",
+      "secretmanager.versions.get",
+      "serviceusage.services.list",
+      "serviceusage.services.use"
+    ],
+    "artifactRepositoryRole": "roles/artifactregistry.reader",
+    "runtimeServiceAccountRole": "roles/iam.serviceAccountUser",
+    "federationServiceAccountRole": "roles/iam.workloadIdentityUser",
+    "cloudRunServiceAgentRole": "roles/run.serviceAgent",
+    "federatedPrincipalSetAttribute": "attribute.repository_id",
+    "federatedPrincipalSetValue": "1335175962",
+    "isolatedWorkloadIdentityPoolRequired": true,
+    "runtimeServiceAccountIds": [
+      "samra-api-staging",
+      "samra-customer-web-staging",
+      "samra-design-system-staging"
+    ]
+  },
+  "artifactInput": {
+    "publicationWorkflow": ".github/workflows/staging-image-publication.yml",
+    "publicationManifest": "artifacts/staging-release/staging-image-publication.json",
+    "publicationManifestHash": "artifacts/staging-release/staging-image-publication.sha256",
+    "sameCommitRequired": true,
+    "exactDigestRequired": true,
+    "crossRunDownloadRequiresActionsRead": true
+  },
+  "deployment": {
+    "oneServicePerRun": true,
+    "initialTrafficPercent": 0,
+    "trafficMustRemainUnchanged": true,
+    "revisionTagAllowed": false,
+    "defaultServiceUrlAllowed": false,
+    "publicUnauthenticatedAllowed": false,
+    "directVpcEgress": "private-ranges-only",
+    "network": "samra-staging-vpc",
+    "subnet": "samra-staging-us-east4",
+    "authorization": "AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT",
+    "evidenceManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
+    "evidenceManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256",
+    "retentionDays": 365
+  },
+  "services": {
+    "samra-api": {
+      "imageName": "samra-api",
+      "serviceAccountId": "samra-api-staging",
+      "ingress": "internal-and-cloud-load-balancing",
+      "defaultUrlDisabled": true,
+      "directVpcEgressRequired": true,
+      "minInstances": 0,
+      "maxInstances": 2,
+      "concurrency": 10,
+      "secretMappings": {
+        "DATABASE_URL": {
+          "secret": "samra-staging-database-url",
+          "versionEnvironment": "SAMRA_STAGING_DATABASE_SECRET_VERSION",
+          "pinnedIntegerRequired": true
+        }
+      },
+      "prerequisiteEvidence": [
+        "verified staging migration manifest and SHA-256 sidecar for the same candidate SHA"
+      ],
+      "requiredRuntimeEnvironment": [
+        "SAMRA_STAGING_AUTH0_ISSUER_BASE_URL",
+        "SAMRA_STAGING_AUTH0_AUDIENCE",
+        "SAMRA_STAGING_DATABASE_SECRET_VERSION"
+      ]
+    },
+    "samra-customer-web": {
+      "imageName": "samra-customer-web",
+      "serviceAccountId": "samra-customer-web-staging",
+      "ingress": "internal-and-cloud-load-balancing",
+      "defaultUrlDisabled": true,
+      "directVpcEgressRequired": false,
+      "minInstances": 0,
+      "maxInstances": 2,
+      "concurrency": 20,
+      "secretMappings": {},
+      "prerequisiteEvidence": [
+        "verified samra-api zero-traffic deployment manifest and SHA-256 sidecar for the same candidate SHA"
+      ],
+      "requiredRuntimeEnvironment": [
+        "SAMRA_STAGING_API_ORIGIN",
+        "SAMRA_STAGING_API_SERVICE_AUDIENCE",
+        "SAMRA_STAGING_AUTH0_DOMAIN",
+        "SAMRA_STAGING_AUTH0_CLIENT_ID",
+        "SAMRA_STAGING_AUTH0_AUDIENCE"
+      ]
+    },
+    "samra-design-system-preview": {
+      "imageName": "samra-design-system-preview",
+      "serviceAccountId": "samra-design-system-staging",
+      "ingress": "internal-and-cloud-load-balancing",
+      "defaultUrlDisabled": true,
+      "directVpcEgressRequired": false,
+      "minInstances": 0,
+      "maxInstances": 1,
+      "concurrency": 20,
+      "secretMappings": {},
+      "prerequisiteEvidence": [],
+      "requiredRuntimeEnvironment": []
+    }
+  },
+  "workflow": {
+    "checkoutAction": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "downloadArtifactAction": "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3",
+    "authenticationAction": "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093",
+    "cloudSdkAction": "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db",
+    "uploadArtifactAction": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "permissions": {
+      "contents": "read",
+      "actions": "read",
+      "id-token": "write"
+    },
+    "automaticTriggers": false,
+    "trafficMutation": false,
+    "migrationExecution": false,
+    "vendorActivation": false
+  },
+  "requiredApis": [
+    "compute.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
+    "sts.googleapis.com"
+  ],
+  "prohibited": [
+    "service-account key",
+    "stored Google credential secret",
+    "non-main deployment",
+    "push or pull-request deployment trigger",
+    "floating image tag",
+    "latest secret version",
+    "revision traffic tag",
+    "traffic mutation",
+    "public unauthenticated access",
+    "default Cloud Run URL",
+    "migration execution",
+    "image publication",
+    "secret payload read",
+    "operations portal deployment",
+    "vendor activation",
+    "production resource",
+    "real customer data",
+    "Replit change"
+  ]
+}

@@ -304,11 +304,11 @@ test("keeps the operations portal blocked until staff security is real", () => {
 test("contains references only, never credentials or live-provider values", () => {
   assert.match(
     contract.database.runtimeSecretReference,
-    /^projects\/PROJECT_ID\/secrets\/samra-staging-database-url\/versions\/latest$/,
+    /^projects\/PROJECT_ID\/secrets\/samra-staging-database-url\/versions\/PINNED_INTEGER$/,
   );
   assert.match(
     contract.database.migrationSecretReference,
-    /^projects\/PROJECT_ID\/secrets\/samra-staging-migration-database-url\/versions\/latest$/,
+    /^projects\/PROJECT_ID\/secrets\/samra-staging-migration-database-url\/versions\/PINNED_INTEGER$/,
   );
   assert.doesNotMatch(
     source,

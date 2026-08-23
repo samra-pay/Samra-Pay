@@ -193,9 +193,13 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
       contract.database.automaticMigrationAllowed === false &&
       contract.database.accessContract ===
         "deploy/gcp/staging-database-access.json" &&
+      contract.database.runtimeSecretReference ===
+        "projects/PROJECT_ID/secrets/samra-staging-database-url/versions/PINNED_INTEGER" &&
+      contract.database.migrationSecretReference ===
+        "projects/PROJECT_ID/secrets/samra-staging-migration-database-url/versions/PINNED_INTEGER" &&
       contract.database.runtimeSecretReference !==
         contract.database.migrationSecretReference,
-    "Private database and split-secret controls are required",
+    "Private database, split-secret, and pinned-version controls are required",
   );
   assert(
     contract.migrationJob.tasks === 1 &&

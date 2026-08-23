@@ -51,7 +51,7 @@
       "id": "zero-traffic-deployment",
       "mutation": "new private Cloud Run revisions with zero traffic",
       "requiredEvidence": [
-        "migration execution ID",
+        "same-candidate prerequisite evidence when applicable",
         "revision names",
         "configuration hashes",
         "zero traffic proof"
@@ -109,8 +109,13 @@
         "operations API production-security promotion"
       ]
     },
-    "futureWorkflow": ".github/workflows/staging-zero-traffic-deployment.yml",
-    "futureProtectedEnvironment": "staging-zero-traffic-deployment",
+    "workflow": ".github/workflows/staging-zero-traffic-deployment.yml",
+    "protectedEnvironment": "staging-zero-traffic-deployment",
+    "controller": "deploy/gcp/deploy-staging-zero-traffic.sh",
+    "evidenceManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
+    "evidenceManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256",
+    "status": "implemented-not-authorized",
+    "sameCandidatePrerequisitesRequired": true,
     "dedicatedFederatedIdentityRequired": true
   },
   "promotion": {

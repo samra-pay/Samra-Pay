@@ -8,9 +8,10 @@ as the future runtime, and Qase as governed test evidence. These systems are
 connected by exact identifiers. None of them may infer that a build, deployment,
 test, traffic change, or vendor activation authorizes the next stage.
 
-This contract is implemented through image publication. Zero-traffic deployment,
-traffic promotion, and rollback automation remain prepared design boundaries and
-are not yet authorized or live.
+Image publication and the zero-traffic deployment controller are implemented.
+The deployment federation, protected environment, and any Cloud Run mutation
+remain separately activated and authorized; no service is live. Traffic
+promotion and rollback automation remain prepared design boundaries.
 
 ## Controlled delivery path
 
@@ -33,14 +34,14 @@ mutations. No current workflow deploys Cloud Run or changes traffic.
 
 ## Stage authority
 
-| Stage                   | Authority                    | Mutation                                       | Required evidence                                                                                | Current state                 |
-| ----------------------- | ---------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------- |
-| Release candidate       | GitHub Actions               | None                                           | Exact `main` SHA, passing gates, Qase release identity                                           | Implemented                   |
-| Image publication       | Protected GitHub environment | Cloud Build record and five immutable images   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                       | Implemented                   |
-| Zero-traffic deployment | Future protected environment | New private Cloud Run revisions at 0% traffic  | Approved manifest, migration execution, configuration hashes, revision names, zero-traffic proof | Not implemented or authorized |
-| Staging verification    | Future controlled test run   | Synthetic test traffic only                    | Readiness, restart, service authentication, ledger, reconciliation, Qase run                     | Not implemented or authorized |
-| Traffic promotion       | Future protected environment | Traffic moves to one exact revision            | Before/after traffic, approver, health evidence, rollback target                                 | Not implemented or authorized |
-| Rollback                | Future protected environment | Traffic returns to one recorded prior revision | Reason, exact prior revision, restored traffic, post-rollback verification                       | Not implemented or authorized |
+| Stage                   | Authority                    | Mutation                                         | Required evidence                                                                                                 | Current state                            |
+| ----------------------- | ---------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Release candidate       | GitHub Actions               | None                                             | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                              |
+| Image publication       | Protected GitHub environment | Cloud Build record and five immutable images     | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                              |
+| Zero-traffic deployment | Protected GitHub environment | One new private Cloud Run revision at 0% traffic | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized |
+| Staging verification    | Future controlled test run   | Synthetic test traffic only                      | Readiness, restart, service authentication, ledger, reconciliation, Qase run                                      | Not implemented or authorized            |
+| Traffic promotion       | Future protected environment | Traffic moves to one exact revision              | Before/after traffic, approver, health evidence, rollback target                                                  | Not implemented or authorized            |
+| Rollback                | Future protected environment | Traffic returns to one recorded prior revision   | Reason, exact prior revision, restored traffic, post-rollback verification                                        | Not implemented or authorized            |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
@@ -70,10 +71,11 @@ with the full commit, workflow run, and attempt. Retention is 365 days. The
 manifest explicitly records that deployment, traffic, and vendor activation are
 not authorized.
 
-## Deployment design boundary
+## Zero-traffic deployment controller
 
-The next controller must consume an independently verified publication manifest
-and deploy only by immutable digest. Its first release must:
+`deploy-staging-zero-traffic.sh` consumes an independently verified publication
+manifest and deploys only by immutable digest. It is limited to one service per
+manual run and must:
 
 - create private Cloud Run revisions for API, customer web, and design preview;
 - use dedicated runtime identities and separate deployment federation;
@@ -81,9 +83,21 @@ and deploy only by immutable digest. Its first release must:
 - disable default service URLs where the approved ingress design permits it;
 - keep public unauthenticated IAM absent;
 - pin secret versions rather than using `latest`;
-- record configuration hashes, database migration execution, and revision names;
+- record a redacted configuration hash, prerequisite evidence, revision name,
+  and byte-for-byte traffic snapshots;
 - fail closed when Auth0 staging configuration or customer-web service
   authentication is incomplete.
+
+The API additionally requires a hashed, same-candidate migration manifest.
+Customer web additionally requires the API's hashed, same-candidate zero-traffic
+deployment manifest. The design-system preview is the only service without a
+runtime-service prerequisite. These gates prevent a later-stage deployment from
+silently skipping database or API sequencing.
+
+The controller writes a deployment manifest and SHA-256 sidecar. That record
+binds the image-publication hash, exact digest, configuration hash, keyless
+deployer, GitHub run, revision, and unchanged traffic. It explicitly keeps
+traffic, migration, and vendor activation unauthorized.
 
 The Operations Portal remains blocked from deployment until workforce identity,
 staff authorization, access review and revocation, and operations API security
@@ -106,12 +120,19 @@ verify the resulting allocation.
 
 ## Separation of identities
 
-The existing GitHub federation provider is intentionally limited to the image
-publication workflow and `staging-image-publication` environment. It must not be
-broadened for deployment. The next phase requires a separate provider, protected
-environment, service account, and least-privilege role for zero-traffic
-deployment. Traffic promotion and rollback require another independently
-reviewable permission boundary.
+The existing GitHub federation provider remains limited to image publication.
+Zero-traffic deployment has a dedicated `samra-zero-traffic-staging` workload
+identity pool containing exactly one `samra-pay-zero-traffic-main` provider, a
+`staging-zero-traffic-deployment` environment, a
+`samra-github-deployer-staging` service account, and an exact custom role. The
+isolated pool binds the stable numeric repository ID without depending on
+GitHub's default OIDC subject format or allowing another provider to share the
+principal set. The role can create or update a Cloud Run revision and inspect
+required metadata, but it cannot build or upload images, read secret payloads,
+execute jobs, mutate IAM, or promote traffic. `run.services.update` is required
+by Cloud Run for revision creation, so the controller independently snapshots
+and verifies that traffic did not change. Traffic promotion and rollback
+require another separately reviewable identity and workflow.
 
 No Google service-account key or stored Google credential secret is permitted.
 GitHub obtains short-lived credentials through workload identity federation.
@@ -139,6 +160,12 @@ If any answer is missing, the release is not promotable.
 - `deploy/gcp/record-staging-image-publication.mjs`
 - `deploy/gcp/publish-staging-images.sh`
 - `.github/workflows/staging-image-publication.yml`
+- `deploy/gcp/staging-zero-traffic-deployment.json`
+- `deploy/gcp/deploy-staging-zero-traffic.sh`
+- `deploy/gcp/record-staging-zero-traffic-deployment.mjs`
+- `deploy/gcp/activate-staging-zero-traffic-federation.sh`
+- `deploy/gcp/audit-staging-zero-traffic-federation.sh`
+- `.github/workflows/staging-zero-traffic-deployment.yml`
 
 Google references:
 
