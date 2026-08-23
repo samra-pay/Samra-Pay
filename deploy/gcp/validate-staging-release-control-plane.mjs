@@ -100,6 +100,18 @@ export function validateStagingReleaseControlPlane(
       Object.keys(contract.deployment.blockedServices).length === 1 &&
       contract.deployment.blockedServices["samra-operations-web"].length ===
         3 &&
+      contract.deployment.workflow ===
+        ".github/workflows/staging-zero-traffic-deployment.yml" &&
+      contract.deployment.protectedEnvironment ===
+        "staging-zero-traffic-deployment" &&
+      contract.deployment.controller ===
+        "deploy/gcp/deploy-staging-zero-traffic.sh" &&
+      contract.deployment.evidenceManifest ===
+        "artifacts/staging-release/staging-zero-traffic-deployment.json" &&
+      contract.deployment.evidenceManifestHash ===
+        "artifacts/staging-release/staging-zero-traffic-deployment.sha256" &&
+      contract.deployment.status === "implemented-not-authorized" &&
+      contract.deployment.sameCandidatePrerequisitesRequired === true &&
       contract.deployment.dedicatedFederatedIdentityRequired === true,
     "Zero-traffic deployment boundary drifted",
   );

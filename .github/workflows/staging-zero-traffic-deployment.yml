@@ -1,0 +1,205 @@
+name: Staging zero-traffic deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run a read-only review or deploy one private revision at zero traffic
+        required: true
+        default: review
+        type: choice
+        options:
+          - review
+          - deploy
+      service:
+        description: One allowlisted service for this run
+        required: true
+        default: samra-design-system-preview
+        type: choice
+        options:
+          - samra-api
+          - samra-customer-web
+          - samra-design-system-preview
+      publication_run_id:
+        description: Successful staging image-publication workflow run ID for this main commit
+        required: true
+        type: string
+      publication_run_attempt:
+        description: Publication workflow run attempt containing the immutable manifest
+        required: true
+        default: "1"
+        type: string
+      prerequisite_run_id:
+        description: Required for API migration evidence or customer-web API deployment evidence
+        required: false
+        type: string
+      prerequisite_artifact_name:
+        description: Exact same-repository prerequisite artifact name
+        required: false
+        type: string
+      authorization:
+        description: For deploy only, enter AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: staging-zero-traffic-${{ inputs.service }}
+  cancel-in-progress: false
+
+env:
+  SAMRA_GCP_PROJECT_ID: samra-pay-staging
+  SAMRA_GCP_PROJECT_NUMBER: "934122615631"
+  SAMRA_GCP_ORGANIZATION_ID: "614833350075"
+  SAMRA_GCP_REGION: us-east4
+  SAMRA_GCP_OPERATOR_ACCOUNT: samra-github-deployer-staging@samra-pay-staging.iam.gserviceaccount.com
+  SAMRA_GCP_EXPECTED_SHA: ${{ github.sha }}
+  SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER: projects/934122615631/locations/global/workloadIdentityPools/samra-zero-traffic-staging/providers/samra-pay-zero-traffic-main
+  SAMRA_GCP_DEPLOYER_SERVICE_ACCOUNT: samra-github-deployer-staging@samra-pay-staging.iam.gserviceaccount.com
+  SAMRA_STAGING_TARGET_SERVICE: ${{ inputs.service }}
+  SAMRA_PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+  SAMRA_PUBLICATION_RUN_ATTEMPT: ${{ inputs.publication_run_attempt }}
+  SAMRA_PREREQUISITE_RUN_ID: ${{ inputs.prerequisite_run_id }}
+  SAMRA_PREREQUISITE_ARTIFACT_NAME: ${{ inputs.prerequisite_artifact_name }}
+  SAMRA_STAGING_PUBLICATION_MANIFEST: ${{ runner.temp }}/samra-publication/staging-image-publication.json
+  SAMRA_STAGING_PUBLICATION_HASH: ${{ runner.temp }}/samra-publication/staging-image-publication.sha256
+  SAMRA_STAGING_PREREQUISITE_MANIFEST: ${{ runner.temp }}/samra-prerequisite/manifest.json
+  SAMRA_STAGING_PREREQUISITE_HASH: ${{ runner.temp }}/samra-prerequisite/manifest.sha256
+  SAMRA_STAGING_DATABASE_SECRET_VERSION: ${{ vars.SAMRA_STAGING_DATABASE_SECRET_VERSION }}
+  SAMRA_STAGING_AUTH0_ISSUER_BASE_URL: ${{ vars.SAMRA_STAGING_AUTH0_ISSUER_BASE_URL }}
+  SAMRA_STAGING_AUTH0_DOMAIN: ${{ vars.SAMRA_STAGING_AUTH0_DOMAIN }}
+  SAMRA_STAGING_AUTH0_CLIENT_ID: ${{ vars.SAMRA_STAGING_AUTH0_CLIENT_ID }}
+  SAMRA_STAGING_AUTH0_AUDIENCE: ${{ vars.SAMRA_STAGING_AUTH0_AUDIENCE }}
+  SAMRA_STAGING_API_ORIGIN: ${{ vars.SAMRA_STAGING_API_ORIGIN }}
+  SAMRA_STAGING_API_SERVICE_AUDIENCE: ${{ vars.SAMRA_STAGING_API_SERVICE_AUDIENCE }}
+
+jobs:
+  deployment:
+    name: Review or deploy one private zero-traffic revision
+    if: >-
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: staging-zero-traffic-deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the exact main commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify source and authorization boundary
+        shell: bash
+        env:
+          SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
+          SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
+          [[ -z "$(git status --porcelain)" ]]
+          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]]
+          [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
+          [[ "${SAMRA_PUBLICATION_RUN_ID}" =~ ^[0-9]+$ ]]
+          [[ "${SAMRA_PUBLICATION_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
+          if [[ "${SAMRA_WORKFLOW_MODE}" == "deploy" ]]; then
+            [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT" ]] || {
+              echo "Deploy mode requires the exact zero-traffic authorization." >&2
+              exit 1
+            }
+          fi
+          if [[ "${SAMRA_STAGING_TARGET_SERVICE}" != "samra-design-system-preview" ]]; then
+            [[ "${SAMRA_PREREQUISITE_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ -n "${SAMRA_PREREQUISITE_ARTIFACT_NAME}" ]]
+          fi
+
+      - name: Download immutable image publication evidence
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: staging-image-publication-${{ github.sha }}-run-${{ inputs.publication_run_id }}-attempt-${{ inputs.publication_run_attempt }}
+          path: ${{ runner.temp }}/samra-publication
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.publication_run_id }}
+
+      - name: Download prerequisite evidence
+        if: inputs.service != 'samra-design-system-preview'
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ inputs.prerequisite_artifact_name }}
+          path: ${{ runner.temp }}/samra-prerequisite-source
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prerequisite_run_id }}
+
+      - name: Normalize prerequisite evidence paths
+        if: inputs.service != 'samra-design-system-preview'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/samra-prerequisite"
+          mapfile -t manifests < <(find "${RUNNER_TEMP}/samra-prerequisite-source" -type f -name '*.json' | sort)
+          mapfile -t hashes < <(find "${RUNNER_TEMP}/samra-prerequisite-source" -type f -name '*.sha256' | sort)
+          [[ "${#manifests[@]}" -eq 1 && "${#hashes[@]}" -eq 1 ]] || {
+            echo "Prerequisite artifact must contain exactly one manifest and one SHA-256 sidecar." >&2
+            exit 1
+          }
+          cp "${manifests[0]}" "${SAMRA_STAGING_PREREQUISITE_MANIFEST}"
+          cp "${hashes[0]}" "${SAMRA_STAGING_PREREQUISITE_HASH}"
+
+      - name: Obtain short-lived Google credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SAMRA_GCP_DEPLOYER_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: ">= 540.0.0"
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+
+      - name: Verify federated caller
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(gcloud config get-value account 2>/dev/null)" == "${SAMRA_GCP_DEPLOYER_SERVICE_ACCOUNT}" ]]
+          [[ "$(gcloud config get-value project 2>/dev/null)" == "${SAMRA_GCP_PROJECT_ID}" ]]
+          [[ -z "$(gcloud iam service-accounts keys list \
+            --iam-account="${SAMRA_GCP_DEPLOYER_SERVICE_ACCOUNT}" \
+            --project="${SAMRA_GCP_PROJECT_ID}" \
+            --managed-by=user --format='value(name)')" ]]
+
+      - name: Run read-only zero-traffic review
+        shell: bash
+        run: bash deploy/gcp/deploy-staging-zero-traffic.sh --review
+
+      - name: Deploy one reviewed revision at zero traffic
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          SAMRA_GCP_ZERO_TRAFFIC_APPLY: AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT
+        run: bash deploy/gcp/deploy-staging-zero-traffic.sh --apply
+
+      - name: Preserve immutable zero-traffic deployment evidence
+        if: inputs.mode == 'deploy' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-zero-traffic-${{ inputs.service }}-${{ github.sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/staging-release/staging-zero-traffic-deployment.json
+            artifacts/staging-release/staging-zero-traffic-deployment.sha256
+            artifacts/staging-release/staging-zero-traffic-configuration-${{ inputs.service }}.json
+            artifacts/staging-release/staging-zero-traffic-before-${{ inputs.service }}.json
+            artifacts/staging-release/staging-zero-traffic-after-${{ inputs.service }}.json
+          if-no-files-found: error
+          retention-days: 365

@@ -49,8 +49,8 @@
     "automaticMigrationAllowed": false,
     "seedPolicy": "manual-idempotent-synthetic-only",
     "accessContract": "deploy/gcp/staging-database-access.json",
-    "runtimeSecretReference": "projects/PROJECT_ID/secrets/samra-staging-database-url/versions/latest",
-    "migrationSecretReference": "projects/PROJECT_ID/secrets/samra-staging-migration-database-url/versions/latest"
+    "runtimeSecretReference": "projects/PROJECT_ID/secrets/samra-staging-database-url/versions/PINNED_INTEGER",
+    "migrationSecretReference": "projects/PROJECT_ID/secrets/samra-staging-migration-database-url/versions/PINNED_INTEGER"
   },
   "services": {
     "samra-api": {
