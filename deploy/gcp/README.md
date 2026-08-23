@@ -226,11 +226,13 @@ The complete CI/CD stage authority, traceability requirements, zero-traffic
 deployment controller, promotion gate, and exact-revision rollback model are
 defined in
 [`docs/operations/staging-release-control-plane.md`](../../docs/operations/staging-release-control-plane.md)
-and machine-validated by `staging-release-control-plane.json`. Image publication
-and zero-traffic deployment are implemented as separate protected workflows.
-Neither the deployment federation nor any Cloud Run mutation is automatically
-authorized. Traffic promotion and rollback remain separate future approval
-gates.
+and machine-validated by `staging-release-control-plane.json`. Image publication,
+zero-traffic deployment, exact-revision promotion, and rollback are implemented
+as separate protected workflows. None of their cloud mutations is automatically
+authorized. Promotion and rollback use distinct protected environments,
+workload-identity providers, and keyless service accounts. The required
+functional verifier and first-ever traffic activation remain separate hard
+stops.
 
 ### Keyless zero-traffic Cloud Run deployment
 
@@ -276,6 +278,41 @@ Artifact Registry, and absence of user-managed keys without changing cloud
 state. GitHub must also have a protected `staging-zero-traffic-deployment`
 environment restricted to `main`; environment variables hold only reviewed
 non-secret identifiers and pinned secret version numbers.
+
+### Exact-revision traffic promotion and rollback
+
+`staging-traffic-control.json` defines the next release boundary. The manual
+`staging-traffic-control.yml` workflow accepts only a candidate already in
+current `main` history. Promotion requires exact hashed zero-traffic deployment
+and functional-verification artifacts for the same candidate, service, and
+revision. The verification contract requires readiness, restart, service
+authentication, ledger, reconciliation, audit, and failure-visibility checks,
+plus a `SAMP` Qase run in `google-cloud-staging`.
+
+`control-staging-traffic.sh --review` proves the service remains private and
+untagged, the candidate revision is Ready and matches the immutable image
+digest, and one different healthy revision currently receives exactly 100% of
+traffic. This deliberately rejects first activation, partial rollout, tags,
+floating aliases, and an unrecorded rollback target. An authorized promotion
+uses only `--to-revisions=<exact revision>=100`, independently verifies the
+result, and writes a hashed promotion manifest. A controller failure after the
+traffic operation triggers a best-effort automatic rollback to the prior
+revision and leaves the run failed.
+
+Rollback consumes that exact promotion manifest, verifies current traffic still
+matches the promoted state, restores the recorded prior revision without a
+rebuild, and writes a second hashed record. The record remains pending until
+post-rollback synthetic verification passes. Beyond the reviewed traffic
+allocation, no operation changes the runtime template, service IAM, vendors,
+secrets, databases, production, or Replit.
+
+The one-time traffic federation activation is separately reviewable through
+`activate-staging-traffic-federation.sh`. Its independent audit requires one
+isolated pool with exactly two environment-specific providers and two distinct
+keyless identities. The custom role contains only Cloud Run traffic update and
+read/audit permissions. The audit fails if either identity has build-image,
+Cloud Build source-bucket, secret, migration, runtime-impersonation, IAM, or
+user-managed-key authority.
 
 Review example from an authenticated, fixed-source Cloud Shell checkout:
 
