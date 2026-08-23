@@ -7,6 +7,10 @@ const controller = await readFile(
   "deploy/gcp/publish-staging-images.sh",
   "utf8",
 );
+const workflow = await readFile(
+  ".github/workflows/staging-image-publication.yml",
+  "utf8",
+);
 
 test("plans one bounded five-image staging publication offline", () => {
   const output = execFileSync(
@@ -67,7 +71,7 @@ test("places an exact authorization after every read-only preflight", () => {
   assert.match(controller, /samra-github-staging@\$\{PROJECT_ID\}/);
 });
 
-test("submits only the reviewed build contract and records all five digests", () => {
+test("submits only the reviewed build contract and records durable provenance", () => {
   for (const evidence of [
     '--config="${ROOT_DIR}/deploy/gcp/cloudbuild.yaml"',
     '--region="${REGION}"',
@@ -81,9 +85,16 @@ test("submits only the reviewed build contract and records all five digests", ()
     "_IMAGE_TAG=${EXPECTED_SHA}",
     "_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}",
     "gcloud builds describe",
+    "record-staging-image-publication.mjs",
+    '--git-tree-sha "$(git -C "${ROOT_DIR}" rev-parse "${EXPECTED_SHA}^{tree}")"',
+    '--github-run-id "${GITHUB_RUN_ID:-}"',
+    '--github-run-attempt "${GITHUB_RUN_ATTEMPT:-}"',
+    '--github-actor "${GITHUB_ACTOR:-}"',
+    'PUBLICATION_MANIFEST="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.json"',
+    'PUBLICATION_MANIFEST_HASH="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.sha256"',
     "STAGING IMAGE PUBLICATION PASS",
     "Cloud Build staging storage, records, logs, and provenance may remain.",
-    "No service was deployed and no traffic was changed.",
+    "No service was deployed, no traffic was changed, and no vendor was activated.",
   ]) {
     assert.ok(controller.includes(evidence), evidence);
   }
@@ -96,6 +107,20 @@ test("submits only the reviewed build contract and records all five digests", ()
   ]) {
     assert.ok(controller.includes(image), image);
   }
+});
+
+test("retains the hashed publication manifest as a commit- and run-specific artifact", () => {
+  assert.match(
+    workflow,
+    /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/,
+  );
+  assert.match(
+    workflow,
+    /name: staging-image-publication-\$\{\{ github\.sha \}\}-run-\$\{\{ github\.run_id \}\}-attempt-\$\{\{ github\.run_attempt \}\}/,
+  );
+  assert.match(workflow, /path: artifacts\/staging-release/);
+  assert.match(workflow, /if-no-files-found: error/);
+  assert.match(workflow, /retention-days: 365/);
 });
 
 test("uses the fully qualified build identity and regional build lookup", () => {
