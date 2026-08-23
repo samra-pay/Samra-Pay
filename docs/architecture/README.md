@@ -43,9 +43,10 @@ repositories, row locks, atomic transaction boundaries, leased work, inbox and
 outbox recovery, audit evidence, and restart-safe retry state.
 
 The Auth0, Persona, and Crossmint decisions do not mean live connections exist.
-Auth0 and Persona sandbox foundations are disabled by default; Crossmint remains
-a documented provider boundary. No real customer, live wallet, funding rail,
-Ethiopia payout rail, or production deployment is represented.
+Auth0 web/mobile and Persona sandbox foundations are disabled by default. The
+dormant Crossmint sandbox adapter cannot be selected by a runtime. No real
+customer, live wallet, funding rail, Ethiopia payout rail, or production
+deployment is represented.
 
 ## Financial invariants
 
@@ -79,6 +80,11 @@ Ethiopia payout rail, or production deployment is represented.
 | `SAMRA_PUBLIC_AUTH0_AUDIENCE`           | Exact HTTPS Samra API identifier       | none       | Cloud Run public runtime mapping to the same API audience           |
 | `VITE_SAMRA_OPS_DATA_MODE`              | `mock`, `api`                          | `mock`     | Selects Operations Portal data source                               |
 | `EXPO_PUBLIC_SAMRA_DATA_MODE`           | `mock`, `api`                          | `mock`     | Selects mobile data source                                          |
+| `EXPO_PUBLIC_SAMRA_API_ORIGIN`          | Exact HTTPS API origin                 | none       | Required with mobile API mode; origin only                          |
+| `EXPO_PUBLIC_SAMRA_AUTH_MODE`           | `disabled`, `auth0-native`             | `disabled` | Enables the native Auth0 boundary only in mobile API mode           |
+| `EXPO_PUBLIC_AUTH0_DOMAIN`              | Auth0 tenant/custom-domain hostname    | none       | Required for native Auth0; hostname only                            |
+| `EXPO_PUBLIC_AUTH0_CLIENT_ID`           | Public Auth0 Native Application ID     | none       | Required for native Auth0; never a client secret                    |
+| `EXPO_PUBLIC_AUTH0_AUDIENCE`            | Exact HTTPS Samra API identifier       | none       | Required for native Auth0 and must match the API audience           |
 
 Unknown values fail clearly. API mode never silently falls back to mock
 financial data.

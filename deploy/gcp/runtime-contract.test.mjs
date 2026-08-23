@@ -171,6 +171,24 @@ test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
 
   assert.equal(auth0.status, "required-before-staging-deployment");
   assert.deepEqual(auth0.customerWebSecrets, []);
+  assert.deepEqual(auth0.mobileRuntimeEnvironment, [
+    "EXPO_PUBLIC_SAMRA_AUTH_MODE",
+    "EXPO_PUBLIC_AUTH0_DOMAIN",
+    "EXPO_PUBLIC_AUTH0_CLIENT_ID",
+    "EXPO_PUBLIC_AUTH0_AUDIENCE",
+  ]);
+  assert.deepEqual(auth0.mobileSecrets, []);
+  assert.equal(auth0.mobileSdk, "react-native-auth0@5.7.0");
+  assert.equal(auth0.mobileApplicationId, "com.samrapay.mobile.staging");
+  assert.equal(auth0.mobileCustomScheme, "samrapayauth");
+  assert.equal(
+    auth0.mobileTokenStorage,
+    "ios-keychain-android-encrypted-storage",
+  );
+  assert.equal(auth0.mobileBoundaryImplemented, true);
+  assert.equal(auth0.mobileClientConnected, false);
+  assert.equal(auth0.expoGoPreviewPreserved, true);
+  assert.equal(auth0.activationBlockedOn.length, 5);
   assert.equal(auth0.clientSecretAllowed, false);
   assert.equal(auth0.tokenAlgorithm, "RS256");
   assert.equal(auth0.tokenStorage, "memory-only");

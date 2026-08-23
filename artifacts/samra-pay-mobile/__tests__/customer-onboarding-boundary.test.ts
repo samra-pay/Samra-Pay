@@ -5,26 +5,61 @@ import { describe, expect, it } from "vitest";
 const loginSource = read("../app/login.tsx");
 const onboardingSource = read("../app/onboarding.tsx");
 const authSource = read("../context/AuthContext.tsx");
+const nativeAuthSource = read("../lib/native-auth0.ts");
+const expoConfigSource = read("../app.config.cjs");
 const runtimeSource = read("../lib/samra-runtime.tsx");
 const layoutSource = read("../app/_layout.tsx");
 const legalRouteSource = read("../app/legal/[kind].tsx");
 const sharedJourneySource = read("../../../lib/samra-client/src/onboarding.ts");
+const ciWorkflowSource = read("../../../.github/workflows/ci.yml");
+const releaseWorkflowSource = read(
+  "../../../.github/workflows/release-candidate.yml",
+);
 
 describe("mobile customer-onboarding trust boundary", () => {
-  it("does not collect local credentials and keeps API sign-in disabled", () => {
+  it("does not collect local credentials and delegates connected sign-in to Auth0", () => {
     expect(loginSource).not.toMatch(/TextInput|keyboardType|secureTextEntry/);
-    expect(loginSource).toContain('if (mode !== "mock")');
-    expect(loginSource).toContain('disabled={loading || mode !== "mock"}');
-    expect(loginSource).toContain("Auth0 sign-in not configured");
+    expect(loginSource).toContain("Continue securely with Auth0");
+    expect(loginSource).toContain("Direct password entry is disabled");
+    expect(loginSource).toContain("disabled={loading}");
   });
 
   it("uses local storage only for the named synthetic session", () => {
     expect(authSource).toContain(
       'const STORAGE_KEY = "samra-pay-demo-session"',
     );
-    expect(authSource).toContain('if (mode !== "mock")');
-    expect(authSource).toContain('if (mode === "mock")');
+    expect(authSource).toContain('config.mode === "disabled"');
+    expect(authSource).toContain("setAuthTokenGetter(");
     expect(authSource).not.toMatch(/accessToken|refreshToken|idToken/);
+    expect(nativeAuthSource).not.toMatch(
+      /AsyncStorage|localStorage|sessionStorage/,
+    );
+  });
+
+  it("keeps native Auth0 out of Expo Go and applies it only at native build time", () => {
+    expect(nativeAuthSource).toContain('import("react-native-auth0")');
+    expect(nativeAuthSource).toContain("credentialsManager.saveCredentials");
+    expect(nativeAuthSource).toContain("credentialsManager.getCredentials");
+    expect(nativeAuthSource).toContain("useDPoP: false");
+    expect(nativeAuthSource).not.toContain("offline_access");
+    expect(expoConfigSource).toContain('if (mode === "disabled") return expo');
+    expect(expoConfigSource).toContain('"react-native-auth0"');
+    expect(expoConfigSource).toContain('"samrapayauth"');
+  });
+
+  it("builds API-mode mobile artifacts only with a complete synthetic Auth0 configuration", () => {
+    for (const workflow of [ciWorkflowSource, releaseWorkflowSource]) {
+      expect(workflow).toContain('EXPO_PUBLIC_SAMRA_AUTH_MODE: "auth0-native"');
+      expect(workflow).toContain(
+        'EXPO_PUBLIC_AUTH0_DOMAIN: "auth0.ci.invalid"',
+      );
+      expect(workflow).toContain(
+        'EXPO_PUBLIC_AUTH0_CLIENT_ID: "NativeCiClient_12345678"',
+      );
+      expect(workflow).toContain(
+        'EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.ci.invalid"',
+      );
+    }
   });
 
   it("shares normalized onboarding truth and exposes fake controls only in mock mode", () => {

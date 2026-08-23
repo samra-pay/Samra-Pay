@@ -476,10 +476,19 @@ A controlled mobile staging bundle requires:
 ```text
 EXPO_PUBLIC_SAMRA_DATA_MODE=api
 EXPO_PUBLIC_SAMRA_API_ORIGIN=https://<samra-api-cloud-run-host>
+EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native
+EXPO_PUBLIC_AUTH0_DOMAIN=<hostname-only>
+EXPO_PUBLIC_AUTH0_CLIENT_ID=<public-native-client-id>
+EXPO_PUBLIC_AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
 ```
 
 These values are public bundle configuration, not secrets. The mobile build
-rejects credentials, paths, queries, fragments, and non-loopback HTTP origins.
+rejects credentials, paths, queries, fragments, non-loopback HTTP origins, and
+partial Auth0 configuration. Native Auth0 mode pins application ID
+`com.samrapay.mobile.staging` and scheme `samrapayauth`, and requires a reviewed
+custom Expo development client or native build. The default mock/disabled build
+does not add the native plugin and remains available through Expo Go. No client
+secret, refresh token, Persona value, or Crossmint value belongs in this bundle.
 
 Do not set `PORT`; Cloud Run injects it. Do not place `DATABASE_URL` in a build
 argument, image, repository file, or ordinary environment-variable manifest.

@@ -115,6 +115,20 @@ test("rejects public, mutable, elevated, and automatic runtime drift", () => {
   assert.throws(() =>
     validateStagingRuntime(
       mutate((value) => {
+        value.vendorReadiness.auth0.mobileClientConnected = true;
+      }),
+    ),
+  );
+  assert.throws(() =>
+    validateStagingRuntime(
+      mutate((value) => {
+        value.vendorReadiness.auth0.mobileSecrets = ["AUTH0_CLIENT_SECRET"];
+      }),
+    ),
+  );
+  assert.throws(() =>
+    validateStagingRuntime(
+      mutate((value) => {
         value.vendorReadiness.crossmint.sandboxAdapterImplemented = false;
       }),
     ),
