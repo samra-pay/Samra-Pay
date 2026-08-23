@@ -39,6 +39,8 @@ audit trail, reconciliation result, or provider-migration mapping.
 - synthetic remittance state and deterministic failure scenarios;
 - Auth0 token, durable identity-binding, guarded customer-web Universal Login,
   and memory-only bearer-token bridge, disabled by default;
+- private Cloud Run customer-web-to-API authentication that preserves Auth0
+  authorization and requires a separate Google service identity;
 - durable onboarding, consent, and Persona-style identity-case boundaries;
 - durable synthetic Crossmint-style wallet provisioning, immutable provider
   mapping, consent, restart, concurrency, failure, and audit boundaries;
@@ -82,6 +84,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 ### Identity and wallet
 
 - [Auth0 customer identity](architecture/customer-identity-auth0.md)
+- [Cloud Run service authentication](architecture/cloud-run-service-authentication.md)
 - [Persona identity case](architecture/customer-identity-persona.md)
 - [Crossmint USDC wallet boundary](architecture/customer-wallet-crossmint.md)
 

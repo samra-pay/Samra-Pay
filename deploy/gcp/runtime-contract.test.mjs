@@ -57,7 +57,10 @@ test("limits database and secret access to API and migration identities", () => 
     "cloud-sql-client",
     "database-secret-accessor",
   ]);
-  for (const name of ["customerWeb", "operationsWeb", "designSystem"]) {
+  assert.deepEqual(contract.identityCapabilities.customerWeb, [
+    "cloud-run-invoker:samra-api",
+  ]);
+  for (const name of ["operationsWeb", "designSystem"]) {
     assert.deepEqual(contract.identityCapabilities[name], []);
   }
 
@@ -136,7 +139,7 @@ test("requires authenticated load-balancer ingress for every service", () => {
   );
   assert.ok(
     contract.approvalGates.includes(
-      "service-to-service authentication for API proxy calls",
+      "exact customer-web roles/run.invoker grant on samra-api and zero-traffic dual-token proof",
     ),
   );
 });
@@ -197,11 +200,25 @@ test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
     contract.services["samra-customer-web"].requiredRuntimeEnvironment,
     [
       "SAMRA_API_ORIGIN",
+      "SAMRA_API_SERVICE_AUTH_MODE",
+      "SAMRA_API_SERVICE_AUDIENCE",
       "SAMRA_PUBLIC_DATA_MODE",
       "SAMRA_PUBLIC_AUTH0_DOMAIN",
       "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
       "SAMRA_PUBLIC_AUTH0_AUDIENCE",
     ],
+  );
+  assert.deepEqual(
+    contract.services["samra-customer-web"].apiProxyAuthentication,
+    {
+      mode: "cloud-run-iam",
+      tokenSource: "cloud-run-metadata-service-identity",
+      serviceAuthorizationHeader: "X-Serverless-Authorization",
+      customerAuthorizationHeader: "Authorization",
+      audienceEnvironment: "SAMRA_API_SERVICE_AUDIENCE",
+      inboundServiceAuthorizationStripped: true,
+      credentialsStored: false,
+    },
   );
 
   assert.equal(persona.status, "prepared-not-authorized");
@@ -254,6 +271,19 @@ test("keeps migrations reviewed, serial, bounded, and non-retrying", () => {
   assert.ok(
     contract.releaseOrder.indexOf("execute reviewed migration job once") <
       contract.releaseOrder.indexOf("deploy API revision with zero traffic"),
+  );
+  assert.ok(
+    contract.releaseOrder.indexOf(
+      "deploy authenticated customer web and design preview with zero traffic",
+    ) <
+      contract.releaseOrder.indexOf(
+        "prove customer-web service identity can invoke API while preserving Auth0 bearer authorization",
+      ),
+  );
+  assert.ok(
+    contract.releaseOrder.indexOf(
+      "prove customer-web service identity can invoke API while preserving Auth0 bearer authorization",
+    ) < contract.releaseOrder.indexOf("promote customer web traffic"),
   );
 });
 

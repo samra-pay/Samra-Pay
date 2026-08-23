@@ -7,6 +7,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultPublicDirectory = path.join(moduleDirectory, "public");
 const publicRuntimeConfigPath = "/samra-runtime-config.js";
+const cloudRunIdentityEndpoint =
+  "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity";
+const cloudRunAuthorizationHeader = "x-serverless-authorization";
+const identityTokenRefreshSkewSeconds = 300;
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -53,20 +57,166 @@ export function loadServerConfig(environment = process.env) {
   }
   if (
     apiOrigin?.protocol === "http:" &&
-    !["127.0.0.1", "[::1]", "localhost"].includes(apiOrigin.hostname)
+    !isLoopbackHostname(apiOrigin.hostname)
   ) {
     throw new Error(
       "SAMRA_API_ORIGIN must use https unless it targets loopback testing.",
     );
   }
+  if (
+    apiOrigin &&
+    (apiOrigin.username ||
+      apiOrigin.password ||
+      apiOrigin.pathname !== "/" ||
+      apiOrigin.search ||
+      apiOrigin.hash)
+  ) {
+    throw new Error(
+      "SAMRA_API_ORIGIN must contain only an origin without credentials, path, query, or fragment.",
+    );
+  }
+
+  const apiServiceAuth = loadApiServiceAuthConfig(environment, apiOrigin);
 
   return Object.freeze({
     apiOrigin,
+    apiServiceAuth,
+    apiServiceIdentityTokenProvider:
+      apiServiceAuth.mode === "cloud-run-iam"
+        ? createCloudRunIdentityTokenProvider({
+            audience: apiServiceAuth.audience,
+          })
+        : null,
     port,
     publicRuntimeConfig: loadPublicRuntimeConfig(environment),
     publicDirectory:
       environment.SAMRA_PUBLIC_DIRECTORY ?? defaultPublicDirectory,
   });
+}
+
+function isLoopbackHostname(hostname) {
+  return ["127.0.0.1", "[::1]", "localhost"].includes(hostname);
+}
+
+export function loadApiServiceAuthConfig(environment, apiOrigin) {
+  const requestedMode = environment.SAMRA_API_SERVICE_AUTH_MODE?.trim();
+  const isLocalOrDisconnected =
+    !apiOrigin || isLoopbackHostname(apiOrigin.hostname);
+  const mode = requestedMode || (isLocalOrDisconnected ? "disabled" : null);
+
+  if (mode === null) {
+    throw new Error(
+      'SAMRA_API_SERVICE_AUTH_MODE must be "cloud-run-iam" for a non-loopback API origin.',
+    );
+  }
+  if (mode !== "disabled" && mode !== "cloud-run-iam") {
+    throw new Error(
+      'SAMRA_API_SERVICE_AUTH_MODE must be "disabled" or "cloud-run-iam".',
+    );
+  }
+  if (!isLocalOrDisconnected && mode !== "cloud-run-iam") {
+    throw new Error(
+      'SAMRA_API_SERVICE_AUTH_MODE must be "cloud-run-iam" for a non-loopback API origin.',
+    );
+  }
+  if (mode === "disabled") {
+    return Object.freeze({ mode, audience: null });
+  }
+  if (!apiOrigin || apiOrigin.protocol !== "https:") {
+    throw new Error(
+      "Cloud Run API service authentication requires an HTTPS API origin.",
+    );
+  }
+
+  const rawAudience = environment.SAMRA_API_SERVICE_AUDIENCE?.trim();
+  let audience;
+  try {
+    audience = rawAudience ? new URL(rawAudience) : null;
+  } catch {
+    audience = null;
+  }
+  if (
+    !audience ||
+    audience.protocol !== "https:" ||
+    audience.username ||
+    audience.password ||
+    audience.pathname !== "/" ||
+    audience.search ||
+    audience.hash
+  ) {
+    throw new Error(
+      "SAMRA_API_SERVICE_AUDIENCE must be the exact HTTPS Cloud Run API origin.",
+    );
+  }
+  if (audience.origin !== apiOrigin.origin) {
+    throw new Error(
+      "SAMRA_API_SERVICE_AUDIENCE must match SAMRA_API_ORIGIN exactly.",
+    );
+  }
+
+  return Object.freeze({ mode, audience: audience.origin });
+}
+
+function parseIdentityToken(token, audience, nowSeconds) {
+  if (
+    typeof token !== "string" ||
+    token.length > 16_384 ||
+    !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(token)
+  ) {
+    throw new Error("Cloud Run service identity returned a malformed token.");
+  }
+
+  let claims;
+  try {
+    claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url"));
+  } catch {
+    throw new Error("Cloud Run service identity returned invalid claims.");
+  }
+  if (
+    claims?.aud !== audience ||
+    !Number.isInteger(claims?.exp) ||
+    claims.exp <= nowSeconds + 60
+  ) {
+    throw new Error("Cloud Run service identity token claims are invalid.");
+  }
+  return claims;
+}
+
+export function createCloudRunIdentityTokenProvider({
+  audience,
+  fetchImpl = fetch,
+  now = () => Date.now(),
+  timeoutMilliseconds = 2_000,
+}) {
+  if (typeof audience !== "string" || audience.length === 0) {
+    throw new Error("A Cloud Run service audience is required.");
+  }
+
+  let cachedToken = null;
+  return async function getCloudRunIdentityToken() {
+    const nowSeconds = Math.floor(now() / 1_000);
+    if (
+      cachedToken &&
+      cachedToken.expiresAt > nowSeconds + identityTokenRefreshSkewSeconds
+    ) {
+      return cachedToken.value;
+    }
+
+    const endpoint = new URL(cloudRunIdentityEndpoint);
+    endpoint.searchParams.set("audience", audience);
+    const response = await fetchImpl(endpoint, {
+      headers: { "Metadata-Flavor": "Google" },
+      signal: AbortSignal.timeout(timeoutMilliseconds),
+    });
+    if (!response.ok) {
+      throw new Error("Cloud Run service identity token is unavailable.");
+    }
+
+    const value = (await response.text()).trim();
+    const claims = parseIdentityToken(value, audience, nowSeconds);
+    cachedToken = Object.freeze({ value, expiresAt: claims.exp });
+    return value;
+  };
 }
 
 export function loadPublicRuntimeConfig(environment = process.env) {
@@ -199,10 +349,15 @@ async function readRequestBody(request) {
   return chunks.length === 0 ? undefined : Buffer.concat(chunks);
 }
 
-function proxyRequestHeaders(request) {
+function proxyRequestHeaders(request, serviceIdentityToken) {
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
-    if (hopByHopHeaders.has(name.toLowerCase()) || value === undefined)
+    const lowerName = name.toLowerCase();
+    if (
+      hopByHopHeaders.has(lowerName) ||
+      lowerName === cloudRunAuthorizationHeader ||
+      value === undefined
+    )
       continue;
     if (Array.isArray(value)) {
       for (const item of value) headers.append(name, item);
@@ -212,10 +367,14 @@ function proxyRequestHeaders(request) {
   }
   headers.set("x-forwarded-host", request.headers.host ?? "");
   headers.set("x-forwarded-proto", "https");
+  if (serviceIdentityToken) {
+    headers.set(cloudRunAuthorizationHeader, `Bearer ${serviceIdentityToken}`);
+  }
   return headers;
 }
 
-async function proxyApiRequest(request, response, apiOrigin) {
+async function proxyApiRequest(request, response, config) {
+  const { apiOrigin } = config;
   if (!apiOrigin) {
     response.writeHead(502, { "content-type": "application/problem+json" });
     response.end(
@@ -236,11 +395,31 @@ async function proxyApiRequest(request, response, apiOrigin) {
       ? undefined
       : await readRequestBody(request);
 
+  let serviceIdentityToken;
+  if (config.apiServiceAuth?.mode === "cloud-run-iam") {
+    try {
+      serviceIdentityToken = await config.apiServiceIdentityTokenProvider?.();
+      if (!serviceIdentityToken) throw new Error("Missing identity token");
+    } catch {
+      response.writeHead(502, { "content-type": "application/problem+json" });
+      response.end(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Samra API authentication unavailable",
+          status: 502,
+          detail:
+            "The web service could not authenticate its request to the Samra API.",
+        }),
+      );
+      return;
+    }
+  }
+
   let upstream;
   try {
     upstream = await fetch(target, {
       body,
-      headers: proxyRequestHeaders(request),
+      headers: proxyRequestHeaders(request, serviceIdentityToken),
       method,
       redirect: "manual",
     });
@@ -320,7 +499,7 @@ export function createStaticServer(config) {
     }
 
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
-      await proxyApiRequest(request, response, config.apiOrigin);
+      await proxyApiRequest(request, response, config);
       return;
     }
 

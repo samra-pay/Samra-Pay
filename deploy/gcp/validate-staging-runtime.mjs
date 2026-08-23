@@ -105,7 +105,7 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
       JSON.stringify({
         api: ["cloud-sql-client", "database-secret-accessor"],
         migrations: ["cloud-sql-client", "database-secret-accessor"],
-        customerWeb: [],
+        customerWeb: ["cloud-run-invoker:samra-api"],
         operationsWeb: [],
         designSystem: [],
       }),
@@ -154,12 +154,29 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     ) ===
       JSON.stringify([
         "SAMRA_API_ORIGIN",
+        "SAMRA_API_SERVICE_AUTH_MODE",
+        "SAMRA_API_SERVICE_AUDIENCE",
         "SAMRA_PUBLIC_DATA_MODE",
         "SAMRA_PUBLIC_AUTH0_DOMAIN",
         "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
         "SAMRA_PUBLIC_AUTH0_AUDIENCE",
       ]),
     "Customer web must receive only the API origin and public runtime identifiers",
+  );
+  assert(
+    JSON.stringify(
+      contract.services["samra-customer-web"].apiProxyAuthentication,
+    ) ===
+      JSON.stringify({
+        mode: "cloud-run-iam",
+        tokenSource: "cloud-run-metadata-service-identity",
+        serviceAuthorizationHeader: "X-Serverless-Authorization",
+        customerAuthorizationHeader: "Authorization",
+        audienceEnvironment: "SAMRA_API_SERVICE_AUDIENCE",
+        inboundServiceAuthorizationStripped: true,
+        credentialsStored: false,
+      }),
+    "Customer web must preserve Auth0 authorization behind exact Cloud Run service identity",
   );
   assert(
     JSON.stringify(
@@ -210,14 +227,28 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     "deploy API revision with zero traffic",
   );
   const trafficIndex = contract.releaseOrder.indexOf("promote API traffic");
+  const customerDeployIndex = contract.releaseOrder.indexOf(
+    "deploy authenticated customer web and design preview with zero traffic",
+  );
+  const serviceAuthProofIndex = contract.releaseOrder.indexOf(
+    "prove customer-web service identity can invoke API while preserving Auth0 bearer authorization",
+  );
+  const customerTrafficIndex = contract.releaseOrder.indexOf(
+    "promote customer web traffic",
+  );
   assert(
-    migrationIndex >= 0 && migrationIndex < apiIndex && apiIndex < trafficIndex,
-    "Migration, zero-traffic deployment, and traffic promotion order drifted",
+    migrationIndex >= 0 &&
+      migrationIndex < apiIndex &&
+      apiIndex < trafficIndex &&
+      trafficIndex < customerDeployIndex &&
+      customerDeployIndex < serviceAuthProofIndex &&
+      serviceAuthProofIndex < customerTrafficIndex,
+    "Migration, zero-traffic deployment, service-auth proof, and traffic promotion order drifted",
   );
 
   for (const gate of [
     "approved load balancer and identity-aware access policy",
-    "service-to-service authentication for API proxy calls",
+    "exact customer-web roles/run.invoker grant on samra-api and zero-traffic dual-token proof",
     "approved Auth0 tenant, API audience, callback, logout, and allowed-origin inventory",
     "separate Persona and Crossmint activation reviews with pinned secret versions",
     "logging, alerts, rollback owner, and cost budget",

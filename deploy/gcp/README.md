@@ -104,8 +104,19 @@ to `SAMRA_API_ORIGIN`. This keeps browser cookies first-party and provides an
 explicit HTTP 502 response when the API is unavailable; it never substitutes
 mock financial data.
 
-`SAMRA_API_ORIGIN` must use HTTPS. Plain HTTP is accepted only for loopback
-container testing and local development.
+The customer-web proxy uses two independent authentication headers. It
+preserves the customer's Auth0 bearer token in `Authorization` and places a
+short-lived Google service identity token in `X-Serverless-Authorization`.
+Cloud Run IAM authenticates the dedicated customer-web service account while
+the Samra API still authenticates the customer. Any client-supplied service
+identity header is stripped. The Google token comes from the Cloud Run metadata
+server, is audience-bound to the exact API origin, stays in memory, and requires
+no service-account key or stored credential.
+
+`SAMRA_API_ORIGIN` and `SAMRA_API_SERVICE_AUDIENCE` must be the same exact
+HTTPS origin. Plain HTTP and disabled service authentication are accepted only
+for loopback container testing and local development. See
+[`docs/architecture/cloud-run-service-authentication.md`](../../docs/architecture/cloud-run-service-authentication.md).
 
 The design-system preview container uses the same versioned source and gates as
 the GitHub preview artifact. It provides an independent browser-based design
@@ -345,10 +356,12 @@ post-audit, and requires the four target services plus migration and temporary
 database jobs to be absent. The review prints image digests as deployment
 evidence but never reads a secret value.
 
-This controller intentionally has no apply mode. A runtime deployment remains
-blocked until the load-balancer and IAP policy, service-to-service
-authentication, logging and alerts, rollback owner, cost boundary, executable
-database-access audit, and critical Qase release evidence are approved. The
+This controller intentionally has no apply mode. The service-to-service code
+boundary is implemented, but a runtime deployment remains blocked until the
+load-balancer and IAP policy, exact service-level `roles/run.invoker` grant and
+zero-traffic dual-token proof, logging and alerts, rollback owner, cost
+boundary, executable database-access audit, and critical Qase release evidence
+are approved. The
 Operations Portal remains separately blocked by workforce authentication,
 staff-access lifecycle controls, and operations API security promotion.
 
@@ -432,7 +445,16 @@ Each web service requires:
 
 ```text
 SAMRA_API_ORIGIN=https://<samra-api-cloud-run-host>
+SAMRA_API_SERVICE_AUTH_MODE=cloud-run-iam
+SAMRA_API_SERVICE_AUDIENCE=https://<samra-api-cloud-run-host>
 ```
+
+The customer-web service identity must receive `roles/run.invoker` on the exact
+`samra-api` Cloud Run service only. Do not grant project-wide invocation. The
+proxy obtains the Google ID token from Cloud Run metadata and sends it through
+`X-Serverless-Authorization`, leaving the browser's Auth0 `Authorization`
+header intact. Token acquisition or claim validation failure returns HTTP 502
+before the API is called.
 
 The customer-web image is environment-portable. It loads
 `/samra-runtime-config.js` before the application bundle and the Cloud Run
