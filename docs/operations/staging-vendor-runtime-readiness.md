@@ -47,6 +47,22 @@ server ignores all other process variables, including Auth0 secrets, Persona
 secrets, Crossmint secrets, and database credentials. Local Vite development
 serves an empty fallback and retains its existing build-time defaults.
 
+The same server also owns the private API proxy boundary. These server-only,
+non-secret values are never exported to the browser:
+
+| Cloud Run value               | Required value                         |
+| ----------------------------- | -------------------------------------- |
+| `SAMRA_API_ORIGIN`            | exact HTTPS `samra-api` service origin |
+| `SAMRA_API_SERVICE_AUTH_MODE` | `cloud-run-iam`                        |
+| `SAMRA_API_SERVICE_AUDIENCE`  | same exact API service origin          |
+
+The proxy preserves the Auth0 customer bearer token in `Authorization`, strips
+any browser-supplied `X-Serverless-Authorization`, and adds an audience-bound
+Google service identity token from Cloud Run metadata in that second header.
+No service-account key is created or stored. The customer-web identity still
+requires a future exact service-level `roles/run.invoker` grant and zero-traffic
+positive and negative proof before deployment or traffic is authorized.
+
 ## Auth0 staging gate
 
 Auth0 requires no browser or native-client secret. The customer-web and native
@@ -151,6 +167,8 @@ References:
 - any vendor credential in GitHub, Docker build arguments, browser or mobile
   bundles, Firebase, logs, screenshots, Qase, or support systems;
 - partial Auth0 public configuration;
+- a non-loopback API proxy without exact Cloud Run service authentication, or
+  a project-wide API invoker grant;
 - Persona production mode or real customer PII;
 - Crossmint sandbox-adapter activation, wallet creation, token movement, or
   balance display;

@@ -22,7 +22,7 @@
   "identityCapabilities": {
     "api": ["cloud-sql-client", "database-secret-accessor"],
     "migrations": ["cloud-sql-client", "database-secret-accessor"],
-    "customerWeb": [],
+    "customerWeb": ["cloud-run-invoker:samra-api"],
     "operationsWeb": [],
     "designSystem": []
   },
@@ -96,11 +96,22 @@
       "secretAccess": [],
       "requiredRuntimeEnvironment": [
         "SAMRA_API_ORIGIN",
+        "SAMRA_API_SERVICE_AUTH_MODE",
+        "SAMRA_API_SERVICE_AUDIENCE",
         "SAMRA_PUBLIC_DATA_MODE",
         "SAMRA_PUBLIC_AUTH0_DOMAIN",
         "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
         "SAMRA_PUBLIC_AUTH0_AUDIENCE"
-      ]
+      ],
+      "apiProxyAuthentication": {
+        "mode": "cloud-run-iam",
+        "tokenSource": "cloud-run-metadata-service-identity",
+        "serviceAuthorizationHeader": "X-Serverless-Authorization",
+        "customerAuthorizationHeader": "Authorization",
+        "audienceEnvironment": "SAMRA_API_SERVICE_AUDIENCE",
+        "inboundServiceAuthorizationStripped": true,
+        "credentialsStored": false
+      }
     },
     "samra-operations-web": {
       "image": "samra-operations-web:FULL_GIT_SHA",
@@ -247,7 +258,9 @@
     "deploy API revision with zero traffic",
     "pass API readiness, restart, ledger, reconciliation, and audit gates",
     "promote API traffic",
-    "deploy authenticated customer web and design preview",
+    "deploy authenticated customer web and design preview with zero traffic",
+    "prove customer-web service identity can invoke API while preserving Auth0 bearer authorization",
+    "promote customer web traffic",
     "deploy operations portal only after its blockers are closed",
     "run Qase staging regression",
     "retain Replit only as a bounded rollback surface"
@@ -259,7 +272,7 @@
     "private Cloud SQL with backups and point-in-time recovery",
     "Secret Manager database reference with no plaintext credential",
     "approved load balancer and identity-aware access policy",
-    "service-to-service authentication for API proxy calls",
+    "exact customer-web roles/run.invoker grant on samra-api and zero-traffic dual-token proof",
     "approved Auth0 tenant, API audience, callback, logout, and allowed-origin inventory",
     "separate Persona and Crossmint activation reviews with pinned secret versions",
     "logging, alerts, rollback owner, and cost budget",

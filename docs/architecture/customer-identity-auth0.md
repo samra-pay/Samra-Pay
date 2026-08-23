@@ -68,6 +68,13 @@ image does not bake them in. Its static server maps the public-only
 `/samra-runtime-config.js` response before the application loads. No Auth0
 secret or vendor credential is part of that response.
 
+For private Cloud Run API calls, the web proxy keeps this Auth0 bearer token in
+`Authorization` and adds a separate Google service-identity token in
+`X-Serverless-Authorization`. See
+[Cloud Run service authentication](./cloud-run-service-authentication.md).
+The Google token proves the calling service; it never substitutes for customer
+authentication or grants a Samra financial capability.
+
 These three browser values are public application identifiers, not client
 secrets. The domain must be a hostname only, the audience must be an absolute
 HTTPS API identifier, and all three must be present before connected sign-in
