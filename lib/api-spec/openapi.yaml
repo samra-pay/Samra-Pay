@@ -281,6 +281,67 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /v1/onboarding/wallet:
+    post:
+      operationId: startCustomerWalletProvisioning
+      tags: [onboarding]
+      summary: Create or resume the Samra-owned customer wallet record
+      description: Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
+      security:
+        - CustomerBearer: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartCustomerWalletProvisioningRequest"
+      responses:
+        "200":
+          description: Existing wallet provisioning record resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerWallet"
+        "201":
+          description: Wallet record created and synthetic provider mapping attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerWallet"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    get:
+      operationId: getCustomerWallet
+      tags: [onboarding]
+      summary: Resume the authenticated customer's normalized wallet state
+      security:
+        - CustomerBearer: []
+      responses:
+        "200":
+          description: Current normalized wallet state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerWallet"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
   /v1/accounts:
     get:
       operationId: listAccounts
@@ -1313,11 +1374,24 @@ components:
 
     CustomerAcquisitionEventType:
       type: string
-      enum: [landing_view, app_open, quote_started, quote_completed, signup_started]
+      enum:
+        [landing_view, app_open, quote_started, quote_completed, signup_started]
 
     CustomerAcquisitionChannel:
       type: string
-      enum: [direct, organic_search, organic_social, paid_search, paid_social, referral, email, partner, offline, unknown]
+      enum:
+        [
+          direct,
+          organic_search,
+          organic_social,
+          paid_search,
+          paid_social,
+          referral,
+          email,
+          partner,
+          offline,
+          unknown,
+        ]
 
     CustomerAcquisitionAttribution:
       type: object
@@ -1328,17 +1402,17 @@ components:
         source:
           anyOf:
             - type: string
-              pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+              pattern: "^[a-z0-9][a-z0-9._-]{0,63}$"
             - type: "null"
         medium:
           anyOf:
             - type: string
-              pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+              pattern: "^[a-z0-9][a-z0-9._-]{0,63}$"
             - type: "null"
         campaign:
           anyOf:
             - type: string
-              pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+              pattern: "^[a-z0-9][a-z0-9._-]{0,63}$"
             - type: "null"
       required: [channel, source, medium, campaign]
 
@@ -1348,7 +1422,7 @@ components:
       properties:
         sessionId:
           type: string
-          pattern: '^acq_[0-9a-f]{32}$'
+          pattern: "^acq_[0-9a-f]{32}$"
         eventType:
           $ref: "#/components/schemas/CustomerAcquisitionEventType"
         platform:
@@ -1376,7 +1450,7 @@ components:
       properties:
         sessionId:
           type: string
-          pattern: '^acq_[0-9a-f]{32}$'
+          pattern: "^acq_[0-9a-f]{32}$"
 
     CustomerAcquisitionLinkReceipt:
       type: object
@@ -1414,7 +1488,14 @@ components:
             quote_started: { type: integer, minimum: 0 }
             quote_completed: { type: integer, minimum: 0 }
             signup_started: { type: integer, minimum: 0 }
-          required: [landing_view, app_open, quote_started, quote_completed, signup_started]
+          required:
+            [
+              landing_view,
+              app_open,
+              quote_started,
+              quote_completed,
+              signup_started,
+            ]
         milestones:
           type: object
           additionalProperties: false
@@ -1429,7 +1510,19 @@ components:
             send_3_completed: { type: integer, minimum: 0 }
             send_4_completed: { type: integer, minimum: 0 }
             send_5_completed: { type: integer, minimum: 0 }
-          required: [linked_customer, onboarding_started, consent_completed, identity_approved, activated, send_1_completed, send_2_completed, send_3_completed, send_4_completed, send_5_completed]
+          required:
+            [
+              linked_customer,
+              onboarding_started,
+              consent_completed,
+              identity_approved,
+              activated,
+              send_1_completed,
+              send_2_completed,
+              send_3_completed,
+              send_4_completed,
+              send_5_completed,
+            ]
         firstTouch:
           type: array
           items: { $ref: "#/components/schemas/CustomerFunnelAttributionRow" }
@@ -1451,8 +1544,19 @@ components:
                 - { type: string, const: campaign }
               minItems: 4
               maxItems: 4
-          required: [aggregateOnly, containsCustomerIdentifiers, acceptedDimensions]
-      required: [generatedAt, cohortFrom, cohortTo, eventSessions, milestones, firstTouch, lastNonDirect, privacy]
+          required:
+            [aggregateOnly, containsCustomerIdentifiers, acceptedDimensions]
+      required:
+        [
+          generatedAt,
+          cohortFrom,
+          cohortTo,
+          eventSessions,
+          milestones,
+          firstTouch,
+          lastNonDirect,
+          privacy,
+        ]
 
     CustomerIdentityCaseState:
       type: string
@@ -1528,6 +1632,89 @@ components:
         disposition:
           $ref: "#/components/schemas/CustomerIdentityProviderEventDisposition"
       required: [identityCase, replayed, disposition]
+
+    CustomerWalletState:
+      type: string
+      enum: [created, provisioning, ready, restricted, error]
+
+    StartCustomerWalletProvisioningRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        bundleVersion:
+          type: string
+          const: alpha-wallet-non-production-v1
+        documentVersion:
+          type: string
+          const: alpha-wallet-non-production-v1
+        locale:
+          type: string
+          const: en-US
+        decision:
+          type: string
+          const: accepted
+      required: [bundleVersion, documentVersion, locale, decision]
+
+    CustomerWallet:
+      type: object
+      additionalProperties: false
+      properties:
+        walletId:
+          type: string
+          pattern: "^wallet_[0-9a-f]{32}$"
+        state:
+          $ref: "#/components/schemas/CustomerWalletState"
+        reasonFamily:
+          anyOf: [{ type: string }, { type: "null" }]
+        provider:
+          type: string
+          enum: [crossmint]
+        asset:
+          type: string
+          enum: [USDC]
+        network:
+          anyOf: [{ type: string }, { type: "null" }]
+        custodyModel:
+          anyOf: [{ type: string }, { type: "null" }]
+        publicAddress:
+          anyOf: [{ type: string }, { type: "null" }]
+        configurationVersion:
+          type: string
+          enum: [crossmint-synthetic-v1]
+        synthetic:
+          type: boolean
+          const: true
+        version:
+          type: integer
+          minimum: 1
+        readyAt:
+          anyOf: [{ type: string, format: date-time }, { type: "null" }]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        nextAllowedActions:
+          type: array
+          items:
+            type: string
+      required:
+        - walletId
+        - state
+        - reasonFamily
+        - provider
+        - asset
+        - network
+        - custodyModel
+        - publicAddress
+        - configurationVersion
+        - synthetic
+        - version
+        - readyAt
+        - createdAt
+        - updatedAt
+        - nextAllowedActions
 
     CustomerConsentType:
       type: string

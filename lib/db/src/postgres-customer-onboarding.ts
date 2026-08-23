@@ -27,7 +27,10 @@ export type CustomerOnboardingState =
   (typeof CUSTOMER_ONBOARDING_STATES)[number];
 
 export type CustomerConsentType =
-  "terms_of_service" | "privacy_notice" | "electronic_communications";
+  | "terms_of_service"
+  | "privacy_notice"
+  | "electronic_communications"
+  | "wallet_provisioning";
 
 export type CustomerConsentDecision = "accepted" | "declined";
 

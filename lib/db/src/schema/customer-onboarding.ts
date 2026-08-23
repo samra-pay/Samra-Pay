@@ -121,6 +121,11 @@ export const customerConsents = samraCore.table(
       table.idempotencyKey,
       table.consentType,
     ),
+    uniqueIndex("customer_consents_id_customer_onboarding_uidx").on(
+      table.id,
+      table.customerId,
+      table.onboardingId,
+    ),
     foreignKey({
       columns: [table.onboardingId, table.customerId],
       foreignColumns: [customerOnboardings.id, customerOnboardings.customerId],
@@ -133,7 +138,7 @@ export const customerConsents = samraCore.table(
     ),
     check(
       "customer_consents_type_chk",
-      sql`${table.consentType} in ('terms_of_service','privacy_notice','electronic_communications')`,
+      sql`${table.consentType} in ('terms_of_service','privacy_notice','electronic_communications','wallet_provisioning')`,
     ),
     check(
       "customer_consents_decision_chk",

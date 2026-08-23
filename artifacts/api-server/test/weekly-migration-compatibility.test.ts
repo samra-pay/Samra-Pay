@@ -200,6 +200,17 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
             AND NOT tgisinternal) AS customer_identity_guards,
          (SELECT count(*)::text FROM information_schema.tables
           WHERE table_schema = 'samra_core'
+            AND table_name IN ('customer_wallets',
+                               'customer_wallet_provider_mappings',
+                               'customer_wallet_transitions'))
+           AS customer_wallet_tables,
+         (SELECT count(*)::text FROM pg_trigger
+          WHERE tgname IN ('customer_wallets_controlled_mutation',
+                           'customer_wallet_provider_mappings_append_only',
+                           'customer_wallet_transitions_append_only')
+            AND NOT tgisinternal) AS customer_wallet_guards,
+         (SELECT count(*)::text FROM information_schema.tables
+          WHERE table_schema = 'samra_core'
             AND table_name IN ('customer_acquisition_sessions',
                                'customer_acquisition_events',
                                'customer_acquisition_links'))
@@ -215,7 +226,7 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
             AND is_nullable = 'YES') AS pending_profile_columns`,
     );
     assert.deepEqual(upgraded.rows[0], {
-      migrations: "15",
+      migrations: "16",
       customers: "2",
       opening_journals: "1",
       natural_balance_minor: "425000",
@@ -228,6 +239,8 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
       customer_onboarding_guards: "3",
       customer_identity_tables: "3",
       customer_identity_guards: "3",
+      customer_wallet_tables: "3",
+      customer_wallet_guards: "3",
       customer_acquisition_tables: "3",
       customer_acquisition_guards: "3",
       pending_profile_columns: "2",

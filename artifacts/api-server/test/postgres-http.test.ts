@@ -5,7 +5,11 @@ import test from "node:test";
 import type { RequestHandler } from "express";
 import { UnauthorizedError } from "express-oauth2-jwt-bearer";
 import { randomUUID } from "node:crypto";
-import { ALPHA_ONBOARDING_CONSENT_BUNDLE } from "@workspace/db";
+import {
+  ALPHA_ONBOARDING_CONSENT_BUNDLE,
+  ALPHA_WALLET_PROVISIONING_DISCLOSURE,
+  createDatabase,
+} from "@workspace/db";
 import { createApp } from "../src/app";
 import type { ApiRuntimeConfig } from "../src/config";
 import { createConfiguredDemoRuntime } from "../src/domain/create-demo-runtime";
@@ -1187,6 +1191,126 @@ test("the Auth0 HTTP onboarding boundary creates one customer, resumes after res
     );
     assert.equal(durableIdentity["state"], "approved");
     assert.equal(durableIdentity["version"], 4);
+
+    const walletBody = {
+      bundleVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.bundleVersion,
+      documentVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.documentVersion,
+      locale: ALPHA_WALLET_PROVISIONING_DISCLOSURE.locale,
+      decision: "accepted",
+    };
+    const [walletStartA, walletStartB] = await Promise.all([
+      apiRequest(second.origin, "/api/v1/onboarding/wallet", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-wallet-start-command-001",
+        },
+        body: walletBody,
+      }),
+      apiRequest(identityRestart.origin, "/api/v1/onboarding/wallet", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-wallet-start-command-001",
+        },
+        body: walletBody,
+      }),
+    ]);
+    assert.deepEqual(
+      [walletStartA.status, walletStartB.status].sort(),
+      [200, 201],
+    );
+    const walletA = walletStartA.body as JsonObject;
+    const walletB = walletStartB.body as JsonObject;
+    assert.equal(walletA["walletId"], walletB["walletId"]);
+    assert.equal(walletA["state"], "ready");
+    assert.equal(walletB["state"], "ready");
+    assert.equal(walletA["provider"], "crossmint");
+    assert.equal(walletA["asset"], "USDC");
+    assert.equal(walletA["network"], "synthetic");
+    assert.equal(walletA["synthetic"], true);
+    assert.equal(JSON.stringify(walletA).includes(subject), false);
+    assert.equal("providerWalletRef" in walletA, false);
+
+    const walletConflict = objectBody(
+      await apiRequest(identityRestart.origin, "/api/v1/onboarding/wallet", {
+        method: "POST",
+        headers: {
+          ...authorization,
+          "Idempotency-Key": "http-wallet-start-command-002",
+        },
+        body: walletBody,
+      }),
+      409,
+    );
+    assert.equal(walletConflict["code"], "CONFLICT");
+
+    await stopServer(identityRestart);
+    const walletRestart = await startServer(config, {
+      customerAccessTokenMiddleware,
+    });
+    running.push(walletRestart);
+    const durableWallet = objectBody(
+      await apiRequest(walletRestart.origin, "/api/v1/onboarding/wallet", {
+        headers: authorization,
+      }),
+      200,
+    );
+    assert.equal(durableWallet["walletId"], walletA["walletId"]);
+    assert.equal(durableWallet["state"], "ready");
+    assert.equal(
+      objectBody(
+        await apiRequest(walletRestart.origin, "/api/v1/onboarding", {
+          headers: authorization,
+        }),
+        200,
+      )["state"],
+      "wallet_ready",
+    );
+
+    const evidence = createDatabase();
+    try {
+      const persisted = await evidence.pool.query<{
+        state: string;
+        environment: string;
+        mapping_count: string;
+        transition_count: string;
+        consent_count: string;
+        audit_count: string;
+      }>(
+        `SELECT wallet.state,
+                wallet.environment,
+                (SELECT count(*)::text
+                   FROM samra_core.customer_wallet_provider_mappings mapping
+                  WHERE mapping.wallet_id = wallet.id) AS mapping_count,
+                (SELECT count(*)::text
+                   FROM samra_core.customer_wallet_transitions transition
+                  WHERE transition.wallet_id = wallet.id) AS transition_count,
+                (SELECT count(*)::text
+                   FROM samra_core.customer_consents consent
+                  WHERE consent.id = wallet.wallet_consent_id
+                    AND consent.consent_type = 'wallet_provisioning') AS consent_count,
+                (SELECT count(*)::text
+                  FROM samra_core.audit_events audit
+                 WHERE audit.entity_type = 'customer_wallet'
+                    AND audit.entity_id = wallet.id::text) AS audit_count
+           FROM samra_core.customer_wallets wallet
+          WHERE wallet.external_ref = $1`,
+        [String(walletA["walletId"])],
+      );
+      assert.deepEqual(persisted.rows, [
+        {
+          state: "ready",
+          environment: "synthetic",
+          mapping_count: "1",
+          transition_count: "3",
+          consent_count: "1",
+          audit_count: "2",
+        },
+      ]);
+    } finally {
+      await evidence.pool.end();
+    }
   } finally {
     await Promise.allSettled(running.map(stopServer));
     if (originalDatabaseUrl === undefined) {

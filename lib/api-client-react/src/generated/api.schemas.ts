@@ -221,6 +221,67 @@ export interface CustomerIdentityProviderEventResult {
   disposition: CustomerIdentityProviderEventDisposition;
 }
 
+export type CustomerWalletState =
+  (typeof CustomerWalletState)[keyof typeof CustomerWalletState];
+
+export const CustomerWalletState = {
+  created: "created",
+  provisioning: "provisioning",
+  ready: "ready",
+  restricted: "restricted",
+  error: "error",
+} as const;
+
+export const StartCustomerWalletProvisioningRequestValue = {
+  bundleVersion: "alpha-wallet-non-production-v1",
+  documentVersion: "alpha-wallet-non-production-v1",
+  locale: "en-US",
+  decision: "accepted",
+} as const;
+export type StartCustomerWalletProvisioningRequest =
+  typeof StartCustomerWalletProvisioningRequestValue;
+
+export type CustomerWalletProvider =
+  (typeof CustomerWalletProvider)[keyof typeof CustomerWalletProvider];
+
+export const CustomerWalletProvider = {
+  crossmint: "crossmint",
+} as const;
+
+export type CustomerWalletAsset =
+  (typeof CustomerWalletAsset)[keyof typeof CustomerWalletAsset];
+
+export const CustomerWalletAsset = {
+  USDC: "USDC",
+} as const;
+
+export type CustomerWalletConfigurationVersion =
+  (typeof CustomerWalletConfigurationVersion)[keyof typeof CustomerWalletConfigurationVersion];
+
+export const CustomerWalletConfigurationVersion = {
+  "crossmint-synthetic-v1": "crossmint-synthetic-v1",
+} as const;
+
+export interface CustomerWallet {
+  /** @pattern ^wallet_[0-9a-f]{32}$ */
+  walletId: string;
+  state: CustomerWalletState;
+  reasonFamily: string | null;
+  provider: CustomerWalletProvider;
+  asset: CustomerWalletAsset;
+  network: string | null;
+  custodyModel: string | null;
+  publicAddress: string | null;
+  configurationVersion: CustomerWalletConfigurationVersion;
+  synthetic: true;
+  /** @minimum 1 */
+  version: number;
+  readyAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  nextAllowedActions: string[];
+}
+
 export type CustomerConsentType =
   (typeof CustomerConsentType)[keyof typeof CustomerConsentType];
 

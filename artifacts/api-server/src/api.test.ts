@@ -18,6 +18,10 @@ import {
   DeterministicFakePersonaAdapter,
 } from "./domain/customer-identity";
 import {
+  CustomerWalletProvisioningService,
+  DeterministicFakeCrossmintAdapter,
+} from "./domain/customer-wallet";
+import {
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerOnboardingNotFoundError,
   type CustomerOnboardingSnapshot,
@@ -25,6 +29,7 @@ import {
   type CustomerOnboardingStore,
   type CustomerIdentityCaseStore,
   type CustomerFunnelStore,
+  type CustomerWalletStore,
 } from "@workspace/db";
 
 const demoConfig: ApiRuntimeConfig = Object.freeze({
@@ -61,6 +66,22 @@ function unusedIdentityVerificationService(): CustomerIdentityVerificationServic
   return new CustomerIdentityVerificationService({
     store,
     provider: new DeterministicFakePersonaAdapter(),
+  });
+}
+
+function unusedWalletProvisioningService(): CustomerWalletProvisioningService {
+  const notUsed = async (): Promise<never> => {
+    throw new Error("not used by this test");
+  };
+  const store: CustomerWalletStore = {
+    prepareAuth0Wallet: notUsed,
+    attachProviderWallet: notUsed,
+    recordProviderStartFailure: notUsed,
+    getAuth0Wallet: notUsed,
+  };
+  return new CustomerWalletProvisioningService({
+    store,
+    provider: new DeterministicFakeCrossmintAdapter(),
   });
 }
 
@@ -174,6 +195,7 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
       },
     },
     customerIdentityVerificationService: unusedIdentityVerificationService(),
+    customerWalletProvisioningService: unusedWalletProvisioningService(),
   });
   const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
     const authorization = req.header("authorization");
@@ -345,6 +367,7 @@ test("Auth0 onboarding starts and resumes before the financial-route authorizati
     customerAuthenticationMode: "auth0",
     customerOnboardingStore: onboardingStore,
     customerIdentityVerificationService: unusedIdentityVerificationService(),
+    customerWalletProvisioningService: unusedWalletProvisioningService(),
   });
   const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
     const authorization = req.header("authorization");
@@ -508,6 +531,7 @@ test("acquisition capture is public and privacy-safe while customer binding rema
       },
     },
     customerIdentityVerificationService: unusedIdentityVerificationService(),
+    customerWalletProvisioningService: unusedWalletProvisioningService(),
     customerFunnelStore: funnel,
   });
   let authenticationCalls = 0;
