@@ -20,6 +20,15 @@
       "maximumGzipBytes": 10000
     },
     {
+      "id": "customer-web-auth0-javascript",
+      "surface": "customer-web-authentication",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^auth0-client-[A-Za-z0-9_-]+\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 225000,
+      "maximumGzipBytes": 66000
+    },
+    {
       "id": "customer-web-styles",
       "surface": "customer-web",
       "directory": "artifacts/samra-pay/dist/public/assets",

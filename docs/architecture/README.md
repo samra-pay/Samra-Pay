@@ -61,17 +61,20 @@ Ethiopia payout rail, or production deployment is represented.
 
 ## Runtime modes
 
-| Variable | Values | Default | Purpose |
-| --- | --- | --- | --- |
-| `SAMRA_BACKEND_MODE` | `disabled`, `demo` | `disabled` | Enables synthetic application routes |
-| `SAMRA_PROVIDER_MODE` | `fake` | `fake` | Uses deterministic provider adapters |
-| `SAMRA_PERSISTENCE_MODE` | `memory`, `postgres` | `memory` | Selects persistence |
-| `SAMRA_RUN_WORKER` | `false`, `true` | `false` | Runs synthetic workflow and outbox work |
-| `SAMRA_INTERNAL_OPERATIONS_ENABLED` | `false`, `true` | `false` | Enables controlled operations APIs |
-| `SAMRA_CUSTOMER_AUTH_MODE` | `disabled`, `auth0` | `disabled` | Enables exact-issuer Auth0 access tokens |
-| `VITE_SAMRA_DATA_MODE` | `mock`, `api` | `mock` | Selects customer-web data source |
-| `VITE_SAMRA_OPS_DATA_MODE` | `mock`, `api` | `mock` | Selects Operations Portal data source |
-| `EXPO_PUBLIC_SAMRA_DATA_MODE` | `mock`, `api` | `mock` | Selects mobile data source |
+| Variable                            | Values                                 | Default    | Purpose                                                             |
+| ----------------------------------- | -------------------------------------- | ---------- | ------------------------------------------------------------------- |
+| `SAMRA_BACKEND_MODE`                | `disabled`, `demo`                     | `disabled` | Enables synthetic application routes                                |
+| `SAMRA_PROVIDER_MODE`               | `fake`                                 | `fake`     | Uses deterministic provider adapters                                |
+| `SAMRA_PERSISTENCE_MODE`            | `memory`, `postgres`                   | `memory`   | Selects persistence                                                 |
+| `SAMRA_RUN_WORKER`                  | `false`, `true`                        | `false`    | Runs synthetic workflow and outbox work                             |
+| `SAMRA_INTERNAL_OPERATIONS_ENABLED` | `false`, `true`                        | `false`    | Enables controlled operations APIs                                  |
+| `SAMRA_CUSTOMER_AUTH_MODE`          | `disabled`, `auth0`                    | `disabled` | Enables exact-issuer Auth0 access tokens                            |
+| `VITE_SAMRA_DATA_MODE`              | `mock`, `api`                          | `mock`     | Selects customer-web data source                                    |
+| `VITE_AUTH0_DOMAIN`                 | Auth0 tenant or custom-domain hostname | none       | Required with customer-web API mode; hostname only                  |
+| `VITE_AUTH0_CLIENT_ID`              | Public Auth0 SPA client ID             | none       | Required with customer-web API mode; never a client secret          |
+| `VITE_AUTH0_AUDIENCE`               | Exact HTTPS Samra API identifier       | none       | Required with customer-web API mode and must match the API audience |
+| `VITE_SAMRA_OPS_DATA_MODE`          | `mock`, `api`                          | `mock`     | Selects Operations Portal data source                               |
+| `EXPO_PUBLIC_SAMRA_DATA_MODE`       | `mock`, `api`                          | `mock`     | Selects mobile data source                                          |
 
 Unknown values fail clearly. API mode never silently falls back to mock
 financial data.

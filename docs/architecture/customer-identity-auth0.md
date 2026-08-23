@@ -1,8 +1,10 @@
 # Customer identity and Auth0 foundation
 
-Status: Auth0 is the locked Alpha customer-authentication vendor. The
-provider-neutral foundation is implemented and tested but disabled by default;
-no live tenant, application, credential, or customer token is connected.
+Status: Auth0 is the locked Alpha customer-authentication vendor. The durable
+backend boundary and customer-web SDK integration are implemented and disabled
+by default. No live tenant, application, credential, or customer token is
+connected; the native mobile integration remains gated on a reviewed custom
+development build.
 
 ## Decision
 
@@ -27,8 +29,8 @@ This foundation delivers:
 
 It does not create or configure an Auth0 tenant, enable production traffic,
 provision real customers, ingest Auth0 logs, implement account recovery,
-connect Persona, create Crossmint wallets, change Replit, or store real
-customer data. The wider Alpha sequence is governed by
+activate mobile Auth0, connect live Persona or Crossmint, change Replit, or
+store real customer data. The wider Alpha sequence is governed by
 [Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Runtime contract
@@ -45,6 +47,30 @@ AUTH0_AUDIENCE=<exact-Samra-API-identifier>
 ```
 
 `AUTH0_ISSUER_BASE_URL` must be an HTTPS origin. Paths, embedded credentials, queries, and fragments are rejected. The signing algorithm is locked in code to RS256 and is not an environment override.
+
+The customer web client is independently fail-closed in API mode:
+
+```text
+VITE_SAMRA_DATA_MODE=api
+VITE_AUTH0_DOMAIN=<tenant-or-custom-domain-hostname>
+VITE_AUTH0_CLIENT_ID=<public-single-page-application-client-id>
+VITE_AUTH0_AUDIENCE=<exact-Samra-API-identifier>
+```
+
+These three browser values are public application identifiers, not client
+secrets. The domain must be a hostname only, the audience must be an absolute
+HTTPS API identifier, and all three must be present before connected sign-in
+renders. The SDK uses Authorization Code with PKCE, a memory-only cache, and a
+fresh access-token lookup per API request. Samra code does not persist access,
+refresh, or ID tokens in local storage, session storage, IndexedDB, URLs,
+analytics, or application state.
+
+Create a separate Auth0 **Single Page Application** for the customer web. Its
+Allowed Callback URL and Allowed Logout URL must exactly equal the deployed
+application URI, including any base path and trailing slash. Allowed Web
+Origins must contain only the application origin. Development and staging
+URLs must be explicitly enumerated; wildcards, HTTP outside loopback local
+development, and production reuse are prohibited.
 
 The API accepts access tokens only. ID tokens are not API credentials. Missing, malformed, expired, wrongly signed, wrong-issuer, and wrong-audience tokens fail with 401. A valid Auth0 subject without a Samra binding fails with 403 on customer-data routes; the controlled `POST /api/v1/onboarding` exception may atomically create the pending Samra customer, binding, and onboarding aggregate. A revoked binding or suspended/closed customer also fails with 403.
 
@@ -117,9 +143,22 @@ This document, configuration, JWT middleware, durable identity mapping, canonica
 
 Create the Samra onboarding record and pending customer profile, bind an Auth0 subject exactly once, define verified-email/phone policy, capture consent versions, and issue the next required onboarding step. No Persona or Crossmint call occurs before this state machine is durable.
 
-### PR C — web and mobile clients
+### PR C1 — customer web client (implemented by this follow-on)
 
-Integrate Auth0 Universal Login in the web client and the supported Auth0 native SDK in mobile. Use Authorization Code with PKCE, request the exact API audience, use SDK-managed secure token handling, and connect the existing bearer-token getter. Do not put bearer or refresh tokens in application-managed browser local storage.
+Integrate Auth0 Universal Login in the web client, request the exact API
+audience, use memory-only SDK token handling, connect the existing per-request
+bearer-token getter, guard customer routes, and use provider logout. The image
+build accepts only the three public identifiers above and remains fail-closed
+when they are absent.
+
+### PR C2 — native mobile client
+
+Integrate the supported Auth0 native SDK with a reviewed Expo custom development
+build, separate iOS and Android identifiers, exact callbacks, secure SDK token
+storage, and the existing bearer-token getter. The official Auth0 Expo SDK is
+not compatible with Expo Go, so this step must not silently remove the current
+visual-preview surface. See the
+[official Expo quickstart](https://auth0.com/docs/quickstart/native/react-native-expo).
 
 ### PR D — recovery and identity operations
 

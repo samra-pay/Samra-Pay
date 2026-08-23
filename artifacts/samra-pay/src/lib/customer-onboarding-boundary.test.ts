@@ -5,17 +5,35 @@ import { describe, expect, it } from "vitest";
 const loginSource = read("../pages/login.tsx");
 const onboardingSource = read("../pages/onboarding.tsx");
 const runtimeSource = read("./samra-runtime.tsx");
+const authSource = read("./customer-auth.tsx");
 const appSource = read("../App.tsx");
+const dashboardLayoutSource = read("../components/dashboard-layout.tsx");
 const legalPageSource = read("../pages/legal.tsx");
 const sharedJourneySource = read(
   "../../../../lib/samra-client/src/onboarding.ts",
 );
 
 describe("web customer-onboarding trust boundary", () => {
-  it("does not collect a local email or password and fails closed in API mode", () => {
+  it("does not collect a local email or password and delegates API sign-in to Auth0", () => {
     expect(loginSource).not.toMatch(/<input|type=["']password["']/);
-    expect(loginSource).toContain('if (mode === "api") return');
-    expect(loginSource).toContain("Auth0 sign-in not configured");
+    expect(loginSource).toContain("await auth.signIn()");
+    expect(loginSource).toContain("Continue with Auth0");
+    expect(loginSource).not.toMatch(/localStorage|sessionStorage|indexedDB/);
+    expect(authSource).toContain("createAuth0Client");
+    expect(authSource).toContain('await import("@auth0/auth0-spa-js")');
+    expect(authSource).toContain(
+      'import type { Auth0Client } from "@auth0/auth0-spa-js"',
+    );
+    expect(authSource).toContain('cacheLocation: "memory"');
+    expect(authSource).toContain("createAccessTokenGetter");
+    expect(authSource).toContain("setAuthTokenGetter(");
+    expect(authSource).toContain("handleRedirectCallback");
+    expect(authSource).toContain("useRefreshTokens: false");
+    expect(authSource).toContain('scope: "openid"');
+    expect(authSource).not.toMatch(/localStorage|sessionStorage|indexedDB/);
+    expect(appSource).toContain("<CustomerAuthProvider>");
+    expect(appSource).toContain("<CustomerAuthGuard>");
+    expect(dashboardLayoutSource).toContain("customerAuth.signOut()");
   });
 
   it("selects the API and synthetic onboarding sources explicitly", () => {

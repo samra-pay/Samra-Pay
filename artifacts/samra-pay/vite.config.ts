@@ -63,6 +63,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'auth0-client': ['@auth0/auth0-spa-js'],
+        },
+      },
+    },
   },
   server: {
     port,
