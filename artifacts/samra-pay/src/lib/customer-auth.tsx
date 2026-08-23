@@ -19,6 +19,7 @@ import {
   withApplicationPath,
   type WebCustomerAuthConfig,
 } from "./auth0-config";
+import { resolveWebPublicEnvironment } from "./public-runtime-config";
 
 export type CustomerAuthStatus =
   "disabled" | "loading" | "anonymous" | "authenticated" | "error";
@@ -45,10 +46,13 @@ export function CustomerAuthProvider({
   const resolution = useMemo(() => {
     try {
       return {
-        config: resolveWebCustomerAuthConfig(import.meta.env, {
-          origin: window.location.origin,
-          baseUrl: import.meta.env.BASE_URL,
-        }),
+        config: resolveWebCustomerAuthConfig(
+          resolveWebPublicEnvironment(import.meta.env),
+          {
+            origin: window.location.origin,
+            baseUrl: import.meta.env.BASE_URL,
+          },
+        ),
         error: null,
       } as const;
     } catch (error) {

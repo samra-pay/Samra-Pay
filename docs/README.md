@@ -97,6 +97,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 - [Workforce access](operations/workforce-access.md)
 - [Case management](operations/case-management.md)
 - [Persona sandbox activation](operations/persona-sandbox-activation.md)
+- [Staging vendor runtime readiness](operations/staging-vendor-runtime-readiness.md)
 
 ### Cloud and delivery
 

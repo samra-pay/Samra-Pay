@@ -6,8 +6,10 @@ import path from "node:path";
 import test from "node:test";
 import {
   createStaticServer,
+  loadPublicRuntimeConfig,
   loadServerConfig,
   resolvePublicFile,
+  serializePublicRuntimeConfig,
 } from "./static-server.mjs";
 
 async function listen(server) {
@@ -36,12 +38,58 @@ test("accepts the Cloud Run port and an HTTPS API origin", () => {
   assert.equal(config.port, 8080);
   assert.equal(config.apiOrigin.href, "https://api.example.test/");
   assert.equal(config.publicDirectory, "/srv/public");
+  assert.deepEqual(config.publicRuntimeConfig, {});
 
   const loopback = loadServerConfig({
     PORT: "8080",
     SAMRA_API_ORIGIN: "http://127.0.0.1:18080",
   });
   assert.equal(loopback.apiOrigin.href, "http://127.0.0.1:18080/");
+});
+
+test("exports only validated public Auth0 runtime identifiers", () => {
+  assert.deepEqual(
+    loadPublicRuntimeConfig({
+      SAMRA_PUBLIC_DATA_MODE: "api",
+      SAMRA_PUBLIC_AUTH0_DOMAIN: "login.staging.samrapay.com",
+      SAMRA_PUBLIC_AUTH0_CLIENT_ID: "public_client_123",
+      SAMRA_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+      AUTH0_CLIENT_SECRET: "must-never-be-exported",
+      PERSONA_API_KEY: "must-never-be-exported",
+    }),
+    {
+      VITE_SAMRA_DATA_MODE: "api",
+      VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
+      VITE_AUTH0_CLIENT_ID: "public_client_123",
+      VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+    },
+  );
+
+  assert.throws(
+    () =>
+      loadPublicRuntimeConfig({
+        SAMRA_PUBLIC_DATA_MODE: "api",
+        SAMRA_PUBLIC_AUTH0_DOMAIN: "login.staging.samrapay.com",
+      }),
+    /Every public Auth0 identifier/,
+  );
+  assert.throws(
+    () =>
+      loadPublicRuntimeConfig({
+        SAMRA_PUBLIC_AUTH0_DOMAIN: "https://tenant.auth0.com",
+        SAMRA_PUBLIC_AUTH0_CLIENT_ID: "public_client_123",
+        SAMRA_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+      }),
+    /hostname only/,
+  );
+  assert.doesNotMatch(
+    serializePublicRuntimeConfig(
+      loadPublicRuntimeConfig({
+        SAMRA_PUBLIC_DATA_MODE: "api",
+      }),
+    ),
+    /SECRET|PERSONA|CROSSMINT/,
+  );
 });
 
 test("fails closed for invalid ports and API protocols", () => {
@@ -90,6 +138,12 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
   const web = createStaticServer({
     apiOrigin: new URL(upstreamOrigin),
     port: 0,
+    publicRuntimeConfig: Object.freeze({
+      VITE_SAMRA_DATA_MODE: "api",
+      VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
+      VITE_AUTH0_CLIENT_ID: "public_client_123",
+      VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+    }),
     publicDirectory,
   });
   const webOrigin = await listen(web);
@@ -98,6 +152,18 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
     const spaResponse = await fetch(`${webOrigin}/dashboard/transfers`);
     assert.equal(spaResponse.status, 200);
     assert.match(await spaResponse.text(), /Samra UI/);
+
+    const runtimeConfigResponse = await fetch(
+      `${webOrigin}/samra-runtime-config.js`,
+    );
+    assert.equal(runtimeConfigResponse.status, 200);
+    assert.equal(
+      runtimeConfigResponse.headers.get("cache-control"),
+      "no-store",
+    );
+    const runtimeConfig = await runtimeConfigResponse.text();
+    assert.match(runtimeConfig, /login\.staging\.samrapay\.com/);
+    assert.doesNotMatch(runtimeConfig, /SECRET|PERSONA|CROSSMINT/);
 
     const apiResponse = await fetch(`${webOrigin}/api/healthz?source=manual`);
     assert.equal(apiResponse.status, 200);
@@ -117,6 +183,7 @@ test("returns an explicit 502 when no API target is configured", async () => {
   const web = createStaticServer({
     apiOrigin: null,
     port: 0,
+    publicRuntimeConfig: Object.freeze({}),
     publicDirectory,
   });
   const webOrigin = await listen(web);
