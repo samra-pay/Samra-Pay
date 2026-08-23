@@ -88,13 +88,6 @@ env:
   SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.operation == 'promote' && 'projects/934122615631/locations/global/workloadIdentityPools/samra-traffic-staging/providers/samra-pay-promotion-main' || 'projects/934122615631/locations/global/workloadIdentityPools/samra-traffic-staging/providers/samra-pay-rollback-main' }}
   SAMRA_GCP_OPERATION_SERVICE_ACCOUNT: ${{ inputs.operation == 'promote' && 'samra-github-promoter-staging@samra-pay-staging.iam.gserviceaccount.com' || 'samra-github-rollback-staging@samra-pay-staging.iam.gserviceaccount.com' }}
   SAMRA_GCP_OPERATOR_ACCOUNT: ${{ inputs.operation == 'promote' && 'samra-github-promoter-staging@samra-pay-staging.iam.gserviceaccount.com' || 'samra-github-rollback-staging@samra-pay-staging.iam.gserviceaccount.com' }}
-  SAMRA_STAGING_ZERO_TRAFFIC_MANIFEST: ${{ runner.temp }}/samra-zero-traffic/staging-zero-traffic-deployment.json
-  SAMRA_STAGING_ZERO_TRAFFIC_HASH: ${{ runner.temp }}/samra-zero-traffic/staging-zero-traffic-deployment.sha256
-  SAMRA_STAGING_VERIFICATION_MANIFEST: ${{ runner.temp }}/samra-verification/staging-verification.json
-  SAMRA_STAGING_VERIFICATION_HASH: ${{ runner.temp }}/samra-verification/staging-verification.sha256
-  SAMRA_STAGING_PROMOTION_MANIFEST: ${{ runner.temp }}/samra-promotion/staging-traffic-promotion.json
-  SAMRA_STAGING_PROMOTION_HASH: ${{ runner.temp }}/samra-promotion/staging-traffic-promotion.sha256
-
 jobs:
   traffic-control:
     name: Review or apply one exact staging traffic operation
@@ -113,6 +106,19 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Initialize runner-local evidence paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf 'SAMRA_STAGING_ZERO_TRAFFIC_MANIFEST=%s\n' "${RUNNER_TEMP}/samra-zero-traffic/staging-zero-traffic-deployment.json"
+            printf 'SAMRA_STAGING_ZERO_TRAFFIC_HASH=%s\n' "${RUNNER_TEMP}/samra-zero-traffic/staging-zero-traffic-deployment.sha256"
+            printf 'SAMRA_STAGING_VERIFICATION_MANIFEST=%s\n' "${RUNNER_TEMP}/samra-verification/staging-verification.json"
+            printf 'SAMRA_STAGING_VERIFICATION_HASH=%s\n' "${RUNNER_TEMP}/samra-verification/staging-verification.sha256"
+            printf 'SAMRA_STAGING_PROMOTION_MANIFEST=%s\n' "${RUNNER_TEMP}/samra-promotion/staging-traffic-promotion.json"
+            printf 'SAMRA_STAGING_PROMOTION_HASH=%s\n' "${RUNNER_TEMP}/samra-promotion/staging-traffic-promotion.sha256"
+          } >> "${GITHUB_ENV}"
 
       - name: Verify source, ancestry, evidence inputs, and authorization
         shell: bash
