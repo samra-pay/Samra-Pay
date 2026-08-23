@@ -227,12 +227,12 @@ deployment controller, promotion gate, and exact-revision rollback model are
 defined in
 [`docs/operations/staging-release-control-plane.md`](../../docs/operations/staging-release-control-plane.md)
 and machine-validated by `staging-release-control-plane.json`. Image publication,
-zero-traffic deployment, exact-revision promotion, and rollback are implemented
-as separate protected workflows. None of their cloud mutations is automatically
-authorized. Promotion and rollback use distinct protected environments,
-workload-identity providers, and keyless service accounts. The required
-functional verifier and first-ever traffic activation remain separate hard
-stops.
+zero-traffic deployment, verification evidence recording, exact-revision
+promotion, and rollback are implemented. None of their cloud mutations is
+automatically authorized. Promotion and rollback use distinct protected
+environments, workload-identity providers, and keyless service accounts. The
+live exact-revision verification probe and first-ever traffic activation remain
+separate hard stops.
 
 ### Keyless zero-traffic Cloud Run deployment
 
@@ -278,6 +278,21 @@ Artifact Registry, and absence of user-managed keys without changing cloud
 state. GitHub must also have a protected `staging-zero-traffic-deployment`
 environment restricted to `main`; environment variables hold only reviewed
 non-secret identifiers and pinned secret version numbers.
+
+### Staging verification evidence
+
+`staging-verification.json` and `record-staging-verification.mjs` define and
+record the pre-promotion evidence boundary. The recorder consumes independently
+hashed zero-traffic deployment and probe manifests, requires the same exact
+candidate, service, and revision, and binds all seven checks to a completed
+passing `SAMP` run in `google-cloud-staging`. It records no secrets or customer
+data and cannot change traffic, public access, runtime configuration, vendors,
+or production.
+
+The live probe workflow is deliberately marked unimplemented and unauthorized.
+Until a separately approved private-revision executor produces valid hashed
+probe evidence, the recorder cannot create a promotable verification record and
+traffic promotion remains blocked.
 
 ### Exact-revision traffic promotion and rollback
 

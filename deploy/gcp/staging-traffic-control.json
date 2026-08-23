@@ -102,9 +102,15 @@
     "retentionDays": 365
   },
   "verificationEvidence": {
-    "status": "required-not-implemented",
+    "status": "recording-implemented-execution-not-authorized",
+    "contract": "deploy/gcp/staging-verification.json",
+    "recorder": "deploy/gcp/record-staging-verification.mjs",
+    "probeManifest": "artifacts/staging-release/staging-verification-probe.json",
+    "probeManifestHash": "artifacts/staging-release/staging-verification-probe.sha256",
     "manifest": "artifacts/staging-release/staging-verification.json",
     "manifestHash": "artifacts/staging-release/staging-verification.sha256",
+    "probeImplemented": false,
+    "executionAuthorized": false,
     "qaseProject": "SAMP",
     "qaseEnvironment": "google-cloud-staging",
     "requiredChecks": [

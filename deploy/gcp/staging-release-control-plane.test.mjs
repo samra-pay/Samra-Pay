@@ -58,6 +58,9 @@ test("validates the bounded staging release control plane", () => {
     deployableServiceCount: 3,
     operationsPortalBlocked: true,
     deploymentAuthorized: false,
+    verificationRecorderImplemented: true,
+    verificationProbeImplemented: false,
+    verificationAuthorized: false,
     promotionAuthorized: false,
   });
 });
@@ -68,6 +71,9 @@ test("rejects automatic, public, floating, and untracked release drift", () => {
     (value) => (value.deployment.initialTrafficPercent = 100),
     (value) => (value.deployment.publicUnauthenticatedAllowed = true),
     (value) => value.deployment.deployableServices.push("samra-operations-web"),
+    (value) => (value.verification.probeImplemented = true),
+    (value) => (value.verification.executionAuthorized = true),
+    (value) => (value.verification.exactRevisionRequired = false),
     (value) => (value.promotion.automatic = true),
     (value) => (value.promotion.latestAliasAllowed = true),
     (value) => (value.rollback.rebuildAllowed = true),

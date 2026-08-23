@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { verifyZeroTrafficDeploymentManifest } from "./record-staging-zero-traffic-deployment.mjs";
+import { validateStagingVerificationManifest } from "./record-staging-verification.mjs";
 import {
   STAGING_TRAFFIC_SERVICES,
   STAGING_VERIFICATION_CHECKS,
@@ -136,45 +137,6 @@ function assertSafeEvidence(manifest) {
     ),
     "Traffic evidence contains a credential or prohibited endpoint",
   );
-}
-
-export function validateStagingVerificationManifest(manifest) {
-  assert(
-    manifest.schemaVersion === 1 &&
-      manifest.status === "passed" &&
-      manifest.environment === "staging" &&
-      manifest.dataClassification === "synthetic-only" &&
-      SHA_PATTERN.test(manifest.candidateSha) &&
-      manifest.releaseId === `staging-${manifest.candidateSha.slice(0, 12)}` &&
-      STAGING_TRAFFIC_SERVICES.includes(manifest.service) &&
-      manifest.revision ===
-        `${manifest.service}-${manifest.candidateSha.slice(0, 12)}`,
-    "Verification manifest identity drifted",
-  );
-  assert(
-    JSON.stringify(Object.keys(manifest.checks)) ===
-      JSON.stringify(STAGING_VERIFICATION_CHECKS) &&
-      STAGING_VERIFICATION_CHECKS.every(
-        (check) => manifest.checks[check] === "passed",
-      ),
-    "All required staging verification checks must pass",
-  );
-  assert(
-    manifest.qase.project === "SAMP" &&
-      manifest.qase.environment === "google-cloud-staging" &&
-      /^\d+$/.test(manifest.qase.runId) &&
-      manifest.qase.runUrl ===
-        `https://app.qase.io/run/SAMP/dashboard/${manifest.qase.runId}`,
-    "Qase staging evidence drifted",
-  );
-  assert(
-    manifest.customerDataUsed === false &&
-      manifest.secretValuesRecorded === false,
-    "Verification evidence exceeded synthetic authority",
-  );
-  normalizeTimestamp(manifest.generatedAt, "Verification timestamp");
-  assertSafeEvidence(manifest);
-  return manifest;
 }
 
 function buildGitHub(input, environment) {
