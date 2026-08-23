@@ -8,6 +8,7 @@ import type {
 
 export interface CustomerIdentityProvider {
   readonly provider: "persona";
+  readonly environment: "fake" | "sandbox";
   createInquiry(
     input: Readonly<{
       identityCaseId: string;
@@ -25,6 +26,7 @@ export class IdentityProviderUnavailableError extends Error {
 
 export class DeterministicFakePersonaAdapter implements CustomerIdentityProvider {
   readonly provider = "persona" as const;
+  readonly environment = "fake" as const;
 
   async createInquiry(
     input: Readonly<{

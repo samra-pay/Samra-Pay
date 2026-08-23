@@ -19,6 +19,10 @@ export function createApp(
   }> = {},
 ): Express {
   const app: Express = express();
+  const runtime =
+    config.backendMode === "demo" && config.providerMode === "fake"
+      ? (demoRuntime ?? createConfiguredDemoRuntime(config))
+      : undefined;
 
   app.use(
     pinoHttp({
@@ -41,13 +45,39 @@ export function createApp(
   );
   app.use(cors());
   app.use(cookieParser());
+  app.post(
+    "/api/v1/provider-events/persona",
+    express.raw({ type: "application/json", limit: "1mb" }),
+    (req, res, next) => {
+      void (async () => {
+        if (!runtime?.personaWebhookService) {
+          throw new DomainError("NOT_FOUND", "The route was not found.");
+        }
+        if (!Buffer.isBuffer(req.body)) {
+          throw new DomainError(
+            "INVALID_ARGUMENT",
+            "The provider webhook body must be JSON.",
+          );
+        }
+        const receipt = await runtime.personaWebhookService.process({
+          rawBody: req.body,
+          signatureHeader: req.header("persona-signature"),
+        });
+        if (receipt.ignored) {
+          res.status(204).end();
+          return;
+        }
+        res.status(200).json({
+          received: true,
+          replayed: receipt.result.replayed,
+          disposition: receipt.result.disposition,
+        });
+      })().catch(next);
+    },
+  );
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  const runtime =
-    config.backendMode === "demo" && config.providerMode === "fake"
-      ? (demoRuntime ?? createConfiguredDemoRuntime(config))
-      : undefined;
   app.use("/api", createApiRouter(config, runtime, dependencies));
   if (runtime && config.runWorker) {
     app.locals["demoWorkerTimer"] = startDemoWorker(

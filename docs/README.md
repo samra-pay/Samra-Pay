@@ -10,19 +10,19 @@ Samra Pay's Alpha is a synthetic-first remittance product with a Samra-owned
 customer record, double-entry control ledger, audit history, reconciliation,
 and PostgreSQL database.
 
-| Capability              | Locked Alpha decision                  | Current state                                                                                                                  |
-| ----------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Customer authentication | Auth0                                  | Backend and customer-web integration implemented; live tenant, public app identifiers, and native mobile client not connected  |
-| Identity verification   | Persona                                | Provider-neutral case model and fake adapter implemented; live template and webhooks not connected                             |
-| Wallet                  | Crossmint-created USDC wallet          | Durable synthetic wallet, consent, mapping, state, and fake-adapter foundation implemented; live wallet creation not connected |
-| Wallet alternatives     | Cybrid, Rain, or Bridge after Alpha    | Evaluation only; no active integration or migration claim                                                                      |
-| Bank funding            | Unresolved                             | Do not imply Crossmint supports Plaid or bank-funded transactions                                                              |
-| Ethiopia payout         | Unresolved                             | Synthetic payout only; no live corridor or remitter-of-record claim                                                            |
-| Financial truth         | Samra control ledger and PostgreSQL    | Durable fake-money implementation and assurance gates exist                                                                    |
-| Cloud                   | Google Cloud                           | Staging foundation and private Cloud SQL exist; Cloud Run deployment is pending                                                |
-| Mobile distribution     | Firebase in the Google Cloud project   | Project linked; mobile app registration and distribution are pending                                                           |
-| Quality evidence        | GitHub Actions and Qase                | GitHub is merge authority; Qase stores governed automated and manual evidence                                                  |
-| Replit                  | Temporary preview and rollback surface | Not a source of financial, design, database, or deployment truth                                                               |
+| Capability              | Locked Alpha decision                  | Current state                                                                                                                       |
+| ----------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Customer authentication | Auth0                                  | Backend and customer-web integration implemented; live tenant, public app identifiers, and native mobile client not connected       |
+| Identity verification   | Persona                                | Fake and credential-gated sandbox adapters plus signed webhook boundary implemented; sandbox inventory and deployment not connected |
+| Wallet                  | Crossmint-created USDC wallet          | Durable synthetic wallet, consent, mapping, state, and fake-adapter foundation implemented; live wallet creation not connected      |
+| Wallet alternatives     | Cybrid, Rain, or Bridge after Alpha    | Evaluation only; no active integration or migration claim                                                                           |
+| Bank funding            | Unresolved                             | Do not imply Crossmint supports Plaid or bank-funded transactions                                                                   |
+| Ethiopia payout         | Unresolved                             | Synthetic payout only; no live corridor or remitter-of-record claim                                                                 |
+| Financial truth         | Samra control ledger and PostgreSQL    | Durable fake-money implementation and assurance gates exist                                                                         |
+| Cloud                   | Google Cloud                           | Staging foundation and private Cloud SQL exist; Cloud Run deployment is pending                                                     |
+| Mobile distribution     | Firebase in the Google Cloud project   | Project linked; mobile app registration and distribution are pending                                                                |
+| Quality evidence        | GitHub Actions and Qase                | GitHub is merge authority; Qase stores governed automated and manual evidence                                                       |
+| Replit                  | Temporary preview and rollback surface | Not a source of financial, design, database, or deployment truth                                                                    |
 
 Crossmint, Auth0, and Persona provide bounded capabilities. They do not own the
 Samra customer, authorization decision, balance, transaction state, ledger,
@@ -60,8 +60,8 @@ audit trail, reconciliation result, or provider-migration mapping.
 ### Not yet connected or deployed
 
 - Auth0 tenant applications and live access tokens;
-- Persona inquiry template, credentials, signed webhooks, PII policy, and live
-  decisions;
+- Persona account inventory, inquiry template, credentials, deployed signed
+  webhook, PII policy, and sandbox decisions;
 - Crossmint credentials, wallet creation, webhooks, or USDC movement;
 - bank funding and Ethiopia payout rails;
 - database user and connection secret, migrations against Cloud SQL, Cloud Run
@@ -96,6 +96,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 - [Operations control plane](architecture/operations-control-plane.md)
 - [Workforce access](operations/workforce-access.md)
 - [Case management](operations/case-management.md)
+- [Persona sandbox activation](operations/persona-sandbox-activation.md)
 
 ### Cloud and delivery
 

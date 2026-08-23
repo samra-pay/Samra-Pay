@@ -8,6 +8,7 @@ import {
   CustomerIdentityUnboundError,
   CustomerOnboardingRequiredError,
 } from "./customer-auth-errors";
+import { PersonaWebhookAuthenticationError } from "../domain/persona";
 
 export type FieldErrors = Readonly<Record<string, readonly string[]>>;
 
@@ -98,6 +99,15 @@ function mapError(error: unknown): Readonly<{
       code: "AUTHENTICATION_REQUIRED",
       title: "Authentication required",
       detail: error.message,
+      fieldErrors: {},
+    };
+  }
+  if (error instanceof PersonaWebhookAuthenticationError) {
+    return {
+      status: 401,
+      code: "PROVIDER_WEBHOOK_AUTHENTICATION_FAILED",
+      title: "Provider webhook authentication failed",
+      detail: "The provider webhook could not be authenticated.",
       fieldErrors: {},
     };
   }

@@ -9,6 +9,16 @@ export type CustomerAuthConfig =
       audience: string;
       tokenSigningAlgorithm: "RS256";
     }>;
+export type CustomerIdentityProviderConfig =
+  | Readonly<{ mode: "fake" }>
+  | Readonly<{
+      mode: "persona-sandbox";
+      apiKey: string;
+      inquiryTemplateId: string;
+      environmentId: string;
+      webhookSecrets: readonly string[];
+      apiVersion: "2025-10-27";
+    }>;
 
 export type ApiRuntimeConfig = Readonly<{
   backendMode: BackendMode;
@@ -19,6 +29,7 @@ export type ApiRuntimeConfig = Readonly<{
   workerIntervalMilliseconds: number;
   internalOperationsEnabled?: boolean;
   customerAuth: CustomerAuthConfig;
+  customerIdentityProvider?: CustomerIdentityProviderConfig;
 }>;
 
 export function loadApiRuntimeConfig(
@@ -50,6 +61,11 @@ export function loadApiRuntimeConfig(
     backendMode,
     persistenceMode,
   );
+  const customerIdentityProvider = parseCustomerIdentityProvider(
+    environment,
+    customerAuth,
+    persistenceMode,
+  );
   return Object.freeze({
     backendMode,
     providerMode,
@@ -59,7 +75,97 @@ export function loadApiRuntimeConfig(
     workerIntervalMilliseconds: 1_000,
     internalOperationsEnabled: operationsRequested,
     customerAuth,
+    customerIdentityProvider,
   });
+}
+
+function parseCustomerIdentityProvider(
+  environment: NodeJS.ProcessEnv,
+  customerAuth: CustomerAuthConfig,
+  persistenceMode: PersistenceMode,
+): CustomerIdentityProviderConfig {
+  const mode = environment["SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE"];
+  if (mode === undefined || mode === "fake") {
+    return Object.freeze({ mode: "fake" });
+  }
+  if (mode !== "persona-sandbox") {
+    throw new Error(
+      `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE must be "fake" or "persona-sandbox"; received "${mode}". Persona production mode is not implemented.`,
+    );
+  }
+  if (customerAuth.mode !== "auth0" || persistenceMode !== "postgres") {
+    throw new Error(
+      "SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE=persona-sandbox requires Auth0 customer mode with PostgreSQL persistence.",
+    );
+  }
+
+  const apiKey = requireEnvironmentValue(environment, "PERSONA_API_KEY");
+  if (!/^persona_sandbox_[A-Za-z0-9_-]{12,}$/u.test(apiKey)) {
+    throw new Error(
+      "PERSONA_API_KEY must be a Persona sandbox key. Production keys are prohibited in this runtime.",
+    );
+  }
+  const inquiryTemplateId = requireEnvironmentValue(
+    environment,
+    "PERSONA_INQUIRY_TEMPLATE_ID",
+  );
+  if (!/^itmpl_[A-Za-z0-9]{8,}$/u.test(inquiryTemplateId)) {
+    throw new Error(
+      "PERSONA_INQUIRY_TEMPLATE_ID must be an opaque Persona template ID beginning with itmpl_.",
+    );
+  }
+  const environmentId = requireEnvironmentValue(
+    environment,
+    "PERSONA_ENVIRONMENT_ID",
+  );
+  if (!/^env_[A-Za-z0-9]{8,}$/u.test(environmentId)) {
+    throw new Error(
+      "PERSONA_ENVIRONMENT_ID must be an opaque Persona environment ID beginning with env_.",
+    );
+  }
+  const currentWebhookSecret = validatePersonaWebhookSecret(
+    requireEnvironmentValue(environment, "PERSONA_WEBHOOK_SECRET"),
+    "PERSONA_WEBHOOK_SECRET",
+  );
+  const previousWebhookSecret =
+    environment["PERSONA_WEBHOOK_SECRET_PREVIOUS"]?.trim();
+  const webhookSecrets = previousWebhookSecret
+    ? Object.freeze([
+        currentWebhookSecret,
+        validatePersonaWebhookSecret(
+          previousWebhookSecret,
+          "PERSONA_WEBHOOK_SECRET_PREVIOUS",
+        ),
+      ])
+    : Object.freeze([currentWebhookSecret]);
+  if (new Set(webhookSecrets).size !== webhookSecrets.length) {
+    throw new Error(
+      "Persona current and previous webhook secrets must be different during rotation.",
+    );
+  }
+
+  return Object.freeze({
+    mode: "persona-sandbox",
+    apiKey,
+    inquiryTemplateId,
+    environmentId,
+    webhookSecrets,
+    apiVersion: "2025-10-27",
+  });
+}
+
+function validatePersonaWebhookSecret(value: string, name: string): string {
+  if (
+    value.length < 16 ||
+    value.length > 512 ||
+    /\s/u.test(value) ||
+    /[\u0000-\u001f\u007f]/u.test(value)
+  ) {
+    throw new Error(
+      `${name} must be 16 to 512 non-whitespace visible characters.`,
+    );
+  }
+  return value;
 }
 
 function parseCustomerAuth(
@@ -105,7 +211,7 @@ function requireEnvironmentValue(
 ): string {
   const value = environment[name]?.trim();
   if (!value) {
-    throw new Error(`${name} is required when customer Auth0 mode is enabled.`);
+    throw new Error(`${name} is required by the selected runtime mode.`);
   }
   return value;
 }
