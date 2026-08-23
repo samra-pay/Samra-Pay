@@ -6,6 +6,15 @@ import {
   loadMobileRuntimeConfig,
 } from "./runtime-config";
 
+const AUTH0_API_ENVIRONMENT = Object.freeze({
+  EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+  EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://samra-api.example.test",
+  EXPO_PUBLIC_SAMRA_AUTH_MODE: "auth0-native",
+  EXPO_PUBLIC_AUTH0_DOMAIN: "samra-staging.us.auth0.com",
+  EXPO_PUBLIC_AUTH0_CLIENT_ID: "NativeClient_12345678",
+  EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+});
+
 afterEach(() => {
   initializeMobileRuntime({ EXPO_PUBLIC_SAMRA_DATA_MODE: "mock" });
   vi.unstubAllGlobals();
@@ -16,6 +25,7 @@ describe("mobile runtime configuration", () => {
     expect(loadMobileRuntimeConfig({})).toEqual({
       dataMode: "mock",
       apiOrigin: null,
+      auth: { mode: "disabled" },
     });
   });
 
@@ -28,26 +38,33 @@ describe("mobile runtime configuration", () => {
   it("normalizes one portable HTTPS API origin", () => {
     expect(
       loadMobileRuntimeConfig({
-        EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+        ...AUTH0_API_ENVIRONMENT,
         EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://samra-api.example.test/",
       }),
     ).toEqual({
       dataMode: "api",
       apiOrigin: "https://samra-api.example.test",
+      auth: {
+        mode: "auth0-native",
+        domain: "samra-staging.us.auth0.com",
+        clientId: "NativeClient_12345678",
+        audience: "https://api.staging.samrapay.com",
+        customScheme: "samrapayauth",
+      },
     });
   });
 
   it("allows HTTP only for loopback development", () => {
     expect(
       loadMobileRuntimeConfig({
-        EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+        ...AUTH0_API_ENVIRONMENT,
         EXPO_PUBLIC_SAMRA_API_ORIGIN: "http://127.0.0.1:3000",
       }).apiOrigin,
     ).toBe("http://127.0.0.1:3000");
 
     expect(() =>
       loadMobileRuntimeConfig({
-        EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+        ...AUTH0_API_ENVIRONMENT,
         EXPO_PUBLIC_SAMRA_API_ORIGIN: "http://api.example.test",
       }),
     ).toThrow(/must use https/);
@@ -62,7 +79,7 @@ describe("mobile runtime configuration", () => {
   ])("rejects an unsafe or non-origin API value: %s", (apiOrigin) => {
     expect(() =>
       loadMobileRuntimeConfig({
-        EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+        ...AUTH0_API_ENVIRONMENT,
         EXPO_PUBLIC_SAMRA_API_ORIGIN: apiOrigin,
       }),
     ).toThrow();
@@ -77,6 +94,51 @@ describe("mobile runtime configuration", () => {
     ).toThrow(/must be \"mock\" or \"api\"/);
   });
 
+  it("requires one complete native Auth0 contract in API mode", () => {
+    expect(() =>
+      loadMobileRuntimeConfig({
+        EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+        EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.example.test",
+      }),
+    ).toThrow(/requires EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native/);
+
+    expect(() =>
+      loadMobileRuntimeConfig({
+        ...AUTH0_API_ENVIRONMENT,
+        EXPO_PUBLIC_AUTH0_CLIENT_ID: "",
+      }),
+    ).toThrow(/AUTH0_CLIENT_ID/);
+  });
+
+  it("rejects Auth0 values in synthetic mode", () => {
+    expect(() =>
+      loadMobileRuntimeConfig({
+        EXPO_PUBLIC_AUTH0_DOMAIN: "tenant.us.auth0.com",
+      }),
+    ).toThrow(/require EXPO_PUBLIC_SAMRA_AUTH_MODE/);
+
+    expect(() =>
+      loadMobileRuntimeConfig({
+        ...AUTH0_API_ENVIRONMENT,
+        EXPO_PUBLIC_SAMRA_DATA_MODE: "mock",
+      }),
+    ).toThrow(/allowed only in mobile API mode/);
+  });
+
+  it.each([
+    ["EXPO_PUBLIC_AUTH0_DOMAIN", "https://tenant.auth0.com/path"],
+    ["EXPO_PUBLIC_AUTH0_CLIENT_ID", "client id with spaces"],
+    ["EXPO_PUBLIC_AUTH0_AUDIENCE", "http://api.example.test"],
+    ["EXPO_PUBLIC_AUTH0_AUDIENCE", "https://user@api.example.test"],
+  ] as const)(
+    "rejects unsafe Auth0 public configuration in %s",
+    (key, value) => {
+      expect(() =>
+        loadMobileRuntimeConfig({ ...AUTH0_API_ENVIRONMENT, [key]: value }),
+      ).toThrow();
+    },
+  );
+
   it("routes generated-client requests to the configured remote API", async () => {
     let requestedUrl = "";
     vi.stubGlobal(
@@ -90,10 +152,7 @@ describe("mobile runtime configuration", () => {
       }),
     );
 
-    const config = initializeMobileRuntime({
-      EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
-      EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://samra-api.example.test",
-    });
+    const config = initializeMobileRuntime(AUTH0_API_ENVIRONMENT);
     await expect(checkMobileApiHealth(config)).resolves.toEqual({
       status: "ok",
     });

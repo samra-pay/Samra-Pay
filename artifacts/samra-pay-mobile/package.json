@@ -62,6 +62,7 @@
     "@expo-google-fonts/noto-serif-ethiopic": "^0.4.1",
     "@expo-google-fonts/outfit": "^0.4.3",
     "@workspace/samra-pay-ds": "workspace:*",
-    "expo-clipboard": "^57.0.1"
+    "expo-clipboard": "^57.0.1",
+    "react-native-auth0": "5.7.0"
   }
 }

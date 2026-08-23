@@ -11,8 +11,8 @@ The approved sequence is:
 
 1. deploy the portable customer-web and API surfaces behind the reviewed Google
    Cloud access boundary;
-2. connect Auth0 staging authentication using public SPA identifiers and API
-   issuer/audience values;
+2. connect Auth0 staging authentication using separate public SPA and Native
+   Application identifiers plus exact API issuer/audience values;
 3. activate Persona sandbox only after its data and support controls pass;
 4. keep the deterministic Crossmint adapter active until the dormant sandbox
    adapter, credential scope, wallet configuration, and operating model pass an
@@ -49,19 +49,33 @@ serves an empty fallback and retains its existing build-time defaults.
 
 ## Auth0 staging gate
 
-Auth0 requires no browser secret. Before deployment, record and review:
+Auth0 requires no browser or native-client secret. The customer-web and native
+mobile boundaries are implemented but remain disconnected. Before deployment,
+record and review:
 
 - tenant and custom-domain owner;
-- SPA client ID;
+- separate SPA and Native Application client IDs;
 - exact Samra API identifier;
 - exact callback, logout, and allowed web-origin inventory;
+- exact native iOS bundle ID, Android package, lowercase custom scheme, and
+  callback/logout inventory;
 - API issuer base URL;
 - RS256 signing and JWKS behavior;
+- custom development-build and controlled tester-distribution workflow;
 - session, incident, account-recovery, deletion, and support owners.
 
 The browser stays PKCE-oriented, uses memory-only token storage, and does not
-use refresh tokens. The API validates issuer and audience. No Auth0 management
-credential is part of the customer runtime.
+use refresh tokens. Mobile uses Auth0 Universal Login and SDK-managed iOS
+Keychain or Android encrypted storage, resolves a fresh Bearer token for each
+API request, and does not request `offline_access`. The default mock build omits
+the native module and remains compatible with Expo Go. API mode requires the
+complete native configuration and a custom build. The API validates issuer and
+audience. No Auth0 management credential is part of either customer runtime.
+
+The reviewed native constants are application ID
+`com.samrapay.mobile.staging` and scheme `samrapayauth`. The mobile boundary is
+not connected until the separate activation runbook passes. See
+[Mobile Auth0 native activation](./mobile-auth0-native-activation.md).
 
 ## Persona sandbox gate
 
@@ -127,6 +141,8 @@ References:
 
 - [Google Cloud Run secret configuration](https://docs.cloud.google.com/run/docs/configuring/services/secrets)
 - [Google Cloud Build substitutions](https://docs.cloud.google.com/build/docs/configuring-builds/substitute-variable-values)
+- [Auth0 Expo quickstart](https://auth0.com/docs/quickstart/native/react-native-expo)
+- [Auth0 React Native SDK](https://github.com/auth0/react-native-auth0)
 - [Crossmint backend wallet REST API](https://docs.crossmint.com/wallets/quickstarts/restapi)
 
 ## Hard stops

@@ -42,9 +42,9 @@ Auth0 remains a deliberate configuration gate:
 
 - web will use Universal Login and request the configured API audience and
   scopes through the Auth0 React SDK;
-- mobile will use the native Auth0 SDK only after a custom Expo development
-  build or EAS workflow is approved, because the native SDK is not compatible
-  with Expo Go;
+- mobile has a disabled-by-default native Auth0 adapter and Expo config plugin;
+  the default mock build does not load either and remains compatible with Expo
+  Go, while API mode requires a complete reviewed native Auth0 configuration;
 - both clients will resolve short-lived tokens on demand through the shared
   request boundary; the request module does not persist them;
 - API-mode login stays disabled until tenant, application, audience, callback,
@@ -194,8 +194,10 @@ not store wallet truth locally or show a provider wallet identifier, public
 address, token balance, or financial entitlement.
 
 Live Auth0 tenant configuration, Persona sandbox configuration, Crossmint
-sandbox credentials, and the mobile custom-development-build decision remain
-hard stops, not values to guess.
+sandbox credentials, and a reviewed mobile custom-development-build and
+distribution workflow remain hard stops, not values to guess. The native
+boundary exists in code but is not connected to an Auth0 application or live
+token.
 
 The Samra-owned funnel telemetry and acquisition attribution foundation is
 defined in [Customer funnel telemetry and acquisition attribution](./customer-funnel-attribution.md).

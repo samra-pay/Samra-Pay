@@ -280,11 +280,27 @@ function validateVendorReadiness(contract) {
           "SAMRA_PUBLIC_AUTH0_AUDIENCE",
         ]) &&
       auth0.customerWebSecrets.length === 0 &&
+      JSON.stringify(auth0.mobileRuntimeEnvironment) ===
+        JSON.stringify([
+          "EXPO_PUBLIC_SAMRA_AUTH_MODE",
+          "EXPO_PUBLIC_AUTH0_DOMAIN",
+          "EXPO_PUBLIC_AUTH0_CLIENT_ID",
+          "EXPO_PUBLIC_AUTH0_AUDIENCE",
+        ]) &&
+      auth0.mobileSecrets.length === 0 &&
+      auth0.mobileSdk === "react-native-auth0@5.7.0" &&
+      auth0.mobileApplicationId === "com.samrapay.mobile.staging" &&
+      auth0.mobileCustomScheme === "samrapayauth" &&
+      auth0.mobileTokenStorage === "ios-keychain-android-encrypted-storage" &&
+      auth0.mobileBoundaryImplemented === true &&
+      auth0.mobileClientConnected === false &&
+      auth0.expoGoPreviewPreserved === true &&
       auth0.tokenAlgorithm === "RS256" &&
       auth0.tokenStorage === "memory-only" &&
       auth0.refreshTokensEnabled === false &&
-      auth0.clientSecretAllowed === false,
-    "Auth0 must remain public-client, PKCE-oriented, and secretless in customer web",
+      auth0.clientSecretAllowed === false &&
+      auth0.activationBlockedOn.length === 5,
+    "Auth0 must remain secretless, disconnected, fail-closed, and Expo Go compatible",
   );
 
   const persona = readiness.persona;

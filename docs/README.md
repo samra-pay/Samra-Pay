@@ -98,6 +98,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 - [Case management](operations/case-management.md)
 - [Persona sandbox activation](operations/persona-sandbox-activation.md)
 - [Staging vendor runtime readiness](operations/staging-vendor-runtime-readiness.md)
+- [Mobile Auth0 native activation](operations/mobile-auth0-native-activation.md)
 
 ### Cloud and delivery
 

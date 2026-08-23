@@ -1,10 +1,9 @@
 # Customer identity and Auth0 foundation
 
 Status: Auth0 is the locked Alpha customer-authentication vendor. The durable
-backend boundary and customer-web SDK integration are implemented and disabled
-by default. No live tenant, application, credential, or customer token is
-connected; the native mobile integration remains gated on a reviewed custom
-development build.
+backend, customer-web, and native-mobile boundaries are implemented and
+disabled by default. No live tenant, application, credential, customer token,
+or custom native build is connected.
 
 ## Decision
 
@@ -25,12 +24,17 @@ This foundation delivers:
 - one server-resolved customer actor for customer, account, activity, beneficiary, and remittance routes;
 - separate trust boundaries for customer routes, synthetic development controls, and workforce operations;
 - stable 401, unbound-identity 403, and restricted-customer 403 problem responses;
+- fail-closed web and native-mobile public-client configuration;
+- native Universal Login with SDK-managed secure credential storage and a
+  request-time Bearer-token boundary;
+- an Expo Go-compatible default mock build with no native Auth0 module load;
 - tests for configuration, route enforcement, spoof resistance, binding concurrency, idempotency, conflict, and audit redaction.
 
 It does not create or configure an Auth0 tenant, enable production traffic,
 provision real customers, ingest Auth0 logs, implement account recovery,
-activate mobile Auth0, connect live Persona or Crossmint, change Replit, or
-store real customer data. The wider Alpha sequence is governed by
+create or distribute a custom native build, connect mobile Auth0 to a client,
+connect live Persona or Crossmint, change Replit, or store real customer data.
+The wider Alpha sequence is governed by
 [Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Runtime contract
@@ -78,6 +82,38 @@ application URI, including any base path and trailing slash. Allowed Web
 Origins must contain only the application origin. Development and staging
 URLs must be explicitly enumerated; wildcards, HTTP outside loopback local
 development, and production reuse are prohibited.
+
+The mobile client is independently fail-closed. Its default is mock data plus
+disabled authentication, which keeps Expo Go available for visual review and
+does not load `react-native-auth0`. Connected mobile requires all six public
+values below and a reviewed custom native build:
+
+```text
+EXPO_PUBLIC_SAMRA_DATA_MODE=api
+EXPO_PUBLIC_SAMRA_API_ORIGIN=https://<exact-Samra-API-origin>
+EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native
+EXPO_PUBLIC_AUTH0_DOMAIN=<tenant-or-custom-domain-hostname>
+EXPO_PUBLIC_AUTH0_CLIENT_ID=<public-native-application-client-id>
+EXPO_PUBLIC_AUTH0_AUDIENCE=<exact-Samra-API-identifier>
+```
+
+The staging iOS bundle identifier and Android package are both
+`com.samrapay.mobile.staging`. The lowercase custom scheme is `samrapayauth`.
+Register the following exact callback and logout URLs in a separate Auth0
+**Native Application**:
+
+```text
+samrapayauth://<domain>/ios/com.samrapay.mobile.staging/callback
+samrapayauth://<domain>/android/com.samrapay.mobile.staging/callback
+```
+
+The native SDK uses Authorization Code with PKCE and stores credentials through
+its credentials manager in iOS Keychain or Android encrypted storage. Samra
+does not put tokens in `AsyncStorage`, React state, URLs, or analytics. The
+client requests `openid` only and does not request `offline_access`. It obtains
+a fresh token from secure storage for each API request. DPoP is explicitly off
+until the generated API client supports the required per-request proof header;
+the API continues to require a Bearer token with exact RS256 issuer and audience.
 
 The API accepts access tokens only. ID tokens are not API credentials. Missing, malformed, expired, wrongly signed, wrong-issuer, and wrong-audience tokens fail with 401. A valid Auth0 subject without a Samra binding fails with 403 on customer-data routes; the controlled `POST /api/v1/onboarding` exception may atomically create the pending Samra customer, binding, and onboarding aggregate. A revoked binding or suspended/closed customer also fails with 403.
 
@@ -138,7 +174,13 @@ The foundation is acceptable when all of the following are proven:
 8. Replayed and concurrent binding requests create one mapping and one audit event.
 9. Attempting to bind the same Auth0 identity to another customer fails atomically.
 10. Migration, typecheck, generated-contract check, API tests, PostgreSQL tests, and build pass in Linux CI.
-11. No live Auth0 tenant, real token, customer PII, deployment, or Replit change is part of the evidence.
+11. Default mobile mock mode remains Expo Go-compatible and does not load the
+    native Auth0 module or add native application identifiers.
+12. Mobile API mode fails before startup unless data mode, API origin, native
+    auth mode, domain, client ID, and audience are complete and valid.
+13. Native sign-in, restore, per-request access-token lookup, logout cleanup,
+    invalid-credential rejection, and no-refresh-token policy have automated evidence.
+14. No live Auth0 tenant, real token, customer PII, deployment, or Replit change is part of the evidence.
 
 ## Follow-on PR sequence
 
@@ -158,14 +200,16 @@ bearer-token getter, guard customer routes, and use provider logout. The image
 build accepts only the three public identifiers above and remains fail-closed
 when they are absent.
 
-### PR C2 — native mobile client
+### PR C2 — native mobile client (implemented by this follow-on)
 
-Integrate the supported Auth0 native SDK with a reviewed Expo custom development
-build, separate iOS and Android identifiers, exact callbacks, secure SDK token
-storage, and the existing bearer-token getter. The official Auth0 Expo SDK is
-not compatible with Expo Go, so this step must not silently remove the current
-visual-preview surface. See the
-[official Expo quickstart](https://auth0.com/docs/quickstart/native/react-native-expo).
+Pin `react-native-auth0`, add an auth-only Expo config plugin, validate one exact
+staging application ID and lowercase scheme, use Universal Login and SDK secure
+credential storage, and connect the existing per-request Bearer-token getter.
+The default build omits the plugin and preserves Expo Go. Tenant/client
+configuration, a custom development build, real signed-token evidence, and any
+distribution remain separate activation gates. See the
+[official Expo quickstart](https://auth0.com/docs/quickstart/native/react-native-expo)
+and [React Native SDK](https://github.com/auth0/react-native-auth0).
 
 ### PR D — recovery and identity operations
 
@@ -181,6 +225,7 @@ Stop before live enablement if any of these are unresolved:
 
 - no separate Auth0 applications for web, mobile, and machine clients;
 - no exact callback, logout, and allowed-origin inventory;
+- no reviewed custom native development-build and distribution workflow;
 - no custom API audience or RS256 configuration;
 - no disposable tenant integration test using real signed access tokens;
 - no reviewed signup, email verification, MFA, recovery, breach-response, and customer-notification policy;

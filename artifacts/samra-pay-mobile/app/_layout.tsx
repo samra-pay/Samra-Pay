@@ -73,7 +73,7 @@ export default function RootLayout() {
           <MobileSamraRuntimeProvider config={mobileRuntimeConfig}>
             <GestureHandlerRootView>
               <KeyboardProvider>
-                <AuthProvider mode={mobileRuntimeConfig.dataMode}>
+                <AuthProvider config={mobileRuntimeConfig.auth}>
                   <LanguageProvider>
                     <TransferProvider>
                       <StatusBar style="light" />

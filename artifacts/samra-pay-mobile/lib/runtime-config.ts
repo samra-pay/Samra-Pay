@@ -2,14 +2,33 @@ import { healthCheck, setBaseUrl } from "@workspace/api-client-react";
 
 export type MobileDataMode = "mock" | "api";
 
+export type MobileAuthMode = "disabled" | "auth0-native";
+
+export const MOBILE_AUTH0_CUSTOM_SCHEME = "samrapayauth";
+
+export type MobileAuthConfig =
+  | Readonly<{ mode: "disabled" }>
+  | Readonly<{
+      mode: "auth0-native";
+      domain: string;
+      clientId: string;
+      audience: string;
+      customScheme: typeof MOBILE_AUTH0_CUSTOM_SCHEME;
+    }>;
+
 export type MobilePublicEnvironment = Readonly<{
   EXPO_PUBLIC_SAMRA_DATA_MODE?: string;
   EXPO_PUBLIC_SAMRA_API_ORIGIN?: string;
+  EXPO_PUBLIC_SAMRA_AUTH_MODE?: string;
+  EXPO_PUBLIC_AUTH0_DOMAIN?: string;
+  EXPO_PUBLIC_AUTH0_CLIENT_ID?: string;
+  EXPO_PUBLIC_AUTH0_AUDIENCE?: string;
 }>;
 
 export type MobileRuntimeConfig = Readonly<{
   dataMode: MobileDataMode;
   apiOrigin: string | null;
+  auth: MobileAuthConfig;
 }>;
 
 function readPublicEnvironment(): MobilePublicEnvironment {
@@ -18,6 +37,10 @@ function readPublicEnvironment(): MobilePublicEnvironment {
   return {
     EXPO_PUBLIC_SAMRA_DATA_MODE: process.env.EXPO_PUBLIC_SAMRA_DATA_MODE,
     EXPO_PUBLIC_SAMRA_API_ORIGIN: process.env.EXPO_PUBLIC_SAMRA_API_ORIGIN,
+    EXPO_PUBLIC_SAMRA_AUTH_MODE: process.env.EXPO_PUBLIC_SAMRA_AUTH_MODE,
+    EXPO_PUBLIC_AUTH0_DOMAIN: process.env.EXPO_PUBLIC_AUTH0_DOMAIN,
+    EXPO_PUBLIC_AUTH0_CLIENT_ID: process.env.EXPO_PUBLIC_AUTH0_CLIENT_ID,
+    EXPO_PUBLIC_AUTH0_AUDIENCE: process.env.EXPO_PUBLIC_AUTH0_AUDIENCE,
   };
 }
 
@@ -71,6 +94,112 @@ function parseApiOrigin(value: string | undefined): string | null {
   return url.origin;
 }
 
+function parseAuthMode(value: string | undefined): MobileAuthMode {
+  if (value === undefined || value === "") return "disabled";
+  if (value === "disabled" || value === "auth0-native") return value;
+
+  throw new Error(
+    'EXPO_PUBLIC_SAMRA_AUTH_MODE must be "disabled" or "auth0-native"; ' +
+      `received ${JSON.stringify(value)}.`,
+  );
+}
+
+function parseAuth0Domain(value: string | undefined): string {
+  const domain = value?.trim().toLowerCase() ?? "";
+  if (
+    domain.length < 3 ||
+    domain.length > 253 ||
+    !domain.includes(".") ||
+    !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u.test(domain) ||
+    domain.includes("..")
+  ) {
+    throw new Error(
+      "EXPO_PUBLIC_AUTH0_DOMAIN must be a hostname only, without a scheme, path, port, or credentials.",
+    );
+  }
+  return domain;
+}
+
+function parseAuth0ClientId(value: string | undefined): string {
+  const clientId = value?.trim() ?? "";
+  if (
+    clientId.length < 8 ||
+    clientId.length > 256 ||
+    !/^[A-Za-z0-9_-]+$/u.test(clientId)
+  ) {
+    throw new Error(
+      "EXPO_PUBLIC_AUTH0_CLIENT_ID must be a non-secret Auth0 native application client ID.",
+    );
+  }
+  return clientId;
+}
+
+function parseAuth0Audience(value: string | undefined): string {
+  const audience = value?.trim() ?? "";
+  let url: URL;
+  try {
+    url = new URL(audience);
+  } catch {
+    throw new Error(
+      "EXPO_PUBLIC_AUTH0_AUDIENCE must be the exact HTTPS Samra API identifier.",
+    );
+  }
+  if (
+    url.protocol !== "https:" ||
+    !url.hostname ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    audience.length > 512
+  ) {
+    throw new Error(
+      "EXPO_PUBLIC_AUTH0_AUDIENCE must be the exact HTTPS Samra API identifier without credentials, query, or fragment.",
+    );
+  }
+  return audience;
+}
+
+function resolveMobileAuthConfig(
+  environment: MobilePublicEnvironment,
+  dataMode: MobileDataMode,
+): MobileAuthConfig {
+  const mode = parseAuthMode(environment.EXPO_PUBLIC_SAMRA_AUTH_MODE);
+  const auth0Values = [
+    environment.EXPO_PUBLIC_AUTH0_DOMAIN,
+    environment.EXPO_PUBLIC_AUTH0_CLIENT_ID,
+    environment.EXPO_PUBLIC_AUTH0_AUDIENCE,
+  ];
+
+  if (mode === "disabled") {
+    if (
+      auth0Values.some((value) => value !== undefined && value.trim() !== "")
+    ) {
+      throw new Error(
+        "Auth0 public values require EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native.",
+      );
+    }
+    if (dataMode === "api") {
+      throw new Error(
+        "Mobile API mode requires EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native.",
+      );
+    }
+    return Object.freeze({ mode: "disabled" });
+  }
+
+  if (dataMode !== "api") {
+    throw new Error("Native Auth0 is allowed only in mobile API mode.");
+  }
+
+  return Object.freeze({
+    mode,
+    domain: parseAuth0Domain(environment.EXPO_PUBLIC_AUTH0_DOMAIN),
+    clientId: parseAuth0ClientId(environment.EXPO_PUBLIC_AUTH0_CLIENT_ID),
+    audience: parseAuth0Audience(environment.EXPO_PUBLIC_AUTH0_AUDIENCE),
+    customScheme: MOBILE_AUTH0_CUSTOM_SCHEME,
+  });
+}
+
 export function loadMobileRuntimeConfig(
   environment: MobilePublicEnvironment = readPublicEnvironment(),
 ): MobileRuntimeConfig {
@@ -83,7 +212,8 @@ export function loadMobileRuntimeConfig(
     );
   }
 
-  return Object.freeze({ dataMode, apiOrigin });
+  const auth = resolveMobileAuthConfig(environment, dataMode);
+  return Object.freeze({ dataMode, apiOrigin, auth });
 }
 
 export function configureMobileApiClient(config: MobileRuntimeConfig): void {

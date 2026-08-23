@@ -13,7 +13,6 @@ import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
 import { SamraLogo } from "@/components/SamraLogo";
 import { useAuth } from "@/context/AuthContext";
-import { useMobileDataMode } from "@/lib/samra-runtime";
 import { useColors } from "@workspace/samra-pay-ds/hooks/use-colors";
 import { nativeTheme } from "@workspace/samra-pay-ds/lib/native-theme";
 import { useRouter } from "expo-router";
@@ -21,8 +20,7 @@ import { useRouter } from "expo-router";
 export default function LoginScreen() {
   const colors = useColors("dark");
   const insets = useSafeAreaInsets();
-  const { signIn } = useAuth();
-  const mode = useMobileDataMode();
+  const { authMode, signIn } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -31,19 +29,21 @@ export default function LoginScreen() {
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const handleSignIn = async () => {
-    if (mode !== "mock") {
-      setError("Auth0 sign-in is not configured for this build.");
-      return;
-    }
     setError(null);
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await new Promise((r) => setTimeout(r, 350));
+      if (authMode === "disabled") {
+        await new Promise((r) => setTimeout(r, 350));
+      }
       await signIn();
       router.replace("/onboarding");
     } catch {
-      setError("Could not start the synthetic session. Try again.");
+      setError(
+        authMode === "auth0-native"
+          ? "Could not complete secure sign-in. Try again."
+          : "Could not start the synthetic session. Try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -84,9 +84,9 @@ export default function LoginScreen() {
                 { color: colors.mutedForeground },
               ]}
             >
-              {mode === "mock"
+              {authMode === "disabled"
                 ? "No email, password, or real account is used. This opens a synthetic onboarding journey only."
-                : "Direct password entry is disabled. Auth0 Universal Login must be configured before connected sign-in is enabled."}
+                : "Direct password entry is disabled. Sign-in opens Auth0 Universal Login and credentials remain in secure device storage."}
             </Text>
           </View>
 
@@ -101,14 +101,14 @@ export default function LoginScreen() {
           <Pressable
             testID="login-submit"
             accessibilityRole="button"
-            accessibilityState={{ disabled: loading || mode !== "mock" }}
+            accessibilityState={{ disabled: loading }}
             onPress={handleSignIn}
-            disabled={loading || mode !== "mock"}
+            disabled={loading}
             style={({ pressed }) => [
               styles.button,
               {
                 backgroundColor: colors.primary,
-                opacity: pressed || loading ? 0.8 : mode !== "mock" ? 0.55 : 1,
+                opacity: pressed || loading ? 0.8 : 1,
               },
             ]}
           >
@@ -118,9 +118,9 @@ export default function LoginScreen() {
               <Text
                 style={[styles.buttonText, { color: colors.primaryForeground }]}
               >
-                {mode === "mock"
+                {authMode === "disabled"
                   ? "Start synthetic onboarding"
-                  : "Auth0 sign-in not configured"}
+                  : "Continue securely with Auth0"}
               </Text>
             )}
           </Pressable>
@@ -136,9 +136,9 @@ export default function LoginScreen() {
           <Text
             style={[styles.demoNoteText, { color: colors.mutedForeground }]}
           >
-            {mode === "mock"
+            {authMode === "disabled"
               ? "This is a product demo. Progress is local and no financial capability is created."
-              : "API mode fails closed until secure Auth0 credentials and callback configuration are supplied."}
+              : "Auth0 supplies only a short-lived API access token. The app does not store passwords or tokens in local application storage."}
           </Text>
         </View>
       </KeyboardAwareScrollViewCompat>

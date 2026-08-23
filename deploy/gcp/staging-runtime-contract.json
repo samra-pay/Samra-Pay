@@ -156,10 +156,31 @@
         "SAMRA_PUBLIC_AUTH0_AUDIENCE"
       ],
       "customerWebSecrets": [],
+      "mobileRuntimeEnvironment": [
+        "EXPO_PUBLIC_SAMRA_AUTH_MODE",
+        "EXPO_PUBLIC_AUTH0_DOMAIN",
+        "EXPO_PUBLIC_AUTH0_CLIENT_ID",
+        "EXPO_PUBLIC_AUTH0_AUDIENCE"
+      ],
+      "mobileSecrets": [],
+      "mobileSdk": "react-native-auth0@5.7.0",
+      "mobileApplicationId": "com.samrapay.mobile.staging",
+      "mobileCustomScheme": "samrapayauth",
+      "mobileTokenStorage": "ios-keychain-android-encrypted-storage",
+      "mobileBoundaryImplemented": true,
+      "mobileClientConnected": false,
+      "expoGoPreviewPreserved": true,
       "tokenAlgorithm": "RS256",
       "tokenStorage": "memory-only",
       "refreshTokensEnabled": false,
-      "clientSecretAllowed": false
+      "clientSecretAllowed": false,
+      "activationBlockedOn": [
+        "approved native application, API audience, callback, and logout inventory",
+        "reviewed custom native development-build and distribution workflow",
+        "disposable signed-token integration, logout, and restart evidence",
+        "approved MFA, account recovery, deletion, incident, and support policy",
+        "independent zero-traffic post-activation audit"
+      ]
     },
     "persona": {
       "status": "prepared-not-authorized",
