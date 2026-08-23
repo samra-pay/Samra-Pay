@@ -8,9 +8,11 @@ as the future runtime, and Qase as governed test evidence. These systems are
 connected by exact identifiers. None of them may infer that a build, deployment,
 test, traffic change, or vendor activation authorizes the next stage.
 
-Image publication, zero-traffic deployment, exact-revision promotion, rollback,
-and immutable deployment-history controllers are implemented. Their federated
-identities, protected environments, verification evidence, and every Cloud Run
+Image publication, zero-traffic deployment, verification evidence recording,
+exact-revision promotion, rollback, and immutable deployment-history
+controllers are implemented. The live exact-revision probe is not implemented
+or authorized. Its future output must satisfy the recorder before promotion can
+consume it. Federated identities, protected environments, and every Cloud Run
 mutation remain separately activated and authorized; no service is live. The
 promotion path deliberately cannot perform first-ever activation because a
 release without a prior healthy revision has no proven rollback target.
@@ -26,25 +28,27 @@ flowchart LR
   E --> F[Five immutable image digests]
   F --> G[Hashed publication manifest]
   G -. separate approval .-> H[Private zero-traffic revisions]
-  H -. future verifier .-> I[Hashed checks and Qase staging run]
-  I -. protected promotion .-> J[Exact revision receives 100 percent]
+  H -. future live probe .-> I[Hashed probe evidence]
+  I --> L[Validated verification record]
+  L -. protected promotion .-> J[Exact revision receives 100 percent]
   J -. protected rollback .-> K[Recorded prior revision restored]
 ```
 
 Solid arrows are implemented evidence flow. Dashed arrows are controlled stages
-that still require activation or evidence. No traffic workflow is authorized,
-and the required pre-promotion functional verifier is not yet implemented.
+that still require activation or evidence. The verification contract and
+tamper-evident recorder are implemented; the live probe that must observe the
+exact deployed revision is not. No traffic workflow is authorized.
 
 ## Stage authority
 
-| Stage                   | Authority                      | Mutation                                                                       | Required evidence                                                                                                 | Current state                            |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Release candidate       | GitHub Actions                 | None                                                                           | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                              |
-| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                              |
-| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                               | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized |
-| Staging verification    | Future controlled test run     | Synthetic test traffic only                                                    | Readiness, restart, service authentication, ledger, reconciliation, audit, failure visibility, Qase run           | Not implemented or authorized            |
-| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100% | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                | Implemented; not activated or authorized |
-| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                   | Implemented; not activated or authorized |
+| Stage                   | Authority                      | Mutation                                                                       | Required evidence                                                                                                 | Current state                                                           |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Release candidate       | GitHub Actions                 | None                                                                           | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                                                             |
+| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                                                             |
+| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                               | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized                                |
+| Staging verification    | Future controlled test run     | Synthetic test traffic only                                                    | Readiness, restart, service authentication, ledger, reconciliation, audit, failure visibility, Qase run           | Evidence recorder implemented; live probe not implemented or authorized |
+| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100% | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                | Implemented; not activated or authorized                                |
+| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                   | Implemented; not activated or authorized                                |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
@@ -106,6 +110,32 @@ The Operations Portal remains blocked from deployment until workforce identity,
 staff authorization, access review and revocation, and operations API security
 are approved. Persona and Crossmint remain separate sandbox gates. No deployment
 controller may activate either vendor.
+
+## Staging verification evidence plane
+
+`record-staging-verification.mjs` closes the evidence-integrity gap between a
+zero-traffic deployment record and traffic promotion. It does not execute the
+live checks. It accepts only two independently hashed inputs:
+
+- the exact zero-traffic deployment manifest; and
+- a future probe manifest proving that all required checks observed the same
+  deployed service revision.
+
+The recorder rejects a different commit, service, revision, environment, Qase
+run, GitHub workflow identity, or incomplete check set. The probe must report a
+completed passing Qase run in project `SAMP` and environment
+`google-cloud-staging`, and must prove readiness, restart, service
+authentication, ledger, reconciliation, audit, and failure visibility against
+the exact deployed revision. It may not change traffic, public access, runtime
+configuration, vendor state, or production state, and it may not use customer
+data or retain secret values.
+
+The live probe workflow is intentionally represented as
+`implemented: false` and `authorized: false`. A person cannot create promotable
+evidence by manually asserting that tests passed. A future implementation must
+solve private-revision access, execute the checks, write the probe manifest and
+SHA-256 sidecar, and retain the exact GitHub and Qase provenance. Until then,
+promotion remains correctly blocked.
 
 ## Exact-revision promotion and rollback
 
@@ -197,6 +227,9 @@ If any answer is missing, the release is not promotable.
 - `deploy/gcp/audit-staging-zero-traffic-federation.sh`
 - `.github/workflows/staging-zero-traffic-deployment.yml`
 - `deploy/gcp/staging-traffic-control.json`
+- `deploy/gcp/staging-verification.json`
+- `deploy/gcp/validate-staging-verification.mjs`
+- `deploy/gcp/record-staging-verification.mjs`
 - `deploy/gcp/validate-staging-traffic-control.mjs`
 - `deploy/gcp/record-staging-traffic-control.mjs`
 - `deploy/gcp/control-staging-traffic.sh`

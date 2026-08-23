@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "status": "evidence-plane-implemented-execution-not-authorized",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "sourceRepository": "haileleuld87/Samra-Pay",
+  "deployableServices": [
+    "samra-api",
+    "samra-customer-web",
+    "samra-design-system-preview"
+  ],
+  "inputEvidence": {
+    "zeroTrafficDeploymentManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
+    "zeroTrafficDeploymentManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256",
+    "probeManifest": "artifacts/staging-release/staging-verification-probe.json",
+    "probeManifestHash": "artifacts/staging-release/staging-verification-probe.sha256"
+  },
+  "outputEvidence": {
+    "manifest": "artifacts/staging-release/staging-verification.json",
+    "manifestHash": "artifacts/staging-release/staging-verification.sha256",
+    "retentionDays": 365
+  },
+  "requiredChecks": [
+    "readiness",
+    "restart",
+    "serviceAuthentication",
+    "ledger",
+    "reconciliation",
+    "audit",
+    "failureVisibility"
+  ],
+  "qase": {
+    "project": "SAMP",
+    "environment": "google-cloud-staging",
+    "completedPassingRunRequired": true,
+    "exactRunUrlRequired": true
+  },
+  "probeAuthority": {
+    "workflowName": "Staging verification probe",
+    "workflowPath": ".github/workflows/staging-verification-probe.yml",
+    "protectedEnvironment": "staging-verification",
+    "allowedRef": "refs/heads/main",
+    "allowedEvent": "workflow_dispatch",
+    "exactCandidateRevisionRequired": true,
+    "allChecksMustBeDeployedRevisionEvidence": true,
+    "implemented": false,
+    "authorized": false
+  },
+  "recorder": {
+    "path": "deploy/gcp/record-staging-verification.mjs",
+    "requiresHashedInputs": true,
+    "requiresExactCandidateBinding": true,
+    "recordsSecrets": false,
+    "recordsCustomerData": false,
+    "implemented": true
+  },
+  "automaticTriggers": false,
+  "trafficMutationAuthorized": false,
+  "publicAccessMutationAuthorized": false,
+  "runtimeMutationAuthorized": false,
+  "vendorActivationAuthorized": false,
+  "productionAuthorized": false,
+  "prohibited": [
+    "manual pass status without hashed probe evidence",
+    "verification of a different commit, service, or revision",
+    "partial required-check evidence",
+    "non-passing or incomplete Qase staging run",
+    "traffic mutation",
+    "public IAM mutation",
+    "runtime configuration mutation",
+    "vendor activation",
+    "production resource",
+    "real customer data",
+    "secret value in evidence",
+    "Replit change"
+  ]
+}

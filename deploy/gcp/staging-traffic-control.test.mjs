@@ -14,10 +14,13 @@ import {
   buildStagingRollbackManifest,
   validateStagingPromotionManifest,
   validateStagingRollbackManifest,
-  validateStagingVerificationManifest,
   verifyPromotionManifest,
   writePromotionManifest,
 } from "./record-staging-traffic-control.mjs";
+import {
+  buildStagingVerificationManifest,
+  validateStagingVerificationManifest,
+} from "./record-staging-verification.mjs";
 import {
   STAGING_VERIFICATION_CHECKS,
   readStagingTrafficControl,
@@ -78,29 +81,60 @@ function buildZeroTrafficDeployment() {
 }
 
 function buildVerification(overrides = {}) {
-  return {
-    schemaVersion: 1,
-    status: "passed",
-    environment: "staging",
-    dataClassification: "synthetic-only",
-    releaseId: `staging-${candidateSha.slice(0, 12)}`,
-    candidateSha,
-    service,
-    revision: candidateRevision,
-    checks: Object.fromEntries(
-      STAGING_VERIFICATION_CHECKS.map((check) => [check, "passed"]),
-    ),
-    qase: {
-      project: "SAMP",
-      environment: "google-cloud-staging",
-      runId: "74",
-      runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
+  const manifest = buildStagingVerificationManifest({
+    zeroTrafficDeployment: buildZeroTrafficDeployment(),
+    zeroTrafficDeploymentManifestSha256: hash,
+    probe: {
+      schemaVersion: 1,
+      status: "passed",
+      environment: "staging",
+      dataClassification: "synthetic-only",
+      releaseId: `staging-${candidateSha.slice(0, 12)}`,
+      candidateSha,
+      sourceRepository: "haileleuld87/Samra-Pay",
+      projectId: "samra-pay-staging",
+      projectNumber: "934122615631",
+      region: "us-east4",
+      service,
+      revision: candidateRevision,
+      checks: Object.fromEntries(
+        STAGING_VERIFICATION_CHECKS.map((check) => [check, "passed"]),
+      ),
+      qase: {
+        project: "SAMP",
+        environment: "google-cloud-staging",
+        status: "passed",
+        runId: "74",
+        runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
+      },
+      github: {
+        repository: "haileleuld87/Samra-Pay",
+        ref: "refs/heads/main",
+        eventName: "workflow_dispatch",
+        workflow: "Staging verification probe",
+        workflowPath: ".github/workflows/staging-verification-probe.yml",
+        protectedEnvironment: "staging-verification",
+        runId: "32619000001",
+        runAttempt: 1,
+        runUrl:
+          "https://github.com/haileleuld87/Samra-Pay/actions/runs/32619000001",
+        actor: "haileleuld87",
+      },
+      exactRevisionObserved: true,
+      allChecksUsedDeployedRevision: true,
+      trafficChanged: false,
+      publicAccessChanged: false,
+      runtimeConfigurationChanged: false,
+      customerDataUsed: false,
+      secretValuesRecorded: false,
+      vendorActivationAuthorized: false,
+      generatedAt: "2026-08-23T00:20:00.000Z",
     },
-    customerDataUsed: false,
-    secretValuesRecorded: false,
+    probeManifestSha256: "1".repeat(64),
+    controllerSha,
     generatedAt: "2026-08-23T00:20:00.000Z",
-    ...overrides,
-  };
+  });
+  return Object.assign(manifest, overrides);
 }
 
 function buildPromotion(overrides = {}) {

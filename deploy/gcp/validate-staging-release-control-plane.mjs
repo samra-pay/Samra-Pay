@@ -117,6 +117,32 @@ export function validateStagingReleaseControlPlane(
   );
 
   assert(
+    contract.verification.status ===
+      "evidence-plane-implemented-execution-not-authorized" &&
+      contract.verification.contract ===
+        "deploy/gcp/staging-verification.json" &&
+      contract.verification.recorder ===
+        "deploy/gcp/record-staging-verification.mjs" &&
+      contract.verification.probeWorkflow ===
+        ".github/workflows/staging-verification-probe.yml" &&
+      contract.verification.probeImplemented === false &&
+      contract.verification.executionAuthorized === false &&
+      contract.verification.probeManifest ===
+        "artifacts/staging-release/staging-verification-probe.json" &&
+      contract.verification.probeManifestHash ===
+        "artifacts/staging-release/staging-verification-probe.sha256" &&
+      contract.verification.manifest ===
+        "artifacts/staging-release/staging-verification.json" &&
+      contract.verification.manifestHash ===
+        "artifacts/staging-release/staging-verification.sha256" &&
+      contract.verification.exactRevisionRequired === true &&
+      contract.verification.allChecksMustUseDeployedRevision === true &&
+      contract.verification.qaseProject === "SAMP" &&
+      contract.verification.qaseEnvironment === "google-cloud-staging",
+    "Staging verification evidence boundary drifted",
+  );
+
+  assert(
     contract.promotion.automatic === false &&
       contract.promotion.status === "implemented-not-authorized" &&
       contract.promotion.workflow ===
@@ -233,6 +259,9 @@ export function validateStagingReleaseControlPlane(
     deployableServiceCount: contract.deployment.deployableServices.length,
     operationsPortalBlocked: true,
     deploymentAuthorized: false,
+    verificationRecorderImplemented: true,
+    verificationProbeImplemented: false,
+    verificationAuthorized: false,
     promotionAuthorized: false,
   });
 }

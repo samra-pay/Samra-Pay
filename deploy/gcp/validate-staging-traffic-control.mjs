@@ -171,11 +171,19 @@ export function validateStagingTrafficControl(
 
   const verification = contract.verificationEvidence;
   assert(
-    verification.status === "required-not-implemented" &&
+    verification.status === "recording-implemented-execution-not-authorized" &&
+      verification.contract === "deploy/gcp/staging-verification.json" &&
+      verification.recorder === "deploy/gcp/record-staging-verification.mjs" &&
+      verification.probeManifest ===
+        "artifacts/staging-release/staging-verification-probe.json" &&
+      verification.probeManifestHash ===
+        "artifacts/staging-release/staging-verification-probe.sha256" &&
       verification.manifest ===
         "artifacts/staging-release/staging-verification.json" &&
       verification.manifestHash ===
         "artifacts/staging-release/staging-verification.sha256" &&
+      verification.probeImplemented === false &&
+      verification.executionAuthorized === false &&
       verification.qaseProject === "SAMP" &&
       verification.qaseEnvironment === "google-cloud-staging" &&
       JSON.stringify(verification.requiredChecks) ===
