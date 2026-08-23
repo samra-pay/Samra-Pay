@@ -39,9 +39,11 @@ describe("web customer-onboarding trust boundary", () => {
     expect(onboardingSource).not.toMatch(
       /localStorage|sessionStorage|indexedDB/,
     );
-    expect(onboardingSource).toMatch(
-      /Account activation and wallet\s+provisioning remain disabled/,
+    expect(onboardingSource).toContain(
+      "I understand this is a synthetic wallet",
     );
+    expect(onboardingSource).toContain("SYNTHETIC_WALLET_PROVISIONING_INPUT");
+    expect(onboardingSource).toContain("no tokens");
     expect(appSource).toContain('path="/electronic-communications"');
     expect(legalPageSource).toContain("getSamraLegalDocument");
   });
@@ -57,11 +59,13 @@ describe("web customer-onboarding trust boundary", () => {
     expect(onboardingSource).toContain("consumePostLoginRedirect()");
   });
 
-  it("keeps API identity approval out of financial routes and recovers both queries", () => {
+  it("keeps wallet readiness out of API financial routes and recovers all onboarding queries", () => {
     expect(onboardingSource).toContain('runtime.mode === "mock"');
     expect(onboardingSource).toContain("Continue to synthetic dashboard");
     expect(onboardingSource).not.toContain(' : "/dashboard"');
     expect(onboardingSource).toContain("identityQuery.refetch()");
+    expect(onboardingSource).toContain("walletQuery.refetch()");
+    expect(onboardingSource).toContain("Financial access");
     expect(onboardingSource).toContain('role="alert"');
     expect(onboardingSource).toContain("motion-reduce:animate-none");
   });

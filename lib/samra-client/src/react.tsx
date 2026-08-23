@@ -26,6 +26,7 @@ import type {
   CustomerIdentityProviderDecision,
   SamraOnboardingDemoControls,
   SamraOnboardingSource,
+  StartCustomerWalletProvisioningInput,
   SubmitCustomerConsentBundleInput,
 } from "./onboarding";
 
@@ -124,6 +125,7 @@ export const samraQueryKeys = {
   transfer: (id: string) => ["samra", "remittance", "transfer", id] as const,
   onboarding: ["samra", "onboarding"] as const,
   identityCase: ["samra", "onboarding", "identity"] as const,
+  wallet: ["samra", "onboarding", "wallet"] as const,
 };
 
 function retryTransient(failureCount: number, error: unknown): boolean {
@@ -298,6 +300,15 @@ export function useCustomerIdentityCase(enabled: boolean) {
   });
 }
 
+export function useCustomerWallet(enabled: boolean) {
+  const { source } = useSamraOnboardingRuntime();
+  return useQuery({
+    ...queryDefaults(samraQueryKeys.wallet),
+    queryFn: () => source.getWallet(),
+    enabled,
+  });
+}
+
 export function useStartCustomerOnboarding() {
   const { source } = useSamraOnboardingRuntime();
   const queryClient = useQueryClient();
@@ -340,6 +351,27 @@ export function useStartCustomerIdentityVerification() {
     onSuccess(snapshot) {
       queryClient.setQueryData(samraQueryKeys.identityCase, snapshot);
       void queryClient.invalidateQueries({
+        queryKey: samraQueryKeys.onboarding,
+      });
+    },
+  });
+}
+
+export function useStartCustomerWalletProvisioning() {
+  const { source } = useSamraOnboardingRuntime();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      input,
+      idempotencyKey,
+    }: {
+      input: StartCustomerWalletProvisioningInput;
+      idempotencyKey: string;
+    }) => source.startWalletProvisioning(input, idempotencyKey),
+    retry: false,
+    async onSuccess(snapshot) {
+      queryClient.setQueryData(samraQueryKeys.wallet, snapshot);
+      await queryClient.invalidateQueries({
         queryKey: samraQueryKeys.onboarding,
       });
     },
@@ -392,6 +424,7 @@ export function useResetDemoCustomerOnboarding() {
     onSuccess() {
       queryClient.setQueryData(samraQueryKeys.onboarding, null);
       queryClient.setQueryData(samraQueryKeys.identityCase, null);
+      queryClient.setQueryData(samraQueryKeys.wallet, null);
     },
   });
 }

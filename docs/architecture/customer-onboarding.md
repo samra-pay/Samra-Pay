@@ -10,8 +10,10 @@ Ethiopia payout remain unresolved. Cybrid, Rain, and Bridge are post-Alpha
 wallet alternatives, not active integrations.
 
 This foundation creates one durable customer and one onboarding aggregate
-across web and mobile. It does not configure Auth0, call Persona or Crossmint,
-fund an account, enable a deployment, or change Replit. See
+across web and mobile. The connected clients can now create and resume the
+Samra-owned synthetic wallet record through the fake Crossmint adapter. This
+does not configure Auth0, call live Persona or Crossmint environments, fund an
+account, enable a deployment, or change Replit. See
 [Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Runtime boundary
@@ -22,8 +24,9 @@ The endpoints exist only in the disabled-by-default Auth0 plus PostgreSQL demo b
 
 Web and mobile now consume one shared onboarding state model and one generated
 API adapter. Both surfaces provide the same four-step progress model, explicit
-versioned consent decisions, durable resume behavior, normalized identity
-states, reviewed failure copy, and a clear stop before wallet or funding setup.
+versioned consent decisions, durable resume behavior, normalized identity and
+wallet states, reviewed failure copy, and a clear stop after synthetic wallet
+readiness but before funding, remittance, balances, or activation.
 
 Mock mode uses an in-memory, deterministic journey with synthetic identifiers
 and explicit fake Persona controls. API mode uses only server responses and
@@ -104,8 +107,13 @@ The database trigger permits only the reviewed forward transition graph and tran
 | `POST /api/v1/onboarding`          | First-login initialization or safe resume  | `201` when the aggregate is created, `200` when it already exists                     |
 | `GET /api/v1/onboarding`           | Cross-surface resume                       | Current durable state, version, timestamps, consent catalog, and next allowed actions |
 | `POST /api/v1/onboarding/consents` | Submit the complete current consent bundle | Immutable decisions plus one atomic aggregate transition                              |
+| `POST /api/v1/onboarding/wallet`   | Record wallet disclosure and create/resume | Normalized synthetic wallet; no provider identifier, PII, balance, or funding         |
+| `GET /api/v1/onboarding/wallet`    | Cross-surface wallet resume                | Current normalized Samra wallet state                                                 |
 
-All three endpoints require an already validated Auth0 API access token. Both command endpoints require `Idempotency-Key`. No endpoint accepts a customer ID, Auth0 subject, email, phone, name, KYC status, wallet status, or capability from the client.
+All endpoints require an already validated Auth0 API access token. Every
+command endpoint requires `Idempotency-Key`. No endpoint accepts a customer ID,
+Auth0 subject, email, phone, name, KYC status, wallet status, or capability from
+the client.
 
 ## First-login transaction
 
@@ -177,9 +185,17 @@ defined in [Customer identity case and Persona boundary](./customer-identity-per
 They may start only from `identity_in_progress`, and provider decisions never
 write customer capability fields directly.
 
-The web and mobile onboarding journey is connected to durable onboarding resume,
-consent, and normalized identity state. Live Auth0 tenant configuration and the
-mobile custom-development-build decision remain hard stops, not values to guess.
+The web and mobile onboarding journey is connected to durable onboarding
+resume, consent, normalized identity state, explicit wallet disclosure, and
+synthetic wallet create/resume. Both surfaces use the same query keys and
+generated transport adapter, keep the wallet disclosure unselected, reuse one
+idempotency key across a retry, and display only normalized Samra state. They do
+not store wallet truth locally or show a provider wallet identifier, public
+address, token balance, or financial entitlement.
+
+Live Auth0 tenant configuration, Persona sandbox configuration, Crossmint
+sandbox credentials, and the mobile custom-development-build decision remain
+hard stops, not values to guess.
 
 The Samra-owned funnel telemetry and acquisition attribution foundation is
 defined in [Customer funnel telemetry and acquisition attribution](./customer-funnel-attribution.md).
@@ -204,11 +220,12 @@ The alpha experience also enforces these customer-facing boundaries:
 - web stage changes move keyboard focus to the new heading, mobile stage
   changes announce the new title and description, and status/error/progress
   semantics are explicit;
-- identity approval does not route an API-mode customer into financial screens
-  while activation and wallet provisioning remain disabled; only mock mode may
-  continue into the synthetic dashboard.
+- wallet readiness does not route an API-mode customer into financial screens
+  while funding, remittance, balance, and activation remain disabled; only mock
+  mode may continue into the synthetic dashboard.
 
 Raw and gzip performance budgets are enforced for the built customer web,
 onboarding, mobile, and operations artifacts. Crossmint remains blocked until
-final manual keyboard/screen-reader/device evidence and live identity
-configuration are approved.
+final manual keyboard/screen-reader/device evidence, live identity
+configuration, the reviewed sandbox asset/network, and credential inventory are
+approved.

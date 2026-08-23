@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildOnboardingJourneyView,
+  SYNTHETIC_WALLET_PROVISIONING_INPUT,
   SyntheticSamraOnboardingSource,
   type CustomerConsentDecision,
   type CustomerOnboardingSnapshot,
@@ -55,9 +56,24 @@ test("journey copy is deterministic and does not overstate capability", async ()
   );
   const approvedOnboarding = await source.getOnboarding();
   const approvedView = buildOnboardingJourneyView(approvedOnboarding, approved);
-  assert.equal(approvedView.stage, "identity_approved");
+  assert.equal(approvedView.stage, "wallet_consent");
   assert.equal(approvedView.progressPercent, 75);
-  assert.match(approvedView.description, /not enabled/i);
+  assert.match(approvedView.description, /no real funds/i);
+
+  const wallet = await source.startWalletProvisioning(
+    SYNTHETIC_WALLET_PROVISIONING_INPUT,
+    "wallet-demo-0001",
+  );
+  const walletReady = buildOnboardingJourneyView(
+    await source.getOnboarding(),
+    approved,
+    wallet,
+  );
+  assert.equal(walletReady.stage, "wallet_ready");
+  assert.match(walletReady.description, /funding.*disabled/i);
+  assert.equal(wallet.synthetic, true);
+  assert.equal(wallet.asset, "USDC");
+  assert.equal(wallet.publicAddress, null);
 });
 
 test("synthetic consent requires the exact catalog and preserves key replays", async () => {
@@ -120,6 +136,52 @@ test("declined consent, identity review, provider error retry, and reset are exp
   await source.reset();
   assert.equal(await source.getOnboarding(), null);
   assert.equal(await source.getIdentityCase(), null);
+  assert.equal(await source.getWallet(), null);
+});
+
+test("synthetic wallet consent is exact, replay-safe, and creates one provider-neutral record", async () => {
+  const source = new SyntheticSamraOnboardingSource(() => now);
+  const onboarding = await source.startOnboarding("start-demo-0005");
+  await source.submitConsentBundle(
+    consentInput(onboarding),
+    "consent-demo-006",
+  );
+  const identity = await source.startIdentityVerification("identity-demo-05");
+  await source.advanceIdentity(
+    identity.identityCaseId,
+    "approved",
+    "decision-demo-06",
+  );
+
+  const first = await source.startWalletProvisioning(
+    SYNTHETIC_WALLET_PROVISIONING_INPUT,
+    "wallet-demo-0002",
+  );
+  const replay = await source.startWalletProvisioning(
+    SYNTHETIC_WALLET_PROVISIONING_INPUT,
+    "wallet-demo-0002",
+  );
+  const secondCommand = await source.startWalletProvisioning(
+    SYNTHETIC_WALLET_PROVISIONING_INPUT,
+    "wallet-demo-0003",
+  );
+
+  assert.equal(first, replay);
+  assert.equal(first, secondCommand);
+  assert.equal(Object.isFrozen(first), true);
+  assert.equal(Object.isFrozen(first.nextAllowedActions), true);
+  assert.equal((await source.getOnboarding())?.state, "wallet_ready");
+
+  await assert.rejects(
+    source.startWalletProvisioning(
+      {
+        ...SYNTHETIC_WALLET_PROVISIONING_INPUT,
+        documentVersion: "wrong-version" as never,
+      },
+      "wallet-demo-0004",
+    ),
+    /does not match the current catalog/i,
+  );
 });
 
 test("contradictory terminal identity decisions restrict onboarding", async () => {

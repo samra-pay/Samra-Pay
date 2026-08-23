@@ -6,6 +6,7 @@ import {
   createRemittanceTransfer,
   getCustomerIdentityCase,
   getCustomerOnboarding,
+  getCustomerWallet,
   getCurrentCustomer,
   getRemittanceOptions,
   getRemittanceTransfer,
@@ -16,6 +17,7 @@ import {
   recordCustomerAcquisitionEvent,
   startCustomerIdentityVerification,
   startCustomerOnboarding,
+  startCustomerWalletProvisioning,
   submitCustomerConsentBundle,
 } from "@workspace/api-client-react";
 
@@ -31,8 +33,10 @@ import type {
   CustomerIdentityCaseSnapshot,
   CustomerIdentityProviderDecision,
   CustomerOnboardingSnapshot,
+  CustomerWalletSnapshot,
   SamraOnboardingDemoControls,
   SamraOnboardingSource,
+  StartCustomerWalletProvisioningInput,
   SubmitCustomerConsentBundleInput,
 } from "./onboarding";
 
@@ -166,6 +170,27 @@ export class GeneratedSamraOnboardingSource
     );
   }
 
+  async getWallet(): Promise<CustomerWalletSnapshot | null> {
+    try {
+      return freezeWalletSnapshot(await getCustomerWallet());
+    } catch (error) {
+      if (isProblem(error, 404, "NOT_FOUND")) return null;
+      throw error;
+    }
+  }
+
+  async startWalletProvisioning(
+    input: StartCustomerWalletProvisioningInput,
+    idempotencyKey: string,
+  ): Promise<CustomerWalletSnapshot> {
+    return freezeWalletSnapshot(
+      await startCustomerWalletProvisioning(
+        { ...input },
+        { headers: idempotencyHeaders(idempotencyKey) },
+      ),
+    );
+  }
+
   async advanceIdentity(
     identityCaseId: string,
     decision: CustomerIdentityProviderDecision,
@@ -211,6 +236,15 @@ function freezeOnboardingSnapshot(
 function freezeIdentityCaseSnapshot(
   snapshot: CustomerIdentityCaseSnapshot,
 ): CustomerIdentityCaseSnapshot {
+  return Object.freeze({
+    ...snapshot,
+    nextAllowedActions: Object.freeze([...snapshot.nextAllowedActions]),
+  });
+}
+
+function freezeWalletSnapshot(
+  snapshot: CustomerWalletSnapshot,
+): CustomerWalletSnapshot {
   return Object.freeze({
     ...snapshot,
     nextAllowedActions: Object.freeze([...snapshot.nextAllowedActions]),

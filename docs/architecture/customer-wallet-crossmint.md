@@ -87,6 +87,25 @@ This proves the internal boundary. It does not prove a Crossmint account,
 sandbox call, asset/network choice, custody model, public address, webhook, or
 USDC movement.
 
+## Connected web and mobile boundary
+
+Web and mobile now use the shared Samra onboarding source to:
+
+- retrieve the normalized wallet only when onboarding has reached a wallet
+  state;
+- present an unselected, versioned non-production disclosure before creation;
+- submit the exact disclosure with a stable idempotency key;
+- resume `created`, `provisioning`, `ready`, `restricted`, and `error` states;
+- retry without asking the provider to create a second economic wallet; and
+- show the configured `USDC` asset and Crossmint adapter while stating that no
+  token, address, balance, funding, withdrawal, remittance, or activation is
+  enabled.
+
+The clients never import generated operation names, persist wallet state, or
+receive provider wallet references. API-mode wallet readiness returns to the
+non-financial product surface. Only explicit mock mode can continue into the
+synthetic dashboard.
+
 ## Events and accounting
 
 Crossmint events are receipt evidence, not accounting truth. The API must:
@@ -124,7 +143,8 @@ customer migration requirements.
 - authenticated event replay creates no duplicate state or ledger effect;
 - provider payloads and secrets are absent from API, audit, analytics, logs,
   Qase, and client storage;
-- web and mobile resume the normalized Samra wallet state after restart;
+- web and mobile resume the normalized Samra wallet state after restart
+  (implemented; PostgreSQL restart evidence is enforced by the API gate);
 - operations can view provider references and failures without viewing secrets
   or gaining balance-edit controls;
 - financial routes remain blocked until funding and payout gates are approved.
