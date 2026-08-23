@@ -197,7 +197,7 @@
       ]
     },
     "crossmint": {
-      "status": "boundary-only-not-authorized",
+      "status": "sandbox-adapter-dormant-not-authorized",
       "mode": "fake",
       "serviceAccount": "api",
       "stagingApiOrigin": "https://staging.crossmint.com/api/2025-06-09",
@@ -208,11 +208,12 @@
       },
       "serverCredentialAllowedInClient": false,
       "secretAccessAuthorized": false,
+      "sandboxAdapterImplemented": true,
       "liveAdapterImplemented": false,
       "activationBlockedOn": [
         "approved Crossmint sandbox account, USDC asset, test network, custody, signer, and recovery model",
         "least-privilege server API key scopes and exact secret version",
-        "live adapter idempotency, timeout, replay, webhook, and restart evidence",
+        "sandbox adapter activation, idempotency, timeout, replay, webhook, and restart evidence",
         "approved customer disclosure and support workflow",
         "independent ledger and provider-balance reconciliation gate"
       ]

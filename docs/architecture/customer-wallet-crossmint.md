@@ -5,8 +5,10 @@
 Crossmint is the locked Alpha wallet provider. The Samra-owned PostgreSQL
 wallet aggregate, explicit non-production consent, authenticated API contract,
 immutable provider mapping, deterministic fake adapter, and failure/replay
-controls are implemented. The live Crossmint integration is not enabled. The
-Alpha scope is wallet creation and normalized lifecycle evidence for an
+controls are implemented. A fail-closed server-only sandbox adapter is also
+implemented but remains dormant and unreachable from the runtime. The live
+Crossmint integration is not enabled. The Alpha scope is wallet creation and
+normalized lifecycle evidence for an
 approved USDC configuration; it does not assume bank funding, Plaid
 compatibility, card issuing, Ethiopia payout, or unrestricted money movement.
 
@@ -75,6 +77,10 @@ The implemented evidence covers:
 - exact consent-to-wallet foreign-key evidence;
 - append-only lifecycle transitions and provider mapping;
 - deterministic fake Crossmint creation from opaque Samra identifiers only;
+- a dormant sandbox adapter that sends only the opaque `userId:<Samra-id>`
+  owner, a stable idempotency key, and one reviewed EVM wallet configuration;
+- strict sandbox response validation, bounded timeouts and payloads, generic
+  failures, and no provider body or credential leakage;
 - atomic mapping attachment and onboarding transition to `wallet_ready`;
 - restart-safe GET and replay-safe create;
 - provider timeout/failure persistence and conflicting-result restriction;
@@ -83,9 +89,12 @@ The implemented evidence covers:
 - readiness and migration-compatibility coverage for the new relations and
   mutation guards.
 
-This proves the internal boundary. It does not prove a Crossmint account,
-sandbox call, asset/network choice, custody model, public address, webhook, or
-USDC movement.
+This proves the internal boundary and the adapter's deterministic request and
+normalization behavior against mocked responses. It does not prove a Crossmint
+account, real sandbox call, approved asset/network choice, custody model,
+public address, webhook, or USDC movement. The PostgreSQL wallet store still
+accepts only `crossmint-synthetic-v1`; attempting to wire the sandbox adapter
+without a separately reviewed activation change therefore fails closed.
 
 ## Connected web and mobile boundary
 
@@ -139,6 +148,10 @@ customer migration requirements.
 
 - deterministic fake-adapter tests for create, replay, concurrent create,
   timeout, restart, changed-command rejection, and conflicting results;
+- sandbox-adapter tests for exact API version and endpoint, `X-API-KEY`
+  server-only transport, opaque `userId` ownership, idempotency, smart and MPC
+  configuration validation, response normalization, payload bounds, and
+  generic failures;
 - wallet and provider mapping writes are atomic and immutable where required;
 - authenticated event replay creates no duplicate state or ledger effect;
 - provider payloads and secrets are absent from API, audit, analytics, logs,
@@ -158,3 +171,10 @@ customer migration requirements.
 - any reliance on unverified bank funding or Plaid compatibility;
 - any direct vendor status granting financial capability;
 - any claim that future migration to Cybrid, Rain, or Bridge will be automatic.
+
+References:
+
+- [Crossmint backend wallet REST quickstart](https://docs.crossmint.com/wallets/quickstarts/restapi)
+- [Crossmint create wallet API](https://docs.crossmint.com/api-reference/wallets/create-wallet)
+- [Crossmint userId owner registration](https://docs.crossmint.com/identity/register-user-data)
+- [Crossmint API key scopes](https://docs.crossmint.com/introduction/platform/api-keys/scopes)

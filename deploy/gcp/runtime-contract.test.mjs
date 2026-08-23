@@ -200,15 +200,17 @@ test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
       secretVersion: crossmint.serverCredential.version,
       clientCredential: crossmint.serverCredentialAllowedInClient,
       secretAccess: crossmint.secretAccessAuthorized,
+      sandboxAdapter: crossmint.sandboxAdapterImplemented,
       liveAdapter: crossmint.liveAdapterImplemented,
     },
     {
-      status: "boundary-only-not-authorized",
+      status: "sandbox-adapter-dormant-not-authorized",
       mode: "fake",
       origin: "https://staging.crossmint.com/api/2025-06-09",
       secretVersion: "PINNED_INTEGER",
       clientCredential: false,
       secretAccess: false,
+      sandboxAdapter: true,
       liveAdapter: false,
     },
   );

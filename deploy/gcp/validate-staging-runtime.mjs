@@ -320,7 +320,7 @@ function validateVendorReadiness(contract) {
 
   const crossmint = readiness.crossmint;
   assert(
-    crossmint.status === "boundary-only-not-authorized" &&
+    crossmint.status === "sandbox-adapter-dormant-not-authorized" &&
       crossmint.mode === "fake" &&
       crossmint.serviceAccount === "api" &&
       crossmint.stagingApiOrigin ===
@@ -333,6 +333,7 @@ function validateVendorReadiness(contract) {
         }) &&
       crossmint.serverCredentialAllowedInClient === false &&
       crossmint.secretAccessAuthorized === false &&
+      crossmint.sandboxAdapterImplemented === true &&
       crossmint.liveAdapterImplemented === false &&
       crossmint.activationBlockedOn.length === 5,
     "Crossmint must remain a dormant server-only staging contract",
