@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-authorized",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "source": {
+    "repository": "haileleuld87/Samra-Pay",
+    "repositoryId": "1335175962",
+    "repositoryOwnerId": "237485986",
+    "branch": "main",
+    "exactCommitRequired": true,
+    "releaseCandidateEvidenceRequired": true
+  },
+  "artifactPublication": {
+    "workflow": ".github/workflows/staging-image-publication.yml",
+    "protectedEnvironment": "staging-image-publication",
+    "keylessFederationRequired": true,
+    "fullShaTagRequired": true,
+    "immutableDigestRequired": true,
+    "imageNames": [
+      "samra-api",
+      "samra-customer-web",
+      "samra-operations-web",
+      "samra-design-system-preview",
+      "samra-migrations"
+    ],
+    "evidenceManifest": "artifacts/staging-release/staging-image-publication.json",
+    "evidenceManifestHash": "artifacts/staging-release/staging-image-publication.sha256",
+    "retentionDays": 365
+  },
+  "deliveryStages": [
+    {
+      "id": "release-candidate",
+      "mutation": "none",
+      "requiredEvidence": [
+        "exact main SHA",
+        "passing release gates",
+        "Qase release identity"
+      ]
+    },
+    {
+      "id": "image-publication",
+      "mutation": "immutable images and build records only",
+      "requiredEvidence": [
+        "Cloud Build ID",
+        "five image digests",
+        "publication manifest hash"
+      ]
+    },
+    {
+      "id": "zero-traffic-deployment",
+      "mutation": "new private Cloud Run revisions with zero traffic",
+      "requiredEvidence": [
+        "migration execution ID",
+        "revision names",
+        "configuration hashes",
+        "zero traffic proof"
+      ]
+    },
+    {
+      "id": "staging-verification",
+      "mutation": "synthetic test traffic only",
+      "requiredEvidence": [
+        "readiness",
+        "restart",
+        "service authentication",
+        "ledger",
+        "reconciliation",
+        "Qase staging run"
+      ]
+    },
+    {
+      "id": "traffic-promotion",
+      "mutation": "explicit traffic reassignment only",
+      "requiredEvidence": [
+        "approved revision",
+        "traffic before",
+        "traffic after",
+        "approver",
+        "rollback target"
+      ]
+    },
+    {
+      "id": "rollback",
+      "mutation": "traffic reassignment to a recorded prior revision only",
+      "requiredEvidence": [
+        "incident or test reason",
+        "previous revision",
+        "restored traffic",
+        "post-rollback verification"
+      ]
+    }
+  ],
+  "deployment": {
+    "automatic": false,
+    "initialTrafficPercent": 0,
+    "floatingImageAllowed": false,
+    "defaultServiceUrlAllowed": false,
+    "publicUnauthenticatedAllowed": false,
+    "deployableServices": [
+      "samra-api",
+      "samra-customer-web",
+      "samra-design-system-preview"
+    ],
+    "blockedServices": {
+      "samra-operations-web": [
+        "workforce authentication and authorization",
+        "staff access review and revocation process",
+        "operations API production-security promotion"
+      ]
+    },
+    "futureWorkflow": ".github/workflows/staging-zero-traffic-deployment.yml",
+    "futureProtectedEnvironment": "staging-zero-traffic-deployment",
+    "dedicatedFederatedIdentityRequired": true
+  },
+  "promotion": {
+    "automatic": false,
+    "futureWorkflow": ".github/workflows/staging-traffic-control.yml",
+    "futureProtectedEnvironment": "staging-traffic-promotion",
+    "exactRevisionRequired": true,
+    "healthAndQaseEvidenceRequired": true,
+    "trafficSnapshotRequired": true,
+    "rollbackTargetRequired": true,
+    "latestAliasAllowed": false
+  },
+  "rollback": {
+    "automatic": false,
+    "method": "route 100 percent to the recorded prior revision",
+    "rebuildAllowed": false,
+    "floatingAliasAllowed": false,
+    "priorRevisionEvidenceRequired": true,
+    "postRollbackVerificationRequired": true
+  },
+  "traceability": {
+    "requiredFields": [
+      "candidateSha",
+      "gitTreeSha",
+      "githubWorkflowRunId",
+      "githubWorkflowRunAttempt",
+      "cloudBuildId",
+      "publisherIdentity",
+      "imageDigests",
+      "cloudRunRevisionNames",
+      "migrationExecutionId",
+      "configurationHashes",
+      "qaseRunId",
+      "trafficBefore",
+      "trafficAfter",
+      "operator",
+      "approver",
+      "createdAt"
+    ],
+    "secretValuesAllowed": false,
+    "customerDataAllowed": false,
+    "retentionDays": 365
+  },
+  "vendorGates": {
+    "auth0": "exact staging tenant, SPA, Native Application, API audience, callback, logout, and origin inventory required before customer traffic",
+    "persona": "sandbox activation remains separately authorized with pinned secret versions and synthetic webhook evidence",
+    "crossmint": "sandbox adapter remains dormant until custody, signer, USDC test asset, key scope, webhook, and reconciliation approval"
+  },
+  "prohibited": [
+    "automatic production deployment",
+    "deployment from a non-main commit",
+    "service-account key",
+    "stored Google credential secret",
+    "floating image tag",
+    "latest secret version",
+    "automatic migration",
+    "public unauthenticated service",
+    "unrecorded traffic promotion",
+    "rollback by rebuild",
+    "real customer PII",
+    "real wallet or funds movement",
+    "Replit deployment mutation"
+  ]
+}

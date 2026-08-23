@@ -109,3 +109,4 @@ financial data.
 - [Backend persistence](../backend-persistence.md)
 - [Testing strategy](../testing/testing-strategy.md)
 - [Google Cloud foundation](../../deploy/gcp/README.md)
+- [Staging release control plane](../operations/staging-release-control-plane.md)

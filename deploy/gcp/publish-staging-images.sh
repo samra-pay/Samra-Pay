@@ -46,6 +46,9 @@ IMAGE_NAMES=(
   samra-design-system-preview
   samra-migrations
 )
+PUBLICATION_EVIDENCE_DIR="${ROOT_DIR}/artifacts/staging-release"
+PUBLICATION_MANIFEST="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.json"
+PUBLICATION_MANIFEST_HASH="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.sha256"
 
 [[ "${PROJECT_ID}" == "samra-pay-staging" ]] || { echo "STOP: project must be samra-pay-staging" >&2; exit 1; }
 [[ "${ORGANIZATION_ID}" == "614833350075" ]] || { echo "STOP: organization must be 614833350075" >&2; exit 1; }
@@ -407,8 +410,32 @@ resolve_digest() {
 
 echo "STAGING IMAGE PUBLICATION PASS"
 echo "Build ID: ${BUILD_ID}"
+PUBLICATION_IMAGE_ARGUMENTS=()
 for name in "${IMAGE_NAMES[@]}"; do
-  printf '%s: %s\n' "${name}" "$(resolve_digest "${name}")"
+  digest="$(resolve_digest "${name}")"
+  PUBLICATION_IMAGE_ARGUMENTS+=(--image "${name}=${digest}")
+  printf '%s: %s\n' "${name}" "${digest}"
 done
+
+node "${ROOT_DIR}/deploy/gcp/record-staging-image-publication.mjs" \
+  --candidate-sha "${EXPECTED_SHA}" \
+  --git-tree-sha "$(git -C "${ROOT_DIR}" rev-parse "${EXPECTED_SHA}^{tree}")" \
+  --project-id "${PROJECT_ID}" \
+  --project-number "${PROJECT_NUMBER}" \
+  --region "${REGION}" \
+  --repository "${REPOSITORY}" \
+  --source-repository "haileleuld87/Samra-Pay" \
+  --cloud-build-id "${BUILD_ID}" \
+  --publisher-identity "${OPERATOR}" \
+  --build-service-account "${BUILD_SERVICE_ACCOUNT}" \
+  --github-run-id "${GITHUB_RUN_ID:-}" \
+  --github-run-attempt "${GITHUB_RUN_ATTEMPT:-}" \
+  --github-actor "${GITHUB_ACTOR:-}" \
+  --output "${PUBLICATION_MANIFEST}" \
+  --hash-output "${PUBLICATION_MANIFEST_HASH}" \
+  "${PUBLICATION_IMAGE_ARGUMENTS[@]}"
+
+echo "Publication manifest: ${PUBLICATION_MANIFEST}"
+echo "Publication manifest hash: ${PUBLICATION_MANIFEST_HASH}"
 echo "Build source was filtered by .gcloudignore; Cloud Build staging storage, records, logs, and provenance may remain."
-echo "No service was deployed and no traffic was changed."
+echo "No service was deployed, no traffic was changed, and no vendor was activated."

@@ -259,6 +259,12 @@ test("workflow is manual, main-only, keyless, protected, and reuses the reviewed
     )?.length,
     1,
   );
+  assert.equal(
+    workflow.match(
+      /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/g,
+    )?.length,
+    1,
+  );
   assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /github\.repository == 'haileleuld87\/Samra-Pay'/);

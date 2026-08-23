@@ -199,7 +199,11 @@ upload when the build identity cannot read it.
 
 Only `--apply` can submit `cloudbuild.yaml`, and it additionally requires the
 exact `AUTHORIZED_STAGING_IMAGE_PUBLICATION` value. A successful apply records
-the Cloud Build ID and all five immutable digests. The submission passes the
+the Cloud Build ID and all five immutable digests in a validated publication
+manifest, writes a SHA-256 sidecar, and—when invoked through GitHub—retains both
+as a commit-, run-, and attempt-specific artifact for 365 days. The manifest
+explicitly keeps deployment, traffic, and vendor activation unauthorized. The
+submission passes the
 dedicated build identity as the fully qualified
 `projects/<project>/serviceAccounts/<email>` resource required by Cloud Build,
 and status lookup is pinned to the same regional build location. The upload is
@@ -217,6 +221,14 @@ create its project-owned source-staging bucket. Those build-plane artifacts
 are the only side effects beyond the five images. The controller still cannot
 deploy a service, run a migration, route traffic, read a secret, modify IAM,
 touch Replit, or use production data.
+
+The complete CI/CD stage authority, traceability requirements, zero-traffic
+deployment boundary, promotion gate, and exact-revision rollback model are
+defined in
+[`docs/operations/staging-release-control-plane.md`](../../docs/operations/staging-release-control-plane.md)
+and machine-validated by `staging-release-control-plane.json`. Image publication
+is implemented. Cloud Run deployment, traffic promotion, and rollback automation
+remain separate future approval gates.
 
 Review example from an authenticated, fixed-source Cloud Shell checkout:
 
