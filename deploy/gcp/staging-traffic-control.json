@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-authorized",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "github": {
+    "owner": "haileleuld87",
+    "repository": "Samra-Pay",
+    "repositoryId": "1335175962",
+    "repositoryOwnerId": "237485986",
+    "allowedRef": "refs/heads/main",
+    "allowedEvent": "workflow_dispatch",
+    "workflowName": "Staging traffic control",
+    "workflowPath": ".github/workflows/staging-traffic-control.yml",
+    "promotionEnvironment": "staging-traffic-promotion",
+    "rollbackEnvironment": "staging-traffic-rollback"
+  },
+  "googleCloud": {
+    "projectId": "samra-pay-staging",
+    "projectNumber": "934122615631",
+    "organizationId": "614833350075",
+    "region": "us-east4",
+    "workloadIdentityLocation": "global",
+    "workloadIdentityPoolId": "samra-traffic-staging",
+    "promotionProviderId": "samra-pay-promotion-main",
+    "rollbackProviderId": "samra-pay-rollback-main",
+    "promoterServiceAccountId": "samra-github-promoter-staging",
+    "rollbackServiceAccountId": "samra-github-rollback-staging",
+    "trafficControllerCustomRoleId": "samraStagingTrafficController"
+  },
+  "provider": {
+    "issuerUri": "https://token.actions.githubusercontent.com",
+    "attributeMapping": {
+      "google.subject": "assertion.sub",
+      "attribute.repository": "assertion.repository",
+      "attribute.repository_id": "assertion.repository_id",
+      "attribute.repository_owner_id": "assertion.repository_owner_id",
+      "attribute.ref": "assertion.ref",
+      "attribute.event_name": "assertion.event_name",
+      "attribute.workflow": "assertion.workflow",
+      "attribute.workflow_ref": "assertion.workflow_ref",
+      "attribute.environment": "assertion.environment"
+    },
+    "commonCondition": "assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging traffic control' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-traffic-control.yml@refs/heads/main'",
+    "promotionEnvironmentCondition": "assertion.environment=='staging-traffic-promotion'",
+    "rollbackEnvironmentCondition": "assertion.environment=='staging-traffic-rollback'"
+  },
+  "iam": {
+    "customRolePermissions": [
+      "iam.roles.get",
+      "iam.serviceAccountKeys.list",
+      "iam.serviceAccounts.get",
+      "iam.serviceAccounts.getIamPolicy",
+      "iam.workloadIdentityPoolProviders.get",
+      "iam.workloadIdentityPools.get",
+      "resourcemanager.projects.get",
+      "resourcemanager.projects.getIamPolicy",
+      "run.operations.get",
+      "run.revisions.get",
+      "run.revisions.list",
+      "run.services.get",
+      "run.services.getIamPolicy",
+      "run.services.update",
+      "serviceusage.services.list",
+      "serviceusage.services.use"
+    ],
+    "federationServiceAccountRole": "roles/iam.workloadIdentityUser",
+    "promotionPrincipalAttribute": "attribute.environment",
+    "promotionPrincipalValue": "staging-traffic-promotion",
+    "rollbackPrincipalAttribute": "attribute.environment",
+    "rollbackPrincipalValue": "staging-traffic-rollback",
+    "isolatedWorkloadIdentityPoolRequired": true,
+    "exactlyTwoProvidersRequired": true
+  },
+  "trafficControl": {
+    "oneServicePerRun": true,
+    "operations": ["promote", "rollback"],
+    "deployableServices": [
+      "samra-api",
+      "samra-customer-web",
+      "samra-design-system-preview"
+    ],
+    "initialActivationAllowed": false,
+    "firstActivationRequiresSeparateApproval": true,
+    "promotionPercent": 100,
+    "partialTrafficAllowed": false,
+    "latestAliasAllowed": false,
+    "trafficTagsAllowed": false,
+    "rebuildForRollbackAllowed": false,
+    "promotionAuthorization": "AUTHORIZED_STAGING_TRAFFIC_PROMOTION",
+    "rollbackAuthorization": "AUTHORIZED_STAGING_TRAFFIC_ROLLBACK",
+    "zeroTrafficManifestRequired": true,
+    "prePromotionVerificationRequired": true,
+    "qaseStagingRunRequired": true,
+    "priorHealthyRevisionRequired": true,
+    "automaticRollbackOnPromotionControlFailure": true,
+    "postRollbackVerificationRequired": true,
+    "promotionEvidenceManifest": "artifacts/staging-release/staging-traffic-promotion.json",
+    "promotionEvidenceHash": "artifacts/staging-release/staging-traffic-promotion.sha256",
+    "rollbackEvidenceManifest": "artifacts/staging-release/staging-traffic-rollback.json",
+    "rollbackEvidenceHash": "artifacts/staging-release/staging-traffic-rollback.sha256",
+    "retentionDays": 365
+  },
+  "verificationEvidence": {
+    "status": "required-not-implemented",
+    "manifest": "artifacts/staging-release/staging-verification.json",
+    "manifestHash": "artifacts/staging-release/staging-verification.sha256",
+    "qaseProject": "SAMP",
+    "qaseEnvironment": "google-cloud-staging",
+    "requiredChecks": [
+      "readiness",
+      "restart",
+      "serviceAuthentication",
+      "ledger",
+      "reconciliation",
+      "audit",
+      "failureVisibility"
+    ]
+  },
+  "workflow": {
+    "checkoutAction": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "downloadArtifactAction": "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3",
+    "authenticationAction": "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093",
+    "cloudSdkAction": "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db",
+    "uploadArtifactAction": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "permissions": {
+      "contents": "read",
+      "actions": "read",
+      "id-token": "write"
+    },
+    "automaticTriggers": false,
+    "environmentSeparatedIdentities": true
+  },
+  "requiredApis": [
+    "iamcredentials.googleapis.com",
+    "run.googleapis.com",
+    "sts.googleapis.com"
+  ],
+  "prohibited": [
+    "service-account key",
+    "stored Google credential secret",
+    "non-main controller execution",
+    "push or pull-request traffic trigger",
+    "floating image tag",
+    "latest revision alias",
+    "partial traffic split",
+    "traffic tag",
+    "first activation without separate approval",
+    "promotion without exact verification evidence",
+    "rollback without recorded prior traffic",
+    "rollback by rebuild",
+    "public IAM mutation",
+    "runtime template or service IAM mutation",
+    "vendor activation",
+    "production resource",
+    "real customer data",
+    "Replit change"
+  ]
+}

@@ -120,25 +120,39 @@
   },
   "promotion": {
     "automatic": false,
-    "futureWorkflow": ".github/workflows/staging-traffic-control.yml",
-    "futureProtectedEnvironment": "staging-traffic-promotion",
+    "status": "implemented-not-authorized",
+    "workflow": ".github/workflows/staging-traffic-control.yml",
+    "protectedEnvironment": "staging-traffic-promotion",
+    "controller": "deploy/gcp/control-staging-traffic.sh",
+    "evidenceManifest": "artifacts/staging-release/staging-traffic-promotion.json",
+    "evidenceManifestHash": "artifacts/staging-release/staging-traffic-promotion.sha256",
     "exactRevisionRequired": true,
     "healthAndQaseEvidenceRequired": true,
     "trafficSnapshotRequired": true,
     "rollbackTargetRequired": true,
-    "latestAliasAllowed": false
+    "latestAliasAllowed": false,
+    "firstActivationAllowed": false,
+    "dedicatedFederatedIdentityRequired": true
   },
   "rollback": {
     "automatic": false,
+    "status": "implemented-not-authorized",
+    "workflow": ".github/workflows/staging-traffic-control.yml",
+    "protectedEnvironment": "staging-traffic-rollback",
+    "controller": "deploy/gcp/control-staging-traffic.sh",
+    "evidenceManifest": "artifacts/staging-release/staging-traffic-rollback.json",
+    "evidenceManifestHash": "artifacts/staging-release/staging-traffic-rollback.sha256",
     "method": "route 100 percent to the recorded prior revision",
     "rebuildAllowed": false,
     "floatingAliasAllowed": false,
     "priorRevisionEvidenceRequired": true,
-    "postRollbackVerificationRequired": true
+    "postRollbackVerificationRequired": true,
+    "dedicatedFederatedIdentityRequired": true
   },
   "traceability": {
     "requiredFields": [
       "candidateSha",
+      "controllerSha",
       "gitTreeSha",
       "githubWorkflowRunId",
       "githubWorkflowRunAttempt",
@@ -149,8 +163,14 @@
       "migrationExecutionId",
       "configurationHashes",
       "qaseRunId",
+      "zeroTrafficDeploymentManifestSha256",
+      "verificationManifestSha256",
+      "promotionManifestSha256",
       "trafficBefore",
       "trafficAfter",
+      "restoredRevision",
+      "rollbackReason",
+      "postRollbackVerificationStatus",
       "operator",
       "approver",
       "createdAt"

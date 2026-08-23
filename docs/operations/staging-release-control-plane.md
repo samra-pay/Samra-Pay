@@ -8,10 +8,12 @@ as the future runtime, and Qase as governed test evidence. These systems are
 connected by exact identifiers. None of them may infer that a build, deployment,
 test, traffic change, or vendor activation authorizes the next stage.
 
-Image publication and the zero-traffic deployment controller are implemented.
-The deployment federation, protected environment, and any Cloud Run mutation
-remain separately activated and authorized; no service is live. Traffic
-promotion and rollback automation remain prepared design boundaries.
+Image publication, zero-traffic deployment, exact-revision promotion, rollback,
+and immutable deployment-history controllers are implemented. Their federated
+identities, protected environments, verification evidence, and every Cloud Run
+mutation remain separately activated and authorized; no service is live. The
+promotion path deliberately cannot perform first-ever activation because a
+release without a prior healthy revision has no proven rollback target.
 
 ## Controlled delivery path
 
@@ -23,25 +25,26 @@ flowchart LR
   D --> E[Google Cloud Build]
   E --> F[Five immutable image digests]
   F --> G[Hashed publication manifest]
-  G -. future approval .-> H[Private zero-traffic revisions]
-  H -. synthetic verification .-> I[Qase staging run]
-  I -. explicit promotion .-> J[Exact revision receives traffic]
-  J -. incident or rollback test .-> K[Recorded prior revision restored]
+  G -. separate approval .-> H[Private zero-traffic revisions]
+  H -. future verifier .-> I[Hashed checks and Qase staging run]
+  I -. protected promotion .-> J[Exact revision receives 100 percent]
+  J -. protected rollback .-> K[Recorded prior revision restored]
 ```
 
-Solid arrows are implemented evidence flow. Dashed arrows are future controlled
-mutations. No current workflow deploys Cloud Run or changes traffic.
+Solid arrows are implemented evidence flow. Dashed arrows are controlled stages
+that still require activation or evidence. No traffic workflow is authorized,
+and the required pre-promotion functional verifier is not yet implemented.
 
 ## Stage authority
 
-| Stage                   | Authority                    | Mutation                                         | Required evidence                                                                                                 | Current state                            |
-| ----------------------- | ---------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Release candidate       | GitHub Actions               | None                                             | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                              |
-| Image publication       | Protected GitHub environment | Cloud Build record and five immutable images     | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                              |
-| Zero-traffic deployment | Protected GitHub environment | One new private Cloud Run revision at 0% traffic | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized |
-| Staging verification    | Future controlled test run   | Synthetic test traffic only                      | Readiness, restart, service authentication, ledger, reconciliation, Qase run                                      | Not implemented or authorized            |
-| Traffic promotion       | Future protected environment | Traffic moves to one exact revision              | Before/after traffic, approver, health evidence, rollback target                                                  | Not implemented or authorized            |
-| Rollback                | Future protected environment | Traffic returns to one recorded prior revision   | Reason, exact prior revision, restored traffic, post-rollback verification                                        | Not implemented or authorized            |
+| Stage                   | Authority                      | Mutation                                                                       | Required evidence                                                                                                 | Current state                            |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Release candidate       | GitHub Actions                 | None                                                                           | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                              |
+| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                              |
+| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                               | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized |
+| Staging verification    | Future controlled test run     | Synthetic test traffic only                                                    | Readiness, restart, service authentication, ledger, reconciliation, audit, failure visibility, Qase run           | Not implemented or authorized            |
+| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100% | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                | Implemented; not activated or authorized |
+| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                   | Implemented; not activated or authorized |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
@@ -104,19 +107,32 @@ staff authorization, access review and revocation, and operations API security
 are approved. Persona and Crossmint remain separate sandbox gates. No deployment
 controller may activate either vendor.
 
-## Promotion and rollback design boundary
+## Exact-revision promotion and rollback
 
-Promotion must route traffic to an exact revision only after synthetic readiness,
-service-authentication, ledger, reconciliation, and Qase evidence pass. The
-controller must first persist the complete traffic allocation and the current
-healthy revision as the rollback target.
+`control-staging-traffic.sh` implements two manual operations. Promotion accepts
+one hashed zero-traffic deployment and one separately hashed verification
+record. The verification must bind the same commit, service, and revision and
+must show passing readiness, restart, service authentication, ledger,
+reconciliation, audit, and failure-visibility checks plus a governed Qase
+staging run. Before mutation, the service must route exactly 100% to one
+untagged healthy revision. An empty allocation, split traffic, a `latest` alias,
+a traffic tag, or a candidate already receiving traffic fails closed.
+
+Promotion uses `gcloud run services update-traffic --to-revisions` with the
+exact candidate revision and then independently verifies the resulting 100%
+allocation. It records the candidate and controller Git SHAs, immutable image
+digest, input manifest hashes, Qase identity, operator, GitHub run, complete
+before/after allocation, and exact rollback target in a hashed manifest. If the
+control path fails after mutation but before that record is complete, it makes a
+best-effort automatic traffic rollback to the pre-recorded revision and leaves
+the workflow failed for investigation.
 
 Rollback must reassign traffic to that recorded revision. It must not rebuild an
 old commit, resolve a floating tag, use a `latest` alias, or guess which revision
-was previously healthy. Google Cloud Run supports explicit revision traffic
-allocation through `gcloud run services update-traffic --to-revisions`; the
-future controller will pin that command to the recorded revision and independently
-verify the resulting allocation.
+was previously healthy. A successful rollback record remains
+`rolled-back-pending-post-verification` until the required synthetic checks are
+rerun. First-ever traffic activation is outside both operations and needs a
+separate approved bootstrap design.
 
 ## Separation of identities
 
@@ -131,8 +147,22 @@ principal set. The role can create or update a Cloud Run revision and inspect
 required metadata, but it cannot build or upload images, read secret payloads,
 execute jobs, mutate IAM, or promote traffic. `run.services.update` is required
 by Cloud Run for revision creation, so the controller independently snapshots
-and verifies that traffic did not change. Traffic promotion and rollback
-require another separately reviewable identity and workflow.
+and verifies that traffic did not change.
+
+Traffic promotion and rollback use a third isolated pool,
+`samra-traffic-staging`, containing exactly two providers. Promotion uses the
+`staging-traffic-promotion` environment and
+`samra-github-promoter-staging`; rollback uses the
+`staging-traffic-rollback` environment and
+`samra-github-rollback-staging`. Each protected-environment claim is bound to
+only its matching service account. Both identities receive the same exact
+traffic-only custom role, but neither can build or read images, read Cloud Build
+source, impersonate a runtime, access secrets, execute migrations, mutate the
+runtime template or IAM, or activate a vendor. The independent audit enumerates
+the relevant Artifact Registry repositories, Cloud Build source bucket,
+secrets, service-account policies, and Cloud Run jobs to detect prohibited
+resource-level grants. Separating the identities prevents a promotion
+credential from silently becoming rollback authority.
 
 No Google service-account key or stored Google credential secret is permitted.
 GitHub obtains short-lived credentials through workload identity federation.
@@ -166,6 +196,13 @@ If any answer is missing, the release is not promotable.
 - `deploy/gcp/activate-staging-zero-traffic-federation.sh`
 - `deploy/gcp/audit-staging-zero-traffic-federation.sh`
 - `.github/workflows/staging-zero-traffic-deployment.yml`
+- `deploy/gcp/staging-traffic-control.json`
+- `deploy/gcp/validate-staging-traffic-control.mjs`
+- `deploy/gcp/record-staging-traffic-control.mjs`
+- `deploy/gcp/control-staging-traffic.sh`
+- `deploy/gcp/activate-staging-traffic-federation.sh`
+- `deploy/gcp/audit-staging-traffic-federation.sh`
+- `.github/workflows/staging-traffic-control.yml`
 
 Google references:
 

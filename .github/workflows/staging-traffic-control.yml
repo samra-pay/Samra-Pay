@@ -1,0 +1,274 @@
+name: Staging traffic control
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run read-only review or apply one authorized traffic operation
+        required: true
+        default: review
+        type: choice
+        options:
+          - review
+          - apply
+      operation:
+        description: Promote a verified candidate or roll back a recorded promotion
+        required: true
+        default: promote
+        type: choice
+        options:
+          - promote
+          - rollback
+      service:
+        description: One allowlisted staging service
+        required: true
+        default: samra-design-system-preview
+        type: choice
+        options:
+          - samra-api
+          - samra-customer-web
+          - samra-design-system-preview
+      candidate_sha:
+        description: Full 40-character main commit already deployed at zero traffic
+        required: true
+        type: string
+      zero_traffic_run_id:
+        description: Promotion only - workflow run containing exact zero-traffic evidence
+        required: false
+        type: string
+      zero_traffic_artifact_name:
+        description: Promotion only - exact zero-traffic artifact name
+        required: false
+        type: string
+      verification_run_id:
+        description: Promotion only - workflow run containing exact staging verification evidence
+        required: false
+        type: string
+      verification_artifact_name:
+        description: Promotion only - exact staging verification artifact name
+        required: false
+        type: string
+      promotion_run_id:
+        description: Rollback only - workflow run containing the promotion record
+        required: false
+        type: string
+      promotion_artifact_name:
+        description: Rollback only - exact promotion artifact name
+        required: false
+        type: string
+      rollback_reason:
+        description: Rollback only - synthetic incident or verification failure reason
+        required: false
+        type: string
+      authorization:
+        description: Apply only - exact promotion or rollback authorization phrase
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: staging-traffic-${{ inputs.service }}
+  cancel-in-progress: false
+
+env:
+  SAMRA_GCP_PROJECT_ID: samra-pay-staging
+  SAMRA_GCP_PROJECT_NUMBER: "934122615631"
+  SAMRA_GCP_ORGANIZATION_ID: "614833350075"
+  SAMRA_GCP_REGION: us-east4
+  SAMRA_GCP_CONTROLLER_SHA: ${{ github.sha }}
+  SAMRA_STAGING_TRAFFIC_OPERATION: ${{ inputs.operation }}
+  SAMRA_STAGING_TARGET_SERVICE: ${{ inputs.service }}
+  SAMRA_STAGING_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+  SAMRA_STAGING_TRAFFIC_AUTHORIZATION: ${{ inputs.authorization }}
+  SAMRA_STAGING_ROLLBACK_REASON: ${{ inputs.rollback_reason }}
+  SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.operation == 'promote' && 'projects/934122615631/locations/global/workloadIdentityPools/samra-traffic-staging/providers/samra-pay-promotion-main' || 'projects/934122615631/locations/global/workloadIdentityPools/samra-traffic-staging/providers/samra-pay-rollback-main' }}
+  SAMRA_GCP_OPERATION_SERVICE_ACCOUNT: ${{ inputs.operation == 'promote' && 'samra-github-promoter-staging@samra-pay-staging.iam.gserviceaccount.com' || 'samra-github-rollback-staging@samra-pay-staging.iam.gserviceaccount.com' }}
+  SAMRA_GCP_OPERATOR_ACCOUNT: ${{ inputs.operation == 'promote' && 'samra-github-promoter-staging@samra-pay-staging.iam.gserviceaccount.com' || 'samra-github-rollback-staging@samra-pay-staging.iam.gserviceaccount.com' }}
+  SAMRA_STAGING_ZERO_TRAFFIC_MANIFEST: ${{ runner.temp }}/samra-zero-traffic/staging-zero-traffic-deployment.json
+  SAMRA_STAGING_ZERO_TRAFFIC_HASH: ${{ runner.temp }}/samra-zero-traffic/staging-zero-traffic-deployment.sha256
+  SAMRA_STAGING_VERIFICATION_MANIFEST: ${{ runner.temp }}/samra-verification/staging-verification.json
+  SAMRA_STAGING_VERIFICATION_HASH: ${{ runner.temp }}/samra-verification/staging-verification.sha256
+  SAMRA_STAGING_PROMOTION_MANIFEST: ${{ runner.temp }}/samra-promotion/staging-traffic-promotion.json
+  SAMRA_STAGING_PROMOTION_HASH: ${{ runner.temp }}/samra-promotion/staging-traffic-promotion.sha256
+
+jobs:
+  traffic-control:
+    name: Review or apply one exact staging traffic operation
+    if: >-
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: ${{ inputs.operation == 'promote' && 'staging-traffic-promotion' || 'staging-traffic-rollback' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact controller commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source, ancestry, evidence inputs, and authorization
+        shell: bash
+        env:
+          SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
+          SAMRA_WORKFLOW_OPERATION: ${{ inputs.operation }}
+          SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
+          SAMRA_ZERO_TRAFFIC_RUN_ID: ${{ inputs.zero_traffic_run_id }}
+          SAMRA_ZERO_TRAFFIC_ARTIFACT: ${{ inputs.zero_traffic_artifact_name }}
+          SAMRA_VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
+          SAMRA_VERIFICATION_ARTIFACT: ${{ inputs.verification_artifact_name }}
+          SAMRA_PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+          SAMRA_PROMOTION_ARTIFACT: ${{ inputs.promotion_artifact_name }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
+          [[ -z "$(git status --porcelain)" ]]
+          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]]
+          [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
+          [[ "${SAMRA_STAGING_CANDIDATE_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "${SAMRA_STAGING_CANDIDATE_SHA}" "${GITHUB_SHA}" || {
+            echo "Candidate SHA is not part of current main history." >&2
+            exit 1
+          }
+          if [[ "${SAMRA_WORKFLOW_OPERATION}" == "promote" ]]; then
+            [[ "${SAMRA_ZERO_TRAFFIC_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ -n "${SAMRA_ZERO_TRAFFIC_ARTIFACT}" ]]
+            [[ "${SAMRA_VERIFICATION_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ -n "${SAMRA_VERIFICATION_ARTIFACT}" ]]
+            if [[ "${SAMRA_WORKFLOW_MODE}" == "apply" ]]; then
+              [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_TRAFFIC_PROMOTION" ]] || {
+                echo "Apply mode requires exact promotion authorization." >&2
+                exit 1
+              }
+            fi
+          else
+            [[ "${SAMRA_PROMOTION_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ -n "${SAMRA_PROMOTION_ARTIFACT}" ]]
+            [[ "${#SAMRA_STAGING_ROLLBACK_REASON}" -ge 12 ]]
+            [[ "${#SAMRA_STAGING_ROLLBACK_REASON}" -le 500 ]]
+            if [[ "${SAMRA_WORKFLOW_MODE}" == "apply" ]]; then
+              [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_TRAFFIC_ROLLBACK" ]] || {
+                echo "Apply mode requires exact rollback authorization." >&2
+                exit 1
+              }
+            fi
+          fi
+
+      - name: Download immutable zero-traffic evidence
+        if: inputs.operation == 'promote'
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ inputs.zero_traffic_artifact_name }}
+          path: ${{ runner.temp }}/samra-zero-traffic-source
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.zero_traffic_run_id }}
+
+      - name: Download immutable staging verification evidence
+        if: inputs.operation == 'promote'
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ inputs.verification_artifact_name }}
+          path: ${{ runner.temp }}/samra-verification-source
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.verification_run_id }}
+
+      - name: Download immutable promotion evidence
+        if: inputs.operation == 'rollback'
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ inputs.promotion_artifact_name }}
+          path: ${{ runner.temp }}/samra-promotion-source
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.promotion_run_id }}
+
+      - name: Normalize exact evidence paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          normalize_pair() {
+            local source_dir="$1"
+            local manifest_name="$2"
+            local hash_name="$3"
+            local target_dir="$4"
+            mapfile -t manifests < <(find "${source_dir}" -type f -name "${manifest_name}" | sort)
+            mapfile -t hashes < <(find "${source_dir}" -type f -name "${hash_name}" | sort)
+            [[ "${#manifests[@]}" -eq 1 && "${#hashes[@]}" -eq 1 ]] || {
+              echo "Evidence artifact must contain one exact manifest and SHA-256 sidecar." >&2
+              exit 1
+            }
+            mkdir -p "${target_dir}"
+            cp "${manifests[0]}" "${target_dir}/${manifest_name}"
+            cp "${hashes[0]}" "${target_dir}/${hash_name}"
+          }
+          if [[ "${SAMRA_STAGING_TRAFFIC_OPERATION}" == "promote" ]]; then
+            normalize_pair "${RUNNER_TEMP}/samra-zero-traffic-source" "staging-zero-traffic-deployment.json" "staging-zero-traffic-deployment.sha256" "${RUNNER_TEMP}/samra-zero-traffic"
+            normalize_pair "${RUNNER_TEMP}/samra-verification-source" "staging-verification.json" "staging-verification.sha256" "${RUNNER_TEMP}/samra-verification"
+          else
+            normalize_pair "${RUNNER_TEMP}/samra-promotion-source" "staging-traffic-promotion.json" "staging-traffic-promotion.sha256" "${RUNNER_TEMP}/samra-promotion"
+          fi
+
+      - name: Obtain operation-specific short-lived Google credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SAMRA_GCP_OPERATION_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: ">= 540.0.0"
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+
+      - name: Verify operation-specific federated caller
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(gcloud config get-value account 2>/dev/null)" == "${SAMRA_GCP_OPERATION_SERVICE_ACCOUNT}" ]]
+          [[ "$(gcloud config get-value project 2>/dev/null)" == "${SAMRA_GCP_PROJECT_ID}" ]]
+          [[ -z "$(gcloud iam service-accounts keys list --iam-account="${SAMRA_GCP_OPERATION_SERVICE_ACCOUNT}" --project="${SAMRA_GCP_PROJECT_ID}" --managed-by=user --format='value(name)')" ]]
+
+      - name: Run read-only traffic review
+        shell: bash
+        run: bash deploy/gcp/control-staging-traffic.sh --review
+
+      - name: Apply one reviewed traffic operation
+        if: inputs.mode == 'apply'
+        shell: bash
+        run: bash deploy/gcp/control-staging-traffic.sh --apply
+
+      - name: Preserve immutable promotion history
+        if: inputs.mode == 'apply' && inputs.operation == 'promote' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-traffic-promotion-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/staging-release/staging-traffic-promotion.json
+            artifacts/staging-release/staging-traffic-promotion.sha256
+            artifacts/staging-release/staging-traffic-before-${{ inputs.service }}.json
+            artifacts/staging-release/staging-traffic-after-${{ inputs.service }}.json
+          if-no-files-found: error
+          retention-days: 365
+
+      - name: Preserve immutable rollback history
+        if: inputs.mode == 'apply' && inputs.operation == 'rollback' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-traffic-rollback-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/staging-release/staging-traffic-rollback.json
+            artifacts/staging-release/staging-traffic-rollback.sha256
+            artifacts/staging-release/staging-traffic-before-${{ inputs.service }}.json
+            artifacts/staging-release/staging-traffic-after-${{ inputs.service }}.json
+          if-no-files-found: error
+          retention-days: 365

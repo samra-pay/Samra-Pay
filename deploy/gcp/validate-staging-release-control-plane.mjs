@@ -118,26 +118,50 @@ export function validateStagingReleaseControlPlane(
 
   assert(
     contract.promotion.automatic === false &&
+      contract.promotion.status === "implemented-not-authorized" &&
+      contract.promotion.workflow ===
+        ".github/workflows/staging-traffic-control.yml" &&
+      contract.promotion.protectedEnvironment === "staging-traffic-promotion" &&
+      contract.promotion.controller ===
+        "deploy/gcp/control-staging-traffic.sh" &&
+      contract.promotion.evidenceManifest ===
+        "artifacts/staging-release/staging-traffic-promotion.json" &&
+      contract.promotion.evidenceManifestHash ===
+        "artifacts/staging-release/staging-traffic-promotion.sha256" &&
       contract.promotion.exactRevisionRequired === true &&
       contract.promotion.healthAndQaseEvidenceRequired === true &&
       contract.promotion.trafficSnapshotRequired === true &&
       contract.promotion.rollbackTargetRequired === true &&
-      contract.promotion.latestAliasAllowed === false,
+      contract.promotion.latestAliasAllowed === false &&
+      contract.promotion.firstActivationAllowed === false &&
+      contract.promotion.dedicatedFederatedIdentityRequired === true,
     "Traffic promotion must remain manual and exact-revision bound",
   );
   assert(
     contract.rollback.automatic === false &&
+      contract.rollback.status === "implemented-not-authorized" &&
+      contract.rollback.workflow ===
+        ".github/workflows/staging-traffic-control.yml" &&
+      contract.rollback.protectedEnvironment === "staging-traffic-rollback" &&
+      contract.rollback.controller ===
+        "deploy/gcp/control-staging-traffic.sh" &&
+      contract.rollback.evidenceManifest ===
+        "artifacts/staging-release/staging-traffic-rollback.json" &&
+      contract.rollback.evidenceManifestHash ===
+        "artifacts/staging-release/staging-traffic-rollback.sha256" &&
       contract.rollback.method ===
         "route 100 percent to the recorded prior revision" &&
       contract.rollback.rebuildAllowed === false &&
       contract.rollback.floatingAliasAllowed === false &&
       contract.rollback.priorRevisionEvidenceRequired === true &&
-      contract.rollback.postRollbackVerificationRequired === true,
+      contract.rollback.postRollbackVerificationRequired === true &&
+      contract.rollback.dedicatedFederatedIdentityRequired === true,
     "Rollback must reuse a recorded immutable revision",
   );
 
   for (const field of [
     "candidateSha",
+    "controllerSha",
     "githubWorkflowRunId",
     "cloudBuildId",
     "imageDigests",
@@ -145,8 +169,14 @@ export function validateStagingReleaseControlPlane(
     "migrationExecutionId",
     "configurationHashes",
     "qaseRunId",
+    "zeroTrafficDeploymentManifestSha256",
+    "verificationManifestSha256",
+    "promotionManifestSha256",
     "trafficBefore",
     "trafficAfter",
+    "restoredRevision",
+    "rollbackReason",
+    "postRollbackVerificationStatus",
     "operator",
     "approver",
   ]) {
