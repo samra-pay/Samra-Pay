@@ -285,6 +285,16 @@ test("workflow and controllers are manual, exact, keyless, and never use latest"
   assert.match(workflow, /staging-traffic-rollback/);
   assert.match(workflow, /AUTHORIZED_STAGING_TRAFFIC_PROMOTION/);
   assert.match(workflow, /AUTHORIZED_STAGING_TRAFFIC_ROLLBACK/);
+  const workflowEnvironment = workflow.slice(
+    workflow.indexOf("\nenv:"),
+    workflow.indexOf("\njobs:"),
+  );
+  assert.doesNotMatch(workflowEnvironment, /\$\{\{\s*runner\./);
+  assert.match(
+    workflow,
+    /SAMRA_STAGING_ZERO_TRAFFIC_MANIFEST=%s\\n' "\$\{RUNNER_TEMP\}\/samra-zero-traffic\/staging-zero-traffic-deployment\.json"/,
+  );
+  assert.match(workflow, /\} >> "\$\{GITHUB_ENV\}"/);
   const controller = readFileSync(
     "deploy/gcp/control-staging-traffic.sh",
     "utf8",

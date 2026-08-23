@@ -333,6 +333,16 @@ test("workflow is manual, main-only, protected, keyless, and consumes prior evid
   assert.match(workflow, /AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT/);
   assert.match(workflow, /deploy-staging-zero-traffic\.sh --review/);
   assert.match(workflow, /deploy-staging-zero-traffic\.sh --apply/);
+  const workflowEnvironment = workflow.slice(
+    workflow.indexOf("\nenv:"),
+    workflow.indexOf("\njobs:"),
+  );
+  assert.doesNotMatch(workflowEnvironment, /\$\{\{\s*runner\./);
+  assert.match(
+    workflow,
+    /SAMRA_STAGING_PUBLICATION_MANIFEST=%s\\n' "\$\{RUNNER_TEMP\}\/samra-publication\/staging-image-publication\.json"/,
+  );
+  assert.match(workflow, /\} >> "\$\{GITHUB_ENV\}"/);
   assert.doesNotMatch(
     workflow,
     /secrets\.|credentials_json|GOOGLE_CREDENTIALS/,
