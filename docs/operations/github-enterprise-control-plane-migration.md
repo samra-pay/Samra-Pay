@@ -21,7 +21,10 @@ repository remains the active source of truth until every transfer gate passes.
 - Organization owners: one
 - Independent staging approvers: none
 - Operating model: solo founder
-- Account-recovery readiness: not yet verified
+- Account-recovery readiness: blocked
+- Two-factor authentication: not enabled
+- Passkey or hardware security key: not configured
+- Verified recovery email: configured
 - Operational files bound to the personal authority: 43
 
 The organization now uses least-privilege defaults. Members receive no base

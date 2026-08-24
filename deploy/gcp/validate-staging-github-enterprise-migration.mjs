@@ -154,8 +154,13 @@ export function validateStagingGithubEnterpriseMigration(
       contract.observedEnterpriseState.operatingModel === "solo-founder" &&
       contract.observedEnterpriseState.organizationMemberCount === 1 &&
       contract.observedEnterpriseState.organizationOwnerCount === 1 &&
-      contract.observedEnterpriseState.accountRecoveryReadiness ===
-        "not-verified" &&
+      contract.observedEnterpriseState.accountRecoveryReadiness === "blocked" &&
+      contract.observedEnterpriseState.twoFactorAuthenticationEnabled ===
+        false &&
+      contract.observedEnterpriseState.passkeyOrSecurityKeyConfigured ===
+        false &&
+      contract.observedEnterpriseState.verifiedRecoveryEmailConfigured ===
+        true &&
       JSON.stringify(contract.observedEnterpriseState.teams) ===
         JSON.stringify([
           "developers",

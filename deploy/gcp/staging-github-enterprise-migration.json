@@ -27,7 +27,10 @@
     "operatingModel": "solo-founder",
     "organizationMemberCount": 1,
     "organizationOwnerCount": 1,
-    "accountRecoveryReadiness": "not-verified",
+    "accountRecoveryReadiness": "blocked",
+    "twoFactorAuthenticationEnabled": false,
+    "passkeyOrSecurityKeyConfigured": false,
+    "verifiedRecoveryEmailConfigured": true,
     "teams": [
       "developers",
       "platform-admins",
