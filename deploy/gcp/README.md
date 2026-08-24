@@ -227,13 +227,13 @@ deployment controller, promotion gate, and exact-revision rollback model are
 defined in
 [`docs/operations/staging-release-control-plane.md`](../../docs/operations/staging-release-control-plane.md)
 and machine-validated by `staging-release-control-plane.json`. Image publication,
-zero-traffic deployment, exact-image verification, verification evidence
-recording, exact-revision promotion, and rollback are implemented. None of
-their cloud mutations is automatically authorized. Deployment, image
-verification, promotion, and rollback use distinct protected environments,
-workload-identity providers, and keyless service accounts. The live
-exact-revision verification probe and first-ever traffic activation remain
-separate hard stops.
+zero-traffic deployment, exact-image verification, private exact-revision
+probing, combined verification evidence recording, exact-revision promotion,
+and rollback are implemented. None of their cloud mutations is automatically
+authorized. Deployment, both verification planes, promotion, and rollback use
+distinct protected environments, workload-identity providers, and keyless
+service accounts. Activating and executing the private probe and first-ever
+traffic activation remain separate hard stops.
 
 ### Keyless zero-traffic Cloud Run deployment
 
@@ -284,11 +284,15 @@ non-secret identifiers and pinned secret version numbers.
 
 `staging-verification.json` and `record-staging-verification.mjs` define and
 record the pre-promotion evidence boundary. The recorder consumes independently
-hashed zero-traffic deployment and probe manifests, requires the same exact
-candidate, service, and revision, and binds all seven checks to a completed
-passing `SAMP` run in `google-cloud-staging`. It records no secrets or customer
-data and cannot change traffic, public access, runtime configuration, vendors,
-or production.
+hashed zero-traffic deployment, exact-image, and private exact-revision probe
+manifests; requires the same exact candidate, image, service, and revision; and
+binds both evidence planes to one completed passing `SAMP` run in
+`google-cloud-staging`. Six database and financial checks run from the exact
+immutable image. Service authentication and deployed-revision network-path
+checks run through the exact deployed HTTP revision. The record truthfully sets
+`allChecksUsedDeployedRevision: false` while proving complete coverage. It
+records no secrets or customer data and cannot change traffic, public access,
+runtime configuration, vendors, or production.
 
 `staging-image-verification.json` adds the first executable layer without
 overstating what it proves. The API build now includes
@@ -308,15 +312,18 @@ database-secret version. One task, no retries, a unique synthetic run ID, exact
 image digest, before/after service-boundary comparison, mandatory job deletion,
 and hashed 365-day evidence prevent duplicate or ambiguous results.
 
-The workflow and one-time federation activation are implemented but remain
-unauthorized. The live private-revision probe is also unimplemented and
-unauthorized. Exact-image evidence does not prove service authentication or the
-deployed revision network path and therefore cannot authorize promotion. After
-separate activation, use
-`activate-staging-image-verification-federation.sh --review`, apply only with
-the exact activation sentinel, and independently run
-`audit-staging-image-verification-federation.sh` before the first protected
-workflow execution.
+The exact-image workflow and one-time federation activation are implemented but
+remain unauthorized. Exact-image evidence alone does not prove service
+authentication or the deployed-revision network path and therefore cannot
+authorize promotion. The separate `staging-verification-probe.yml` workflow now
+implements that missing plane. It temporarily enables the private service URL
+and an exact-revision tag without changing traffic, ingress, public IAM, or the
+runtime template; runs one keyless, no-secret VPC-connected job; then restores
+the complete service boundary byte for byte. It combines both JUnit evidence
+sets into one Qase run and records one hashed, promotion-consumable manifest.
+The probe federation and workflow remain dormant and execution remains
+unauthorized. Review and independently audit each federation boundary before
+its first protected workflow run.
 
 ### Exact-revision traffic promotion and rollback
 

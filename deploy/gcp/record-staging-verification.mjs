@@ -3,6 +3,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  validateStagingImageVerificationManifest,
+  verifyStagingImageVerificationManifest,
+} from "./record-staging-image-verification.mjs";
+import {
+  validateStagingRevisionProbeManifest,
+  verifyStagingRevisionProbeManifest,
+} from "./record-staging-revision-probe.mjs";
+import {
   validateStagingZeroTrafficDeploymentManifest,
   verifyZeroTrafficDeploymentManifest,
 } from "./record-staging-zero-traffic-deployment.mjs";
@@ -15,11 +23,20 @@ const SOURCE_REPOSITORY = "haileleuld87/Samra-Pay";
 const PROJECT_ID = "samra-pay-staging";
 const PROJECT_NUMBER = "934122615631";
 const REGION = "us-east4";
-const PROBE_WORKFLOW = "Staging verification probe";
-const PROBE_WORKFLOW_PATH = ".github/workflows/staging-verification-probe.yml";
-const PROTECTED_ENVIRONMENT = "staging-verification";
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
+const IMAGE_CHECKS = Object.freeze([
+  "readiness",
+  "restart",
+  "ledger",
+  "reconciliation",
+  "audit",
+  "failureVisibility",
+]);
+const PROBE_CHECKS = Object.freeze([
+  "serviceAuthentication",
+  "deployedRevisionNetworkPath",
+]);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -43,7 +60,7 @@ function validateChecks(checks) {
       JSON.stringify(Object.keys(checks)) ===
         JSON.stringify(STAGING_VERIFICATION_CHECKS) &&
       STAGING_VERIFICATION_CHECKS.every((check) => checks[check] === "passed"),
-    "All required deployed-revision verification checks must pass",
+    "All required staging verification checks must pass",
   );
   return checks;
 }
@@ -55,44 +72,24 @@ function validateQase(qase) {
       qase.status === "passed" &&
       typeof qase.runId === "string" &&
       /^\d+$/.test(qase.runId) &&
-      qase.runUrl === `https://app.qase.io/run/SAMP/dashboard/${qase.runId}`,
-    "Qase staging evidence drifted or is not passing",
+      qase.runUrl === `https://app.qase.io/run/SAMP/dashboard/${qase.runId}` &&
+      qase.imageJUnitIncluded === true &&
+      qase.probeJUnitIncluded === true,
+    "Combined Qase staging evidence drifted or is not passing",
   );
   return qase;
 }
 
-function validateProbeGitHub(github) {
-  assert(
-    github?.repository === SOURCE_REPOSITORY &&
-      github.ref === "refs/heads/main" &&
-      github.eventName === "workflow_dispatch" &&
-      github.workflow === PROBE_WORKFLOW &&
-      github.workflowPath === PROBE_WORKFLOW_PATH &&
-      github.protectedEnvironment === PROTECTED_ENVIRONMENT &&
-      typeof github.runId === "string" &&
-      /^\d+$/.test(github.runId) &&
-      Number.isSafeInteger(github.runAttempt) &&
-      github.runAttempt >= 1 &&
-      github.runUrl ===
-        `https://github.com/${SOURCE_REPOSITORY}/actions/runs/${github.runId}` &&
-      typeof github.actor === "string" &&
-      github.actor.trim().length > 0 &&
-      github.actor === github.actor.trim(),
-    "GitHub verification-probe provenance drifted",
-  );
-  return github;
-}
-
 function assertSafeEvidence(manifest) {
   assert(
-    !/postgres(?:ql)?:\/\/|worf\.replit|12345678|client_secret|api[_-]?key|private[_-]?key|authorization:|bearer\s+/i.test(
+    !/postgres(?:ql)?:\/\/|worf\.replit|12345678|client_secret|api[_-]?key|private[_-]?key|authorization:|bearer\s+|versions\/latest/i.test(
       JSON.stringify(manifest),
     ),
     "Verification evidence contains a credential or prohibited endpoint",
   );
 }
 
-function validateIdentity(manifest, label) {
+function validateIdentity(manifest) {
   assert(
     manifest.schemaVersion === 1 &&
       manifest.status === "passed" &&
@@ -103,61 +100,70 @@ function validateIdentity(manifest, label) {
       manifest.projectNumber === PROJECT_NUMBER &&
       manifest.region === REGION &&
       SHA_PATTERN.test(manifest.candidateSha) &&
+      SHA_PATTERN.test(manifest.controllerSha) &&
       manifest.releaseId === `staging-${manifest.candidateSha.slice(0, 12)}` &&
       STAGING_TRAFFIC_SERVICES.includes(manifest.service) &&
       manifest.revision ===
-        `${manifest.service}-${manifest.candidateSha.slice(0, 12)}`,
-    `${label} identity drifted`,
+        `${manifest.service}-${manifest.candidateSha.slice(0, 12)}` &&
+      typeof manifest.imageDigest === "string" &&
+      /@sha256:[0-9a-f]{64}$/.test(manifest.imageDigest),
+    "Verification release identity drifted",
   );
-}
-
-export function validateStagingVerificationProbeManifest(manifest) {
-  validateIdentity(manifest, "Verification probe");
-  validateChecks(manifest.checks);
-  validateQase(manifest.qase);
-  validateProbeGitHub(manifest.github);
-  assert(
-    manifest.exactRevisionObserved === true &&
-      manifest.allChecksUsedDeployedRevision === true &&
-      manifest.trafficChanged === false &&
-      manifest.publicAccessChanged === false &&
-      manifest.runtimeConfigurationChanged === false &&
-      manifest.customerDataUsed === false &&
-      manifest.secretValuesRecorded === false &&
-      manifest.vendorActivationAuthorized === false,
-    "Verification probe exceeded synthetic evidence-only authority",
-  );
-  normalizeTimestamp(manifest.generatedAt, "Verification probe timestamp");
-  assertSafeEvidence(manifest);
-  return manifest;
 }
 
 export function validateStagingVerificationManifest(manifest) {
-  validateIdentity(manifest, "Verification manifest");
-  assert(
-    SHA_PATTERN.test(manifest.controllerSha),
-    "Verification controller SHA is invalid",
-  );
+  validateIdentity(manifest);
   validateChecks(manifest.checks);
   validateQase(manifest.qase);
-  validateProbeGitHub(manifest.probeGitHub);
+  assert(
+    JSON.stringify(manifest.evidenceCoverage) ===
+      JSON.stringify({
+        exactImagePrivateDatabaseJob: IMAGE_CHECKS,
+        exactDeployedRevisionPrivateHttpProbe: PROBE_CHECKS,
+      }),
+    "Verification evidence coverage drifted",
+  );
   assert(
     HASH_PATTERN.test(manifest.evidence.zeroTrafficDeploymentManifestSha256) &&
+      HASH_PATTERN.test(manifest.evidence.imageVerificationManifestSha256) &&
       HASH_PATTERN.test(manifest.evidence.probeManifestSha256),
     "Verification input evidence hashes are invalid",
   );
   assert(
-    manifest.exactRevisionObserved === true &&
-      manifest.allChecksUsedDeployedRevision === true &&
-      manifest.trafficChanged === false &&
+    manifest.exactCandidateArtifactVerified === true &&
+      manifest.exactRevisionObserved === true &&
+      manifest.allChecksUsedDeployedRevision === false &&
+      manifest.serviceAuthenticationObserved === true &&
+      manifest.deployedRevisionNetworkPathObserved === true &&
+      manifest.temporaryRoutingRestored === true &&
+      manifest.trafficPercentageChanged === false &&
       manifest.publicAccessChanged === false &&
-      manifest.runtimeConfigurationChanged === false &&
+      manifest.runtimeTemplateChanged === false &&
       manifest.customerDataUsed === false &&
       manifest.secretValuesRecorded === false &&
-      manifest.trafficAuthorized === false &&
+      manifest.trafficPromotionAuthorized === false &&
       manifest.vendorActivationAuthorized === false &&
       manifest.productionAuthorized === false,
-    "Verification manifest exceeded evidence-only authority",
+    "Verification manifest exceeded combined evidence-only authority",
+  );
+  assert(
+    manifest.probeGitHub?.repository === SOURCE_REPOSITORY &&
+      manifest.probeGitHub.ref === "refs/heads/main" &&
+      manifest.probeGitHub.eventName === "workflow_dispatch" &&
+      manifest.probeGitHub.workflow === "Staging verification probe" &&
+      manifest.probeGitHub.workflowPath ===
+        ".github/workflows/staging-verification-probe.yml" &&
+      manifest.probeGitHub.protectedEnvironment === "staging-verification" &&
+      typeof manifest.probeGitHub.runId === "string" &&
+      /^\d+$/.test(manifest.probeGitHub.runId) &&
+      Number.isSafeInteger(manifest.probeGitHub.runAttempt) &&
+      manifest.probeGitHub.runAttempt >= 1 &&
+      manifest.probeGitHub.runUrl ===
+        `https://github.com/${SOURCE_REPOSITORY}/actions/runs/${manifest.probeGitHub.runId}` &&
+      typeof manifest.probeGitHub.actor === "string" &&
+      manifest.probeGitHub.actor.length > 0 &&
+      manifest.probeGitHub.actor === manifest.probeGitHub.actor.trim(),
+    "Verification probe provenance drifted",
   );
   normalizeTimestamp(manifest.generatedAt, "Verification timestamp");
   assertSafeEvidence(manifest);
@@ -168,21 +174,36 @@ export function buildStagingVerificationManifest(input) {
   const deployment = validateStagingZeroTrafficDeploymentManifest(
     input.zeroTrafficDeployment,
   );
-  const probe = validateStagingVerificationProbeManifest(input.probe);
+  const image = validateStagingImageVerificationManifest(
+    input.imageVerification,
+  );
+  const probe = validateStagingRevisionProbeManifest(input.probe);
   assert(
-    deployment.candidateSha === probe.candidateSha &&
+    image?.status === "passed-not-promotion-eligible" &&
+      image.promotionEligible === false &&
+      IMAGE_CHECKS.every((check) => image.imageChecks?.[check] === "passed"),
+    "Exact-image verification evidence is incomplete",
+  );
+  assert(
+    deployment.candidateSha === image.candidateSha &&
+      deployment.candidateSha === probe.candidateSha &&
+      deployment.releaseId === image.releaseId &&
       deployment.releaseId === probe.releaseId &&
+      deployment.deployment.service === image.service &&
       deployment.deployment.service === probe.service &&
-      deployment.deployment.revision === probe.revision,
-    "Verification inputs do not describe one exact candidate revision",
+      deployment.deployment.revision === image.revision &&
+      deployment.deployment.revision === probe.revision &&
+      deployment.publication.imageDigest === image.imageDigest &&
+      deployment.publication.imageDigest === probe.imageDigest,
+    "Verification inputs do not describe one exact candidate artifact and revision",
   );
   const manifest = {
     schemaVersion: 1,
     status: "passed",
     environment: "staging",
     dataClassification: "synthetic-only",
-    releaseId: probe.releaseId,
-    candidateSha: probe.candidateSha,
+    releaseId: deployment.releaseId,
+    candidateSha: deployment.candidateSha,
     controllerSha: input.controllerSha?.trim().toLowerCase(),
     sourceRepository: SOURCE_REPOSITORY,
     projectId: PROJECT_ID,
@@ -190,35 +211,48 @@ export function buildStagingVerificationManifest(input) {
     region: REGION,
     service: probe.service,
     revision: probe.revision,
+    imageDigest: probe.imageDigest,
     checks: Object.fromEntries(
       STAGING_VERIFICATION_CHECKS.map((check) => [check, "passed"]),
     ),
-    qase: structuredClone(probe.qase),
+    evidenceCoverage: {
+      exactImagePrivateDatabaseJob: IMAGE_CHECKS,
+      exactDeployedRevisionPrivateHttpProbe: PROBE_CHECKS,
+    },
+    qase: structuredClone(input.qase),
     evidence: {
       zeroTrafficDeploymentManifestSha256: normalizeHash(
         input.zeroTrafficDeploymentManifestSha256,
         "Zero-traffic deployment manifest hash",
       ),
+      imageVerificationManifestSha256: normalizeHash(
+        input.imageVerificationManifestSha256,
+        "Image-verification manifest hash",
+      ),
       probeManifestSha256: normalizeHash(
         input.probeManifestSha256,
-        "Verification probe manifest hash",
+        "Revision-probe manifest hash",
       ),
     },
     probeGitHub: structuredClone(probe.github),
+    exactCandidateArtifactVerified: true,
     exactRevisionObserved: true,
-    allChecksUsedDeployedRevision: true,
-    trafficChanged: false,
+    allChecksUsedDeployedRevision: false,
+    serviceAuthenticationObserved: true,
+    deployedRevisionNetworkPathObserved: true,
+    temporaryRoutingRestored: true,
+    trafficPercentageChanged: false,
     publicAccessChanged: false,
-    runtimeConfigurationChanged: false,
+    runtimeTemplateChanged: false,
     customerDataUsed: false,
     secretValuesRecorded: false,
-    trafficAuthorized: false,
+    trafficPromotionAuthorized: false,
     vendorActivationAuthorized: false,
     productionAuthorized: false,
     generatedAt: input.generatedAt,
   };
   validateStagingVerificationManifest(manifest);
-  return manifest;
+  return Object.freeze(manifest);
 }
 
 async function writeHashedManifest(manifest, manifestPath, hashPath) {
@@ -235,40 +269,6 @@ async function writeHashedManifest(manifest, manifestPath, hashPath) {
   return hash;
 }
 
-async function verifyHashedManifest(manifestPath, hashPath, validator, label) {
-  const [serialized, hashRecord] = await Promise.all([
-    readFile(manifestPath, "utf8"),
-    readFile(hashPath, "utf8"),
-  ]);
-  const expectedHash = hashRecord.trim().split(/\s+/)[0];
-  const actualHash = createHash("sha256").update(serialized).digest("hex");
-  assert(expectedHash === actualHash, `${label} manifest hash does not match`);
-  const manifest = JSON.parse(serialized);
-  validator(manifest);
-  return manifest;
-}
-
-export async function writeStagingVerificationProbeManifest(
-  manifest,
-  manifestPath,
-  hashPath,
-) {
-  validateStagingVerificationProbeManifest(manifest);
-  return writeHashedManifest(manifest, manifestPath, hashPath);
-}
-
-export async function verifyStagingVerificationProbeManifest(
-  manifestPath,
-  hashPath,
-) {
-  return verifyHashedManifest(
-    manifestPath,
-    hashPath,
-    validateStagingVerificationProbeManifest,
-    "Verification probe",
-  );
-}
-
 export async function writeStagingVerificationManifest(
   manifest,
   manifestPath,
@@ -282,12 +282,19 @@ export async function verifyStagingVerificationManifest(
   manifestPath,
   hashPath,
 ) {
-  return verifyHashedManifest(
-    manifestPath,
-    hashPath,
-    validateStagingVerificationManifest,
-    "Verification",
+  const [serialized, hashRecord] = await Promise.all([
+    readFile(manifestPath, "utf8"),
+    readFile(hashPath, "utf8"),
+  ]);
+  const expectedHash = hashRecord.trim().split(/\s+/)[0];
+  const actualHash = createHash("sha256").update(serialized).digest("hex");
+  assert(
+    expectedHash === actualHash,
+    "Verification manifest hash does not match",
   );
+  const manifest = JSON.parse(serialized);
+  validateStagingVerificationManifest(manifest);
+  return manifest;
 }
 
 function parseArguments(values) {
@@ -309,35 +316,59 @@ function required(options, name) {
   return options[name];
 }
 
+async function readHash(path, label) {
+  return normalizeHash(
+    (await readFile(path, "utf8")).trim().split(/\s+/)[0],
+    label,
+  );
+}
+
 async function main(values) {
   const [command, ...rawOptions] =
     values[0] === "--" ? values.slice(1) : values;
   const options = parseArguments(rawOptions);
   if (command === "build") {
-    const zeroTrafficDeployment = await verifyZeroTrafficDeploymentManifest(
-      required(options, "zero_traffic_manifest"),
-      required(options, "zero_traffic_hash"),
-    );
-    const probe = await verifyStagingVerificationProbeManifest(
-      required(options, "probe_manifest"),
-      required(options, "probe_hash"),
-    );
+    const zeroTrafficManifestPath = required(options, "zero_traffic_manifest");
+    const zeroTrafficHashPath = required(options, "zero_traffic_hash");
+    const imageManifestPath = required(options, "image_manifest");
+    const imageHashPath = required(options, "image_hash");
+    const probeManifestPath = required(options, "probe_manifest");
+    const probeHashPath = required(options, "probe_hash");
     const manifest = buildStagingVerificationManifest({
-      zeroTrafficDeployment,
-      zeroTrafficDeploymentManifestSha256: normalizeHash(
-        (await readFile(required(options, "zero_traffic_hash"), "utf8"))
-          .trim()
-          .split(/\s+/)[0],
+      zeroTrafficDeployment: await verifyZeroTrafficDeploymentManifest(
+        zeroTrafficManifestPath,
+        zeroTrafficHashPath,
+      ),
+      zeroTrafficDeploymentManifestSha256: await readHash(
+        zeroTrafficHashPath,
         "Zero-traffic deployment manifest hash",
       ),
-      probe,
-      probeManifestSha256: normalizeHash(
-        (await readFile(required(options, "probe_hash"), "utf8"))
-          .trim()
-          .split(/\s+/)[0],
-        "Verification probe manifest hash",
+      imageVerification: await verifyStagingImageVerificationManifest(
+        imageManifestPath,
+        imageHashPath,
+      ),
+      imageVerificationManifestSha256: await readHash(
+        imageHashPath,
+        "Image-verification manifest hash",
+      ),
+      probe: await verifyStagingRevisionProbeManifest(
+        probeManifestPath,
+        probeHashPath,
+      ),
+      probeManifestSha256: await readHash(
+        probeHashPath,
+        "Revision-probe manifest hash",
       ),
       controllerSha: required(options, "controller_sha"),
+      qase: {
+        project: "SAMP",
+        environment: "google-cloud-staging",
+        status: "passed",
+        runId: required(options, "qase_run_id"),
+        runUrl: required(options, "qase_run_url"),
+        imageJUnitIncluded: true,
+        probeJUnitIncluded: true,
+      },
       generatedAt: options.generated_at ?? new Date().toISOString(),
     });
     const hash = await writeStagingVerificationManifest(

@@ -8,16 +8,16 @@ as the future runtime, and Qase as governed test evidence. These systems are
 connected by exact identifiers. None of them may infer that a build, deployment,
 test, traffic change, or vendor activation authorizes the next stage.
 
-Image publication, zero-traffic deployment, exact-image verification,
-verification evidence recording, exact-revision promotion, rollback, and
-immutable deployment-history controllers are implemented. The exact-image
-workflow is not activated or authorized, and its evidence is intentionally not
-promotable. The live exact-revision probe is not implemented or authorized. Its
-future output must satisfy the recorder before promotion can consume it.
-Federated identities, protected environments, and every Cloud Run mutation
-remain separately activated and authorized; no service is live. The promotion
-path deliberately cannot perform first-ever activation because a release
-without a prior healthy revision has no proven rollback target.
+Image publication, zero-traffic deployment, exact-image verification, private
+exact-revision probing, combined verification evidence recording,
+exact-revision promotion, rollback, and immutable deployment-history
+controllers are implemented. Both verification workflows remain dormant and
+unauthorized. Exact-image evidence is intentionally non-promotable by itself;
+the final recorder also requires the private exact-revision probe and one shared
+passing Qase run. Federated identities, protected environments, and every Cloud
+Run mutation remain separately activated and authorized; no service is live.
+The promotion path deliberately cannot perform first-ever activation because a
+release without a prior healthy revision has no proven rollback target.
 
 ## Controlled delivery path
 
@@ -32,27 +32,29 @@ flowchart LR
   G -. separate approval .-> H[Private zero-traffic revisions]
   H -. separate approval .-> V[Temporary exact-image verifier job]
   V --> P[Hashed non-promotable image evidence]
-  H -. future live probe .-> I[Hashed probe evidence]
-  I --> L[Validated verification record]
+  H -. separate approval .-> I[Temporary private exact-revision probe]
+  I --> Q[Hashed probe evidence]
+  P --> L[One combined Qase run and verification record]
+  Q --> L
   L -. protected promotion .-> J[Exact revision receives 100 percent]
   J -. protected rollback .-> K[Recorded prior revision restored]
 ```
 
 Solid arrows are implemented evidence flow. Dashed arrows are controlled stages
-that still require activation or evidence. The verification contract and
-tamper-evident recorder are implemented; the live probe that must observe the
-exact deployed revision is not. No traffic workflow is authorized.
+that still require activation and explicit execution authority. Both probe
+planes and the tamper-evident recorder are implemented. No verification or
+traffic workflow is authorized.
 
 ## Stage authority
 
-| Stage                   | Authority                      | Mutation                                                                       | Required evidence                                                                                                 | Current state                                                                                |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Release candidate       | GitHub Actions                 | None                                                                           | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                                                                                  |
-| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                                                                                  |
-| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                               | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized                                                     |
-| Staging verification    | Protected GitHub environment   | One temporary private exact-image job; future private-revision probe           | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, Qase run   | Exact-image workflow implemented but not activated or authorized; live probe not implemented |
-| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100% | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                | Implemented; not activated or authorized                                                     |
-| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                   | Implemented; not activated or authorized                                                     |
+| Stage                   | Authority                      | Mutation                                                                             | Required evidence                                                                                                   | Current state                                                                  |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, Qase release identity                                                              | Implemented                                                                    |
+| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                         | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                          | Implemented                                                                    |
+| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                                     | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof   | Implemented; not activated or authorized                                       |
+| Staging verification    | Protected GitHub environment   | Two temporary private jobs: exact-image database suite and exact-revision HTTP probe | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, one Qase run | Both workflows implemented; federation activation and execution not authorized |
+| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100%       | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                  | Implemented; not activated or authorized                                       |
+| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                      | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                     | Implemented; not activated or authorized                                       |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
@@ -119,27 +121,42 @@ controller may activate either vendor.
 
 `record-staging-verification.mjs` closes the evidence-integrity gap between a
 zero-traffic deployment record and traffic promotion. It does not execute the
-live checks. It accepts only two independently hashed inputs:
+checks. It accepts only three independently hashed inputs:
 
 - the exact zero-traffic deployment manifest; and
-- a future probe manifest proving that all required checks observed the same
-  deployed service revision.
+- the exact-image verification manifest proving readiness, restart, ledger,
+  reconciliation, audit, and failure visibility from the immutable API image;
+- the private exact-revision probe manifest proving service authentication and
+  the deployed revision network path through the exact Cloud Run revision.
 
 The recorder rejects a different commit, service, revision, environment, Qase
-run, GitHub workflow identity, or incomplete check set. The probe must report a
-completed passing Qase run in project `SAMP` and environment
-`google-cloud-staging`, and must prove readiness, restart, service
-authentication, ledger, reconciliation, audit, and failure visibility against
-the exact deployed revision. It may not change traffic, public access, runtime
-configuration, vendor state, or production state, and it may not use customer
-data or retain secret values.
+run, GitHub workflow identity, image digest, or incomplete check set. Both
+planes must upload their JUnit results to one completed passing Qase run in
+project `SAMP` and environment `google-cloud-staging`. The final record states
+that not every check traversed the deployed revision while proving that every
+required check ran on its defined evidence plane. Neither controller may change
+traffic percentage, public access, ingress, runtime configuration, vendor
+state, or production state, use customer data, or retain secret values.
 
-The live probe workflow is intentionally represented as
-`implemented: false` and `authorized: false`. A person cannot create promotable
-evidence by manually asserting that tests passed. A future implementation must
-solve private-revision access, execute the checks, write the probe manifest and
-SHA-256 sidecar, and retain the exact GitHub and Qase provenance. Until then,
-promotion remains correctly blocked.
+`staging-verification-probe.yml` implements the second plane. It is manual,
+main-only, and protected by `staging-verification`. The controller requires the
+exact hashed deployment and exact-image evidence for the same candidate, then
+temporarily enables the private service URL and applies a unique tag to the
+exact zero-traffic revision. One VPC-connected, no-secret Cloud Run job uses a
+dedicated runtime identity with only `run.invoker` on `samra-api`; the controller
+uses a separate keyless identity. Anonymous access must fail, authenticated
+health and readiness must succeed, and both responses must identify the exact
+candidate revision.
+
+The probe records only response hashes and status metadata through an
+execution-filtered Cloud Logging view. Its cleanup trap deletes the temporary
+job, removes the tag, disables the default URL again, and requires the complete
+service boundary to match its before snapshot byte for byte. Any ambiguity,
+cleanup failure, identity token, or cross-execution log fails closed. The
+workflow then combines both JUnit files into one Qase run and writes the final
+hashed verification record. The implementation and federation controllers are
+complete, but activation and execution remain unauthorized until separately
+reviewed and approved.
 
 ### Exact-image verification foundation
 
@@ -172,8 +189,8 @@ attests the zero-traffic revision separately, compares the complete service
 boundary before and after, deletes the temporary job, and writes a hashed
 `passed-not-promotion-eligible` record. The workflow and one-time federation
 activation are implemented but not authorized. Promotion still requires the
-later private network-path probe and the existing final seven-check
-verification record.
+separate private exact-revision probe and the final combined verification
+record.
 
 ## Exact-revision promotion and rollback
 
@@ -242,6 +259,20 @@ log view. The runtime has no project role and receives secret access only on
 `samra-staging-database-url`. Neither identity may change traffic, service IAM,
 runtime service configuration, vendors, or production.
 
+Private exact-revision verification uses a fifth isolated pool,
+`samra-revision-probe-staging`, with one provider bound only to the manual
+`staging-verification-probe.yml` workflow and the `staging-verification`
+environment. `samra-github-probe-staging` receives the minimum project-level
+Cloud Run job lifecycle permissions required by Google Cloud; the protected
+workflow and fixed controller bind their use to the environment's temporary
+probe job. It may also temporarily update the reviewed service routing
+metadata, read the immutable image, use only `samra-revision-probe-staging`,
+and read one restricted log view. The runtime identity has no project,
+repository, or secret access and can invoke only `samra-api`. The audit also
+proves the provider-managed Cloud Run service agent retains its required Direct
+VPC role. Full before/after boundary equality prevents the temporary URL or
+revision tag from surviving a successful run.
+
 No Google service-account key or stored Google credential secret is permitted.
 GitHub obtains short-lived credentials through workload identity federation.
 
@@ -285,6 +316,13 @@ If any answer is missing, the release is not promotable.
 - `deploy/gcp/activate-staging-image-verification-federation.sh`
 - `deploy/gcp/audit-staging-image-verification-federation.sh`
 - `.github/workflows/staging-image-verification.yml`
+- `deploy/gcp/staging-revision-probe.json`
+- `deploy/gcp/validate-staging-revision-probe.mjs`
+- `deploy/gcp/record-staging-revision-probe.mjs`
+- `deploy/gcp/run-staging-revision-probe.sh`
+- `deploy/gcp/activate-staging-revision-probe-federation.sh`
+- `deploy/gcp/audit-staging-revision-probe-federation.sh`
+- `.github/workflows/staging-verification-probe.yml`
 - `deploy/gcp/validate-staging-traffic-control.mjs`
 - `deploy/gcp/record-staging-traffic-control.mjs`
 - `deploy/gcp/control-staging-traffic.sh`

@@ -59,7 +59,7 @@
     },
     {
       "id": "staging-verification",
-      "mutation": "synthetic test traffic only",
+      "mutation": "two temporary private jobs plus bounded URL and exact-revision tag metadata with zero traffic-percentage change",
       "requiredEvidence": [
         "exact-image synthetic PostgreSQL suite",
         "exact revision and image attestation",
@@ -121,7 +121,7 @@
     "dedicatedFederatedIdentityRequired": true
   },
   "verification": {
-    "status": "image-workflow-implemented-execution-not-authorized",
+    "status": "two-plane-workflow-implemented-execution-not-authorized",
     "contract": "deploy/gcp/staging-verification.json",
     "recorder": "deploy/gcp/record-staging-verification.mjs",
     "imageVerificationContract": "deploy/gcp/staging-image-verification.json",
@@ -139,14 +139,34 @@
     "imageExecutionAuthorized": false,
     "imageEvidencePromotionEligible": false,
     "probeWorkflow": ".github/workflows/staging-verification-probe.yml",
-    "probeImplemented": false,
+    "probeProtectedEnvironment": "staging-verification",
+    "probeContract": "deploy/gcp/staging-revision-probe.json",
+    "probeRecorder": "deploy/gcp/record-staging-revision-probe.mjs",
+    "probeController": "deploy/gcp/run-staging-revision-probe.sh",
+    "probeFederationActivation": "deploy/gcp/activate-staging-revision-probe-federation.sh",
+    "probeFederationAudit": "deploy/gcp/audit-staging-revision-probe-federation.sh",
+    "probeImplemented": true,
     "executionAuthorized": false,
     "probeManifest": "artifacts/staging-release/staging-verification-probe.json",
     "probeManifestHash": "artifacts/staging-release/staging-verification-probe.sha256",
     "manifest": "artifacts/staging-release/staging-verification.json",
     "manifestHash": "artifacts/staging-release/staging-verification.sha256",
     "exactRevisionRequired": true,
-    "allChecksMustUseDeployedRevision": true,
+    "exactCandidateBindingRequired": true,
+    "allChecksMustUseDeployedRevision": false,
+    "evidenceCoverageRequired": true,
+    "exactImagePrivateDatabaseChecks": [
+      "readiness",
+      "restart",
+      "ledger",
+      "reconciliation",
+      "audit",
+      "failureVisibility"
+    ],
+    "exactDeployedRevisionPrivateHttpChecks": [
+      "serviceAuthentication",
+      "deployedRevisionNetworkPath"
+    ],
     "qaseProject": "SAMP",
     "qaseEnvironment": "google-cloud-staging"
   },
@@ -196,6 +216,8 @@
       "configurationHashes",
       "qaseRunId",
       "zeroTrafficDeploymentManifestSha256",
+      "imageVerificationManifestSha256",
+      "probeManifestSha256",
       "verificationManifestSha256",
       "promotionManifestSha256",
       "trafficBefore",

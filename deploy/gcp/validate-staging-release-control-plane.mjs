@@ -118,7 +118,7 @@ export function validateStagingReleaseControlPlane(
 
   assert(
     contract.verification.status ===
-      "image-workflow-implemented-execution-not-authorized" &&
+      "two-plane-workflow-implemented-execution-not-authorized" &&
       contract.verification.contract ===
         "deploy/gcp/staging-verification.json" &&
       contract.verification.recorder ===
@@ -146,7 +146,19 @@ export function validateStagingReleaseControlPlane(
       contract.verification.imageEvidencePromotionEligible === false &&
       contract.verification.probeWorkflow ===
         ".github/workflows/staging-verification-probe.yml" &&
-      contract.verification.probeImplemented === false &&
+      contract.verification.probeProtectedEnvironment ===
+        "staging-verification" &&
+      contract.verification.probeContract ===
+        "deploy/gcp/staging-revision-probe.json" &&
+      contract.verification.probeRecorder ===
+        "deploy/gcp/record-staging-revision-probe.mjs" &&
+      contract.verification.probeController ===
+        "deploy/gcp/run-staging-revision-probe.sh" &&
+      contract.verification.probeFederationActivation ===
+        "deploy/gcp/activate-staging-revision-probe-federation.sh" &&
+      contract.verification.probeFederationAudit ===
+        "deploy/gcp/audit-staging-revision-probe-federation.sh" &&
+      contract.verification.probeImplemented === true &&
       contract.verification.executionAuthorized === false &&
       contract.verification.probeManifest ===
         "artifacts/staging-release/staging-verification-probe.json" &&
@@ -157,7 +169,25 @@ export function validateStagingReleaseControlPlane(
       contract.verification.manifestHash ===
         "artifacts/staging-release/staging-verification.sha256" &&
       contract.verification.exactRevisionRequired === true &&
-      contract.verification.allChecksMustUseDeployedRevision === true &&
+      contract.verification.exactCandidateBindingRequired === true &&
+      contract.verification.allChecksMustUseDeployedRevision === false &&
+      contract.verification.evidenceCoverageRequired === true &&
+      JSON.stringify(contract.verification.exactImagePrivateDatabaseChecks) ===
+        JSON.stringify([
+          "readiness",
+          "restart",
+          "ledger",
+          "reconciliation",
+          "audit",
+          "failureVisibility",
+        ]) &&
+      JSON.stringify(
+        contract.verification.exactDeployedRevisionPrivateHttpChecks,
+      ) ===
+        JSON.stringify([
+          "serviceAuthentication",
+          "deployedRevisionNetworkPath",
+        ]) &&
       contract.verification.qaseProject === "SAMP" &&
       contract.verification.qaseEnvironment === "google-cloud-staging",
     "Staging verification evidence boundary drifted",
@@ -217,6 +247,8 @@ export function validateStagingReleaseControlPlane(
     "configurationHashes",
     "qaseRunId",
     "zeroTrafficDeploymentManifestSha256",
+    "imageVerificationManifestSha256",
+    "probeManifestSha256",
     "verificationManifestSha256",
     "promotionManifestSha256",
     "trafficBefore",
@@ -283,7 +315,7 @@ export function validateStagingReleaseControlPlane(
     verificationRecorderImplemented: true,
     verificationImageRunnerImplemented: true,
     verificationImageWorkflowImplemented: true,
-    verificationProbeImplemented: false,
+    verificationProbeImplemented: true,
     verificationAuthorized: false,
     promotionAuthorized: false,
   });

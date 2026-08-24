@@ -22,7 +22,7 @@ import {
   buildStagingZeroTrafficDeploymentManifest,
   writeZeroTrafficDeploymentManifest,
 } from "./record-staging-zero-traffic-deployment.mjs";
-import { validateStagingVerificationProbeManifest } from "./record-staging-verification.mjs";
+import { validateStagingVerificationManifest } from "./record-staging-verification.mjs";
 import {
   STAGING_IMAGE_VERIFICATION_CHECKS,
   readStagingImageVerificationContract,
@@ -306,10 +306,10 @@ test("rejects image, revision, test, identity, secret, and authority drift", () 
   }
 });
 
-test("cannot be passed to the promotable deployed-revision recorder", () => {
+test("cannot be passed off as the combined two-plane verification", () => {
   assert.throws(
-    () => validateStagingVerificationProbeManifest(verification()),
-    /Verification probe identity drifted/,
+    () => validateStagingVerificationManifest(verification()),
+    /Verification release identity drifted/,
   );
 });
 

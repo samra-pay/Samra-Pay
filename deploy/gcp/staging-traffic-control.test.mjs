@@ -8,6 +8,8 @@ import {
   STAGING_IMAGE_NAMES,
   buildStagingImagePublicationManifest,
 } from "./record-staging-image-publication.mjs";
+import { buildStagingImageVerificationManifest } from "./record-staging-image-verification.mjs";
+import { buildStagingRevisionProbeManifest } from "./record-staging-revision-probe.mjs";
 import { buildStagingZeroTrafficDeploymentManifest } from "./record-staging-zero-traffic-deployment.mjs";
 import {
   buildStagingPromotionManifest,
@@ -80,61 +82,117 @@ function buildZeroTrafficDeployment() {
   });
 }
 
-function buildVerification(overrides = {}) {
-  const manifest = buildStagingVerificationManifest({
+function buildImageVerification() {
+  return buildStagingImageVerificationManifest({
     zeroTrafficDeployment: buildZeroTrafficDeployment(),
     zeroTrafficDeploymentManifestSha256: hash,
-    probe: {
-      schemaVersion: 1,
-      status: "passed",
-      environment: "staging",
-      dataClassification: "synthetic-only",
-      releaseId: `staging-${candidateSha.slice(0, 12)}`,
-      candidateSha,
-      sourceRepository: "haileleuld87/Samra-Pay",
-      projectId: "samra-pay-staging",
-      projectNumber: "934122615631",
-      region: "us-east4",
-      service,
-      revision: candidateRevision,
-      checks: Object.fromEntries(
-        STAGING_VERIFICATION_CHECKS.map((check) => [check, "passed"]),
-      ),
-      qase: {
-        project: "SAMP",
-        environment: "google-cloud-staging",
-        status: "passed",
-        runId: "74",
-        runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
-      },
-      github: {
-        repository: "haileleuld87/Samra-Pay",
-        ref: "refs/heads/main",
-        eventName: "workflow_dispatch",
-        workflow: "Staging verification probe",
-        workflowPath: ".github/workflows/staging-verification-probe.yml",
-        protectedEnvironment: "staging-verification",
-        runId: "32619000001",
-        runAttempt: 1,
-        runUrl:
-          "https://github.com/haileleuld87/Samra-Pay/actions/runs/32619000001",
-        actor: "haileleuld87",
-      },
-      exactRevisionObserved: true,
-      allChecksUsedDeployedRevision: true,
-      trafficChanged: false,
-      publicAccessChanged: false,
-      runtimeConfigurationChanged: false,
-      customerDataUsed: false,
-      secretValuesRecorded: false,
-      vendorActivationAuthorized: false,
-      generatedAt: "2026-08-23T00:20:00.000Z",
+    revision: candidateRevision,
+    imageDigest: digest(service),
+    revisionAttestation: {
+      ready: true,
+      exactImageDigest: true,
+      privateIngress: true,
+      defaultServiceUrlDisabled: true,
+      publicIamAbsent: true,
     },
-    probeManifestSha256: "1".repeat(64),
-    controllerSha,
+    syntheticRunId: "verify-a1b2c3",
+    jobExecutionId: "samra-api-verifier-a1b2c3",
+    junitSha256: "2".repeat(64),
+    runtimeServiceAccount:
+      "samra-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+    databaseSecretVersion: "7",
+    imageChecks: {
+      readiness: "passed",
+      restart: "passed",
+      ledger: "passed",
+      reconciliation: "passed",
+      audit: "passed",
+      failureVisibility: "passed",
+    },
     generatedAt: "2026-08-23T00:20:00.000Z",
   });
-  return Object.assign(manifest, overrides);
+}
+
+function buildProbe() {
+  const result = {
+    schemaVersion: 1,
+    status: "passed",
+    probeId: "svp-32619000001-1",
+    unauthenticatedStatus: 403,
+    authenticatedHealthStatus: 200,
+    authenticatedReadinessStatus: 200,
+    healthResponseSha256: "3".repeat(64),
+    readinessResponseSha256: "4".repeat(64),
+    observedRevision: candidateRevision,
+    serviceAuthenticationObserved: true,
+    deployedRevisionNetworkPathObserved: true,
+    tokenRecorded: false,
+  };
+  return buildStagingRevisionProbeManifest({
+    zeroTrafficDeployment: buildZeroTrafficDeployment(),
+    imageVerification: buildImageVerification(),
+    zeroTrafficDeploymentManifestSha256: "5".repeat(64),
+    imageVerificationManifestSha256: "6".repeat(64),
+    revision: candidateRevision,
+    imageDigest: digest(service),
+    result,
+    probeId: result.probeId,
+    jobExecutionId: "samra-staging-revision-probe-a1b2c",
+    runtimeServiceAccount:
+      "samra-revision-probe-staging@samra-pay-staging.iam.gserviceaccount.com",
+    resultSha256: "7".repeat(64),
+    junitSha256: "8".repeat(64),
+    routing: {
+      candidateTrafficPercentBefore: 0,
+      candidateTrafficPercentDuring: 0,
+      candidateTrafficPercentAfter: 0,
+      exactRevisionTagTemporarilyApplied: true,
+      defaultServiceUrlTemporarilyEnabled: true,
+      ingressChanged: false,
+      publicAccessChanged: false,
+      runtimeTemplateChanged: false,
+      boundaryBeforeSha256: "9".repeat(64),
+      boundaryAfterSha256: "9".repeat(64),
+      tagRemoved: true,
+      defaultServiceUrlDisabledAfter: true,
+    },
+    github: {
+      repository: "haileleuld87/Samra-Pay",
+      ref: "refs/heads/main",
+      eventName: "workflow_dispatch",
+      workflow: "Staging verification probe",
+      workflowPath: ".github/workflows/staging-verification-probe.yml",
+      protectedEnvironment: "staging-verification",
+      runId: "32619000001",
+      runAttempt: 1,
+      runUrl:
+        "https://github.com/haileleuld87/Samra-Pay/actions/runs/32619000001",
+      actor: "haileleuld87",
+    },
+    generatedAt: "2026-08-23T00:30:00.000Z",
+  });
+}
+
+function buildVerification() {
+  return buildStagingVerificationManifest({
+    zeroTrafficDeployment: buildZeroTrafficDeployment(),
+    zeroTrafficDeploymentManifestSha256: hash,
+    imageVerification: buildImageVerification(),
+    imageVerificationManifestSha256: "a".repeat(64),
+    probe: buildProbe(),
+    probeManifestSha256: "1".repeat(64),
+    controllerSha,
+    qase: {
+      project: "SAMP",
+      environment: "google-cloud-staging",
+      status: "passed",
+      runId: "74",
+      runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
+      imageJUnitIncluded: true,
+      probeJUnitIncluded: true,
+    },
+    generatedAt: "2026-08-23T00:40:00.000Z",
+  });
 }
 
 function buildPromotion(overrides = {}) {
@@ -181,6 +239,10 @@ test("rejects first activation, mutable aliases, split traffic, and shared ident
     (value) =>
       (value.googleCloud.rollbackServiceAccountId =
         value.googleCloud.promoterServiceAccountId),
+    (value) => (value.verificationEvidence.probeImplemented = false),
+    (value) =>
+      (value.verificationEvidence.allChecksMustUseDeployedRevision = true),
+    (value) => (value.verificationEvidence.evidenceCoverageRequired = false),
     (value) => (value.workflow.automaticTriggers = true),
   ]) {
     const changed = structuredClone(contract);
