@@ -150,6 +150,7 @@ test("validates a recorder-only staging verification boundary", () => {
       serviceCount: 3,
       checkCount: 7,
       recorderImplemented: true,
+      imageRunnerImplemented: true,
       probeImplemented: false,
       executionAuthorized: false,
     },
@@ -160,6 +161,10 @@ test("rejects any contract that pretends the missing probe is implemented or aut
   for (const mutate of [
     (value) => (value.probeAuthority.implemented = true),
     (value) => (value.probeAuthority.authorized = true),
+    (value) => (value.imageVerificationFoundation.promotionEligible = true),
+    (value) => (value.imageVerificationFoundation.executionAuthorized = true),
+    (value) =>
+      (value.imageVerificationFoundation.imageRunnerImplemented = false),
     (value) => (value.automaticTriggers = true),
     (value) => (value.trafficMutationAuthorized = true),
     (value) => (value.publicAccessMutationAuthorized = true),

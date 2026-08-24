@@ -35,6 +35,20 @@
     "completedPassingRunRequired": true,
     "exactRunUrlRequired": true
   },
+  "imageVerificationFoundation": {
+    "status": "runner-implemented-execution-not-authorized",
+    "contract": "deploy/gcp/staging-image-verification.json",
+    "validator": "deploy/gcp/validate-staging-image-verification.mjs",
+    "recorder": "deploy/gcp/record-staging-image-verification.mjs",
+    "imageRunnerImplemented": true,
+    "workflowImplemented": false,
+    "executionAuthorized": false,
+    "promotionEligible": false,
+    "excludedPromotionChecks": [
+      "serviceAuthentication",
+      "deployedRevisionNetworkPath"
+    ]
+  },
   "probeAuthority": {
     "workflowName": "Staging verification probe",
     "workflowPath": ".github/workflows/staging-verification-probe.yml",

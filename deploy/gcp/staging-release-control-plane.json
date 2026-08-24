@@ -61,11 +61,13 @@
       "id": "staging-verification",
       "mutation": "synthetic test traffic only",
       "requiredEvidence": [
-        "readiness",
-        "restart",
+        "exact-image synthetic PostgreSQL suite",
+        "exact revision and image attestation",
+        "deployed revision network path",
         "service authentication",
         "ledger",
         "reconciliation",
+        "audit and failure visibility",
         "Qase staging run"
       ]
     },
@@ -122,6 +124,12 @@
     "status": "evidence-plane-implemented-execution-not-authorized",
     "contract": "deploy/gcp/staging-verification.json",
     "recorder": "deploy/gcp/record-staging-verification.mjs",
+    "imageVerificationContract": "deploy/gcp/staging-image-verification.json",
+    "imageVerificationRecorder": "deploy/gcp/record-staging-image-verification.mjs",
+    "imageRunnerImplemented": true,
+    "imageWorkflowImplemented": false,
+    "imageExecutionAuthorized": false,
+    "imageEvidencePromotionEligible": false,
     "probeWorkflow": ".github/workflows/staging-verification-probe.yml",
     "probeImplemented": false,
     "executionAuthorized": false,

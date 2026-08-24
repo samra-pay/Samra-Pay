@@ -41,14 +41,14 @@ exact deployed revision is not. No traffic workflow is authorized.
 
 ## Stage authority
 
-| Stage                   | Authority                      | Mutation                                                                       | Required evidence                                                                                                 | Current state                                                           |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Release candidate       | GitHub Actions                 | None                                                                           | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                                                             |
-| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                                                             |
-| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                               | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized                                |
-| Staging verification    | Future controlled test run     | Synthetic test traffic only                                                    | Readiness, restart, service authentication, ledger, reconciliation, audit, failure visibility, Qase run           | Evidence recorder implemented; live probe not implemented or authorized |
-| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100% | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                | Implemented; not activated or authorized                                |
-| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                   | Implemented; not activated or authorized                                |
+| Stage                   | Authority                      | Mutation                                                                       | Required evidence                                                                                                 | Current state                                                                                |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Release candidate       | GitHub Actions                 | None                                                                           | Exact `main` SHA, passing gates, Qase release identity                                                            | Implemented                                                                                  |
+| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                   | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                        | Implemented                                                                                  |
+| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                               | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof | Implemented; not activated or authorized                                                     |
+| Staging verification    | Future controlled test run     | Synthetic test traffic only                                                    | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, Qase run   | Exact-image runner and partial recorder implemented; execution and live probe not authorized |
+| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100% | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                | Implemented; not activated or authorized                                                     |
+| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                   | Implemented; not activated or authorized                                                     |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
@@ -136,6 +136,27 @@ evidence by manually asserting that tests passed. A future implementation must
 solve private-revision access, execute the checks, write the probe manifest and
 SHA-256 sidecar, and retain the exact GitHub and Qase provenance. Until then,
 promotion remains correctly blocked.
+
+### Exact-image verification foundation
+
+The API image now contains a second bundled entrypoint,
+`dist/staging-verification.mjs`. It runs the nine existing synthetic PostgreSQL
+journeys from the exact immutable API image and uses a unique synthetic run ID
+so retries do not collide with prior idempotency keys or workforce identities.
+The normal API startup command still runs only `dist/index.mjs`.
+
+`record-staging-image-verification.mjs` can combine a hashed zero-traffic
+deployment record with exact revision attestation, the immutable image digest,
+the pinned database-secret version number, a JUnit hash, and all six image-level
+checks. Its output is intentionally `passed-not-promotion-eligible`. It records
+that service authentication and the deployed-revision network path were not
+executed and sets `allChecksUsedDeployedRevision: false`.
+
+This separation prevents a private job running the correct image from being
+misrepresented as an HTTP test of the zero-traffic Cloud Run revision. A future
+protected workflow and dedicated verifier identity may execute this layer only
+after separate cloud authorization. Promotion still requires the later private
+network-path probe and the existing final seven-check verification record.
 
 ## Exact-revision promotion and rollback
 
@@ -230,6 +251,9 @@ If any answer is missing, the release is not promotable.
 - `deploy/gcp/staging-verification.json`
 - `deploy/gcp/validate-staging-verification.mjs`
 - `deploy/gcp/record-staging-verification.mjs`
+- `deploy/gcp/staging-image-verification.json`
+- `deploy/gcp/validate-staging-image-verification.mjs`
+- `deploy/gcp/record-staging-image-verification.mjs`
 - `deploy/gcp/validate-staging-traffic-control.mjs`
 - `deploy/gcp/record-staging-traffic-control.mjs`
 - `deploy/gcp/control-staging-traffic.sh`

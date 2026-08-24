@@ -289,10 +289,21 @@ passing `SAMP` run in `google-cloud-staging`. It records no secrets or customer
 data and cannot change traffic, public access, runtime configuration, vendors,
 or production.
 
-The live probe workflow is deliberately marked unimplemented and unauthorized.
-Until a separately approved private-revision executor produces valid hashed
-probe evidence, the recorder cannot create a promotable verification record and
-traffic promotion remains blocked.
+`staging-image-verification.json` adds the first executable layer without
+overstating what it proves. The API build now includes
+`dist/staging-verification.mjs`, a bundled, rerunnable version of the nine
+PostgreSQL synthetic journeys. The ordinary API container command is unchanged.
+The partial recorder can bind a passing exact-image run to the immutable digest
+and zero-traffic revision attestation, but its status is always
+`passed-not-promotion-eligible`. It explicitly records service authentication
+and the deployed-revision network path as `not-executed`.
+
+The protected image-verification workflow, dedicated runtime identity, and
+execution are deliberately marked unimplemented or unauthorized. The live
+private-revision probe is also unimplemented and unauthorized. Until a
+separately approved executor produces exact-image evidence and then exercises
+the deployed private revision itself, the final recorder cannot create a
+promotable verification record and traffic promotion remains blocked.
 
 ### Exact-revision traffic promotion and rollback
 

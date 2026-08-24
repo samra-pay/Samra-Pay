@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
@@ -17,6 +18,12 @@ if (!connectionString) {
 
 const originalDatabaseUrl = process.env["DATABASE_URL"];
 process.env["DATABASE_URL"] = connectionString;
+
+const syntheticRunId = normalizeSyntheticRunId(
+  process.env["SAMRA_SYNTHETIC_RUN_ID"] ?? randomUUID(),
+);
+const workforceExternalRef = `daily_reconciliation_admin_${syntheticRunId}`;
+const workforceLoginName = `daily-reconciliation-admin-${syntheticRunId}@samra.test`;
 
 const evidenceDatabase = createDatabase({ connectionString });
 const journeyTransferIds = new Set<string>();
@@ -164,7 +171,9 @@ test("SYNTH-DAILY-004 cancellation is idempotent and restores available balance"
     const path = `/api/v1/remittance/transfers/${journey.id}/cancel`;
     const options = {
       method: "POST",
-      headers: { "Idempotency-Key": "daily-cancellation-command" },
+      headers: {
+        "Idempotency-Key": syntheticKey("cancellation-command"),
+      },
     } as const;
     const cancelled = objectBody(await apiRequest(origin, path, options), 200);
     const replayed = objectBody(await apiRequest(origin, path, options), 200);
@@ -296,15 +305,15 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
 
     const workforce = first.runtime.workforceAuthStore!;
     await workforce.upsertUser({
-      externalRef: "daily_reconciliation_admin",
-      loginName: "daily-reconciliation-admin@samra.test",
+      externalRef: workforceExternalRef,
+      loginName: workforceLoginName,
       displayName: "Daily Reconciliation Administrator",
       role: "administrator",
       password: "daily-synthetic-reconciliation-password",
     });
     const operationsHeaders = await loginWorkforce(
       first.origin,
-      "daily-reconciliation-admin@samra.test",
+      workforceLoginName,
       "daily-synthetic-reconciliation-password",
     );
     const before = await getBalance(first.origin);
@@ -368,7 +377,7 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
       method: "POST",
       headers: {
         ...operationsHeaders,
-        "Idempotency-Key": "daily-reconciliation-resolution",
+        "Idempotency-Key": syntheticKey("reconciliation-resolution"),
       },
       body: {
         reason:
@@ -392,7 +401,7 @@ test("SYNTH-DAILY-008 reconciliation mismatch and controlled resolution survive 
       200,
     );
     assert.equal(resolved["state"], "resolved");
-    assert.equal(resolved["resolvedBy"], "daily_reconciliation_admin");
+    assert.equal(resolved["resolvedBy"], workforceExternalRef);
     assert.equal(typeof resolved["resolutionJournalId"], "string");
     assert.deepEqual(replayed, resolved);
   } finally {
@@ -514,7 +523,7 @@ async function createJourney(
     }),
     201,
   );
-  const idempotencyKey = `daily-${label}-create`;
+  const idempotencyKey = syntheticKey(`${label}-create`);
   const transfer = objectBody(
     await apiRequest(origin, "/api/v1/remittance/transfers", {
       method: "POST",
@@ -701,6 +710,20 @@ function moneyMinor(value: unknown): bigint {
   const minorUnits = (value as JsonObject)["minorUnits"];
   assert.equal(typeof minorUnits, "string");
   return BigInt(minorUnits);
+}
+
+function syntheticKey(suffix: string): string {
+  return `daily-${syntheticRunId}-${suffix}`;
+}
+
+function normalizeSyntheticRunId(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(normalized)) {
+    throw new Error(
+      "SAMRA_SYNTHETIC_RUN_ID must be 1-48 lowercase letters, digits, or hyphens.",
+    );
+  }
+  return normalized;
 }
 
 function objectBody(response: ApiResponse, status: number): JsonObject {

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "status": "runner-implemented-execution-not-authorized",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "sourceRepository": "haileleuld87/Samra-Pay",
+  "service": "samra-api",
+  "imageRunner": {
+    "source": "artifacts/api-server/test/daily-synthetic-journeys.test.ts",
+    "bundle": "artifacts/api-server/dist/staging-verification.mjs",
+    "containerCommand": [
+      "node",
+      "--test",
+      "--test-reporter=junit",
+      "./dist/staging-verification.mjs"
+    ],
+    "testCount": 9,
+    "uniqueSyntheticRunIdRequired": true,
+    "pinnedDatabaseSecretVersionRequired": true,
+    "dedicatedRuntimeIdentity": "samra-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+    "implemented": true,
+    "executionAuthorized": false
+  },
+  "inputEvidence": {
+    "zeroTrafficDeploymentManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
+    "zeroTrafficDeploymentManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256"
+  },
+  "outputEvidence": {
+    "manifest": "artifacts/staging-release/staging-image-verification.json",
+    "manifestHash": "artifacts/staging-release/staging-image-verification.sha256",
+    "retentionDays": 365
+  },
+  "imageChecks": [
+    "readiness",
+    "restart",
+    "ledger",
+    "reconciliation",
+    "audit",
+    "failureVisibility"
+  ],
+  "excludedPromotionChecks": [
+    "serviceAuthentication",
+    "deployedRevisionNetworkPath"
+  ],
+  "revisionAttestation": {
+    "readyRequired": true,
+    "exactImageDigestRequired": true,
+    "privateIngressRequired": true,
+    "defaultServiceUrlDisabledRequired": true,
+    "publicIamAbsentRequired": true
+  },
+  "promotionEligible": false,
+  "workflowImplemented": false,
+  "automaticTriggers": false,
+  "trafficMutationAuthorized": false,
+  "publicAccessMutationAuthorized": false,
+  "runtimeMutationAuthorized": false,
+  "vendorActivationAuthorized": false,
+  "productionAuthorized": false,
+  "prohibited": [
+    "claiming image execution proves the deployed revision network path",
+    "claiming image execution proves service authentication",
+    "promotion eligibility from partial verification evidence",
+    "floating image tag",
+    "latest secret version",
+    "shared runtime identity",
+    "traffic mutation",
+    "public IAM mutation",
+    "runtime configuration mutation",
+    "vendor activation",
+    "production resource",
+    "real customer data",
+    "secret value in evidence",
+    "Replit change"
+  ]
+}
