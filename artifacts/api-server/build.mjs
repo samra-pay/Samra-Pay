@@ -17,6 +17,10 @@ async function buildAll() {
   await esbuild({
     entryPoints: {
       index: path.resolve(artifactDir, "src/index.ts"),
+      "staging-revision-probe": path.resolve(
+        artifactDir,
+        "src/staging-revision-probe.ts",
+      ),
       "staging-verification": path.resolve(
         artifactDir,
         "test/daily-synthetic-journeys.test.ts",

@@ -102,15 +102,37 @@
     "retentionDays": 365
   },
   "verificationEvidence": {
-    "status": "recording-implemented-execution-not-authorized",
+    "status": "two-plane-workflow-implemented-execution-not-authorized",
     "contract": "deploy/gcp/staging-verification.json",
     "recorder": "deploy/gcp/record-staging-verification.mjs",
+    "probeContract": "deploy/gcp/staging-revision-probe.json",
+    "probeRecorder": "deploy/gcp/record-staging-revision-probe.mjs",
+    "probeController": "deploy/gcp/run-staging-revision-probe.sh",
+    "probeFederationActivation": "deploy/gcp/activate-staging-revision-probe-federation.sh",
+    "probeFederationAudit": "deploy/gcp/audit-staging-revision-probe-federation.sh",
+    "probeWorkflow": ".github/workflows/staging-verification-probe.yml",
+    "probeProtectedEnvironment": "staging-verification",
     "probeManifest": "artifacts/staging-release/staging-verification-probe.json",
     "probeManifestHash": "artifacts/staging-release/staging-verification-probe.sha256",
     "manifest": "artifacts/staging-release/staging-verification.json",
     "manifestHash": "artifacts/staging-release/staging-verification.sha256",
-    "probeImplemented": false,
+    "probeImplemented": true,
     "executionAuthorized": false,
+    "exactCandidateBindingRequired": true,
+    "allChecksMustUseDeployedRevision": false,
+    "evidenceCoverageRequired": true,
+    "exactImagePrivateDatabaseChecks": [
+      "readiness",
+      "restart",
+      "ledger",
+      "reconciliation",
+      "audit",
+      "failureVisibility"
+    ],
+    "exactDeployedRevisionPrivateHttpChecks": [
+      "serviceAuthentication",
+      "deployedRevisionNetworkPath"
+    ],
     "qaseProject": "SAMP",
     "qaseEnvironment": "google-cloud-staging",
     "requiredChecks": [

@@ -12,6 +12,8 @@
   "inputEvidence": {
     "zeroTrafficDeploymentManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
     "zeroTrafficDeploymentManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256",
+    "imageVerificationManifest": "artifacts/staging-release/staging-image-verification.json",
+    "imageVerificationManifestHash": "artifacts/staging-release/staging-image-verification.sha256",
     "probeManifest": "artifacts/staging-release/staging-verification-probe.json",
     "probeManifestHash": "artifacts/staging-release/staging-verification-probe.sha256"
   },
@@ -36,12 +38,12 @@
     "exactRunUrlRequired": true
   },
   "imageVerificationFoundation": {
-    "status": "runner-implemented-execution-not-authorized",
+    "status": "workflow-implemented-execution-not-authorized",
     "contract": "deploy/gcp/staging-image-verification.json",
     "validator": "deploy/gcp/validate-staging-image-verification.mjs",
     "recorder": "deploy/gcp/record-staging-image-verification.mjs",
     "imageRunnerImplemented": true,
-    "workflowImplemented": false,
+    "workflowImplemented": true,
     "executionAuthorized": false,
     "promotionEligible": false,
     "excludedPromotionChecks": [
@@ -52,12 +54,21 @@
   "probeAuthority": {
     "workflowName": "Staging verification probe",
     "workflowPath": ".github/workflows/staging-verification-probe.yml",
+    "contract": "deploy/gcp/staging-revision-probe.json",
+    "validator": "deploy/gcp/validate-staging-revision-probe.mjs",
+    "recorder": "deploy/gcp/record-staging-revision-probe.mjs",
+    "controller": "deploy/gcp/run-staging-revision-probe.sh",
+    "federationActivation": "deploy/gcp/activate-staging-revision-probe-federation.sh",
+    "federationAudit": "deploy/gcp/audit-staging-revision-probe-federation.sh",
     "protectedEnvironment": "staging-verification",
     "allowedRef": "refs/heads/main",
     "allowedEvent": "workflow_dispatch",
     "exactCandidateRevisionRequired": true,
-    "allChecksMustBeDeployedRevisionEvidence": true,
-    "implemented": false,
+    "deployedRevisionChecks": [
+      "serviceAuthentication",
+      "deployedRevisionNetworkPath"
+    ],
+    "implemented": true,
     "authorized": false
   },
   "recorder": {
@@ -70,16 +81,19 @@
   },
   "automaticTriggers": false,
   "trafficMutationAuthorized": false,
+  "temporaryRoutingMutationAuthorized": false,
   "publicAccessMutationAuthorized": false,
   "runtimeMutationAuthorized": false,
   "vendorActivationAuthorized": false,
   "productionAuthorized": false,
   "prohibited": [
-    "manual pass status without hashed probe evidence",
+    "manual pass status without hashed image and probe evidence",
     "verification of a different commit, service, or revision",
-    "partial required-check evidence",
+    "claiming every check traversed the deployed HTTP revision",
+    "partial combined required-check evidence",
     "non-passing or incomplete Qase staging run",
-    "traffic mutation",
+    "traffic percentage mutation",
+    "persistent revision tag or service URL",
     "public IAM mutation",
     "runtime configuration mutation",
     "vendor activation",

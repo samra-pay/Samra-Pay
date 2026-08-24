@@ -171,9 +171,22 @@ export function validateStagingTrafficControl(
 
   const verification = contract.verificationEvidence;
   assert(
-    verification.status === "recording-implemented-execution-not-authorized" &&
+    verification.status ===
+      "two-plane-workflow-implemented-execution-not-authorized" &&
       verification.contract === "deploy/gcp/staging-verification.json" &&
       verification.recorder === "deploy/gcp/record-staging-verification.mjs" &&
+      verification.probeContract === "deploy/gcp/staging-revision-probe.json" &&
+      verification.probeRecorder ===
+        "deploy/gcp/record-staging-revision-probe.mjs" &&
+      verification.probeController ===
+        "deploy/gcp/run-staging-revision-probe.sh" &&
+      verification.probeFederationActivation ===
+        "deploy/gcp/activate-staging-revision-probe-federation.sh" &&
+      verification.probeFederationAudit ===
+        "deploy/gcp/audit-staging-revision-probe-federation.sh" &&
+      verification.probeWorkflow ===
+        ".github/workflows/staging-verification-probe.yml" &&
+      verification.probeProtectedEnvironment === "staging-verification" &&
       verification.probeManifest ===
         "artifacts/staging-release/staging-verification-probe.json" &&
       verification.probeManifestHash ===
@@ -182,8 +195,25 @@ export function validateStagingTrafficControl(
         "artifacts/staging-release/staging-verification.json" &&
       verification.manifestHash ===
         "artifacts/staging-release/staging-verification.sha256" &&
-      verification.probeImplemented === false &&
+      verification.probeImplemented === true &&
       verification.executionAuthorized === false &&
+      verification.exactCandidateBindingRequired === true &&
+      verification.allChecksMustUseDeployedRevision === false &&
+      verification.evidenceCoverageRequired === true &&
+      JSON.stringify(verification.exactImagePrivateDatabaseChecks) ===
+        JSON.stringify([
+          "readiness",
+          "restart",
+          "ledger",
+          "reconciliation",
+          "audit",
+          "failureVisibility",
+        ]) &&
+      JSON.stringify(verification.exactDeployedRevisionPrivateHttpChecks) ===
+        JSON.stringify([
+          "serviceAuthentication",
+          "deployedRevisionNetworkPath",
+        ]) &&
       verification.qaseProject === "SAMP" &&
       verification.qaseEnvironment === "google-cloud-staging" &&
       JSON.stringify(verification.requiredChecks) ===

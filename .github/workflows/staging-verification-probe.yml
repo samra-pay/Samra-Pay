@@ -1,0 +1,248 @@
+name: Staging verification probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run a read-only review or one bounded private exact-revision probe
+        required: true
+        default: review
+        type: choice
+        options:
+          - review
+          - verify
+      zero_traffic_run_id:
+        description: Successful API zero-traffic deployment workflow run ID for this main commit
+        required: true
+        type: string
+      zero_traffic_run_attempt:
+        description: Zero-traffic workflow attempt containing immutable evidence
+        required: true
+        default: "1"
+        type: string
+      image_verification_run_id:
+        description: Successful exact-image verification workflow run ID for this main commit
+        required: true
+        type: string
+      image_verification_run_attempt:
+        description: Exact-image verification workflow attempt containing immutable evidence
+        required: true
+        default: "1"
+        type: string
+      authorization:
+        description: For verify only, enter AUTHORIZED_STAGING_REVISION_PROBE
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: staging-verification-probe
+  cancel-in-progress: false
+
+env:
+  SAMRA_GCP_PROJECT_ID: samra-pay-staging
+  SAMRA_GCP_PROJECT_NUMBER: "934122615631"
+  SAMRA_GCP_ORGANIZATION_ID: "614833350075"
+  SAMRA_GCP_REGION: us-east4
+  SAMRA_GCP_OPERATOR_ACCOUNT: samra-github-probe-staging@samra-pay-staging.iam.gserviceaccount.com
+  SAMRA_GCP_EXPECTED_SHA: ${{ github.sha }}
+  SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER: projects/934122615631/locations/global/workloadIdentityPools/samra-revision-probe-staging/providers/samra-pay-revision-probe-main
+  SAMRA_GCP_CONTROLLER_SERVICE_ACCOUNT: samra-github-probe-staging@samra-pay-staging.iam.gserviceaccount.com
+  SAMRA_ZERO_TRAFFIC_RUN_ID: ${{ inputs.zero_traffic_run_id }}
+  SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT: ${{ inputs.zero_traffic_run_attempt }}
+  SAMRA_IMAGE_VERIFICATION_RUN_ID: ${{ inputs.image_verification_run_id }}
+  SAMRA_IMAGE_VERIFICATION_RUN_ATTEMPT: ${{ inputs.image_verification_run_attempt }}
+  QASE_TESTOPS_PROJECT: SAMP
+  QASE_TESTOPS_ENVIRONMENT: google-cloud-staging
+
+jobs:
+  verification:
+    name: Review or verify the private exact revision
+    if: >-
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: staging-verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+    steps:
+      - name: Check out the exact main commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Initialize runner-local evidence paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf 'SAMRA_STAGING_ZERO_TRAFFIC_MANIFEST=%s\n' "${RUNNER_TEMP}/samra-zero-traffic/staging-zero-traffic-deployment.json"
+            printf 'SAMRA_STAGING_ZERO_TRAFFIC_HASH=%s\n' "${RUNNER_TEMP}/samra-zero-traffic/staging-zero-traffic-deployment.sha256"
+            printf 'SAMRA_STAGING_IMAGE_VERIFICATION_MANIFEST=%s\n' "${RUNNER_TEMP}/samra-image-verification/staging-image-verification.json"
+            printf 'SAMRA_STAGING_IMAGE_VERIFICATION_HASH=%s\n' "${RUNNER_TEMP}/samra-image-verification/staging-image-verification.sha256"
+            printf 'SAMRA_PROBE_ID=%s\n' "svp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Verify source and authorization boundary
+        shell: bash
+        env:
+          SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
+          SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
+          [[ -z "$(git status --porcelain)" ]]
+          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]]
+          [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
+          [[ "${SAMRA_ZERO_TRAFFIC_RUN_ID}" =~ ^[0-9]+$ ]]
+          [[ "${SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
+          [[ "${SAMRA_IMAGE_VERIFICATION_RUN_ID}" =~ ^[0-9]+$ ]]
+          [[ "${SAMRA_IMAGE_VERIFICATION_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
+          if [[ "${SAMRA_WORKFLOW_MODE}" == "verify" ]]; then
+            [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_REVISION_PROBE" ]] || {
+              echo "Verify mode requires the exact revision-probe authorization." >&2
+              exit 1
+            }
+            [[ -n "${QASE_TESTOPS_API_TOKEN}" ]] || {
+              echo "Verify mode requires the protected Qase token." >&2
+              exit 1
+            }
+          fi
+
+      - name: Download immutable API zero-traffic evidence
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: staging-zero-traffic-samra-api-${{ github.sha }}-run-${{ inputs.zero_traffic_run_id }}-attempt-${{ inputs.zero_traffic_run_attempt }}
+          path: ${{ runner.temp }}/samra-zero-traffic
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.zero_traffic_run_id }}
+
+      - name: Download immutable exact-image verification evidence
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: staging-image-verification-${{ github.sha }}-run-${{ inputs.image_verification_run_id }}-attempt-${{ inputs.image_verification_run_attempt }}
+          path: ${{ runner.temp }}/samra-image-verification
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.image_verification_run_id }}
+
+      - name: Obtain short-lived Google credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SAMRA_GCP_CONTROLLER_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: ">= 540.0.0"
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+
+      - name: Verify federated caller
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(gcloud config get-value account 2>/dev/null)" == "${SAMRA_GCP_CONTROLLER_SERVICE_ACCOUNT}" ]]
+          [[ "$(gcloud config get-value project 2>/dev/null)" == "${SAMRA_GCP_PROJECT_ID}" ]]
+          [[ -z "$(gcloud iam service-accounts keys list --iam-account="${SAMRA_GCP_CONTROLLER_SERVICE_ACCOUNT}" --project="${SAMRA_GCP_PROJECT_ID}" --managed-by=user --format='value(name)')" ]]
+
+      - name: Run read-only private exact-revision review
+        shell: bash
+        run: bash deploy/gcp/run-staging-revision-probe.sh --review
+
+      - name: Execute one bounded private exact-revision probe
+        if: inputs.mode == 'verify'
+        shell: bash
+        env:
+          SAMRA_GCP_REVISION_PROBE_APPLY: AUTHORIZED_STAGING_REVISION_PROBE
+        run: bash deploy/gcp/run-staging-revision-probe.sh --apply
+
+      - name: Prepare one combined Qase result set
+        if: inputs.mode == 'verify' && success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/samra-qase-staging"
+          cp "${RUNNER_TEMP}/samra-image-verification/staging-image-verification.junit.xml" "${RUNNER_TEMP}/samra-qase-staging/exact-image-private-database.xml"
+          cp "artifacts/staging-release/staging-revision-probe.junit.xml" "${RUNNER_TEMP}/samra-qase-staging/exact-deployed-revision-private-http.xml"
+          [[ "$(find "${RUNNER_TEMP}/samra-qase-staging" -type f -name '*.xml' | wc -l | tr -d ' ')" == "2" ]]
+
+      - name: Create one Qase Google Cloud staging run
+        id: qase_create
+        if: inputs.mode == 'verify' && success()
+        uses: qase-tms/gh-actions/run-create@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
+          title: Samra Pay staging verification — ${{ github.sha }}
+          description: Exact-image private PostgreSQL assurance plus an authenticated private HTTP probe of the exact deployed zero-traffic API revision.
+
+      - name: Upload both evidence planes to the same Qase run
+        id: qase_upload
+        if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && success()
+        uses: qase-tms/gh-actions/report@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase_create.outputs.id }}
+          format: junit
+          path: ${{ runner.temp }}/samra-qase-staging
+
+      - name: Complete the combined Qase run
+        id: qase_complete
+        if: inputs.mode == 'verify' && steps.qase_upload.outcome == 'success' && success()
+        uses: qase-tms/gh-actions/run-complete@v1
+        with:
+          project: ${{ env.QASE_TESTOPS_PROJECT }}
+          id: ${{ steps.qase_create.outputs.id }}
+
+      - name: Record final tamper-evident staging verification
+        if: inputs.mode == 'verify' && steps.qase_complete.outcome == 'success' && success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node deploy/gcp/record-staging-verification.mjs build \
+            --zero-traffic-manifest "${SAMRA_STAGING_ZERO_TRAFFIC_MANIFEST}" \
+            --zero-traffic-hash "${SAMRA_STAGING_ZERO_TRAFFIC_HASH}" \
+            --image-manifest "${SAMRA_STAGING_IMAGE_VERIFICATION_MANIFEST}" \
+            --image-hash "${SAMRA_STAGING_IMAGE_VERIFICATION_HASH}" \
+            --probe-manifest artifacts/staging-release/staging-verification-probe.json \
+            --probe-hash artifacts/staging-release/staging-verification-probe.sha256 \
+            --controller-sha "${GITHUB_SHA}" \
+            --qase-run-id "${{ steps.qase_create.outputs.id }}" \
+            --qase-run-url "https://app.qase.io/run/SAMP/dashboard/${{ steps.qase_create.outputs.id }}" \
+            --output artifacts/staging-release/staging-verification.json \
+            --hash-output artifacts/staging-release/staging-verification.sha256
+          node deploy/gcp/record-staging-verification.mjs verify \
+            --manifest artifacts/staging-release/staging-verification.json \
+            --hash artifacts/staging-release/staging-verification.sha256
+
+      - name: Preserve immutable combined verification evidence
+        if: inputs.mode == 'verify' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-verification-${{ github.sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/samra-zero-traffic/staging-zero-traffic-deployment.json
+            ${{ runner.temp }}/samra-zero-traffic/staging-zero-traffic-deployment.sha256
+            ${{ runner.temp }}/samra-image-verification/staging-image-verification.junit.xml
+            ${{ runner.temp }}/samra-image-verification/staging-image-verification.json
+            ${{ runner.temp }}/samra-image-verification/staging-image-verification.sha256
+            artifacts/staging-release/staging-revision-probe.junit.xml
+            artifacts/staging-release/staging-verification-probe.json
+            artifacts/staging-release/staging-verification-probe.sha256
+            artifacts/staging-release/staging-verification.json
+            artifacts/staging-release/staging-verification.sha256
+          if-no-files-found: error
+          retention-days: 365

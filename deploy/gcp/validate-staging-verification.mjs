@@ -44,6 +44,10 @@ export function validateStagingVerificationContract(
           "artifacts/staging-release/staging-zero-traffic-deployment.json",
         zeroTrafficDeploymentManifestHash:
           "artifacts/staging-release/staging-zero-traffic-deployment.sha256",
+        imageVerificationManifest:
+          "artifacts/staging-release/staging-image-verification.json",
+        imageVerificationManifestHash:
+          "artifacts/staging-release/staging-image-verification.sha256",
         probeManifest:
           "artifacts/staging-release/staging-verification-probe.json",
         probeManifestHash:
@@ -67,12 +71,12 @@ export function validateStagingVerificationContract(
   assert(
     JSON.stringify(contract.imageVerificationFoundation) ===
       JSON.stringify({
-        status: "runner-implemented-execution-not-authorized",
+        status: "workflow-implemented-execution-not-authorized",
         contract: "deploy/gcp/staging-image-verification.json",
         validator: "deploy/gcp/validate-staging-image-verification.mjs",
         recorder: "deploy/gcp/record-staging-image-verification.mjs",
         imageRunnerImplemented: true,
-        workflowImplemented: false,
+        workflowImplemented: true,
         executionAuthorized: false,
         promotionEligible: false,
         excludedPromotionChecks: [
@@ -86,13 +90,28 @@ export function validateStagingVerificationContract(
     contract.probeAuthority.workflowName === "Staging verification probe" &&
       contract.probeAuthority.workflowPath ===
         ".github/workflows/staging-verification-probe.yml" &&
+      contract.probeAuthority.contract ===
+        "deploy/gcp/staging-revision-probe.json" &&
+      contract.probeAuthority.validator ===
+        "deploy/gcp/validate-staging-revision-probe.mjs" &&
+      contract.probeAuthority.recorder ===
+        "deploy/gcp/record-staging-revision-probe.mjs" &&
+      contract.probeAuthority.controller ===
+        "deploy/gcp/run-staging-revision-probe.sh" &&
+      contract.probeAuthority.federationActivation ===
+        "deploy/gcp/activate-staging-revision-probe-federation.sh" &&
+      contract.probeAuthority.federationAudit ===
+        "deploy/gcp/audit-staging-revision-probe-federation.sh" &&
       contract.probeAuthority.protectedEnvironment === "staging-verification" &&
       contract.probeAuthority.allowedRef === "refs/heads/main" &&
       contract.probeAuthority.allowedEvent === "workflow_dispatch" &&
       contract.probeAuthority.exactCandidateRevisionRequired === true &&
-      contract.probeAuthority.allChecksMustBeDeployedRevisionEvidence ===
-        true &&
-      contract.probeAuthority.implemented === false &&
+      JSON.stringify(contract.probeAuthority.deployedRevisionChecks) ===
+        JSON.stringify([
+          "serviceAuthentication",
+          "deployedRevisionNetworkPath",
+        ]) &&
+      contract.probeAuthority.implemented === true &&
       contract.probeAuthority.authorized === false,
     "Staging verification probe authority drifted",
   );
@@ -108,6 +127,7 @@ export function validateStagingVerificationContract(
   assert(
     contract.automaticTriggers === false &&
       contract.trafficMutationAuthorized === false &&
+      contract.temporaryRoutingMutationAuthorized === false &&
       contract.publicAccessMutationAuthorized === false &&
       contract.runtimeMutationAuthorized === false &&
       contract.vendorActivationAuthorized === false &&
@@ -115,11 +135,13 @@ export function validateStagingVerificationContract(
     "Staging verification exceeded evidence-only authority",
   );
   for (const prohibited of [
-    "manual pass status without hashed probe evidence",
+    "manual pass status without hashed image and probe evidence",
     "verification of a different commit, service, or revision",
-    "partial required-check evidence",
+    "claiming every check traversed the deployed HTTP revision",
+    "partial combined required-check evidence",
     "non-passing or incomplete Qase staging run",
-    "traffic mutation",
+    "traffic percentage mutation",
+    "persistent revision tag or service URL",
     "public IAM mutation",
     "runtime configuration mutation",
     "vendor activation",
@@ -147,7 +169,7 @@ export function validateStagingVerificationContract(
     checkCount: STAGING_VERIFICATION_CHECKS.length,
     recorderImplemented: true,
     imageRunnerImplemented: true,
-    probeImplemented: false,
+    probeImplemented: true,
     executionAuthorized: false,
   });
 }

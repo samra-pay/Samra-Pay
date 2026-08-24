@@ -10,17 +10,24 @@ import {
   buildStagingImagePublicationManifest,
 } from "./record-staging-image-publication.mjs";
 import {
-  buildStagingZeroTrafficDeploymentManifest,
-  writeZeroTrafficDeploymentManifest,
-} from "./record-staging-zero-traffic-deployment.mjs";
+  buildStagingImageVerificationManifest,
+  writeStagingImageVerificationManifest,
+} from "./record-staging-image-verification.mjs";
+import {
+  buildStagingRevisionProbeJUnit,
+  buildStagingRevisionProbeManifest,
+  writeStagingRevisionProbeManifest,
+} from "./record-staging-revision-probe.mjs";
 import {
   buildStagingVerificationManifest,
   validateStagingVerificationManifest,
-  validateStagingVerificationProbeManifest,
   verifyStagingVerificationManifest,
   writeStagingVerificationManifest,
-  writeStagingVerificationProbeManifest,
 } from "./record-staging-verification.mjs";
+import {
+  buildStagingZeroTrafficDeploymentManifest,
+  writeZeroTrafficDeploymentManifest,
+} from "./record-staging-zero-traffic-deployment.mjs";
 import { STAGING_VERIFICATION_CHECKS } from "./validate-staging-traffic-control.mjs";
 import {
   readStagingVerificationContract,
@@ -78,29 +85,84 @@ function deployment() {
   });
 }
 
-export function verificationProbe(overrides = {}) {
+function imageVerification() {
+  return buildStagingImageVerificationManifest({
+    zeroTrafficDeployment: deployment(),
+    zeroTrafficDeploymentManifestSha256: "1".repeat(64),
+    revision,
+    imageDigest: digest(service),
+    revisionAttestation: {
+      ready: true,
+      exactImageDigest: true,
+      privateIngress: true,
+      defaultServiceUrlDisabled: true,
+      publicIamAbsent: true,
+    },
+    syntheticRunId: "verify-a1b2c3",
+    jobExecutionId: "samra-api-verifier-a1b2c3",
+    junitSha256: "2".repeat(64),
+    runtimeServiceAccount:
+      "samra-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+    databaseSecretVersion: "7",
+    imageChecks: {
+      readiness: "passed",
+      restart: "passed",
+      ledger: "passed",
+      reconciliation: "passed",
+      audit: "passed",
+      failureVisibility: "passed",
+    },
+    generatedAt: "2026-08-23T00:20:00.000Z",
+  });
+}
+
+function probeResult(overrides = {}) {
   return {
     schemaVersion: 1,
     status: "passed",
-    environment: "staging",
-    dataClassification: "synthetic-only",
-    releaseId: `staging-${candidateSha.slice(0, 12)}`,
-    candidateSha,
-    sourceRepository: "haileleuld87/Samra-Pay",
-    projectId: "samra-pay-staging",
-    projectNumber: "934122615631",
-    region: "us-east4",
-    service,
+    probeId: "svp-32619000001-1",
+    unauthenticatedStatus: 403,
+    authenticatedHealthStatus: 200,
+    authenticatedReadinessStatus: 200,
+    healthResponseSha256: "3".repeat(64),
+    readinessResponseSha256: "4".repeat(64),
+    observedRevision: revision,
+    serviceAuthenticationObserved: true,
+    deployedRevisionNetworkPathObserved: true,
+    tokenRecorded: false,
+    ...overrides,
+  };
+}
+
+function probe(overrides = {}) {
+  const result = probeResult(overrides.result);
+  return buildStagingRevisionProbeManifest({
+    zeroTrafficDeployment: deployment(),
+    imageVerification: imageVerification(),
+    zeroTrafficDeploymentManifestSha256: "5".repeat(64),
+    imageVerificationManifestSha256: "6".repeat(64),
     revision,
-    checks: Object.fromEntries(
-      STAGING_VERIFICATION_CHECKS.map((check) => [check, "passed"]),
-    ),
-    qase: {
-      project: "SAMP",
-      environment: "google-cloud-staging",
-      status: "passed",
-      runId: "74",
-      runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
+    imageDigest: digest(service),
+    result,
+    probeId: result.probeId,
+    jobExecutionId: "samra-staging-revision-probe-a1b2c",
+    runtimeServiceAccount:
+      "samra-revision-probe-staging@samra-pay-staging.iam.gserviceaccount.com",
+    resultSha256: "7".repeat(64),
+    junitSha256: "8".repeat(64),
+    routing: {
+      candidateTrafficPercentBefore: 0,
+      candidateTrafficPercentDuring: 0,
+      candidateTrafficPercentAfter: 0,
+      exactRevisionTagTemporarilyApplied: true,
+      defaultServiceUrlTemporarilyEnabled: true,
+      ingressChanged: false,
+      publicAccessChanged: false,
+      runtimeTemplateChanged: false,
+      boundaryBeforeSha256: "9".repeat(64),
+      boundaryAfterSha256: "9".repeat(64),
+      tagRemoved: true,
+      defaultServiceUrlDisabledAfter: true,
     },
     github: {
       repository: "haileleuld87/Samra-Pay",
@@ -115,32 +177,36 @@ export function verificationProbe(overrides = {}) {
         "https://github.com/haileleuld87/Samra-Pay/actions/runs/32619000001",
       actor: "haileleuld87",
     },
-    exactRevisionObserved: true,
-    allChecksUsedDeployedRevision: true,
-    trafficChanged: false,
-    publicAccessChanged: false,
-    runtimeConfigurationChanged: false,
-    customerDataUsed: false,
-    secretValuesRecorded: false,
-    vendorActivationAuthorized: false,
-    generatedAt: "2026-08-23T00:20:00.000Z",
+    generatedAt: "2026-08-23T00:30:00.000Z",
     ...overrides,
-  };
+    result,
+  });
 }
 
-function verification(overrides = {}) {
+function combined(overrides = {}) {
   return buildStagingVerificationManifest({
     zeroTrafficDeployment: deployment(),
-    zeroTrafficDeploymentManifestSha256: "1".repeat(64),
-    probe: verificationProbe(),
-    probeManifestSha256: "2".repeat(64),
+    zeroTrafficDeploymentManifestSha256: "a".repeat(64),
+    imageVerification: imageVerification(),
+    imageVerificationManifestSha256: "b".repeat(64),
+    probe: probe(),
+    probeManifestSha256: "c".repeat(64),
     controllerSha,
-    generatedAt: "2026-08-23T00:30:00.000Z",
+    qase: {
+      project: "SAMP",
+      environment: "google-cloud-staging",
+      status: "passed",
+      runId: "74",
+      runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
+      imageJUnitIncluded: true,
+      probeJUnitIncluded: true,
+    },
+    generatedAt: "2026-08-23T00:40:00.000Z",
     ...overrides,
   });
 }
 
-test("validates a recorder-only staging verification boundary", () => {
+test("validates the complete but dormant two-plane staging verification", () => {
   assert.deepEqual(
     validateStagingVerificationContract(readStagingVerificationContract()),
     {
@@ -151,92 +217,83 @@ test("validates a recorder-only staging verification boundary", () => {
       checkCount: 7,
       recorderImplemented: true,
       imageRunnerImplemented: true,
-      probeImplemented: false,
+      probeImplemented: true,
       executionAuthorized: false,
     },
   );
 });
 
-test("rejects any contract that pretends the missing probe is implemented or authorized", () => {
-  for (const mutate of [
-    (value) => (value.probeAuthority.implemented = true),
-    (value) => (value.probeAuthority.authorized = true),
-    (value) => (value.imageVerificationFoundation.promotionEligible = true),
-    (value) => (value.imageVerificationFoundation.executionAuthorized = true),
-    (value) =>
-      (value.imageVerificationFoundation.imageRunnerImplemented = false),
-    (value) => (value.automaticTriggers = true),
-    (value) => (value.trafficMutationAuthorized = true),
-    (value) => (value.publicAccessMutationAuthorized = true),
-    (value) => value.requiredChecks.pop(),
-  ]) {
-    const changed = structuredClone(readStagingVerificationContract());
-    mutate(changed);
-    assert.throws(() => validateStagingVerificationContract(changed));
-  }
-});
-
-test("records one exact deployed revision from two independently hashed inputs", () => {
-  const manifest = verification();
+test("records one candidate across exact-image and exact-revision evidence", () => {
+  const manifest = combined();
   assert.equal(manifest.status, "passed");
   assert.equal(manifest.candidateSha, candidateSha);
-  assert.equal(manifest.service, service);
   assert.equal(manifest.revision, revision);
-  assert.equal(manifest.qase.runId, "74");
-  assert.equal(manifest.trafficChanged, false);
-  assert.equal(manifest.trafficAuthorized, false);
+  assert.equal(manifest.imageDigest, digest(service));
+  assert.equal(manifest.allChecksUsedDeployedRevision, false);
+  assert.deepEqual(Object.keys(manifest.checks), STAGING_VERIFICATION_CHECKS);
+  assert.deepEqual(manifest.evidenceCoverage, {
+    exactImagePrivateDatabaseJob: [
+      "readiness",
+      "restart",
+      "ledger",
+      "reconciliation",
+      "audit",
+      "failureVisibility",
+    ],
+    exactDeployedRevisionPrivateHttpProbe: [
+      "serviceAuthentication",
+      "deployedRevisionNetworkPath",
+    ],
+  });
   assert.equal(validateStagingVerificationManifest(manifest), manifest);
 });
 
-test("rejects partial, failed, mismatched, manually asserted, or unsafe probe evidence", () => {
+test("rejects mismatched, incomplete, unsafe, or overstated combined evidence", () => {
   for (const mutate of [
     (value) => (value.checks.ledger = "failed"),
-    (value) => delete value.checks.restart,
+    (value) => delete value.checks.audit,
     (value) => (value.qase.status = "in_progress"),
     (value) => (value.qase.environment = "github-ci-postgres"),
-    (value) => (value.qase.runId = 74),
-    (value) => (value.github.runId = 32619000001),
-    (value) => (value.github.actor = " "),
-    (value) => (value.revision = "samra-api-other"),
-    (value) => (value.exactRevisionObserved = false),
-    (value) => (value.allChecksUsedDeployedRevision = false),
-    (value) => (value.trafficChanged = true),
-    (value) => (value.publicAccessChanged = true),
+    (value) => (value.qase.imageJUnitIncluded = false),
+    (value) => (value.probeGitHub.runId = 32619000001),
+    (value) => (value.allChecksUsedDeployedRevision = true),
+    (value) => (value.trafficPercentageChanged = true),
+    (value) => (value.temporaryRoutingRestored = false),
     (value) => (value.customerDataUsed = true),
     (value) => (value.notes = "Authorization: Bearer secret"),
   ]) {
-    const changed = structuredClone(verificationProbe());
+    const changed = structuredClone(combined());
     mutate(changed);
-    assert.throws(() => validateStagingVerificationProbeManifest(changed));
+    assert.throws(() => validateStagingVerificationManifest(changed));
   }
 });
 
-test("rejects probe evidence for a different deployment candidate", () => {
-  const probe = verificationProbe({
-    candidateSha: "9".repeat(40),
-    releaseId: `staging-${"9".repeat(12)}`,
-    revision: `samra-api-${"9".repeat(12)}`,
-  });
-  assert.throws(
-    () =>
-      buildStagingVerificationManifest({
-        zeroTrafficDeployment: deployment(),
-        zeroTrafficDeploymentManifestSha256: "1".repeat(64),
-        probe,
-        probeManifestSha256: "2".repeat(64),
-        controllerSha,
-        generatedAt: "2026-08-23T00:30:00.000Z",
-      }),
-    /one exact candidate revision/,
+test("rejects a probe for a different candidate revision", () => {
+  const changedProbe = structuredClone(probe());
+  changedProbe.candidateSha = "d".repeat(40);
+  changedProbe.releaseId = `staging-${"d".repeat(12)}`;
+  changedProbe.revision = `samra-api-${"d".repeat(12)}`;
+  assert.throws(() =>
+    buildStagingVerificationManifest({
+      zeroTrafficDeployment: deployment(),
+      zeroTrafficDeploymentManifestSha256: "a".repeat(64),
+      imageVerification: imageVerification(),
+      imageVerificationManifestSha256: "b".repeat(64),
+      probe: changedProbe,
+      probeManifestSha256: "c".repeat(64),
+      controllerSha,
+      qase: combined().qase,
+      generatedAt: "2026-08-23T00:40:00.000Z",
+    }),
   );
 });
 
-test("writes and independently verifies tamper-evident verification evidence", async () => {
+test("writes and independently detects tampering in final evidence", async () => {
   const root = await mkdtemp(join(tmpdir(), "samra-verification-"));
   const manifestPath = join(root, "staging-verification.json");
   const hashPath = join(root, "staging-verification.sha256");
   const hash = await writeStagingVerificationManifest(
-    verification(),
+    combined(),
     manifestPath,
     hashPath,
   );
@@ -248,8 +305,8 @@ test("writes and independently verifies tamper-evident verification evidence", a
   await writeFile(
     manifestPath,
     (await readFile(manifestPath, "utf8")).replace(
-      '"trafficChanged": false',
-      '"trafficChanged": true',
+      '"temporaryRoutingRestored": true',
+      '"temporaryRoutingRestored": false',
     ),
     "utf8",
   );
@@ -259,55 +316,63 @@ test("writes and independently verifies tamper-evident verification evidence", a
   );
 });
 
-test("builds and verifies the final evidence through the operator CLI", async () => {
+test("builds and verifies the final manifest through the operator CLI", async () => {
   const root = await mkdtemp(join(tmpdir(), "samra-verification-cli-"));
-  const zeroTrafficPath = join(root, "staging-zero-traffic-deployment.json");
-  const zeroTrafficHashPath = join(
-    root,
-    "staging-zero-traffic-deployment.sha256",
-  );
-  const probePath = join(root, "staging-verification-probe.json");
-  const probeHashPath = join(root, "staging-verification-probe.sha256");
-  const manifestPath = join(root, "staging-verification.json");
-  const hashPath = join(root, "staging-verification.sha256");
+  const zeroManifest = join(root, "zero.json");
+  const zeroHash = join(root, "zero.sha256");
+  const imageManifest = join(root, "image.json");
+  const imageHash = join(root, "image.sha256");
+  const probeManifest = join(root, "probe.json");
+  const probeHash = join(root, "probe.sha256");
+  const finalManifest = join(root, "final.json");
+  const finalHash = join(root, "final.sha256");
   await writeZeroTrafficDeploymentManifest(
     deployment(),
-    zeroTrafficPath,
-    zeroTrafficHashPath,
+    zeroManifest,
+    zeroHash,
   );
-  await writeStagingVerificationProbeManifest(
-    verificationProbe(),
-    probePath,
-    probeHashPath,
+  await writeStagingImageVerificationManifest(
+    imageVerification(),
+    imageManifest,
+    imageHash,
   );
+  await writeStagingRevisionProbeManifest(probe(), probeManifest, probeHash);
   const build = await execFileAsync(process.execPath, [
     "deploy/gcp/record-staging-verification.mjs",
     "build",
     "--zero-traffic-manifest",
-    zeroTrafficPath,
+    zeroManifest,
     "--zero-traffic-hash",
-    zeroTrafficHashPath,
+    zeroHash,
+    "--image-manifest",
+    imageManifest,
+    "--image-hash",
+    imageHash,
     "--probe-manifest",
-    probePath,
+    probeManifest,
     "--probe-hash",
-    probeHashPath,
+    probeHash,
     "--controller-sha",
     controllerSha,
+    "--qase-run-id",
+    "74",
+    "--qase-run-url",
+    "https://app.qase.io/run/SAMP/dashboard/74",
     "--generated-at",
-    "2026-08-23T00:30:00.000Z",
+    "2026-08-23T00:40:00.000Z",
     "--output",
-    manifestPath,
+    finalManifest,
     "--hash-output",
-    hashPath,
+    finalHash,
   ]);
   assert.equal(JSON.parse(build.stdout).status, "passed");
   const verify = await execFileAsync(process.execPath, [
     "deploy/gcp/record-staging-verification.mjs",
     "verify",
     "--manifest",
-    manifestPath,
+    finalManifest,
     "--hash",
-    hashPath,
+    finalHash,
   ]);
   assert.deepEqual(JSON.parse(verify.stdout), {
     status: "passed",
@@ -316,4 +381,11 @@ test("builds and verifies the final evidence through the operator CLI", async ()
     revision,
     qaseRunId: "74",
   });
+});
+
+test("generates two passing deployed-revision JUnit cases", () => {
+  const junit = buildStagingRevisionProbeJUnit(probeResult());
+  assert.match(junit, /tests="2" failures="0"/);
+  assert.match(junit, /STAGING-REVISION-001/);
+  assert.match(junit, /STAGING-REVISION-002/);
 });
