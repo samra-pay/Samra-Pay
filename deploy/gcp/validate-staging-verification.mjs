@@ -65,6 +65,24 @@ export function validateStagingVerificationContract(
     "Staging verification Qase authority drifted",
   );
   assert(
+    JSON.stringify(contract.imageVerificationFoundation) ===
+      JSON.stringify({
+        status: "runner-implemented-execution-not-authorized",
+        contract: "deploy/gcp/staging-image-verification.json",
+        validator: "deploy/gcp/validate-staging-image-verification.mjs",
+        recorder: "deploy/gcp/record-staging-image-verification.mjs",
+        imageRunnerImplemented: true,
+        workflowImplemented: false,
+        executionAuthorized: false,
+        promotionEligible: false,
+        excludedPromotionChecks: [
+          "serviceAuthentication",
+          "deployedRevisionNetworkPath",
+        ],
+      }),
+    "Staging image-verification foundation drifted",
+  );
+  assert(
     contract.probeAuthority.workflowName === "Staging verification probe" &&
       contract.probeAuthority.workflowPath ===
         ".github/workflows/staging-verification-probe.yml" &&
@@ -128,6 +146,7 @@ export function validateStagingVerificationContract(
     serviceCount: STAGING_TRAFFIC_SERVICES.length,
     checkCount: STAGING_VERIFICATION_CHECKS.length,
     recorderImplemented: true,
+    imageRunnerImplemented: true,
     probeImplemented: false,
     executionAuthorized: false,
   });

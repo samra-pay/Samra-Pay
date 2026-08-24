@@ -106,6 +106,33 @@ test("runs migrations before API and browser runtime probes", () => {
   }
 });
 
+test("ships a rerunnable synthetic verifier without changing the API command", async () => {
+  const [build, apiDockerfile, syntheticJourneys] = await Promise.all([
+    readFile("artifacts/api-server/build.mjs", "utf8"),
+    readFile("deploy/gcp/Dockerfile.api", "utf8"),
+    readFile(
+      "artifacts/api-server/test/daily-synthetic-journeys.test.ts",
+      "utf8",
+    ),
+  ]);
+  assert.match(build, /"staging-verification"/);
+  assert.match(build, /test\/daily-synthetic-journeys\.test\.ts/);
+  assert.match(
+    apiDockerfile,
+    /COPY --from=build --chown=node:node \/workspace\/artifacts\/api-server\/dist \.\/dist/,
+  );
+  assert.match(
+    apiDockerfile,
+    /CMD \["node", "--enable-source-maps", "\.\/dist\/index\.mjs"\]/,
+  );
+  assert.match(syntheticJourneys, /SAMRA_SYNTHETIC_RUN_ID/);
+  assert.match(syntheticJourneys, /randomUUID\(\)/);
+  assert.doesNotMatch(
+    syntheticJourneys,
+    /Idempotency-Key": "daily-(?:cancellation-command|reconciliation-resolution)/,
+  );
+});
+
 test("keeps the portability job isolated, recurring, and evidence-producing", () => {
   for (const required of [
     "workflow_dispatch:",

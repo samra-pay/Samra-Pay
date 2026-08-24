@@ -123,6 +123,14 @@ export function validateStagingReleaseControlPlane(
         "deploy/gcp/staging-verification.json" &&
       contract.verification.recorder ===
         "deploy/gcp/record-staging-verification.mjs" &&
+      contract.verification.imageVerificationContract ===
+        "deploy/gcp/staging-image-verification.json" &&
+      contract.verification.imageVerificationRecorder ===
+        "deploy/gcp/record-staging-image-verification.mjs" &&
+      contract.verification.imageRunnerImplemented === true &&
+      contract.verification.imageWorkflowImplemented === false &&
+      contract.verification.imageExecutionAuthorized === false &&
+      contract.verification.imageEvidencePromotionEligible === false &&
       contract.verification.probeWorkflow ===
         ".github/workflows/staging-verification-probe.yml" &&
       contract.verification.probeImplemented === false &&
@@ -260,6 +268,7 @@ export function validateStagingReleaseControlPlane(
     operationsPortalBlocked: true,
     deploymentAuthorized: false,
     verificationRecorderImplemented: true,
+    verificationImageRunnerImplemented: true,
     verificationProbeImplemented: false,
     verificationAuthorized: false,
     promotionAuthorized: false,
