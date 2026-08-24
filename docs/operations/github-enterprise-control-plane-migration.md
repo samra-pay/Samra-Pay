@@ -18,12 +18,15 @@ repository remains the active source of truth until every transfer gate passes.
 - Target organization ID: `320532147`
 - Target repository name: `samra-pay/Samra-Pay`
 - Enterprise billing: trial
+- Enterprise billing information: not configured
 - Organization owners: one
 - Independent staging approvers: none
 - Operating model: solo founder
 - Account-recovery readiness: blocked
-- Two-factor authentication: not enabled
+- Two-factor authentication: enabled with an authenticator app
 - Passkey or hardware security key: not configured
+- Recovery codes: generated and viewed; external storage not independently
+  verified
 - Verified recovery email: configured
 - Operational files bound to the personal authority: 43
 

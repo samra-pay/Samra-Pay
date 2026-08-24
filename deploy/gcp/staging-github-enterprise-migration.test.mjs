@@ -22,6 +22,9 @@ test("validates the prepared but unauthorized Enterprise migration", () => {
       targetRepository: contract.repository.targetAuthority.nameWithOwner,
       stableRepositoryId: contract.repository.stableId,
       targetOwnerId: contract.repository.targetAuthority.ownerId,
+      accountRecoveryReadiness: "blocked",
+      twoFactorAuthenticationEnabled: true,
+      passkeyOrSecurityKeyConfigured: false,
       blockerCount: 3,
       currentAuthorityFileCount: 43,
       transferAuthorized: false,
@@ -51,6 +54,12 @@ test("rejects premature transfer authorization and weakened governance", () => {
       (value.governance.accountRecovery.minimumAuthenticationMethods = 1),
     (value) => (value.governance.baseRepositoryPermission = "read"),
     (value) => (value.observedEnterpriseState.billingStatus = "paid"),
+    (value) =>
+      (value.observedEnterpriseState.twoFactorAuthenticationEnabled = false),
+    (value) =>
+      (value.observedEnterpriseState.recoveryCodesGeneratedAndViewed = false),
+    (value) =>
+      (value.observedEnterpriseState.passkeyOrSecurityKeyConfigured = true),
     (value) => value.blockingGates.pop(),
     (value) => value.cutoverOrder.reverse(),
   ]) {
@@ -69,6 +78,10 @@ test("runs an offline review without mutating GitHub or Google Cloud", () => {
   assert.match(output, /READ-ONLY GITHUB ENTERPRISE MIGRATION REVIEW PASS/);
   assert.match(output, /validated-prepared-not-authorized/);
   assert.match(output, /Operating model: solo-founder/);
+  assert.match(
+    output,
+    /Account recovery: blocked; 2FA: enabled; passkey\/security key: missing/,
+  );
   assert.match(output, /Operational authority references inventoried: 43/);
   assert.match(output, /TRANSFER NOT AUTHORIZED/);
   assert.doesNotMatch(output, /APPLIED|TRANSFER COMPLETE|TRUST UPDATED/);
