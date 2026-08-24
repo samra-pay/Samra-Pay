@@ -14,7 +14,7 @@ export const STAGING_IMAGE_VERIFICATION_EXCLUSIONS = Object.freeze([
   "deployedRevisionNetworkPath",
 ]);
 
-const STATUS = "runner-implemented-execution-not-authorized";
+const STATUS = "workflow-implemented-execution-not-authorized";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -72,12 +72,62 @@ export function validateStagingImageVerificationContract(
       }) &&
       JSON.stringify(contract.outputEvidence) ===
         JSON.stringify({
+          junit:
+            "artifacts/staging-release/staging-image-verification.junit.xml",
           manifest: "artifacts/staging-release/staging-image-verification.json",
           manifestHash:
             "artifacts/staging-release/staging-image-verification.sha256",
           retentionDays: 365,
         }),
     "Staging image verification evidence paths drifted",
+  );
+  assert(
+    JSON.stringify(contract.workflow) ===
+      JSON.stringify({
+        name: "Staging image verification",
+        path: ".github/workflows/staging-image-verification.yml",
+        protectedEnvironment: "staging-image-verification",
+        allowedRef: "refs/heads/main",
+        allowedEvent: "workflow_dispatch",
+        automaticTriggers: false,
+        implemented: true,
+        executionAuthorized: false,
+      }),
+    "Staging image verification workflow boundary drifted",
+  );
+  assert(
+    JSON.stringify(contract.googleCloud) ===
+      JSON.stringify({
+        projectId: "samra-pay-staging",
+        projectNumber: "934122615631",
+        region: "us-east4",
+        workloadIdentityPoolId: "samra-image-verify-staging",
+        workloadIdentityProviderId: "samra-pay-image-verify-main",
+        controllerServiceAccount:
+          "samra-github-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+        runtimeServiceAccount:
+          "samra-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+        network: "samra-staging-vpc",
+        subnet: "samra-staging-us-east4",
+        jobName: "samra-staging-image-verifier",
+        logBucket: "_Default",
+        logLocation: "global",
+        logView: "samra-staging-image-verifier",
+      }) &&
+      JSON.stringify(contract.job) ===
+        JSON.stringify({
+          temporary: true,
+          mustBeAbsentBeforeAndAfter: true,
+          tasks: 1,
+          parallelism: 1,
+          maxRetries: 0,
+          timeout: "15m",
+          vpcEgress: "private-ranges-only",
+          databaseSecret: "samra-staging-database-url",
+          pinnedSecretVersionRequired: true,
+          junitFromRestrictedLogView: true,
+        }),
+    "Staging image verification cloud-job boundary drifted",
   );
   assert(
     JSON.stringify(contract.imageChecks) ===
@@ -99,7 +149,7 @@ export function validateStagingImageVerificationContract(
   );
   assert(
     contract.promotionEligible === false &&
-      contract.workflowImplemented === false &&
+      contract.workflowImplemented === true &&
       contract.automaticTriggers === false &&
       contract.trafficMutationAuthorized === false &&
       contract.publicAccessMutationAuthorized === false &&
@@ -143,7 +193,7 @@ export function validateStagingImageVerificationContract(
     testCount: 9,
     imageCheckCount: STAGING_IMAGE_VERIFICATION_CHECKS.length,
     runnerImplemented: true,
-    workflowImplemented: false,
+    workflowImplemented: true,
     executionAuthorized: false,
     promotionEligible: false,
   });

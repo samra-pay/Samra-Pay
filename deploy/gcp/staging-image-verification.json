@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "runner-implemented-execution-not-authorized",
+  "status": "workflow-implemented-execution-not-authorized",
   "environment": "staging",
   "dataClassification": "synthetic-only",
   "sourceRepository": "haileleuld87/Samra-Pay",
@@ -21,11 +21,49 @@
     "implemented": true,
     "executionAuthorized": false
   },
+  "workflow": {
+    "name": "Staging image verification",
+    "path": ".github/workflows/staging-image-verification.yml",
+    "protectedEnvironment": "staging-image-verification",
+    "allowedRef": "refs/heads/main",
+    "allowedEvent": "workflow_dispatch",
+    "automaticTriggers": false,
+    "implemented": true,
+    "executionAuthorized": false
+  },
+  "googleCloud": {
+    "projectId": "samra-pay-staging",
+    "projectNumber": "934122615631",
+    "region": "us-east4",
+    "workloadIdentityPoolId": "samra-image-verify-staging",
+    "workloadIdentityProviderId": "samra-pay-image-verify-main",
+    "controllerServiceAccount": "samra-github-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+    "runtimeServiceAccount": "samra-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+    "network": "samra-staging-vpc",
+    "subnet": "samra-staging-us-east4",
+    "jobName": "samra-staging-image-verifier",
+    "logBucket": "_Default",
+    "logLocation": "global",
+    "logView": "samra-staging-image-verifier"
+  },
+  "job": {
+    "temporary": true,
+    "mustBeAbsentBeforeAndAfter": true,
+    "tasks": 1,
+    "parallelism": 1,
+    "maxRetries": 0,
+    "timeout": "15m",
+    "vpcEgress": "private-ranges-only",
+    "databaseSecret": "samra-staging-database-url",
+    "pinnedSecretVersionRequired": true,
+    "junitFromRestrictedLogView": true
+  },
   "inputEvidence": {
     "zeroTrafficDeploymentManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
     "zeroTrafficDeploymentManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256"
   },
   "outputEvidence": {
+    "junit": "artifacts/staging-release/staging-image-verification.junit.xml",
     "manifest": "artifacts/staging-release/staging-image-verification.json",
     "manifestHash": "artifacts/staging-release/staging-image-verification.sha256",
     "retentionDays": 365
@@ -50,7 +88,7 @@
     "publicIamAbsentRequired": true
   },
   "promotionEligible": false,
-  "workflowImplemented": false,
+  "workflowImplemented": true,
   "automaticTriggers": false,
   "trafficMutationAuthorized": false,
   "publicAccessMutationAuthorized": false,

@@ -118,7 +118,7 @@ export function validateStagingReleaseControlPlane(
 
   assert(
     contract.verification.status ===
-      "evidence-plane-implemented-execution-not-authorized" &&
+      "image-workflow-implemented-execution-not-authorized" &&
       contract.verification.contract ===
         "deploy/gcp/staging-verification.json" &&
       contract.verification.recorder ===
@@ -127,8 +127,21 @@ export function validateStagingReleaseControlPlane(
         "deploy/gcp/staging-image-verification.json" &&
       contract.verification.imageVerificationRecorder ===
         "deploy/gcp/record-staging-image-verification.mjs" &&
+      contract.verification.imageWorkflow ===
+        ".github/workflows/staging-image-verification.yml" &&
+      contract.verification.imageProtectedEnvironment ===
+        "staging-image-verification" &&
+      contract.verification.imageController ===
+        "deploy/gcp/run-staging-image-verification.sh" &&
+      contract.verification.imageFederationActivation ===
+        "deploy/gcp/activate-staging-image-verification-federation.sh" &&
+      contract.verification.imageFederationAudit ===
+        "deploy/gcp/audit-staging-image-verification-federation.sh" &&
       contract.verification.imageRunnerImplemented === true &&
-      contract.verification.imageWorkflowImplemented === false &&
+      contract.verification.imageWorkflowImplemented === true &&
+      contract.verification.imageDedicatedFederatedIdentityRequired === true &&
+      contract.verification.imageDedicatedRuntimeIdentityRequired === true &&
+      contract.verification.imageRestrictedLogViewRequired === true &&
       contract.verification.imageExecutionAuthorized === false &&
       contract.verification.imageEvidencePromotionEligible === false &&
       contract.verification.probeWorkflow ===
@@ -269,6 +282,7 @@ export function validateStagingReleaseControlPlane(
     deploymentAuthorized: false,
     verificationRecorderImplemented: true,
     verificationImageRunnerImplemented: true,
+    verificationImageWorkflowImplemented: true,
     verificationProbeImplemented: false,
     verificationAuthorized: false,
     promotionAuthorized: false,

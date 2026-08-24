@@ -60,6 +60,7 @@ test("validates the bounded staging release control plane", () => {
     deploymentAuthorized: false,
     verificationRecorderImplemented: true,
     verificationImageRunnerImplemented: true,
+    verificationImageWorkflowImplemented: true,
     verificationProbeImplemented: false,
     verificationAuthorized: false,
     promotionAuthorized: false,
@@ -73,6 +74,9 @@ test("rejects automatic, public, floating, and untracked release drift", () => {
     (value) => (value.deployment.publicUnauthenticatedAllowed = true),
     (value) => value.deployment.deployableServices.push("samra-operations-web"),
     (value) => (value.verification.imageRunnerImplemented = false),
+    (value) => (value.verification.imageWorkflowImplemented = false),
+    (value) =>
+      (value.verification.imageDedicatedRuntimeIdentityRequired = false),
     (value) => (value.verification.imageExecutionAuthorized = true),
     (value) => (value.verification.imageEvidencePromotionEligible = true),
     (value) => (value.verification.probeImplemented = true),

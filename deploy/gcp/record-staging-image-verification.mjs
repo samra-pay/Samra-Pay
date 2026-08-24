@@ -26,6 +26,13 @@ const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const DIGEST_PATTERN = /@sha256:[0-9a-f]{64}$/;
 const SYNTHETIC_RUN_PATTERN = /^[a-z0-9][a-z0-9-]{0,47}$/;
 const EXECUTION_ID_PATTERN = /^[a-z][a-z0-9-]{0,62}$/;
+const VERIFICATION_JOB = "samra-staging-image-verifier";
+const EXPECTED_TEST_IDS = Object.freeze(
+  Array.from(
+    { length: 9 },
+    (_, index) => `SYNTH-DAILY-${String(index + 1).padStart(3, "0")}`,
+  ),
+);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -95,6 +102,101 @@ function assertSafeEvidence(manifest) {
     ),
     "Image-verification evidence contains a credential or unsafe endpoint",
   );
+}
+
+function decodeXml(value) {
+  return value
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
+}
+
+export function validateStagingVerificationJUnit(junit) {
+  assert(typeof junit === "string" && junit.length > 0, "JUnit is empty");
+  assert(
+    !/postgres(?:ql)?:\/\/|worf\.replit|12345678|client_secret|api[_-]?key|private[_-]?key|authorization:|bearer\s+/i.test(
+      junit,
+    ),
+    "JUnit contains a credential or unsafe endpoint",
+  );
+  assert(
+    /<testsuites\b/.test(junit) && /<\/testsuites>/.test(junit),
+    "JUnit does not contain one complete testsuites document",
+  );
+  assert(
+    !/<(?:failure|error|skipped)\b/.test(junit),
+    "JUnit contains a failed, errored, or skipped test",
+  );
+  const names = [...junit.matchAll(/<testcase\b[^>]*\bname="([^"]+)"/g)].map(
+    (match) => decodeXml(match[1]),
+  );
+  assert(names.length === 9, "JUnit must contain exactly nine test cases");
+  for (const id of EXPECTED_TEST_IDS) {
+    assert(
+      names.filter((name) => name.startsWith(`${id} `)).length === 1,
+      `JUnit must contain exactly one ${id} test case`,
+    );
+  }
+  const junitSha256 = createHash("sha256").update(junit).digest("hex");
+  return Object.freeze({
+    testCount: 9,
+    junitSha256,
+    imageChecks: Object.freeze(
+      Object.fromEntries(
+        STAGING_IMAGE_VERIFICATION_CHECKS.map((check) => [check, "passed"]),
+      ),
+    ),
+  });
+}
+
+function logEntryOrder(left, right) {
+  return `${left.timestamp ?? ""}`.localeCompare(`${right.timestamp ?? ""}`);
+}
+
+export function extractStagingVerificationJUnitFromLogs(
+  entries,
+  executionName,
+) {
+  assert(
+    Array.isArray(entries) && entries.length > 0,
+    "No verifier logs found",
+  );
+  assert(
+    EXECUTION_ID_PATTERN.test(executionName),
+    "Verifier execution name is invalid",
+  );
+  const payloads = entries
+    .map((entry) => {
+      assert(
+        entry?.resource?.type === "cloud_run_job" &&
+          entry.resource.labels?.job_name === VERIFICATION_JOB &&
+          entry.labels?.execution_name === executionName &&
+          entry.logName?.endsWith("/logs/run.googleapis.com%2Fstdout") &&
+          typeof entry.textPayload === "string",
+        "Verifier log entry escaped the restricted execution boundary",
+      );
+      return entry;
+    })
+    .sort(logEntryOrder)
+    .map((entry) => entry.textPayload);
+  const joined = payloads.join("\n");
+  const start = joined.indexOf("<testsuites");
+  const end = joined.lastIndexOf("</testsuites>");
+  assert(start >= 0 && end >= start, "Verifier logs do not contain JUnit");
+  const prefix = joined.slice(0, start).trim();
+  const suffix = joined.slice(end + "</testsuites>".length).trim();
+  assert(
+    (prefix === "" ||
+      /^<\?xml\s+version="1\.0"\s+encoding="utf-8"\?>$/i.test(prefix)) &&
+      suffix === "",
+    "Verifier stdout contains non-JUnit data",
+  );
+  const documentStart = prefix === "" ? start : joined.indexOf("<?xml");
+  const junit = `${joined.slice(documentStart, end + "</testsuites>".length)}\n`;
+  validateStagingVerificationJUnit(junit);
+  return junit;
 }
 
 export function validateStagingImageVerificationManifest(manifest) {
@@ -338,8 +440,21 @@ async function main(values) {
     );
     return;
   }
+  if (command === "extract-junit") {
+    const output = required(options, "output");
+    const junit = extractStagingVerificationJUnitFromLogs(
+      JSON.parse(await readFile(required(options, "logs"), "utf8")),
+      required(options, "execution"),
+    );
+    await mkdir(dirname(output), { recursive: true });
+    await writeFile(output, junit, "utf8");
+    process.stdout.write(
+      `${JSON.stringify(validateStagingVerificationJUnit(junit))}\n`,
+    );
+    return;
+  }
   throw new Error(
-    "Usage: record-staging-image-verification.mjs <build|verify> ...",
+    "Usage: record-staging-image-verification.mjs <build|verify|extract-junit> ...",
   );
 }
 
