@@ -235,6 +235,14 @@ distinct protected environments, workload-identity providers, and keyless
 service accounts. Activating and executing the private probe and first-ever
 traffic activation remain separate hard stops.
 
+The controlled move from the founder's personal GitHub namespace to the
+Enterprise-backed Samra Pay organization is documented in
+[`docs/operations/github-enterprise-control-plane-migration.md`](../../docs/operations/github-enterprise-control-plane-migration.md)
+and machine-validated by `staging-github-enterprise-migration.json`. Its
+read-only review inventories every operational personal-authority dependency
+and rejects target-organization authority before repository transfer is
+explicitly authorized.
+
 ### Keyless zero-traffic Cloud Run deployment
 
 `staging-zero-traffic-deployment.json` defines a second keyless GitHub trust
