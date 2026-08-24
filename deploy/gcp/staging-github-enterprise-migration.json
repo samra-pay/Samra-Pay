@@ -24,12 +24,16 @@
   },
   "observedEnterpriseState": {
     "billingStatus": "trial",
+    "billingInformationConfigured": false,
     "operatingModel": "solo-founder",
     "organizationMemberCount": 1,
     "organizationOwnerCount": 1,
     "accountRecoveryReadiness": "blocked",
-    "twoFactorAuthenticationEnabled": false,
+    "twoFactorAuthenticationEnabled": true,
+    "authenticatorAppConfigured": true,
     "passkeyOrSecurityKeyConfigured": false,
+    "recoveryCodesGeneratedAndViewed": true,
+    "recoveryCodesExternalStorageVerified": false,
     "verifiedRecoveryEmailConfigured": true,
     "teams": [
       "developers",

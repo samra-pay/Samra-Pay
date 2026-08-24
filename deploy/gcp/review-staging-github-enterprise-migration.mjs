@@ -24,6 +24,13 @@ console.log(`Target: ${result.targetRepository}`);
 console.log(`Stable repository ID to reverify: ${result.stableRepositoryId}`);
 console.log(`Target organization ID: ${result.targetOwnerId}`);
 console.log(
+  [
+    `Account recovery: ${result.accountRecoveryReadiness}`,
+    `2FA: ${result.twoFactorAuthenticationEnabled ? "enabled" : "disabled"}`,
+    `passkey/security key: ${result.passkeyOrSecurityKeyConfigured ? "configured" : "missing"}`,
+  ].join("; "),
+);
+console.log(
   `Operational authority references inventoried: ${result.currentAuthorityFileCount}`,
 );
 console.log(`Blocking gates: ${contract.blockingGates.join(", ")}`);

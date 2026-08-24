@@ -151,13 +151,20 @@ export function validateStagingGithubEnterpriseMigration(
 
   assert(
     contract.observedEnterpriseState.billingStatus === "trial" &&
+      contract.observedEnterpriseState.billingInformationConfigured ===
+        false &&
       contract.observedEnterpriseState.operatingModel === "solo-founder" &&
       contract.observedEnterpriseState.organizationMemberCount === 1 &&
       contract.observedEnterpriseState.organizationOwnerCount === 1 &&
       contract.observedEnterpriseState.accountRecoveryReadiness === "blocked" &&
       contract.observedEnterpriseState.twoFactorAuthenticationEnabled ===
-        false &&
+        true &&
+      contract.observedEnterpriseState.authenticatorAppConfigured === true &&
       contract.observedEnterpriseState.passkeyOrSecurityKeyConfigured ===
+        false &&
+      contract.observedEnterpriseState.recoveryCodesGeneratedAndViewed ===
+        true &&
+      contract.observedEnterpriseState.recoveryCodesExternalStorageVerified ===
         false &&
       contract.observedEnterpriseState.verifiedRecoveryEmailConfigured ===
         true &&
@@ -254,6 +261,12 @@ export function validateStagingGithubEnterpriseMigration(
     targetRepository: repository.targetAuthority.nameWithOwner,
     stableRepositoryId: repository.stableId,
     targetOwnerId: repository.targetAuthority.ownerId,
+    accountRecoveryReadiness:
+      contract.observedEnterpriseState.accountRecoveryReadiness,
+    twoFactorAuthenticationEnabled:
+      contract.observedEnterpriseState.twoFactorAuthenticationEnabled,
+    passkeyOrSecurityKeyConfigured:
+      contract.observedEnterpriseState.passkeyOrSecurityKeyConfigured,
     blockerCount: contract.blockingGates.length,
     currentAuthorityFileCount: currentFiles.length,
     transferAuthorized: false,
