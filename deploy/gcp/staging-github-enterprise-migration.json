@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-authorized",
+  "observedAt": "2026-08-24",
+  "repository": {
+    "name": "Samra-Pay",
+    "stableId": "1335175962",
+    "defaultBranch": "main",
+    "activeAuthority": {
+      "accountType": "user",
+      "ownerLogin": "haileleuld87",
+      "ownerId": "237485986",
+      "nameWithOwner": "haileleuld87/Samra-Pay",
+      "enterpriseBacked": false
+    },
+    "targetAuthority": {
+      "accountType": "organization",
+      "ownerLogin": "samra-pay",
+      "ownerId": "320532147",
+      "nameWithOwner": "samra-pay/Samra-Pay",
+      "enterpriseSlug": "samra-pay",
+      "enterpriseBacked": true
+    }
+  },
+  "observedEnterpriseState": {
+    "billingStatus": "trial",
+    "organizationMemberCount": 1,
+    "organizationOwnerCount": 1,
+    "teams": [
+      "developers",
+      "platform-admins",
+      "staging-approvers"
+    ]
+  },
+  "governance": {
+    "minimumOrganizationOwners": 2,
+    "independentStagingApproverRequired": true,
+    "selfApprovalAllowed": false,
+    "baseRepositoryPermission": "none",
+    "baseProjectPermission": "none",
+    "memberRepositoryCreationAllowed": false,
+    "memberPagesCreationAllowed": false,
+    "repositoryAdminCanInviteOutsideCollaborators": false,
+    "repositoryAdminCanInstallApps": false,
+    "repositoryAdminCanChangeVisibility": false,
+    "repositoryAdminCanDeleteOrTransfer": false,
+    "repositoryAdminCanRenameProtectedBranches": false,
+    "memberTeamCreationAllowed": false,
+    "appAccessRequests": "members-only"
+  },
+  "blockingGates": [
+    "paid-enterprise-activation",
+    "second-organization-owner",
+    "independent-staging-approver"
+  ],
+  "transfer": {
+    "authorized": false,
+    "releaseFreezeRequired": true,
+    "backupAndInventoryRequired": true,
+    "exactMainShaRequired": true,
+    "stableRepositoryIdMustBeVerifiedAfterTransfer": true,
+    "transferMustPrecedeGoogleTrustCutover": true,
+    "googleTrustMustFailClosedDuringCutover": true,
+    "protectedEnvironmentsMustBeReaudited": true,
+    "branchProtectionMustBeReaudited": true,
+    "qaseGitHubAppMustBeReconnected": true,
+    "readOnlyReleaseWorkflowMustPassBeforePublication": true
+  },
+  "operationalReferences": {
+    "scanRoots": [
+      ".github/workflows",
+      "deploy/gcp"
+    ],
+    "currentAuthorityFiles": [
+      ".github/workflows/staging-image-publication.yml",
+      ".github/workflows/staging-image-verification.yml",
+      ".github/workflows/staging-traffic-control.yml",
+      ".github/workflows/staging-verification-probe.yml",
+      ".github/workflows/staging-zero-traffic-deployment.yml",
+      "deploy/gcp/README.md",
+      "deploy/gcp/activate-staging-github-federation.sh",
+      "deploy/gcp/activate-staging-image-verification-federation.sh",
+      "deploy/gcp/activate-staging-revision-probe-federation.sh",
+      "deploy/gcp/activate-staging-traffic-federation.sh",
+      "deploy/gcp/activate-staging-zero-traffic-federation.sh",
+      "deploy/gcp/audit-staging-github-federation.sh",
+      "deploy/gcp/audit-staging-image-verification-federation.sh",
+      "deploy/gcp/audit-staging-revision-probe-federation.sh",
+      "deploy/gcp/audit-staging-traffic-federation.sh",
+      "deploy/gcp/audit-staging-zero-traffic-federation.sh",
+      "deploy/gcp/publish-staging-images.sh",
+      "deploy/gcp/record-staging-image-publication.mjs",
+      "deploy/gcp/record-staging-image-verification.mjs",
+      "deploy/gcp/record-staging-revision-probe.mjs",
+      "deploy/gcp/record-staging-traffic-control.mjs",
+      "deploy/gcp/record-staging-verification.mjs",
+      "deploy/gcp/record-staging-zero-traffic-deployment.mjs",
+      "deploy/gcp/staging-github-federation.json",
+      "deploy/gcp/staging-github-federation.test.mjs",
+      "deploy/gcp/staging-image-verification.json",
+      "deploy/gcp/staging-image-verification.test.mjs",
+      "deploy/gcp/staging-release-control-plane.json",
+      "deploy/gcp/staging-release-control-plane.test.mjs",
+      "deploy/gcp/staging-revision-probe.json",
+      "deploy/gcp/staging-traffic-control.json",
+      "deploy/gcp/staging-traffic-control.test.mjs",
+      "deploy/gcp/staging-verification.json",
+      "deploy/gcp/staging-verification.test.mjs",
+      "deploy/gcp/staging-zero-traffic-deployment.json",
+      "deploy/gcp/staging-zero-traffic-deployment.test.mjs",
+      "deploy/gcp/validate-staging-github-federation.mjs",
+      "deploy/gcp/validate-staging-image-verification.mjs",
+      "deploy/gcp/validate-staging-release-control-plane.mjs",
+      "deploy/gcp/validate-staging-revision-probe.mjs",
+      "deploy/gcp/validate-staging-traffic-control.mjs",
+      "deploy/gcp/validate-staging-verification.mjs",
+      "deploy/gcp/validate-staging-zero-traffic-deployment.mjs"
+    ],
+    "migrationControlFiles": [
+      "deploy/gcp/review-staging-github-enterprise-migration.mjs",
+      "deploy/gcp/staging-github-enterprise-migration.json",
+      "deploy/gcp/staging-github-enterprise-migration.test.mjs",
+      "deploy/gcp/validate-staging-github-enterprise-migration.mjs"
+    ]
+  },
+  "cutoverOrder": [
+    "activate-paid-enterprise",
+    "add-second-owner",
+    "add-independent-staging-approver",
+    "capture-pre-transfer-inventory-and-backup",
+    "freeze-staging-release-environments",
+    "transfer-repository",
+    "verify-repository-id-and-new-owner-id",
+    "switch-repository-authority-contracts",
+    "reapply-five-google-workload-identity-boundaries",
+    "rebind-protected-environment-reviewers",
+    "reconnect-qase-github-app",
+    "audit-branch-actions-environment-and-cloud-controls",
+    "run-read-only-release-workflow",
+    "resume-authorized-release-operations"
+  ]
+}
