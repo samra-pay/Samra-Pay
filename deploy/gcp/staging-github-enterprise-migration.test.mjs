@@ -17,6 +17,7 @@ test("validates the prepared but unauthorized Enterprise migration", () => {
     {
       schemaVersion: 1,
       status: "validated-prepared-not-authorized",
+      operatingModel: "solo-founder",
       activeRepository: contract.repository.activeAuthority.nameWithOwner,
       targetRepository: contract.repository.targetAuthority.nameWithOwner,
       stableRepositoryId: contract.repository.stableId,
@@ -40,8 +41,14 @@ test("rejects premature transfer authorization and weakened governance", () => {
   for (const mutate of [
     (value) => (value.status = "authorized"),
     (value) => (value.transfer.authorized = true),
-    (value) => (value.governance.minimumOrganizationOwners = 1),
-    (value) => (value.governance.selfApprovalAllowed = true),
+    (value) => (value.governance.operatingModel = "multi-operator"),
+    (value) => (value.governance.minimumActiveOrganizationOwners = 2),
+    (value) => (value.governance.placeholderOrSharedOwnerAllowed = true),
+    (value) => (value.governance.independentStagingApproverRequired = true),
+    (value) => (value.governance.requiredEnvironmentReviewerConfigured = true),
+    (value) => (value.governance.requiredAutomatedChecks = false),
+    (value) =>
+      (value.governance.accountRecovery.minimumAuthenticationMethods = 1),
     (value) => (value.governance.baseRepositoryPermission = "read"),
     (value) => (value.observedEnterpriseState.billingStatus = "paid"),
     (value) => value.blockingGates.pop(),
@@ -61,6 +68,7 @@ test("runs an offline review without mutating GitHub or Google Cloud", () => {
   );
   assert.match(output, /READ-ONLY GITHUB ENTERPRISE MIGRATION REVIEW PASS/);
   assert.match(output, /validated-prepared-not-authorized/);
+  assert.match(output, /Operating model: solo-founder/);
   assert.match(output, /Operational authority references inventoried: 43/);
   assert.match(output, /TRANSFER NOT AUTHORIZED/);
   assert.doesNotMatch(output, /APPLIED|TRANSFER COMPLETE|TRUST UPDATED/);

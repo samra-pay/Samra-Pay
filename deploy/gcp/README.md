@@ -439,10 +439,15 @@ requires all of the following:
 3. selection of `publish` plus the exact image-publication authorization; and
 4. approval through the `staging-image-publication` GitHub environment.
 
-Before enabling publication, that environment must be configured with at least
-one required reviewer, self-review prevention, and deployment restricted to
-`main`. Until those repository settings are independently verified, use only
-the workflow's `review` mode. The workflow reuses
+Before enabling publication, that environment must restrict deployment to
+`main`. In a multi-operator organization it must also use a qualified required
+reviewer with self-review prevention. In the documented solo-founder operating
+model, do not create a nominal reviewer or enable a rule that deadlocks every
+release. The manual exact-SHA authorization, required automated checks, exact
+workflow identity, immutable digest, and evidence gates are the operative
+separation controls until a second qualified human exists. Until the applicable
+repository settings are independently verified, use only the workflow's
+`review` mode. The workflow reuses
 `publish-staging-images.sh`; it does not introduce a second image build path and
 contains no service deployment, traffic, migration, secret-value, provider,
 production, or Replit command.

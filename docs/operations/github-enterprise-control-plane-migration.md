@@ -20,24 +20,60 @@ repository remains the active source of truth until every transfer gate passes.
 - Enterprise billing: trial
 - Organization owners: one
 - Independent staging approvers: none
+- Operating model: solo founder
+- Account-recovery readiness: not yet verified
 - Operational files bound to the personal authority: 43
 
 The organization now uses least-privilege defaults. Members receive no base
 repository or project access, cannot create repositories or Pages sites, and
 cannot perform sensitive repository-administration actions reserved for owners.
-The `developers`, `platform-admins`, and `staging-approvers` teams exist.
+The `developers`, `platform-admins`, and `staging-approvers` teams exist. They
+reserve durable role boundaries for future hires and contractors; they do not
+pretend that an independent human reviewer exists today.
+
+## Solo-founder control model
+
+[GitHub recommends at least two organization owners](https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-peoples-access-to-your-organization-with-roles/maintaining-ownership-continuity-for-your-organization)
+because a single owner can become an availability risk. Samra Pay currently has
+one legitimate owner. A placeholder, shared, bot, or nominal owner would
+increase access risk without creating real governance, so a second owner is a
+resilience recommendation for when a qualified person exists, not a migration
+gate.
+
+Until then, release safety comes from controls that a solo founder can actually
+operate and prove:
+
+- at least two GitHub authentication methods, including a passkey or hardware
+  security key;
+- recovery codes stored securely outside the daily-use device and a verified
+  recovery email;
+- protected `main`, required automated checks, and no direct release from an
+  unreviewed branch;
+- manual release workflows bound to the exact repository, workflow, branch,
+  event, environment, and full Git SHA;
+- immutable image digests, keyless Google federation, and no `latest` tags;
+- read-only review and tamper-evident evidence before every state-changing
+  release step; and
+- explicit founder authorization for publication, deployment, migration,
+  traffic promotion, and rollback.
+
+Required environment reviewers and self-review prevention remain disabled while
+there is only one qualified operator. Enabling them now would either create a
+fake control or deadlock releases because
+[GitHub prevents the initiating user from approving when self-review prevention is enabled](https://docs.github.com/en/enterprise-cloud@latest/actions/reference/workflows-and-actions/deployments-and-environments#required-reviewers).
+Add those controls when a second qualified human joins.
 
 ## Hard stop gates
 
 Do not transfer the repository until all three gates pass:
 
 1. GitHub Enterprise billing is activated on a durable paid plan.
-2. A second organization owner has accepted the invitation.
-3. A person other than the change author is in `staging-approvers` and can serve
-   as the required protected-environment reviewer with self-review prevented.
+2. Solo-founder account recovery is verified against the requirements above.
+3. The pre-transfer backup, inventory, and release-freeze procedure is ready to
+   run from the exact current `main` commit.
 
-Do not add a placeholder, shared account, bot, or service identity to satisfy a
-human review gate.
+Do not add a placeholder, shared account, bot, or service identity to simulate
+ownership continuity or independent review.
 
 ## Controlled cutover sequence
 
@@ -60,8 +96,9 @@ human review gate.
    repository name and organization owner ID. Keep the stable repository-ID,
    branch, event, workflow-file, workflow-name, and protected-environment
    restrictions.
-9. Rebind all protected deployment environments to `staging-approvers`, require
-   one reviewer, and prevent self-review.
+9. Restrict every protected deployment environment to `main` and preserve its
+   exact workflow and authorization gates. Do not configure a required reviewer
+   until a second qualified human can provide genuine separation of duties.
 10. Reconnect and audit the Qase GitHub App, branch protection, rulesets, Actions
     policy, repository variables, environment variables, and webhooks.
 11. Run every independent read-only GitHub and Google Cloud audit.

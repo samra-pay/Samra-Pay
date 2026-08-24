@@ -16,21 +16,20 @@ const EXACT = Object.freeze({
 
 const EXPECTED_BLOCKERS = Object.freeze([
   "paid-enterprise-activation",
-  "second-organization-owner",
-  "independent-staging-approver",
+  "solo-founder-account-recovery-readiness",
+  "pre-transfer-backup-and-freeze-readiness",
 ]);
 
 const EXPECTED_CUTOVER_ORDER = Object.freeze([
   "activate-paid-enterprise",
-  "add-second-owner",
-  "add-independent-staging-approver",
+  "verify-solo-founder-account-recovery-readiness",
   "capture-pre-transfer-inventory-and-backup",
   "freeze-staging-release-environments",
   "transfer-repository",
   "verify-repository-id-and-new-owner-id",
   "switch-repository-authority-contracts",
   "reapply-five-google-workload-identity-boundaries",
-  "rebind-protected-environment-reviewers",
+  "enforce-solo-founder-protected-environment-controls",
   "reconnect-qase-github-app",
   "audit-branch-actions-environment-and-cloud-controls",
   "run-read-only-release-workflow",
@@ -152,8 +151,11 @@ export function validateStagingGithubEnterpriseMigration(
 
   assert(
     contract.observedEnterpriseState.billingStatus === "trial" &&
+      contract.observedEnterpriseState.operatingModel === "solo-founder" &&
       contract.observedEnterpriseState.organizationMemberCount === 1 &&
       contract.observedEnterpriseState.organizationOwnerCount === 1 &&
+      contract.observedEnterpriseState.accountRecoveryReadiness ===
+        "not-verified" &&
       JSON.stringify(contract.observedEnterpriseState.teams) ===
         JSON.stringify([
           "developers",
@@ -163,9 +165,24 @@ export function validateStagingGithubEnterpriseMigration(
     "Observed Enterprise state drifted",
   );
   assert(
-    governance.minimumOrganizationOwners === 2 &&
-      governance.independentStagingApproverRequired === true &&
-      governance.selfApprovalAllowed === false &&
+    governance.operatingModel === "solo-founder" &&
+      governance.minimumActiveOrganizationOwners === 1 &&
+      governance.secondOwnerRecommendedWhenQualified === true &&
+      governance.placeholderOrSharedOwnerAllowed === false &&
+      governance.independentStagingApproverRequired === false &&
+      governance.requiredEnvironmentReviewerConfigured === false &&
+      governance.selfReviewPreventionEnabled === false &&
+      governance.releaseAuthorizationMode ===
+        "manual-exact-sha-with-automated-evidence" &&
+      governance.requiredAutomatedChecks === true &&
+      governance.requiredMainBranchProtection === true &&
+      governance.requiredExactWorkflowIdentity === true &&
+      governance.requiredImmutableArtifactDigest === true &&
+      governance.accountRecovery.minimumAuthenticationMethods === 2 &&
+      governance.accountRecovery.passkeyOrSecurityKeyRequired === true &&
+      governance.accountRecovery
+        .recoveryCodesStoredOutsideDailyDeviceRequired === true &&
+      governance.accountRecovery.verifiedRecoveryEmailRequired === true &&
       governance.baseRepositoryPermission === "none" &&
       governance.baseProjectPermission === "none" &&
       governance.memberRepositoryCreationAllowed === false &&
@@ -227,6 +244,7 @@ export function validateStagingGithubEnterpriseMigration(
   return Object.freeze({
     schemaVersion: 1,
     status: "validated-prepared-not-authorized",
+    operatingModel: governance.operatingModel,
     activeRepository: repository.activeAuthority.nameWithOwner,
     targetRepository: repository.targetAuthority.nameWithOwner,
     stableRepositoryId: repository.stableId,
