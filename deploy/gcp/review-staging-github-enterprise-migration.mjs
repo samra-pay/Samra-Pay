@@ -18,6 +18,7 @@ const result = validateStagingGithubEnterpriseMigration(contract, { root });
 
 console.log("READ-ONLY GITHUB ENTERPRISE MIGRATION REVIEW PASS");
 console.log(`Status: ${result.status}`);
+console.log(`Operating model: ${result.operatingModel}`);
 console.log(`Active: ${result.activeRepository}`);
 console.log(`Target: ${result.targetRepository}`);
 console.log(`Stable repository ID to reverify: ${result.stableRepositoryId}`);

@@ -24,8 +24,13 @@
   },
   "observedEnterpriseState": {
     "billingStatus": "trial",
+    "operatingModel": "solo-founder",
     "organizationMemberCount": 1,
     "organizationOwnerCount": 1,
+    "accountRecoveryReadiness": "blocked",
+    "twoFactorAuthenticationEnabled": false,
+    "passkeyOrSecurityKeyConfigured": false,
+    "verifiedRecoveryEmailConfigured": true,
     "teams": [
       "developers",
       "platform-admins",
@@ -33,9 +38,24 @@
     ]
   },
   "governance": {
-    "minimumOrganizationOwners": 2,
-    "independentStagingApproverRequired": true,
-    "selfApprovalAllowed": false,
+    "operatingModel": "solo-founder",
+    "minimumActiveOrganizationOwners": 1,
+    "secondOwnerRecommendedWhenQualified": true,
+    "placeholderOrSharedOwnerAllowed": false,
+    "independentStagingApproverRequired": false,
+    "requiredEnvironmentReviewerConfigured": false,
+    "selfReviewPreventionEnabled": false,
+    "releaseAuthorizationMode": "manual-exact-sha-with-automated-evidence",
+    "requiredAutomatedChecks": true,
+    "requiredMainBranchProtection": true,
+    "requiredExactWorkflowIdentity": true,
+    "requiredImmutableArtifactDigest": true,
+    "accountRecovery": {
+      "minimumAuthenticationMethods": 2,
+      "passkeyOrSecurityKeyRequired": true,
+      "recoveryCodesStoredOutsideDailyDeviceRequired": true,
+      "verifiedRecoveryEmailRequired": true
+    },
     "baseRepositoryPermission": "none",
     "baseProjectPermission": "none",
     "memberRepositoryCreationAllowed": false,
@@ -50,8 +70,8 @@
   },
   "blockingGates": [
     "paid-enterprise-activation",
-    "second-organization-owner",
-    "independent-staging-approver"
+    "solo-founder-account-recovery-readiness",
+    "pre-transfer-backup-and-freeze-readiness"
   ],
   "transfer": {
     "authorized": false,
@@ -125,15 +145,14 @@
   },
   "cutoverOrder": [
     "activate-paid-enterprise",
-    "add-second-owner",
-    "add-independent-staging-approver",
+    "verify-solo-founder-account-recovery-readiness",
     "capture-pre-transfer-inventory-and-backup",
     "freeze-staging-release-environments",
     "transfer-repository",
     "verify-repository-id-and-new-owner-id",
     "switch-repository-authority-contracts",
     "reapply-five-google-workload-identity-boundaries",
-    "rebind-protected-environment-reviewers",
+    "enforce-solo-founder-protected-environment-controls",
     "reconnect-qase-github-app",
     "audit-branch-actions-environment-and-cloud-controls",
     "run-read-only-release-workflow",
