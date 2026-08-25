@@ -5,9 +5,29 @@ import {
   CustomerAcquisitionTracker,
   deriveWebCustomerAcquisitionAttribution,
   directCustomerAcquisitionAttribution,
+  parseCustomerAcquisitionCampaignAllowlist,
   type CustomerAcquisitionSessionStore,
   type CustomerAcquisitionTransport,
 } from "./acquisition.ts";
+
+test("campaign activation accepts only a bounded explicit runtime allowlist", () => {
+  assert.deepEqual(
+    parseCustomerAcquisitionCampaignAllowlist(
+      "alpha_launch,community_referral",
+    ),
+    ["alpha_launch", "community_referral"],
+  );
+  for (const value of [
+    undefined,
+    "",
+    "alpha_launch,alpha_launch",
+    "Alpha Launch",
+    "private@email",
+    Array.from({ length: 51 }, (_, index) => `campaign_${index}`).join(","),
+  ]) {
+    assert.deepEqual(parseCustomerAcquisitionCampaignAllowlist(value), []);
+  }
+});
 
 test("web attribution classifies known channels without retaining raw URLs or arbitrary campaign values", () => {
   assert.deepEqual(

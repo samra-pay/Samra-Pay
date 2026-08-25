@@ -236,6 +236,19 @@ export function validateStagingReleaseControlPlane(
     "Rollback must reuse a recorded immutable revision",
   );
 
+  assert(
+    contract.publicReadiness.status === "prepared-not-authorized" &&
+      contract.publicReadiness.contract ===
+        "deploy/gcp/staging-public-readiness.json" &&
+      contract.publicReadiness.validator ===
+        "deploy/gcp/validate-staging-public-readiness.mjs" &&
+      contract.publicReadiness.repositoryTransferPortable === true &&
+      contract.publicReadiness.dnsMutationAuthorized === false &&
+      contract.publicReadiness.publicTrafficAuthorized === false &&
+      contract.publicReadiness.acquisitionActivationAuthorized === false,
+    "Public-readiness handoff must remain portable and unauthorized",
+  );
+
   for (const field of [
     "candidateSha",
     "controllerSha",
@@ -318,6 +331,7 @@ export function validateStagingReleaseControlPlane(
     verificationProbeImplemented: true,
     verificationAuthorized: false,
     promotionAuthorized: false,
+    publicTrafficAuthorized: false,
   });
 }
 

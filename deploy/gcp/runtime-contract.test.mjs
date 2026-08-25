@@ -209,6 +209,14 @@ test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
     ],
   );
   assert.deepEqual(
+    contract.services["samra-customer-web"].optionalRuntimeEnvironment,
+    [
+      "SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS",
+      "SAMRA_PUBLIC_SEARCH_INDEXING",
+      "SAMRA_PUBLIC_HTTPS_ONLY",
+    ],
+  );
+  assert.deepEqual(
     contract.services["samra-customer-web"].apiProxyAuthentication,
     {
       mode: "cloud-run-iam",

@@ -33,6 +33,10 @@ describe("web customer-acquisition trust boundary", () => {
   it("sanitizes attribution and keeps telemetry fail-open", () => {
     expect(sharedTrackerSource).toContain("SOURCE_ALIASES");
     expect(sharedTrackerSource).toContain("allowedCampaigns");
+    expect(runtimeSource).toContain(
+      "parseCustomerAcquisitionCampaignAllowlist",
+    );
+    expect(runtimeSource).toContain("VITE_SAMRA_ACQUISITION_CAMPAIGNS");
     expect(sharedTrackerSource).not.toMatch(/utm_content|utm_term/);
     expect(sharedTrackerSource).not.toContain('params.get("email")');
     expect(sharedTrackerSource).not.toContain('params.get("phone")');

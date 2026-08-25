@@ -110,8 +110,10 @@ mode; mock mode receives a frozen no-op client.
   startup. It recognizes only allowlisted UTM source/medium aliases, known
   search and social referrer hosts, and the presence (never the value) of
   `gclid` or `fbclid`. Raw query strings and referrer URLs are never sent or
-  persisted. Campaign is currently `null` because no production campaign
-  taxonomy has been approved.
+  persisted. Campaign remains `null` unless a deployment supplies an explicit,
+  validated `SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS` allowlist. The staging public
+  readiness contract keeps that allowlist empty until taxonomy, privacy, abuse,
+  and monitoring gates are approved.
 - Web continuity relies on the API's first-party `HttpOnly` session cookie. The
   browser application does not read or persist that cookie value.
 - Mobile uses direct attribution until an approved install/deep-link policy
@@ -160,4 +162,6 @@ The change is acceptable only when Linux CI proves:
 Run the connected customer journey through accessibility, keyboard, screen
 reader, narrow-screen, failure-recovery, and performance gates. Production
 campaign taxonomy, consent, abuse controls, retention, and live analytics remain
-blocked governance decisions rather than guessed client configuration.
+blocked governance decisions rather than guessed client configuration. The
+ordered activation boundary is defined in
+[`docs/operations/staging-public-readiness.md`](../operations/staging-public-readiness.md).

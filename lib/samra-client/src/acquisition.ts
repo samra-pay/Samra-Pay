@@ -94,6 +94,7 @@ type CustomerAcquisitionTrackerOptions = Readonly<{
 
 const SESSION_PATTERN = /^acq_[0-9a-f]{32}$/;
 const DIMENSION_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+const MAXIMUM_CAMPAIGN_ALLOWLIST_SIZE = 50;
 
 export class CustomerAcquisitionTracker implements CustomerAcquisitionClient {
   readonly enabled = true;
@@ -357,6 +358,23 @@ export function directCustomerAcquisitionAttribution(): CustomerAcquisitionAttri
     medium: null,
     campaign: null,
   });
+}
+
+export function parseCustomerAcquisitionCampaignAllowlist(
+  value: unknown,
+): readonly string[] {
+  if (typeof value !== "string" || value.trim() === "") {
+    return Object.freeze([]);
+  }
+  const campaigns = value.split(",").map((campaign) => campaign.trim());
+  if (
+    campaigns.length > MAXIMUM_CAMPAIGN_ALLOWLIST_SIZE ||
+    new Set(campaigns).size !== campaigns.length ||
+    campaigns.some((campaign) => !DIMENSION_PATTERN.test(campaign))
+  ) {
+    return Object.freeze([]);
+  }
+  return Object.freeze(campaigns);
 }
 
 export function deriveWebCustomerAcquisitionAttribution(

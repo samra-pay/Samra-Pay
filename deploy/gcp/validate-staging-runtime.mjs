@@ -165,6 +165,17 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
   );
   assert(
     JSON.stringify(
+      contract.services["samra-customer-web"].optionalRuntimeEnvironment,
+    ) ===
+      JSON.stringify([
+        "SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS",
+        "SAMRA_PUBLIC_SEARCH_INDEXING",
+        "SAMRA_PUBLIC_HTTPS_ONLY",
+      ]),
+    "Customer web optional public-edge configuration drifted",
+  );
+  assert(
+    JSON.stringify(
       contract.services["samra-customer-web"].apiProxyAuthentication,
     ) ===
       JSON.stringify({

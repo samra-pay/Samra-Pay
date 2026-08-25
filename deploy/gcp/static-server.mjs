@@ -11,6 +11,9 @@ const cloudRunIdentityEndpoint =
   "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity";
 const cloudRunAuthorizationHeader = "x-serverless-authorization";
 const identityTokenRefreshSkewSeconds = 300;
+const publicCampaignPattern = /^[a-z0-9][a-z0-9._-]{0,63}$/u;
+const maximumPublicCampaigns = 50;
+const maximumProxyRequestBodyBytes = 1_048_576;
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -89,6 +92,7 @@ export function loadServerConfig(environment = process.env) {
         : null,
     port,
     publicRuntimeConfig: loadPublicRuntimeConfig(environment),
+    publicTransport: loadPublicTransportConfig(environment),
     publicDirectory:
       environment.SAMRA_PUBLIC_DIRECTORY ?? defaultPublicDirectory,
   });
@@ -251,6 +255,10 @@ export function loadPublicRuntimeConfig(environment = process.env) {
     assertPublicHttpsIdentifier(auth0.audience, "SAMRA_PUBLIC_AUTH0_AUDIENCE");
   }
 
+  const campaigns = parsePublicCampaignAllowlist(
+    environment.SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS,
+  );
+
   return Object.freeze({
     ...(dataMode ? { VITE_SAMRA_DATA_MODE: dataMode } : {}),
     ...(auth0.domain
@@ -260,6 +268,42 @@ export function loadPublicRuntimeConfig(environment = process.env) {
           VITE_AUTH0_AUDIENCE: auth0.audience,
         }
       : {}),
+    ...(campaigns.length > 0
+      ? { VITE_SAMRA_ACQUISITION_CAMPAIGNS: campaigns.join(",") }
+      : {}),
+  });
+}
+
+export function parsePublicCampaignAllowlist(value) {
+  if (value === undefined || value.trim() === "") return Object.freeze([]);
+  const campaigns = value.split(",").map((campaign) => campaign.trim());
+  if (
+    campaigns.length > maximumPublicCampaigns ||
+    new Set(campaigns).size !== campaigns.length ||
+    campaigns.some((campaign) => !publicCampaignPattern.test(campaign))
+  ) {
+    throw new Error(
+      `SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS must contain at most ${maximumPublicCampaigns} unique lowercase slugs.`,
+    );
+  }
+  return Object.freeze(campaigns);
+}
+
+export function loadPublicTransportConfig(environment = process.env) {
+  const searchIndexing =
+    environment.SAMRA_PUBLIC_SEARCH_INDEXING?.trim() || "disabled";
+  if (!["disabled", "enabled"].includes(searchIndexing)) {
+    throw new Error(
+      'SAMRA_PUBLIC_SEARCH_INDEXING must be "disabled" or "enabled".',
+    );
+  }
+  const httpsOnly = environment.SAMRA_PUBLIC_HTTPS_ONLY?.trim() || "false";
+  if (!["false", "true"].includes(httpsOnly)) {
+    throw new Error('SAMRA_PUBLIC_HTTPS_ONLY must be "true" or "false".');
+  }
+  return Object.freeze({
+    httpsOnly: httpsOnly === "true",
+    searchIndexing,
   });
 }
 
@@ -314,14 +358,21 @@ export function resolvePublicFile(publicDirectory, requestPathname) {
   return candidate;
 }
 
-function applySecurityHeaders(response) {
+function applySecurityHeaders(response, transport = {}) {
   response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   response.setHeader(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()",
   );
+  if (transport.searchIndexing !== "enabled") {
+    response.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+  }
+  if (transport.httpsOnly === true) {
+    response.setHeader("Strict-Transport-Security", "max-age=31536000");
+  }
 }
 
 function servePublicRuntimeConfig(request, response, config) {
@@ -343,9 +394,25 @@ function servePublicRuntimeConfig(request, response, config) {
   response.end(request.method === "HEAD" ? undefined : body);
 }
 
-async function readRequestBody(request) {
+class RequestBodyTooLargeError extends Error {}
+
+async function readRequestBody(
+  request,
+  maximumBytes = maximumProxyRequestBodyBytes,
+) {
+  const declaredLength = Number(request.headers["content-length"]);
+  if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
+    throw new RequestBodyTooLargeError();
+  }
+
   const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
+  let totalBytes = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > maximumBytes) throw new RequestBodyTooLargeError();
+    chunks.push(buffer);
+  }
   return chunks.length === 0 ? undefined : Buffer.concat(chunks);
 }
 
@@ -390,10 +457,28 @@ async function proxyApiRequest(request, response, config) {
 
   const target = new URL(request.url ?? "/api", apiOrigin);
   const method = request.method ?? "GET";
-  const body =
-    method === "GET" || method === "HEAD"
-      ? undefined
-      : await readRequestBody(request);
+  let body;
+  try {
+    body =
+      method === "GET" || method === "HEAD"
+        ? undefined
+        : await readRequestBody(request);
+  } catch (error) {
+    if (!(error instanceof RequestBodyTooLargeError)) throw error;
+    response.writeHead(413, {
+      "cache-control": "no-store",
+      "content-type": "application/problem+json",
+    });
+    response.end(
+      JSON.stringify({
+        type: "about:blank",
+        title: "Request body too large",
+        status: 413,
+        detail: "The request body exceeds the 1 MiB customer-web limit.",
+      }),
+    );
+    return;
+  }
 
   let serviceIdentityToken;
   if (config.apiServiceAuth?.mode === "cloud-run-iam") {
@@ -447,8 +532,17 @@ async function proxyApiRequest(request, response, config) {
   for (const cookie of upstream.headers.getSetCookie()) {
     response.appendHeader("set-cookie", cookie);
   }
+  response.setHeader("cache-control", "no-store");
   response.statusCode = upstream.status;
   response.end(Buffer.from(await upstream.arrayBuffer()));
+}
+
+function cacheControlFor(filePath) {
+  const basename = path.basename(filePath);
+  if (basename === "index.html") return "no-store";
+  return /-[A-Za-z0-9_-]{8,}\.[^.]+$/u.test(basename)
+    ? "public, max-age=31536000, immutable"
+    : "no-cache";
 }
 
 async function serveFile(response, filePath, requestMethod) {
@@ -461,12 +555,7 @@ async function serveFile(response, filePath, requestMethod) {
     contentTypes.get(path.extname(filePath).toLowerCase()) ??
       "application/octet-stream",
   );
-  response.setHeader(
-    "cache-control",
-    path.basename(filePath) === "index.html"
-      ? "no-cache"
-      : "public, max-age=31536000, immutable",
-  );
+  response.setHeader("cache-control", cacheControlFor(filePath));
   response.setHeader("content-length", String(file.size));
   if (requestMethod === "HEAD") {
     response.end();
@@ -478,14 +567,34 @@ async function serveFile(response, filePath, requestMethod) {
 
 export function createStaticServer(config) {
   return createServer(async (request, response) => {
-    applySecurityHeaders(response);
+    applySecurityHeaders(response, config.publicTransport);
     const url = new URL(request.url ?? "/", "http://samra.local");
 
     if (url.pathname === "/healthz") {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        response.writeHead(405, {
+          allow: "GET, HEAD",
+          "cache-control": "no-store",
+          "content-type": "application/problem+json",
+        });
+        response.end(
+          JSON.stringify({
+            type: "about:blank",
+            title: "Method not allowed",
+            status: 405,
+          }),
+        );
+        return;
+      }
       response.writeHead(200, {
+        "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8",
       });
-      response.end(JSON.stringify({ status: "ok" }));
+      response.end(
+        request.method === "HEAD"
+          ? undefined
+          : JSON.stringify({ status: "ok" }),
+      );
       return;
     }
 

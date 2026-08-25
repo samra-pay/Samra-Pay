@@ -15,6 +15,7 @@ import {
   CustomerAcquisitionTracker,
   DISABLED_CUSTOMER_ACQUISITION_CLIENT,
   deriveWebCustomerAcquisitionAttribution,
+  parseCustomerAcquisitionCampaignAllowlist,
   type CustomerAcquisitionClient,
 } from "@workspace/samra-client/acquisition";
 import {
@@ -99,6 +100,9 @@ export function SamraRuntimeProvider({
                 search: window.location.search,
                 referrer: document.referrer,
                 currentOrigin: window.location.origin,
+                allowedCampaigns: parseCustomerAcquisitionCampaignAllowlist(
+                  publicEnvironment.VITE_SAMRA_ACQUISITION_CAMPAIGNS,
+                ),
               }),
               transport: new GeneratedCustomerAcquisitionTransport(),
               allowCookieSession: true,

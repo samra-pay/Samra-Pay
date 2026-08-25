@@ -9,7 +9,9 @@ import {
   createStaticServer,
   loadApiServiceAuthConfig,
   loadPublicRuntimeConfig,
+  loadPublicTransportConfig,
   loadServerConfig,
+  parsePublicCampaignAllowlist,
   resolvePublicFile,
   serializePublicRuntimeConfig,
 } from "./static-server.mjs";
@@ -43,6 +45,10 @@ test("accepts the Cloud Run port and an HTTPS API origin", () => {
   assert.equal(config.apiOrigin.href, "https://api.example.test/");
   assert.equal(config.publicDirectory, "/srv/public");
   assert.deepEqual(config.publicRuntimeConfig, {});
+  assert.deepEqual(config.publicTransport, {
+    httpsOnly: false,
+    searchIndexing: "disabled",
+  });
   assert.deepEqual(config.apiServiceAuth, {
     mode: "cloud-run-iam",
     audience: "https://api.example.test",
@@ -168,6 +174,7 @@ test("exports only validated public Auth0 runtime identifiers", () => {
       SAMRA_PUBLIC_AUTH0_DOMAIN: "login.staging.samrapay.com",
       SAMRA_PUBLIC_AUTH0_CLIENT_ID: "public_client_123",
       SAMRA_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+      SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS: "alpha_launch,community_referral",
       AUTH0_CLIENT_SECRET: "must-never-be-exported",
       PERSONA_API_KEY: "must-never-be-exported",
     }),
@@ -176,6 +183,7 @@ test("exports only validated public Auth0 runtime identifiers", () => {
       VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
       VITE_AUTH0_CLIENT_ID: "public_client_123",
       VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+      VITE_SAMRA_ACQUISITION_CAMPAIGNS: "alpha_launch,community_referral",
     },
   );
 
@@ -203,6 +211,45 @@ test("exports only validated public Auth0 runtime identifiers", () => {
       }),
     ),
     /SECRET|PERSONA|CROSSMINT/,
+  );
+});
+
+test("fails closed on malformed campaign or public-transport configuration", () => {
+  assert.deepEqual(
+    parsePublicCampaignAllowlist("alpha_launch,community_referral"),
+    ["alpha_launch", "community_referral"],
+  );
+  for (const campaigns of [
+    "alpha_launch,alpha_launch",
+    "Alpha Launch",
+    "private@email",
+    Array.from({ length: 51 }, (_, index) => `campaign_${index}`).join(","),
+  ]) {
+    assert.throws(
+      () =>
+        loadPublicRuntimeConfig({
+          SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS: campaigns,
+        }),
+      /at most 50 unique lowercase slugs/u,
+    );
+  }
+  assert.deepEqual(
+    loadPublicTransportConfig({
+      SAMRA_PUBLIC_HTTPS_ONLY: "true",
+      SAMRA_PUBLIC_SEARCH_INDEXING: "disabled",
+    }),
+    { httpsOnly: true, searchIndexing: "disabled" },
+  );
+  assert.throws(
+    () => loadPublicTransportConfig({ SAMRA_PUBLIC_HTTPS_ONLY: "yes" }),
+    /must be "true" or "false"/u,
+  );
+  assert.throws(
+    () =>
+      loadPublicTransportConfig({
+        SAMRA_PUBLIC_SEARCH_INDEXING: "maybe",
+      }),
+    /must be "disabled" or "enabled"/u,
   );
 });
 
@@ -239,6 +286,8 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
     path.join(publicDirectory, "index.html"),
     "<h1>Samra UI</h1>",
   );
+  await writeFile(path.join(publicDirectory, "app-12345678.js"), "hashed");
+  await writeFile(path.join(publicDirectory, "app.js"), "unhashed");
 
   const upstream = createServer((request, response) => {
     assert.equal(request.url, "/api/healthz?source=manual");
@@ -254,6 +303,10 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
   const web = createStaticServer({
     apiOrigin: new URL(upstreamOrigin),
     port: 0,
+    publicTransport: Object.freeze({
+      httpsOnly: true,
+      searchIndexing: "disabled",
+    }),
     publicRuntimeConfig: Object.freeze({
       VITE_SAMRA_DATA_MODE: "api",
       VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
@@ -267,7 +320,28 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
   try {
     const spaResponse = await fetch(`${webOrigin}/dashboard/transfers`);
     assert.equal(spaResponse.status, 200);
+    assert.equal(spaResponse.headers.get("cache-control"), "no-store");
+    assert.equal(
+      spaResponse.headers.get("strict-transport-security"),
+      "max-age=31536000",
+    );
+    assert.equal(
+      spaResponse.headers.get("x-robots-tag"),
+      "noindex, nofollow, noarchive",
+    );
+    assert.equal(
+      spaResponse.headers.get("cross-origin-opener-policy"),
+      "same-origin-allow-popups",
+    );
     assert.match(await spaResponse.text(), /Samra UI/);
+
+    const immutableAssetResponse = await fetch(`${webOrigin}/app-12345678.js`);
+    assert.equal(
+      immutableAssetResponse.headers.get("cache-control"),
+      "public, max-age=31536000, immutable",
+    );
+    const mutableAssetResponse = await fetch(`${webOrigin}/app.js`);
+    assert.equal(mutableAssetResponse.headers.get("cache-control"), "no-cache");
 
     const runtimeConfigResponse = await fetch(
       `${webOrigin}/samra-runtime-config.js`,
@@ -288,10 +362,48 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
       },
     });
     assert.equal(apiResponse.status, 200);
+    assert.equal(apiResponse.headers.get("cache-control"), "no-store");
     assert.deepEqual(await apiResponse.json(), { status: "ok" });
     assert.deepEqual(apiResponse.headers.getSetCookie(), [
       "samra_session=synthetic; Path=/; HttpOnly",
     ]);
+  } finally {
+    await close(web);
+    await close(upstream);
+    await rm(publicDirectory, { recursive: true, force: true });
+  }
+});
+
+test("rejects oversized API request bodies before reaching the API", async () => {
+  const publicDirectory = await mkdtemp(path.join(tmpdir(), "samra-web-"));
+  let upstreamRequests = 0;
+  const upstream = createServer((_request, response) => {
+    upstreamRequests += 1;
+    response.end("unexpected");
+  });
+  const upstreamOrigin = await listen(upstream);
+  const web = createStaticServer({
+    apiOrigin: new URL(upstreamOrigin),
+    port: 0,
+    publicRuntimeConfig: Object.freeze({}),
+    publicDirectory,
+  });
+  const webOrigin = await listen(web);
+
+  try {
+    const response = await fetch(`${webOrigin}/api/v1/acquisition/events`, {
+      body: Buffer.alloc(1_048_577, "a"),
+      method: "POST",
+    });
+    assert.equal(response.status, 413);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await response.json(), {
+      type: "about:blank",
+      title: "Request body too large",
+      status: 413,
+      detail: "The request body exceeds the 1 MiB customer-web limit.",
+    });
+    assert.equal(upstreamRequests, 0);
   } finally {
     await close(web);
     await close(upstream);

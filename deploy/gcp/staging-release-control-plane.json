@@ -201,6 +201,15 @@
     "postRollbackVerificationRequired": true,
     "dedicatedFederatedIdentityRequired": true
   },
+  "publicReadiness": {
+    "status": "prepared-not-authorized",
+    "contract": "deploy/gcp/staging-public-readiness.json",
+    "validator": "deploy/gcp/validate-staging-public-readiness.mjs",
+    "repositoryTransferPortable": true,
+    "dnsMutationAuthorized": false,
+    "publicTrafficAuthorized": false,
+    "acquisitionActivationAuthorized": false
+  },
   "traceability": {
     "requiredFields": [
       "candidateSha",

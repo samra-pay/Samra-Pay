@@ -64,6 +64,7 @@ test("validates the bounded staging release control plane", () => {
     verificationProbeImplemented: true,
     verificationAuthorized: false,
     promotionAuthorized: false,
+    publicTrafficAuthorized: false,
   });
 });
 
@@ -88,6 +89,10 @@ test("rejects automatic, public, floating, and untracked release drift", () => {
     (value) => (value.promotion.automatic = true),
     (value) => (value.promotion.latestAliasAllowed = true),
     (value) => (value.rollback.rebuildAllowed = true),
+    (value) => (value.publicReadiness.publicTrafficAuthorized = true),
+    (value) => (value.publicReadiness.dnsMutationAuthorized = true),
+    (value) => (value.publicReadiness.acquisitionActivationAuthorized = true),
+    (value) => (value.publicReadiness.repositoryTransferPortable = false),
     (value) => (value.traceability.secretValuesAllowed = true),
     (value) => value.traceability.requiredFields.splice(0, 1),
   ]) {

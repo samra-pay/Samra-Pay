@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-authorized",
+  "observedAt": "2026-08-24",
+  "environment": "staging",
+  "dataClassification": "synthetic-only",
+  "activationAuthorized": false,
+  "portability": {
+    "repositoryAuthorityContract": "deploy/gcp/staging-github-enterprise-migration.json",
+    "stableRepositoryId": "1335175962",
+    "workflowAuthoritySelector": "repository.activeAuthority",
+    "cloudResourceNamesContainRepositoryOwner": false,
+    "repositoryTransferRequiresInfrastructureRebuild": false,
+    "replitRequired": false,
+    "vendorCredentialRequiredForEdge": false,
+    "transferActions": [
+      "verify the stable repository ID after transfer",
+      "switch the active repository authority contract",
+      "rebind the five Google workload-identity boundaries",
+      "reaudit protected environments and branch controls",
+      "reconnect the Qase GitHub application",
+      "pass the read-only release workflow"
+    ]
+  },
+  "publicEdge": {
+    "status": "architecture-prepared-not-authorized",
+    "projectId": "samra-pay-staging",
+    "region": "us-east4",
+    "host": "STAGING_CUSTOMER_HOST",
+    "dnsMutationAuthorized": false,
+    "certificateProvisioningAuthorized": false,
+    "trafficActivationAuthorized": false,
+    "components": [
+      "global external managed HTTPS load balancer",
+      "reserved global IPv4 address",
+      "Google-managed TLS certificate",
+      "regional serverless NEG for samra-customer-web",
+      "HTTPS redirect",
+      "Cloud Armor edge policy"
+    ],
+    "routing": {
+      "customerWeb": {
+        "path": "/*",
+        "backend": "samra-customer-web",
+        "browserAuthentication": "public",
+        "allowed": true
+      },
+      "sameOriginApiProxy": {
+        "path": "/api/*",
+        "backend": "samra-customer-web",
+        "browserAuthentication": "route-specific-auth0",
+        "serviceAuthenticationToApi": "cloud-run-iam",
+        "allowed": true
+      },
+      "directApi": {
+        "backend": "samra-api",
+        "allowed": false
+      },
+      "operationsPortal": {
+        "backend": "samra-operations-web",
+        "allowed": false
+      },
+      "designSystemPreview": {
+        "backend": "samra-design-system-preview",
+        "allowed": false
+      }
+    },
+    "customerWebRuntimeDelta": {
+      "currentInvokerIamCheck": "required",
+      "targetInvokerIamCheck": "disabled-only-after-public-edge-activation",
+      "ingress": "internal-and-cloud-load-balancing",
+      "defaultServiceUrlDisabled": true,
+      "directRunAppAccessAllowed": false,
+      "apiRemainsIamAuthenticated": true,
+      "activationRequiresSeparateReviewedChange": true
+    },
+    "transport": {
+      "httpAllowed": false,
+      "tlsMinimum": "1.2",
+      "managedCertificateMustBeActiveBeforeDnsCutover": true,
+      "hstsRequiredAfterTlsVerification": true,
+      "hstsIncludeSubdomains": false,
+      "hstsPreload": false
+    },
+    "caching": {
+      "html": "no-store",
+      "runtimeConfig": "no-store",
+      "api": "no-store",
+      "health": "no-store",
+      "fingerprintedStaticAssets": "public-max-age-31536000-immutable"
+    },
+    "security": {
+      "cloudArmorRequiredBeforeTraffic": true,
+      "stagingSearchIndexingAllowed": false,
+      "publicAcquisitionRateLimitRequired": true,
+      "requestBodyLimitRequired": true,
+      "requestBodyLimitImplemented": true,
+      "requestBodyLimitBytes": 1048576,
+      "requestBodyLimitImplementation": "deploy/gcp/static-server.mjs",
+      "knownBotPolicyRequired": true,
+      "apiAndOperationsOriginExposureAllowed": false,
+      "securityHeaders": [
+        "Referrer-Policy",
+        "X-Content-Type-Options",
+        "X-Frame-Options",
+        "Cross-Origin-Opener-Policy",
+        "Permissions-Policy",
+        "X-Robots-Tag",
+        "Strict-Transport-Security"
+      ]
+    }
+  },
+  "observability": {
+    "status": "contract-prepared-not-authorized",
+    "activationAuthorized": false,
+    "notificationChannelIds": [],
+    "notificationChannelRequiredBeforeActivation": true,
+    "plaintextNotificationDestinationAllowed": false,
+    "publicProbe": {
+      "host": "STAGING_CUSTOMER_HOST",
+      "path": "/healthz",
+      "method": "GET",
+      "intervalSeconds": 300,
+      "timeoutSeconds": 10,
+      "expectedStatus": 200,
+      "expectedJson": {
+        "status": "ok"
+      },
+      "realProviderCallAllowed": false,
+      "customerRecordCreationAllowed": false
+    },
+    "privateProbe": {
+      "controller": "deploy/gcp/run-staging-revision-probe.sh",
+      "apiReadinessPath": "/api/readyz",
+      "requiresExactRevision": true,
+      "requiresServiceIdentity": true
+    },
+    "alerts": [
+      {
+        "id": "public-availability",
+        "signal": "uptime-check-success-ratio",
+        "condition": "below",
+        "threshold": 0.99,
+        "windowSeconds": 900
+      },
+      {
+        "id": "edge-5xx-ratio",
+        "signal": "https-load-balancer-5xx-ratio",
+        "condition": "above",
+        "threshold": 0.02,
+        "windowSeconds": 600
+      },
+      {
+        "id": "customer-web-p95-latency",
+        "signal": "cloud-run-request-p95-milliseconds",
+        "condition": "above",
+        "threshold": 2500,
+        "windowSeconds": 900
+      },
+      {
+        "id": "cloud-sql-storage-utilization",
+        "signal": "cloud-sql-disk-utilization",
+        "condition": "above",
+        "threshold": 0.8,
+        "windowSeconds": 900
+      },
+      {
+        "id": "cloud-sql-connection-utilization",
+        "signal": "cloud-sql-connection-utilization",
+        "condition": "above",
+        "threshold": 0.8,
+        "windowSeconds": 900
+      },
+      {
+        "id": "cloud-sql-backup-age",
+        "signal": "cloud-sql-latest-successful-backup-age-hours",
+        "condition": "above",
+        "threshold": 26,
+        "windowSeconds": 300
+      }
+    ],
+    "structuredLogFields": [
+      "requestId",
+      "traceId",
+      "service",
+      "revision",
+      "candidateSha",
+      "statusCode",
+      "latencyMs"
+    ],
+    "forbiddenLogFields": [
+      "authorization header",
+      "cookie",
+      "query string",
+      "request body",
+      "customer PII",
+      "identity evidence",
+      "provider payload",
+      "secret value"
+    ],
+    "logRetentionDays": 30,
+    "releaseEvidenceRetentionDays": 365,
+    "rollbackRunbook": "docs/operations/staging-release-control-plane.md"
+  },
+  "acquisitionActivation": {
+    "status": "implemented-disabled-pending-governance",
+    "activationAuthorized": false,
+    "vendorIndependent": true,
+    "marketingExportAuthorized": false,
+    "activeCampaigns": [],
+    "campaignAllowlistEnvironment": "SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS",
+    "campaignAllowlistFormat": "comma-separated-lowercase-slugs",
+    "maximumCampaignCount": 50,
+    "publicEndpoints": [
+      "/api/v1/acquisition/events",
+      "/api/v1/acquisition/bind"
+    ],
+    "canonicalReportEndpoint": "/api/v1/internal/operations/customer-funnel",
+    "ownedMilestone": "fifth-completed-remittance",
+    "clientTelemetryFailOpen": true,
+    "serverMilestonesDerivedFromCanonicalRecords": true,
+    "privacyGates": [
+      "approved privacy notice and lawful basis",
+      "approved retention and deletion procedure",
+      "approved data-subject request process",
+      "approved campaign taxonomy owner and change control",
+      "approved cross-domain and mobile attribution policy"
+    ],
+    "abuseGates": [
+      "Cloud Armor rate limit on public acquisition capture",
+      "application request-body limit",
+      "idempotency and replay controls",
+      "bot filtering and abuse budget",
+      "alerting for rejected and failed capture"
+    ],
+    "prohibitedData": [
+      "raw URL",
+      "query string",
+      "IP address",
+      "user agent",
+      "device fingerprint",
+      "name",
+      "email",
+      "phone number",
+      "Auth0 subject",
+      "bearer token",
+      "identity evidence",
+      "financial value",
+      "provider payload"
+    ]
+  },
+  "costBoundary": {
+    "incrementalMonthlyEstimateApproved": false,
+    "minimumInstances": 0,
+    "logRetentionDays": 30,
+    "budgetReviewRequiredBeforeApply": true,
+    "costAlertRequiredBeforeTraffic": true
+  },
+  "activationOrder": [
+    "confirm staging customer hostname and DNS owner",
+    "confirm incremental Google Cloud estimate and budget alert",
+    "activate repository authority or complete Enterprise cutover",
+    "create edge resources with no DNS cutover",
+    "verify certificate and load-balancer configuration",
+    "configure Auth0 callbacks, logout URLs, and allowed origins",
+    "activate notification channels and observability policies",
+    "pass synthetic public-edge, private-API, accessibility, and rollback tests",
+    "approve privacy, campaign taxonomy, retention, and abuse controls",
+    "authorize first public staging traffic separately",
+    "perform DNS cutover and record evidence",
+    "observe the rollback window before acquisition activation"
+  ],
+  "prohibited": [
+    "automatic DNS mutation",
+    "public samra-api origin",
+    "public operations portal",
+    "public design-system preview",
+    "unrestricted Cloud Run ingress",
+    "default run.app customer endpoint",
+    "public traffic before an active certificate",
+    "campaign activation without an allowlist",
+    "production customer data",
+    "real provider call from an uptime probe",
+    "stored Google service-account key",
+    "repository-owner name embedded in a Google Cloud resource name",
+    "Replit runtime dependency"
+  ]
+}

@@ -235,6 +235,16 @@ distinct protected environments, workload-identity providers, and keyless
 service accounts. Activating and executing the private probe and first-ever
 traffic activation remain separate hard stops.
 
+The public customer-web edge, monitoring thresholds, repository-transfer
+portability rule, and controlled acquisition activation sequence are defined in
+[`docs/operations/staging-public-readiness.md`](../../docs/operations/staging-public-readiness.md)
+and machine-validated by `staging-public-readiness.json`. The target edge is a
+Google external HTTPS load balancer routing only to `samra-customer-web`; it
+does not expose the API, Operations Portal, or design-system preview. The
+contract contains no mutable GitHub owner name, requires no Replit or vendor
+credential, and remains fully unauthorized for DNS, certificates, alerts,
+campaigns, and traffic.
+
 The controlled move from the founder's personal GitHub namespace to the
 Enterprise-backed Samra Pay organization is documented in
 [`docs/operations/github-enterprise-control-plane-migration.md`](../../docs/operations/github-enterprise-control-plane-migration.md)
@@ -620,11 +630,17 @@ SAMRA_PUBLIC_DATA_MODE=api
 SAMRA_PUBLIC_AUTH0_DOMAIN=<hostname-only>
 SAMRA_PUBLIC_AUTH0_CLIENT_ID=<public-SPA-client-id>
 SAMRA_PUBLIC_AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
+SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS=<comma-separated-approved-slugs-or-omit>
+SAMRA_PUBLIC_SEARCH_INDEXING=disabled
+SAMRA_PUBLIC_HTTPS_ONLY=false
 ```
 
 They are not secrets. Omitting any Auth0 value leaves API-mode customer sign-in
-fail-closed. The endpoint is `no-store`, maps only the four reviewed public
-identifiers, and ignores every other process variable. Auth0 identifiers are no
+fail-closed. Leave the campaign allowlist empty until privacy, taxonomy, and
+abuse controls are approved. Keep search indexing disabled in staging. Change
+HTTPS-only to `true` only after the managed certificate and load balancer have
+been independently verified. The endpoint is `no-store`, maps only the reviewed
+public identifiers, and ignores every other process variable. Auth0 identifiers are no
 longer Docker build arguments, so one immutable image can move between reviewed
 environments without a rebuild. Never pass an Auth0 client secret, access token,
 refresh token, management credential, Persona value, or Crossmint value into

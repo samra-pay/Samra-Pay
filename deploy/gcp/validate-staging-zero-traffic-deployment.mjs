@@ -230,8 +230,12 @@ export function validateStagingZeroTrafficDeployment(
     );
     assert(
       Array.isArray(service.requiredRuntimeEnvironment) &&
+        Array.isArray(service.optionalRuntimeEnvironment ?? []) &&
         Array.isArray(service.prerequisiteEvidence) &&
-        !service.requiredRuntimeEnvironment.some(
+        ![
+          ...service.requiredRuntimeEnvironment,
+          ...(service.optionalRuntimeEnvironment ?? []),
+        ].some(
           (value) =>
             /PASSWORD|API_KEY|CLIENT_SECRET|WEBHOOK_SECRET/.test(value) ||
             (/SECRET/.test(value) && !/_SECRET_VERSION$/.test(value)),
@@ -254,7 +258,6 @@ export function validateStagingZeroTrafficDeployment(
         .length === 0,
     "Private database or VPC boundary drifted",
   );
-
   assert(
     JSON.stringify(contract.workflow.permissions) ===
       JSON.stringify({

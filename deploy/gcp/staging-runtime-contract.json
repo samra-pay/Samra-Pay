@@ -103,6 +103,11 @@
         "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
         "SAMRA_PUBLIC_AUTH0_AUDIENCE"
       ],
+      "optionalRuntimeEnvironment": [
+        "SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS",
+        "SAMRA_PUBLIC_SEARCH_INDEXING",
+        "SAMRA_PUBLIC_HTTPS_ONLY"
+      ],
       "apiProxyAuthentication": {
         "mode": "cloud-run-iam",
         "tokenSource": "cloud-run-metadata-service-identity",

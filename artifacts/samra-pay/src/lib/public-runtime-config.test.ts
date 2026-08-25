@@ -16,6 +16,7 @@ describe("public runtime configuration", () => {
           VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
           VITE_AUTH0_CLIENT_ID: "public-client-id",
           VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+          VITE_SAMRA_ACQUISITION_CAMPAIGNS: "alpha_launch,community_referral",
         },
       ),
     ).toEqual({
@@ -23,6 +24,7 @@ describe("public runtime configuration", () => {
       VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
       VITE_AUTH0_CLIENT_ID: "public-client-id",
       VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+      VITE_SAMRA_ACQUISITION_CAMPAIGNS: "alpha_launch,community_referral",
       PRIVATE_BUILD_VALUE: "never-exported-by-the-server",
     });
   });

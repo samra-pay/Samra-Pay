@@ -78,6 +78,9 @@ deployment is represented.
 | `SAMRA_PUBLIC_AUTH0_DOMAIN`             | Auth0 tenant or custom-domain hostname | none       | Cloud Run public runtime mapping to `VITE_AUTH0_DOMAIN`                  |
 | `SAMRA_PUBLIC_AUTH0_CLIENT_ID`          | Public Auth0 SPA client ID             | none       | Cloud Run public runtime mapping; never a client secret                  |
 | `SAMRA_PUBLIC_AUTH0_AUDIENCE`           | Exact HTTPS Samra API identifier       | none       | Cloud Run public runtime mapping to the same API audience                |
+| `SAMRA_PUBLIC_ACQUISITION_CAMPAIGNS`    | Up to 50 lowercase campaign slugs      | none       | Explicit allowlist for owned attribution capture; empty keeps it off     |
+| `SAMRA_PUBLIC_SEARCH_INDEXING`          | `disabled`, `enabled`                  | `disabled` | Keeps staging out of search indexes unless separately approved           |
+| `SAMRA_PUBLIC_HTTPS_ONLY`               | `false`, `true`                        | `false`    | Emits HSTS only after the public TLS edge is independently verified      |
 | `SAMRA_API_ORIGIN`                      | Exact HTTPS Cloud Run API origin       | none       | Customer-web same-origin proxy target; loopback HTTP only in development |
 | `SAMRA_API_SERVICE_AUTH_MODE`           | `disabled`, `cloud-run-iam`            | local only | Requires Cloud Run service identity for every non-loopback API target    |
 | `SAMRA_API_SERVICE_AUDIENCE`            | Exact HTTPS Cloud Run API origin       | none       | Audience for the customer-web service identity token                     |
