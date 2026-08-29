@@ -1,430 +1,388 @@
-import { PageTransition } from "@/components/page-transition";
-import { Button } from "@workspace/samra-pay-ds/components/ui/button";
-import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck, Globe, Star, Users } from "lucide-react";
-import { Link } from "wouter";
-import heroBg from "@assets/generated_images/hero-bg.jpg";
-import heroBg640 from "@assets/generated_images/hero-bg-640.jpg";
-import heroBgWebp from "@assets/generated_images/hero-bg.webp";
-import heroBg640Webp from "@assets/generated_images/hero-bg-640.webp";
-import remittanceStoryWide from "@assets/home-ceremony.jpg";
-import remittanceStoryWide800 from "@assets/home-ceremony-800.jpg";
-import remittanceStoryWideWebp from "@assets/home-ceremony.webp";
-import remittanceStoryWide800Webp from "@assets/home-ceremony-800.webp";
-import remittanceStoryTall from "@assets/jebena-pour-banner.jpg";
-import remittanceStoryTall480 from "@assets/jebena-pour-banner-480.jpg";
-import remittanceStoryTallWebp from "@assets/jebena-pour-banner.webp";
-import remittanceStoryTall480Webp from "@assets/jebena-pour-banner-480.webp";
-import { CreditCard, Card3DWrapper } from "@/components/credit-card";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
-import { useRef } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
+import {
+  ArrowRight,
+  ChevronDown,
+  CreditCard,
+  Globe2,
+  LockKeyhole,
+  Menu,
+  PieChart,
+  Send,
+  ShieldCheck,
+  Users,
+  WalletCards,
+  X,
+} from "lucide-react";
+import "./coming-soon.css";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0 }
+const siteContent = {
+  navigation: [
+    { label: "Features", href: "#features" },
+    { label: "Values", href: "#values" },
+    { label: "FAQ", href: "#faq" },
+    { label: "Blog", href: "#blog" },
+  ],
+  features: [
+    {
+      icon: CreditCard,
+      title: "Feature title",
+      description: "Short description of the feature and how it helps you manage money with ease and confidence.",
+    },
+    {
+      icon: Users,
+      title: "Feature title",
+      description: "Short description of the feature and how it helps you manage money with ease and confidence.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Feature title",
+      description: "Short description of the feature and how it helps you manage money with ease and confidence.",
+    },
+  ],
+  capabilities: [
+    { icon: Send, label: "Move money across borders with clarity" },
+    { icon: WalletCards, label: "Manage and spend with global ease" },
+    { icon: PieChart, label: "Track and stay on top of what matters" },
+    { icon: LockKeyhole, label: "Secure by design, privacy first" },
+    { icon: Globe2, label: "Built for the Ethiopian diaspora" },
+  ],
+  questions: [
+    {
+      question: "What is Samra Pay?",
+      answer: "Samra Pay is a concept-stage financial platform being designed for the Ethiopian diaspora. Final products and availability are still being defined.",
+    },
+    {
+      question: "When will Samra Pay launch?",
+      answer: "A public launch date has not been announced. Early-access updates will be shared only after the relevant product and operating details are confirmed.",
+    },
+    {
+      question: "How do I get early access?",
+      answer: "This prototype demonstrates the early-access experience. The production signup workflow will be connected before public launch.",
+    },
+    {
+      question: "Will Samra Pay be available globally?",
+      answer: "No geographic availability is being represented yet. Future access will depend on the final product, operating partners, and applicable requirements.",
+    },
+  ],
 };
 
-export default function Home() {
-  const containerRef = useRef(null);
-  const prefersReducedMotion = useReducedMotion();
-  const storyReveal = (hidden: { opacity: number; x?: number; y?: number }) =>
-    prefersReducedMotion
-      ? {}
-      : {
-          initial: hidden,
-          whileInView: { opacity: 1, x: 0, y: 0 },
-          viewport: { once: true, margin: "-100px" },
-        };
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"]
-  });
+function ComingSoonLogo({ dark = false }: { dark?: boolean }) {
+  return (
+    <span className={dark ? "coming-logo is-dark" : "coming-logo"} aria-label="Samra Pay">
+      <span>samra</span><em>pay</em>
+    </span>
+  );
+}
 
-  const yBg = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const opacityBg = useTransform(scrollYProgress, [0, 0.5], [0.4, 0]);
+function ComingSoonLanguageToggle({ className = "" }: { className?: string }) {
+  const [language, setLanguage] = useState<"en" | "am">("en");
+  return (
+    <div className={`coming-language-toggle ${className}`} role="group" aria-label="Language">
+      <button type="button" aria-pressed={language === "en"} onClick={() => setLanguage("en")}>EN</button>
+      <button type="button" lang="am" aria-pressed={language === "am"} onClick={() => setLanguage("am")}>አማ</button>
+    </div>
+  );
+}
+
+function EarlyAccessForm({ compact = false }: { compact?: boolean }) {
+  const emailId = useId();
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!event.currentTarget.checkValidity()) return;
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <div className="early-access-success" role="status">
+        <ShieldCheck aria-hidden="true" />
+        <div>
+          <strong>Preview complete.</strong>
+          <span>No information was transmitted or stored.</span>
+        </div>
+        <button type="button" onClick={() => setSubmitted(false)}>
+          Reset
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <PageTransition>
-      <div className="w-full" ref={containerRef}>
+    <form className={compact ? "early-access-form is-compact" : "early-access-form"} onSubmit={handleSubmit}>
+      <label className="sr-only" htmlFor={emailId}>
+        Email address
+      </label>
+      <input
+        id={emailId}
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        placeholder="Enter your email address"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        required
+      />
+      <button type="submit">Request early access</button>
+    </form>
+  );
+}
 
-        {/* HERO SECTION */}
-        <section className="relative min-h-[auto] lg:min-h-[min(100dvh,960px)] flex items-center overflow-hidden pt-24 pb-16 lg:py-20">
-          <div className="absolute inset-0 z-0 bg-background">
-            <motion.div
-              style={{
-                y: prefersReducedMotion ? 0 : yBg,
-                opacity: prefersReducedMotion ? 0.4 : opacityBg,
-              }}
-              className="absolute inset-0 mix-blend-screen"
-            >
-              <picture>
-                <source
-                  type="image/webp"
-                  srcSet={`${heroBg640Webp} 640w, ${heroBgWebp} 1024w`}
-                  sizes="100vw"
-                />
-                <img
-                  src={heroBg}
-                  srcSet={`${heroBg640} 640w, ${heroBg} 1024w`}
-                  sizes="100vw"
-                  alt=""
-                  loading="eager"
-                  fetchPriority="high"
-                  className="w-full h-full object-cover"
-                />
-              </picture>
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/80" />
-            </motion.div>
+function ComingSoonHeader() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <header className="coming-header">
+      <a className="brand-link" href="#top" aria-label="Samra Pay home">
+        <ComingSoonLogo dark />
+      </a>
+      <nav className="coming-desktop-nav" aria-label="Primary navigation">
+        {siteContent.navigation.map((item) => (
+          <a key={item.href} href={item.href}>
+            {item.label}
+          </a>
+        ))}
+      </nav>
+      <div className="coming-header-actions">
+        <ComingSoonLanguageToggle />
+        <button
+          type="button"
+          className="coming-menu-button"
+          aria-label={open ? "Close navigation" : "Open navigation"}
+          aria-expanded={open}
+          aria-controls="coming-mobile-nav"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+        </button>
+      </div>
+      {open && (
+        <nav id="coming-mobile-nav" className="coming-mobile-nav" aria-label="Mobile navigation">
+          <div className="coming-mobile-nav-top">
+            <ComingSoonLogo dark />
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close navigation">
+              <X aria-hidden="true" />
+            </button>
           </div>
+          {siteContent.navigation.map((item) => (
+            <a key={item.href} href={item.href} onClick={() => setOpen(false)}>
+              {item.label}
+            </a>
+          ))}
+          <ComingSoonLanguageToggle className="coming-mobile-language" />
+        </nav>
+      )}
+    </header>
+  );
+}
 
-          <div className="container relative z-20 px-6 mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center h-full py-4 lg:py-0">
-            <motion.div
-              initial={prefersReducedMotion ? false : "hidden"}
-              animate={prefersReducedMotion ? undefined : "visible"}
-              transition={{ staggerChildren: 0.1, delayChildren: 0.2 }}
-              className="max-w-2xl"
-            >
-              <motion.div variants={fadeUp} className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium tracking-[0.2em] uppercase mb-6 md:mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(212,175,55,0.15)]">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
-                Designed in Addis. Polished in NY.
-              </motion.div>
+function FAQ() {
+  const [openQuestion, setOpenQuestion] = useState<number | null>(null);
 
-              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-3 md:mb-4 text-[#F9F7F1]">
-                Your financial home.<br/>
-                Built for life here<br/>
-                <span className="italic text-primary">and home.</span>
-              </motion.h1>
-
-              <motion.p variants={fadeUp} lang="am" className="font-ethiopic text-2xl md:text-3xl text-primary/70 leading-relaxed mb-5 md:mb-6">
-                ቤቶ ቅርብ ነው።
-              </motion.p>
-
-              <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-8 md:mb-10 leading-relaxed max-w-lg font-light">
-                A modern financial platform for the Ethiopian diaspora. One card builds your life here. The other brings you home.
-              </motion.p>
-
-              <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 sm:gap-5">
-                <Button asChild variant="gold" size="lg" className="rounded-full w-full sm:w-auto h-12 sm:h-14 px-8 text-base">
-                  <Link href="/cards">
-                    Explore Cards <ArrowRight className="ml-2 w-5 h-5" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="rounded-full w-full sm:w-auto h-12 sm:h-14 px-8 text-base border-white/20 hover:bg-white/5 hover:border-white/40 transition-all">
-                  <Link href="/remittance">
-                    View Remittance Rates
-                  </Link>
-                </Button>
-                <Link
-                  href="/remittance"
-                  className="mt-1 inline-flex items-center justify-center gap-2 text-xs tracking-[0.12em] uppercase text-primary/80 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:hidden"
+  return (
+    <section className="faq-section" id="faq" aria-labelledby="faq-title">
+      <div className="coming-container faq-grid">
+        <div>
+          <p className="section-eyebrow">Questions</p>
+          <h2 id="faq-title">Frequently asked questions</h2>
+        </div>
+        <div className="faq-list">
+          {siteContent.questions.map((item, index) => {
+            const isOpen = openQuestion === index;
+            const answerId = `faq-answer-${index}`;
+            return (
+              <div className="faq-item" key={item.question}>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls={answerId}
+                  onClick={() => setOpenQuestion(isOpen ? null : index)}
                 >
-                  <Globe className="size-3.5" aria-hidden="true" />
-                  180 ETB / $1 illustrative demo rate
-                </Link>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9, x: 20 }}
-              animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, x: 0 }}
-              transition={{ delay: 0.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative lg:h-[700px] flex items-center justify-center lg:justify-end"
-            >
-              <div className="relative w-full max-w-[640px]">
-                {/* Floating stat chips */}
-                <div className="relative w-full max-w-[440px] ml-auto">
-                  <motion.div
-                    initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-                    animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-                    transition={{ delay: 1.2 }}
-                    className="absolute -left-16 -top-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-eucalyptus/10 flex items-center justify-center">
-                      <Star className="w-4 h-4 text-eucalyptus" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Credit Score</div>
-                      <div className="text-lg font-serif text-white/90">745 <span className="text-eucalyptus text-xs font-sans font-medium ml-1">+12</span></div>
-                    </div>
-                  </motion.div>
-
-                  <Card3DWrapper>
-                    <CreditCard variant="charge" showFlipHint />
-                  </Card3DWrapper>
-
-                  {/* Ambient glow behind card */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/10 blur-[100px] rounded-full -z-10" />
+                  <span>{item.question}</span>
+                  <ChevronDown aria-hidden="true" />
+                </button>
+                <div id={answerId} className="faq-answer" hidden={!isOpen}>
+                  <p>{item.answer}</p>
                 </div>
-
-                <Link
-                  href="/remittance"
-                  aria-label="View remittance rates, illustrative demo rate of 180 Ethiopian birr per US dollar"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden rounded-2xl md:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-                >
-                  <motion.div
-                    initial={false}
-                    animate={prefersReducedMotion ? undefined : { x: [0, 5, 0] }}
-                    transition={prefersReducedMotion ? undefined : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-[#111713]/95 p-4 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(212,175,55,0.12)] transition-colors hover:border-primary/60"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-primary" aria-hidden="true" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-primary/80 uppercase tracking-[0.18em]">Remittance promo</div>
-                      <div className="text-xl font-mono text-primary tracking-tight">180 ETB <span className="text-xs text-muted-foreground font-sans tracking-normal">/ $1</span></div>
-                      <div className="text-[9px] text-muted-foreground/80">Illustrative demo rate</div>
-                    </div>
-                  </motion.div>
-                </Link>
               </div>
-            </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function Home() {
+  return (
+    <div className="coming-soon-site" id="top">
+      <ComingSoonHeader />
+
+      <main>
+        <section className="coming-hero" aria-labelledby="coming-title">
+          <div className="coming-hero-copy">
+            <div className="coming-status">
+              <span aria-hidden="true" />
+              Coming soon
+            </div>
+            <h1 id="coming-title">
+              Your financial home. Built between <em>here</em> and <em>home.</em>
+            </h1>
+            <p className="coming-hero-deck">A modern financial platform being designed for the Ethiopian diaspora.</p>
+            <EarlyAccessForm />
+            <p className="concept-note" id="concept-status">
+              <ShieldCheck aria-hidden="true" />
+              Concept preview. Samra Pay is not yet live, and no financial services are offered through this page.
+            </p>
+          </div>
+
+          <div className="coming-hero-media">
+            <img src="/coming-soon/hero-woman-coffee.png" alt="Ethiopian diaspora woman holding a coffee cup" />
+            <div className="concept-preview-card" aria-label="Illustrative product preview">
+              <span>Concept preview</span>
+              <WalletCards aria-hidden="true" />
+              <strong>Product moment</strong>
+              <p>Replace with an approved feature and supporting line.</p>
+            </div>
           </div>
         </section>
 
-        {/* SOCIAL PROOF BAND */}
-        <section className="border-y border-white/5 bg-background/50 relative z-20">
-          <div className="container mx-auto px-6 py-10">
-            <p className="mb-7 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground/70">Illustrative demo snapshot</p>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
+        <section className="story-intro" id="story" aria-labelledby="story-title">
+          <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="section-pattern section-pattern-light" />
+          <div className="coming-container story-intro-grid">
+            <h2 id="story-title">Bridging lives.<br />Connecting futures.</h2>
+            <p>
+              Samra Pay is being shaped for a global Ethiopian community. This framework separates the design system from the final product story so approved content can be added without rebuilding the experience.
+            </p>
+          </div>
+        </section>
+
+        <section className="feature-framework" id="features" aria-label="Replaceable feature framework">
+          <div className="coming-container feature-framework-grid">
+            {siteContent.features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <article className={index === 2 ? "feature-framework-item is-wide" : "feature-framework-item"} key={`${feature.title}-${index}`}>
+                  <Icon aria-hidden="true" />
+                  <div>
+                    <h3>{feature.title}</h3>
+                    <p>{feature.description}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="capability-band" id="capabilities" aria-labelledby="capabilities-title">
+          <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="section-pattern section-pattern-dark" />
+          <div className="coming-container capability-grid">
             <div>
-              <div className="text-3xl font-serif text-white/90 mb-1">$40M+</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Remitted Home</div>
+              <p className="section-eyebrow">Built around you</p>
+              <h2 id="capabilities-title">Designed for how you move, give, and grow.</h2>
             </div>
-            <div className="w-px h-10 bg-white/10 hidden md:block" />
-            <div>
-              <div className="text-3xl font-serif text-primary mb-1">180 ETB</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Illustrative promo rate</div>
-            </div>
-            <div className="w-px h-10 bg-white/10 hidden md:block" />
-            <div>
-              <div className="text-3xl font-serif text-white/90 mb-1">12,000+</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Community Members</div>
-            </div>
+            <div className="capability-list">
+              {siteContent.capabilities.map((capability) => {
+                const Icon = capability.icon;
+                return (
+                  <a key={capability.label} href="#concept-status">
+                    <Icon aria-hidden="true" />
+                    <span>{capability.label}</span>
+                    <ArrowRight aria-hidden="true" />
+                  </a>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* FEATURE GRID */}
-        <section className="py-32 relative">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-24">
-              <p className="mb-5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">Built around your whole life</p>
-              <h2 className="font-serif text-4xl md:text-5xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
-                Financial tools<br/>
-                <span className="italic text-primary">with soul.</span>
-              </h2>
-              <p className="text-xl text-muted-foreground font-light">
-                We didn't just put a new coat of paint on a banking app. We built features specifically designed for the financial reality of the diaspora.
+        <section className="proof-section proof-section-dark" id="values" aria-labelledby="approach-title">
+          <div className="coming-container proof-grid proof-grid-text-first">
+            <div className="proof-copy">
+              <p className="section-eyebrow">Our approach</p>
+              <h2 id="approach-title">Rooted in culture.<br />Focused on people.</h2>
+              <p>
+                The final narrative will be supplied here. The framework is ready for approved product positioning, user evidence, and specific calls to action.
               </p>
             </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: <ShieldCheck className="w-8 h-8 text-primary" />,
-                  title: "Credit, Without the Catch",
-                  desc: "A true charge card. Build your US credit history month-by-month without the indignity of tying up a security deposit."
-                },
-                {
-                  icon: <Plane className="w-8 h-8 text-primary" />,
-                  title: "Direct to Addis",
-                  desc: "Every swipe earns points. Upgrade to the Co-brand to earn 3x on Ethiopian Airlines and get priority toward your flight home."
-                },
-                {
-                  icon: <Users className="w-8 h-8 text-primary" />,
-                  title: "Tomoca Social House",
-                  desc: "Banking shouldn't be isolating. Join our physical hubs for traditional coffee ceremonies, pitch nights, and community wealth building."
-                }
-              ].map((feature, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-                  whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={prefersReducedMotion ? undefined : { delay: idx * 0.15, duration: 0.7 }}
-                  className="p-10 rounded-[2rem] border border-white/5 bg-gradient-to-b from-card to-background hover:border-primary/20 transition-colors group"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-8 group-hover:bg-primary/10 transition-colors">
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-2xl font-serif mb-4">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed font-light">
-                    {feature.desc}
-                  </p>
-                </motion.div>
-              ))}
+            <div className="proof-image-wrap">
+              <img src="/coming-soon/proof-man-laptop.png" alt="Ethiopian diaspora professional working on a laptop in a coffee shop" />
+              <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="proof-pattern" />
             </div>
           </div>
         </section>
 
-        {/* REMITTANCE STORY SECTION */}
-        <section className="py-24 md:py-40 bg-[#050505] border-y border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(212,175,55,0.08),_transparent_60%)] pointer-events-none" />
-          <div className="container mx-auto px-6 relative z-10">
-            <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-
-              {/* Text Content */}
-              <motion.div
-                {...storyReveal({ opacity: 0, x: -40 })}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                className="lg:col-span-5"
-              >
-                <div className="w-12 h-[1px] bg-primary mb-8" />
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif mb-8 leading-[1.1] tracking-tight font-normal text-[#F9F7F1]">
-                  Every transfer <br/>
-                  <span className="italic text-primary">ends like this.</span>
-                </h2>
-
-                <div className="space-y-6 text-lg md:text-xl text-white/60 font-light leading-[1.6] mb-12">
-                  <p>
-                    Sending money home isn't a transaction. It's participation in a shared life. It's the scent of popcorn roasting, the familiar bubble of the jebena, and the quiet assurance that family is taken care of.
-                  </p>
-                  <p className="font-medium text-white/80">
-                    Money here. Money home. More to build.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-4 mb-10">
-                  <Button asChild variant="gold" className="rounded-none px-8 py-6 text-sm tracking-widest uppercase self-start">
-                    <Link href="/remittance">Send Money Home</Link>
-                  </Button>
-                  <p lang="am" className="font-ethiopic text-xl text-primary/60 leading-relaxed">
-                    ገንዘብ ወደ ቤት ይላኩ።
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* Image Collage */}
-              <div className="lg:col-span-7 relative h-[470px] sm:h-[600px] lg:h-[700px]">
-                {/* Tall Banner Image */}
-                <motion.div
-                  {...storyReveal({ opacity: 0, y: 40 })}
-                  transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute right-0 top-0 w-2/3 sm:w-[55%] h-[80%] z-10 group"
-                >
-                  <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <picture>
-                    <source
-                      type="image/webp"
-                      srcSet={`${remittanceStoryTall480Webp} 480w, ${remittanceStoryTallWebp} 731w`}
-                      sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
-                    />
-                    <img
-                      src={remittanceStoryTall}
-                      srcSet={`${remittanceStoryTall480} 480w, ${remittanceStoryTall} 731w`}
-                      sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
-                      loading="lazy"
-                      decoding="async"
-                      alt="Jebena pouring fresh coffee"
-                      className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                    />
-                  </picture>
-                  <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.2em] text-white/40 uppercase drop-shadow-md">
-                    Fig. 01 — The Pour
-                  </div>
-                </motion.div>
-
-                {/* Wide Gathering Image */}
-                <motion.div
-                  {...storyReveal({ opacity: 0, x: 40 })}
-                  transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute left-0 bottom-0 w-3/4 sm:w-[65%] h-[60%] z-20 group"
-                >
-                  <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <picture>
-                    <source
-                      type="image/webp"
-                      srcSet={`${remittanceStoryWide800Webp} 800w, ${remittanceStoryWideWebp} 1600w`}
-                      sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
-                    />
-                    <img
-                      src={remittanceStoryWide}
-                      srcSet={`${remittanceStoryWide800} 800w, ${remittanceStoryWide} 1600w`}
-                      sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
-                      loading="lazy"
-                      decoding="async"
-                      alt="Intimate coffee ceremony gathering"
-                      className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                    />
-                  </picture>
-                  <div className="absolute bottom-4 left-4 text-[10px] tracking-[0.2em] text-white/50 uppercase drop-shadow-md">
-                    Fig. 02 — Family & Friends
-                  </div>
-                </motion.div>
-              </div>
-
+        <section className="proof-section proof-section-light" id="blog" aria-labelledby="everyday-title">
+          <div className="coming-container proof-grid proof-grid-image-first">
+            <div className="proof-image-wrap proof-image-woman">
+              <img src="/coming-soon/woman-with-phone-diaspora.jpg" alt="Ethiopian diaspora woman using her phone at home" />
+            </div>
+            <div className="proof-copy">
+              <p className="section-eyebrow">Built for real life</p>
+              <h2 id="everyday-title">Simple to use.<br />Every day.</h2>
+              <p>
+                Replace this section with the strongest approved proof point once the final product scope and supporting evidence are ready.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* CO-BRAND HIGHLIGHT */}
-        <section className="py-24 relative overflow-hidden bg-[#0A0D0B] border-y border-white/5">
-          {/* Green/Gold atmospheric lighting */}
-          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_50%,_rgba(212,175,55,0.05),_rgba(27,59,43,0.2)_40%,_transparent_70%)] pointer-events-none" />
+        <FAQ />
 
-          <div className="container mx-auto px-6 relative z-10">
-            <div className="grid lg:grid-cols-2 items-center gap-16 lg:gap-24">
-              <motion.div
-                initial={prefersReducedMotion ? false : { opacity: 0, x: -30 }}
-                whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={prefersReducedMotion ? undefined : { duration: 0.8 }}
-                className="order-2 lg:order-1"
-              >
-                <div className="relative w-full max-w-[500px] mx-auto perspective-[1200px]">
-                  <Card3DWrapper>
-                    <CreditCard variant="airlines" last4="1991" showFlipHint />
-                  </Card3DWrapper>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={prefersReducedMotion ? false : { opacity: 0, x: 30 }}
-                whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={prefersReducedMotion ? undefined : { duration: 0.8 }}
-                className="order-1 lg:order-2"
-              >
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6">
-                  Premium Tier
-                </div>
-                <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl mb-6 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
-                  The ultimate <br/><span className="italic text-primary">upgrade.</span>
-                </h2>
-                <p className="text-lg text-muted-foreground mb-8 font-light leading-relaxed">
-                  Elevate your travel with the Ethiopian Airlines Co-branded Card. Earn 3x points on eligible Ethiopian Airlines purchases and move toward the journey home with benefits designed for the distance between two places.
-                </p>
-                <Button asChild variant="link" className="p-0 h-auto text-primary text-lg group font-medium">
-                  <Link href="/cards/co-brand">
-                    Explore Co-brand Card <ChevronRight className="ml-1 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </motion.div>
+        <section className="final-cta" aria-labelledby="final-cta-title">
+          <div className="coming-container final-cta-grid">
+            <div>
+              <h2 id="final-cta-title">Be the first to know when we launch.</h2>
+              <p>This preview does not transmit information. Connect the approved signup workflow before publication.</p>
             </div>
+            <EarlyAccessForm compact />
           </div>
         </section>
+      </main>
 
-        {/* FINAL CTA */}
-        <section className="py-32 relative">
-          <div className="absolute inset-0 bg-primary/5 pattern-dots" />
-          <div className="container mx-auto px-6 relative z-10 text-center">
-            <h2 className="font-serif text-5xl md:text-6xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
-              Your next chapter<br/>
-              <span className="italic text-primary">starts here.</span>
-            </h2>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-light">
-              Explore the Samra Pay demo and see how your financial life here and home could work together.
-            </p>
-            <Button asChild variant="gold" size="lg" className="rounded-full h-16 px-10 text-lg shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:scale-105 transition-transform duration-300">
-              <Link href="/login">
-                Enter the demo
-              </Link>
-            </Button>
+      <footer className="coming-footer">
+        <div className="coming-container coming-footer-grid">
+          <div className="coming-footer-brand">
+            <a href="#top" aria-label="Samra Pay home"><ComingSoonLogo /></a>
+            <p>Your financial home, built between here and home.</p>
+            <small>© {new Date().getFullYear()} Samra Pay. Concept preview.</small>
           </div>
-        </section>
-
-      </div>
-    </PageTransition>
+          <div>
+            <h3>Explore</h3>
+            <a href="#features">Features</a>
+            <a href="#values">Values</a>
+            <a href="#faq">FAQ</a>
+            <a href="#blog">Blog</a>
+          </div>
+          <div>
+            <h3>Legal</h3>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+          </div>
+          <div>
+            <h3>Status</h3>
+            <p>Concept-stage product</p>
+            <p>No live financial services</p>
+            <p>No sign-in or account access</p>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

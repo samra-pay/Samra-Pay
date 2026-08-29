@@ -1,17 +1,33 @@
-import { createRoot } from 'react-dom/client';
+import { createRoot } from "react-dom/client";
 
-import App from './App';
-import { ErrorBoundary } from '@/components/error-boundary';
+const rootElement = document.getElementById("root");
 
-import './index.css';
+if (!rootElement) {
+  throw new Error("Root element was not found.");
+}
 
-createRoot(document.getElementById('root')!, {
-  // Keeps caught errors off reportError(), which would raise the dev overlay.
-  onCaughtError: (error, errorInfo) => {
-    console.error(error, errorInfo.componentStack);
-  },
-}).render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>,
-);
+async function bootstrap() {
+  if (window.location.pathname === "/") {
+    const { default: Home } = await import("./pages/home");
+    createRoot(rootElement!).render(<Home />);
+    return;
+  }
+
+  const [{ default: App }, { ErrorBoundary }] = await Promise.all([
+    import("./App"),
+    import("@/components/error-boundary"),
+    import("./index.css"),
+  ]);
+
+  createRoot(rootElement!, {
+    onCaughtError: (error, errorInfo) => {
+      console.error(error, errorInfo.componentStack);
+    },
+  }).render(
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>,
+  );
+}
+
+void bootstrap();

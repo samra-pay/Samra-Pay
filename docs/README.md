@@ -108,6 +108,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)
 - [Staging CI/CD, traceability, promotion, and rollback](operations/staging-release-control-plane.md)
 - [Staging public edge, observability, and acquisition activation](operations/staging-public-readiness.md)
+- [Public coming-soon Git, Google Cloud, and Squarespace release](operations/public-coming-soon-release.md)
 - [Testing strategy](testing/testing-strategy.md)
 - [Qase and CI reporting](testing/qase-ci.md)
 - [Release-candidate evidence](testing/release-candidate-evidence.md)
