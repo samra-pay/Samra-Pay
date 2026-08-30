@@ -48,6 +48,8 @@ test("locks one prepared keyless production preflight boundary", () => {
   });
   assert.equal(contract.iam.billingAccountRole, null);
   assert.equal(contract.github.enterpriseTransferRequiresTrustReissue, true);
+  assert.equal(contract.provider.displayName, "Samra production preflight");
+  assert.ok(contract.provider.displayName.length <= 32);
 });
 
 test("rejects repository, project, IAM, API, action, trigger, and authorization drift", () => {
@@ -58,6 +60,8 @@ test("rejects repository, project, IAM, API, action, trigger, and authorization 
     (value) => (value.github.allowedRef = "refs/heads/feature"),
     (value) => (value.googleCloud.productionProjectNumber = "1"),
     (value) => (value.googleCloud.stagingProjectId = "another-project"),
+    (value) =>
+      (value.provider.displayName = "Samra production foundation preflight"),
     (value) => (value.iam.billingAccountRole = "roles/billing.viewer"),
     (value) =>
       value.iam.productionCustomRolePermissions.push("billing.budgets.list"),
@@ -137,6 +141,8 @@ test("keeps the one-time bootstrap exact, resumable, keyless, and authorization-
     "serviceusage.services.use",
     "gcloud iam workload-identity-pools create",
     "gcloud iam workload-identity-pools providers create-oidc",
+    'PROVIDER_DISPLAY_NAME="Samra production preflight"',
+    '--display-name="${PROVIDER_DISPLAY_NAME}"',
     "assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main'",
     "assertion.environment=='production-foundation-review'",
     "roles/iam.workloadIdentityUser",
