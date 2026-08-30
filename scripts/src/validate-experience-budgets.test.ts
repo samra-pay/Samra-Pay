@@ -68,6 +68,44 @@ describe("experience artifact budgets", () => {
     expect(ambiguous.results[0]!.failures[0]).toMatch(/found 2/);
   });
 
+  it("passes only while forbidden artifacts remain absent", async () => {
+    const root = await fixture("dist/public-entry.js", "public");
+    const forbiddenContract: ExperienceBudgetContract = {
+      version: 2,
+      budgets: [
+        {
+          id: "legacy-auth",
+          surface: "customer-web",
+          directory: "dist",
+          match: "^auth0-client-[a-z]+\\.js$",
+          expectedMatches: 0,
+        },
+      ],
+    };
+
+    const absent = await evaluateExperienceBudgets(
+      forbiddenContract,
+      root,
+      metadata,
+    );
+    expect(absent.results[0]).toMatchObject({
+      status: "passed",
+      expectedMatches: 0,
+      matchedFiles: [],
+      maximumBytes: null,
+      maximumGzipBytes: null,
+    });
+
+    await writeFixture(root, "dist/auth0-client-legacy.js", "forbidden");
+    const present = await evaluateExperienceBudgets(
+      forbiddenContract,
+      root,
+      metadata,
+    );
+    expect(present.status).toBe("failed");
+    expect(present.results[0]!.failures[0]).toMatch(/expected 0.*found 1/);
+  });
+
   it("reports raw and compressed budget regressions independently", async () => {
     const root = await fixture("dist/entry-app.js", "0123456789".repeat(30));
     const report = await evaluateExperienceBudgets(
@@ -86,14 +124,23 @@ describe("experience artifact budgets", () => {
   it("rejects duplicate IDs, ambiguous contracts, and invalid limits", () => {
     const budget = contract().budgets[0]!;
     expect(() =>
-      validateContract({ version: 1, budgets: [budget, budget] }),
+      validateContract({ version: 2, budgets: [budget, budget] }),
     ).toThrow(/unique/);
     expect(() => validateContract(contract({ maximumBytes: 0 }))).toThrow(
       /positive maximumBytes/,
     );
     expect(() => validateContract(contract({ expectedMatches: 2 }))).toThrow(
-      /exactly one/,
+      /zero or exactly one/,
     );
+    expect(() =>
+      validateContract(
+        contract({
+          expectedMatches: 0,
+          maximumBytes: 100,
+          maximumGzipBytes: 100,
+        }),
+      ),
+    ).toThrow(/must not define size limits/);
   });
 
   it("rejects a directory that resolves outside the workspace", async () => {
@@ -112,7 +159,7 @@ function contract(
   overrides: Partial<ExperienceBudgetContract["budgets"][number]> = {},
 ): ExperienceBudgetContract {
   return {
-    version: 1,
+    version: 2,
     budgets: [
       {
         id: "entry",
