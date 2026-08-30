@@ -134,7 +134,9 @@ Shell, `--review` inventories the exact project, the open billing account
 already attached to `samra-pay-staging`, and all budgets on that account. It
 accepts a missing project as resumable state but rejects any existing project,
 billing link, or production-targeted budget that differs from the confirmed
-boundary.
+boundary. The project check uses an exact organization inventory rather than a
+direct lookup because Google Cloud can mask an absent global project ID as a
+permission error.
 
 Only `--apply` with the exact one-time environment authorization can create the
 project, link that same billing account, and create one project-only USD 25

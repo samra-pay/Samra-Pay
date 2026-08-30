@@ -262,6 +262,22 @@ export function classifyObservedProductionProject(
   });
 }
 
+export function classifyObservedProductionProjectInventory(
+  observed,
+  controller = readComingSoonProductionProject(),
+) {
+  validateComingSoonProductionProject(controller);
+  assert(
+    Array.isArray(observed),
+    "Production project inventory must be a list",
+  );
+  assert(
+    observed.length <= 1,
+    "Production project inventory returned more than one exact project ID",
+  );
+  return classifyObservedProductionProject(observed[0] ?? null, controller);
+}
+
 export function classifyObservedProductionBilling(
   observed,
   expectedBillingAccount,

@@ -6,6 +6,7 @@ import {
   classifyObservedProductionBilling,
   classifyObservedProductionBudgets,
   classifyObservedProductionProject,
+  classifyObservedProductionProjectInventory,
   readComingSoonProductionProject,
   validateComingSoonProductionProject,
   validateProductionProjectControllerEnvironment,
@@ -201,6 +202,22 @@ test("classifies a missing or exact project and rejects existing drift", () => {
   }
 });
 
+test("uses exact organization inventory when Google masks an absent project as permission denied", () => {
+  assert.deepEqual(classifyObservedProductionProjectInventory([]), {
+    state: "missing",
+  });
+  assert.deepEqual(classifyObservedProductionProjectInventory([exactProject]), {
+    state: "ready",
+    projectId: "samra-pay-production",
+    projectNumber: "123456789012",
+  });
+  assert.throws(
+    () =>
+      classifyObservedProductionProjectInventory([exactProject, exactProject]),
+    /more than one exact project ID/,
+  );
+});
+
 test("classifies only an absent or exact production billing link", () => {
   const account = "billingAccounts/ABCDEF-123456-ABCDEF";
   assert.deepEqual(
@@ -335,6 +352,8 @@ test("keeps every mutation after exact account, Git, state, and authorization gu
     "STOP: wrong Google account",
     "STOP: set the active Google Cloud project to ${SOURCE_BILLING_PROJECT_ID}",
     'gcloud projects describe "${SOURCE_BILLING_PROJECT_ID}"',
+    "gcloud projects list",
+    "parent.type=organization AND parent.id=${ORGANIZATION_ID} AND projectId=${PROJECT_ID}",
     "source commit does not match the reviewed SHA",
     "source working tree is not clean",
     "The billing account attached",
@@ -379,6 +398,10 @@ test("keeps every mutation after exact account, Git, state, and authorization gu
   assert.doesNotMatch(
     controllerScript,
     /--allow-unauthenticated|gcloud secrets versions|curl |terraform|pulumi|kubectl/iu,
+  );
+  assert.doesNotMatch(
+    controllerScript,
+    /gcloud projects describe "\$\{PROJECT_ID\}"/u,
   );
 
   const syntax = spawnSync(
