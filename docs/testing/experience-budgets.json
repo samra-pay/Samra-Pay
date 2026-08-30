@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "budgets": [
     {
       "id": "customer-web-entry-javascript",
@@ -7,35 +7,49 @@
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^index-[A-Za-z0-9_-]+\\.js$",
       "expectedMatches": 1,
-      "maximumBytes": 1350000,
-      "maximumGzipBytes": 400000
+      "maximumBytes": 240000,
+      "maximumGzipBytes": 80000
+    },
+    {
+      "id": "customer-web-public-shell-javascript",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^coming-soon-[A-Za-z0-9_-]+\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 15000,
+      "maximumGzipBytes": 6000
+    },
+    {
+      "id": "customer-web-public-home-javascript",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^home-[A-Za-z0-9_-]+\\.js$",
+      "expectedMatches": 1,
+      "maximumBytes": 25000,
+      "maximumGzipBytes": 9000
     },
     {
       "id": "customer-web-onboarding-javascript",
       "surface": "customer-web",
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^onboarding-[A-Za-z0-9_-]+\\.js$",
-      "expectedMatches": 1,
-      "maximumBytes": 30000,
-      "maximumGzipBytes": 10000
+      "expectedMatches": 0
     },
     {
       "id": "customer-web-auth0-javascript",
       "surface": "customer-web-authentication",
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^auth0-client-[A-Za-z0-9_-]+\\.js$",
-      "expectedMatches": 1,
-      "maximumBytes": 225000,
-      "maximumGzipBytes": 66000
+      "expectedMatches": 0
     },
     {
       "id": "customer-web-styles",
       "surface": "customer-web",
       "directory": "artifacts/samra-pay/dist/public/assets",
-      "match": "^index-[A-Za-z0-9_-]+\\.css$",
+      "match": "^coming-soon-[A-Za-z0-9_-]+\\.css$",
       "expectedMatches": 1,
-      "maximumBytes": 220000,
-      "maximumGzipBytes": 32000
+      "maximumBytes": 80000,
+      "maximumGzipBytes": 18000
     },
     {
       "id": "operations-entry-javascript",

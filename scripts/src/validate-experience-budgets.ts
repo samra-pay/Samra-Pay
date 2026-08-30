@@ -20,8 +20,8 @@ export type ExperienceBudget = Readonly<{
   directory: string;
   match: string;
   expectedMatches: number;
-  maximumBytes: number;
-  maximumGzipBytes: number;
+  maximumBytes?: number;
+  maximumGzipBytes?: number;
 }>;
 
 export type ExperienceBudgetContract = Readonly<{
@@ -34,10 +34,11 @@ export type ExperienceBudgetResult = Readonly<{
   surface: string;
   status: "passed" | "failed";
   matchedFiles: readonly string[];
+  expectedMatches: number;
   bytes: number | null;
   gzipBytes: number | null;
-  maximumBytes: number;
-  maximumGzipBytes: number;
+  maximumBytes: number | null;
+  maximumGzipBytes: number | null;
   failures: readonly string[];
 }>;
 
@@ -80,18 +81,18 @@ export async function evaluateExperienceBudgets(
       failures.push(
         `expected ${budget.expectedMatches} matching artifact(s), found ${matchedFiles.length}`,
       );
-    } else if (matchedFiles.length === 1) {
+    } else if (budget.expectedMatches === 1 && matchedFiles.length === 1) {
       const content = await readFile(path.join(directory, matchedFiles[0]!));
       bytes = content.byteLength;
       gzipBytes = gzipSync(content, { level: 9 }).byteLength;
-      if (bytes > budget.maximumBytes) {
+      if (bytes > budget.maximumBytes!) {
         failures.push(
-          `raw bytes ${bytes} exceed maximum ${budget.maximumBytes}`,
+          `raw bytes ${bytes} exceed maximum ${budget.maximumBytes!}`,
         );
       }
-      if (gzipBytes > budget.maximumGzipBytes) {
+      if (gzipBytes > budget.maximumGzipBytes!) {
         failures.push(
-          `gzip bytes ${gzipBytes} exceed maximum ${budget.maximumGzipBytes}`,
+          `gzip bytes ${gzipBytes} exceed maximum ${budget.maximumGzipBytes!}`,
         );
       }
     }
@@ -106,10 +107,13 @@ export async function evaluateExperienceBudgets(
             path.posix.join(budget.directory.replaceAll("\\", "/"), file),
           ),
         ),
+        expectedMatches: budget.expectedMatches,
         bytes,
         gzipBytes,
-        maximumBytes: budget.maximumBytes,
-        maximumGzipBytes: budget.maximumGzipBytes,
+        maximumBytes:
+          budget.expectedMatches === 1 ? budget.maximumBytes! : null,
+        maximumGzipBytes:
+          budget.expectedMatches === 1 ? budget.maximumGzipBytes! : null,
         failures: Object.freeze(failures),
       }),
     );
@@ -129,12 +133,12 @@ export async function evaluateExperienceBudgets(
 
 export function validateContract(contract: ExperienceBudgetContract): void {
   if (
-    contract.version !== 1 ||
+    contract.version !== 2 ||
     !Array.isArray(contract.budgets) ||
     contract.budgets.length === 0
   ) {
     throw new Error(
-      "Experience budget contract must use version 1 and define budgets.",
+      "Experience budget contract must use version 2 and define budgets.",
     );
   }
   const ids = contract.budgets.map(({ id }) => id);
@@ -161,14 +165,27 @@ export function validateContract(contract: ExperienceBudgetContract): void {
         `Budget ${budget.id} contains an invalid match expression.`,
       );
     }
-    if (budget.expectedMatches !== 1) {
-      throw new Error(`Budget ${budget.id} must expect exactly one artifact.`);
+    if (budget.expectedMatches !== 0 && budget.expectedMatches !== 1) {
+      throw new Error(
+        `Budget ${budget.id} must expect zero or exactly one artifact.`,
+      );
+    }
+    if (budget.expectedMatches === 0) {
+      if (
+        budget.maximumBytes !== undefined ||
+        budget.maximumGzipBytes !== undefined
+      ) {
+        throw new Error(
+          `Forbidden budget ${budget.id} must not define size limits.`,
+        );
+      }
+      continue;
     }
     for (const [label, value] of [
       ["maximumBytes", budget.maximumBytes],
       ["maximumGzipBytes", budget.maximumGzipBytes],
     ] as const) {
-      if (!Number.isSafeInteger(value) || value < 1) {
+      if (!Number.isSafeInteger(value) || (value ?? 0) < 1) {
         throw new Error(`Budget ${budget.id} requires a positive ${label}.`);
       }
     }
@@ -264,9 +281,11 @@ async function main(): Promise<void> {
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   for (const result of report.results) {
     const measured =
-      result.bytes === null
-        ? "artifact mismatch"
-        : `${result.bytes} B raw / ${result.gzipBytes} B gzip`;
+      result.expectedMatches === 0
+        ? `${result.matchedFiles.length} forbidden artifact(s)`
+        : result.bytes === null
+          ? "artifact mismatch"
+          : `${result.bytes} B raw / ${result.gzipBytes} B gzip`;
     console.log(
       `${result.status === "passed" ? "PASS" : "FAIL"} ${result.id}: ${measured}`,
     );
