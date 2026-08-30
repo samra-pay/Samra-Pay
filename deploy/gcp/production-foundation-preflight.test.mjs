@@ -222,8 +222,18 @@ test("production review accepts only the human or dedicated auditor and writes n
   );
   assert.match(
     productionReview,
-    /--billing-project="\$\{SAMRA_GCP_QUOTA_PROJECT_ID\}"/,
+    /scope=projects\/\$\{SAMRA_GCP_PROJECT_NUMBER\}/,
   );
+  assert.match(
+    productionReview,
+    /X-Goog-User-Project: \$\{SAMRA_GCP_QUOTA_PROJECT_ID\}/,
+  );
+  assert.match(
+    productionReview,
+    /billingbudgets\.googleapis\.com\/v1\/billingAccounts\/\$\{BILLING_ACCOUNT\}\/budgets/,
+  );
+  assert.match(productionReview, /unset BUDGET_ACCESS_TOKEN/);
+  assert.doesNotMatch(productionReview, /gcloud billing budgets list/);
   assert.match(productionReview, /cloudMutation: false/);
   assert.match(productionReview, /customerData: false/);
   assert.match(productionReview, /vendorActivation: false/);
@@ -253,7 +263,7 @@ test("every inline JavaScript validator parses before Cloud Shell execution", ()
       ),
     ].map((match) => ({ module: Boolean(match[1]), source: match[2] })),
   );
-  assert.equal(programs.length, 19);
+  assert.equal(programs.length, 20);
   for (const program of programs) {
     execFileSync(
       process.execPath,

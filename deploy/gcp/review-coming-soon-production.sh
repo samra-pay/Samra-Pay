@@ -39,10 +39,12 @@ PLAN
   exit 0
 fi
 
-command -v gcloud >/dev/null 2>&1 || {
-  echo "gcloud is required; run review only from authenticated Google Cloud Shell." >&2
-  exit 1
-}
+for required_command in gcloud curl; do
+  command -v "${required_command}" >/dev/null 2>&1 || {
+    echo "${required_command} is required; run review only from authenticated Google Cloud Shell or GitHub Actions." >&2
+    exit 1
+  }
+done
 
 : "${SAMRA_GCP_PROJECT_ID:=samra-pay-production}"
 : "${SAMRA_GCP_PROJECT_NUMBER:=382465561715}"
@@ -135,12 +137,27 @@ BILLING_ACCOUNT="$(
   ' "${BILLING_RESULT}"
 )"
 
+BUDGET_ACCESS_TOKEN="$(gcloud auth print-access-token --quiet)"
+BUDGETS_RESPONSE="$(
+  curl --fail --silent --show-error \
+    --get \
+    --header "Authorization: Bearer ${BUDGET_ACCESS_TOKEN}" \
+    --header "X-Goog-User-Project: ${SAMRA_GCP_QUOTA_PROJECT_ID}" \
+    --data-urlencode "scope=projects/${SAMRA_GCP_PROJECT_NUMBER}" \
+    --data-urlencode "pageSize=100" \
+    "https://billingbudgets.googleapis.com/v1/billingAccounts/${BILLING_ACCOUNT}/budgets"
+)"
+unset BUDGET_ACCESS_TOKEN
 BUDGETS_JSON="$(
-  gcloud billing budgets list \
-    --billing-account="${BILLING_ACCOUNT}" \
-    --billing-project="${SAMRA_GCP_QUOTA_PROJECT_ID}" \
-    --quiet \
-    --format=json
+  printf '%s' "${BUDGETS_RESPONSE}" | node -e '
+    const fs = require("fs");
+    const response = JSON.parse(fs.readFileSync(0, "utf8"));
+    if (response.nextPageToken) {
+      process.stderr.write("STOP: project-scoped production budget inventory exceeded one API page\n");
+      process.exit(1);
+    }
+    process.stdout.write(JSON.stringify(response.budgets ?? []));
+  '
 )"
 BUDGET_RESULT="$(
   printf '%s' "${BUDGETS_JSON}" | node --input-type=module -e '

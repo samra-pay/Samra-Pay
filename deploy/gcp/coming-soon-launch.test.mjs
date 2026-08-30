@@ -384,7 +384,8 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
     "READ-ONLY COMING-SOON PRODUCTION FOUNDATION REVIEW PASS",
     "this is not a spending cap",
     'gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}"',
-    '--billing-project="${SAMRA_GCP_QUOTA_PROJECT_ID}"',
+    '--data-urlencode "scope=projects/${SAMRA_GCP_PROJECT_NUMBER}"',
+    '--header "X-Goog-User-Project: ${SAMRA_GCP_QUOTA_PROJECT_ID}"',
     "Billing account: verified exact source-project match",
     "Billing source project: ${SOURCE_BILLING_PROJECT_ID}",
     "remain unauthorized",
@@ -394,10 +395,10 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
   }
   assert.equal(
     productionReview.match(
-      /--billing-project="\$\{SAMRA_GCP_QUOTA_PROJECT_ID\}"/gu,
+      /--data-urlencode "scope=projects\/\$\{SAMRA_GCP_PROJECT_NUMBER\}"/gu,
     )?.length,
     1,
-    "only the single-project budget inventory uses the production quota project",
+    "only the budget inventory uses the exact production project scope",
   );
   assert.doesNotMatch(
     productionReview,
@@ -409,6 +410,6 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
   );
   assert.doesNotMatch(
     productionReview,
-    /gcloud services enable|billingbudgets\.googleapis\.com/iu,
+    /gcloud services enable|gcloud billing budgets (?:create|update|delete)/iu,
   );
 });
