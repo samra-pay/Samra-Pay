@@ -126,8 +126,8 @@ overrides:
   # Dedupe @types/react to a single version to prevent "two different types with this name exist" TS errors
   "@types/react": "19.2.17"
   "@types/react-dom": "19.2.3"
-  # replit uses linux-x64 only, we can exclude all other platforms
-  "esbuild>@esbuild/darwin-arm64": "-"
+  # Keep the deployment target lean while retaining the founder's macOS ARM
+  # workstation so the exact release build can be reproduced before CI.
   "esbuild>@esbuild/darwin-x64": "-"
   "esbuild>@esbuild/freebsd-arm64": "-"
   "esbuild>@esbuild/freebsd-x64": "-"
@@ -153,7 +153,6 @@ overrides:
   "esbuild>@esbuild/android-x64": '-'
   "esbuild>@esbuild/openharmony-arm64": '-'
   "lightningcss>lightningcss-android-arm64": "-"
-  "lightningcss>lightningcss-darwin-arm64": "-"
   "lightningcss>lightningcss-darwin-x64": "-"
   "lightningcss>lightningcss-freebsd-x64": "-"
   "lightningcss>lightningcss-linux-arm-gnueabihf": "-"
@@ -163,7 +162,6 @@ overrides:
   "lightningcss>lightningcss-win32-arm64-msvc": "-"
   "lightningcss>lightningcss-win32-x64-msvc": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-android-arm64": "-"
-  "@tailwindcss/oxide>@tailwindcss/oxide-darwin-arm64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-darwin-x64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-freebsd-x64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-linux-arm-gnueabihf": "-"
@@ -174,7 +172,6 @@ overrides:
   "@tailwindcss/oxide>@tailwindcss/oxide-linux-x64-musl": "-"
   "rollup>@rollup/rollup-android-arm-eabi": "-"
   "rollup>@rollup/rollup-android-arm64": "-"
-  "rollup>@rollup/rollup-darwin-arm64": "-"
   "rollup>@rollup/rollup-darwin-x64": "-"
   "rollup>@rollup/rollup-freebsd-arm64": "-"
   "rollup>@rollup/rollup-freebsd-x64": "-"

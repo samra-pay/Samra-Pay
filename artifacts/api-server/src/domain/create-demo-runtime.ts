@@ -10,6 +10,7 @@ import {
   PostgresCustomerIdentityCaseStore,
   PostgresCustomerFunnelStore,
   PostgresCustomerWalletStore,
+  PostgresMarketingWaitlistStore,
   RandomIdGenerator,
   assertPostgresRuntimeReady,
   createDatabase,
@@ -65,6 +66,7 @@ export function createConfiguredDemoRuntime(
     workforceAuthStore: new PostgresWorkforceAuthStore(context),
     operationsCaseStore: new PostgresOperationsCaseStore(context),
     customerFunnelStore: new PostgresCustomerFunnelStore(context),
+    marketingWaitlistStore: new PostgresMarketingWaitlistStore(context),
     actorResolver: customerActorResolver,
     beneficiaryActorResolver: customerActorResolver,
     customerAuthenticationMode:

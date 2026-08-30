@@ -45,6 +45,9 @@ audit trail, reconciliation result, or provider-migration mapping.
 - durable synthetic Crossmint-style wallet provisioning, immutable provider
   mapping, consent, restart, concurrency, failure, and audit boundaries;
 - customer web, Expo mobile, Operations Portal, and governed design system;
+- DS2 public coming-soon web, English/Amharic routes, explicit-consent
+  waitlist API and PostgreSQL records, public-bundle isolation, and a
+  review-only Google Cloud launch contract;
 - fast, daily, weekly, performance, container, and release-candidate gates;
 - Qase traceability and manual evidence contracts.
 
@@ -68,6 +71,8 @@ audit trail, reconciliation result, or provider-migration mapping.
 - bank funding and Ethiopia payout rails;
 - database user and connection secret, migrations against Cloud SQL, Cloud Run
   services, Cloud Run migration job, load balancer, or public application;
+- production project, production waitlist database, public domain, managed TLS,
+  Cloud Armor, DNS cutover, or public waitlist collection;
 - real customer data, production security, production compliance approval, or
   production provider traffic.
 
@@ -106,6 +111,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 ### Cloud and delivery
 
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)
+- [Coming-soon Google Cloud launch](operations/coming-soon-cloud-launch.md)
 - [Staging CI/CD, traceability, promotion, and rollback](operations/staging-release-control-plane.md)
 - [Testing strategy](testing/testing-strategy.md)
 - [Qase and CI reporting](testing/qase-ci.md)

@@ -86,6 +86,9 @@ function Router() {
   return (
     <div className="flex flex-col min-h-screen">
       <Switch>
+        {/* The coming-soon surface owns its own navigation and footer. */}
+        <Route path="/" component={Home} />
+
         {/* No navbar/footer on login */}
         <Route path="/login" component={Login} />
         <Route path="/onboarding">
@@ -120,7 +123,6 @@ function Router() {
           <main className="flex-1">
             <RoutedErrorBoundary>
               <Switch>
-                <Route path="/" component={Home} />
                 <Route path="/cards/charge" component={ChargeCardPage} />
                 <Route path="/cards/co-brand" component={CoBrandCardPage} />
                 <Route path="/cards" component={Cards} />

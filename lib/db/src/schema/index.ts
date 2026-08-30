@@ -12,3 +12,4 @@ export * from "./customer-onboarding";
 export * from "./customer-identity";
 export * from "./customer-acquisition";
 export * from "./customer-wallet";
+export * from "./marketing";

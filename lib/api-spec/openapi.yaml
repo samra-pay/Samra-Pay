@@ -12,6 +12,7 @@ tags:
   - name: customer
   - name: onboarding
   - name: acquisition
+  - name: marketing
   - name: accounts
   - name: activity
   - name: beneficiaries
@@ -99,6 +100,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerAcquisitionEventReceipt"
+        "409": { $ref: "#/components/responses/ConflictProblem" }
+        "422": { $ref: "#/components/responses/ValidationProblem" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/waitlist/subscriptions:
+    post:
+      operationId: subscribeWaitlist
+      tags: [marketing]
+      summary: Join the public launch waitlist with explicit consent
+      description: Stores the normalized email separately from acquisition telemetry and records the exact consent notice version, locale, server timestamp, and idempotency evidence. The endpoint accepts no customer, identity, device, or financial data.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeWaitlistRequest"
+      responses:
+        "202":
+          description: The subscription and consent evidence were accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitlistSubscriptionReceipt"
         "409": { $ref: "#/components/responses/ConflictProblem" }
         "422": { $ref: "#/components/responses/ValidationProblem" }
         "503": { $ref: "#/components/responses/Unavailable" }
@@ -1354,6 +1380,42 @@ components:
             $ref: "#/components/schemas/ApiProblem"
 
   schemas:
+    SubscribeWaitlistRequest:
+      type: object
+      additionalProperties: false
+      required: [email, consent, consentVersion, locale]
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 3
+          maxLength: 254
+        consent:
+          type: boolean
+          const: true
+        consentVersion:
+          type: string
+          pattern: "^coming-soon-[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        locale:
+          type: string
+          enum: [en, am]
+        website:
+          type: string
+          maxLength: 0
+          description: Honeypot field. Real clients must leave it empty.
+
+    WaitlistSubscriptionReceipt:
+      type: object
+      additionalProperties: false
+      required: [accepted, acceptedAt]
+      properties:
+        accepted:
+          type: boolean
+          const: true
+        acceptedAt:
+          type: string
+          format: date-time
+
     CustomerOnboardingState:
       type: string
       enum:

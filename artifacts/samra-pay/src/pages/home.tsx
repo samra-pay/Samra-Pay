@@ -1,430 +1,327 @@
-import { PageTransition } from "@/components/page-transition";
-import { Button } from "@workspace/samra-pay-ds/components/ui/button";
-import { ArrowRight, ChevronRight, Plane, Coffee, ShieldCheck, Globe, Star, Users } from "lucide-react";
-import { Link } from "wouter";
-import heroBg from "@assets/generated_images/hero-bg.jpg";
-import heroBg640 from "@assets/generated_images/hero-bg-640.jpg";
-import heroBgWebp from "@assets/generated_images/hero-bg.webp";
-import heroBg640Webp from "@assets/generated_images/hero-bg-640.webp";
-import remittanceStoryWide from "@assets/home-ceremony.jpg";
-import remittanceStoryWide800 from "@assets/home-ceremony-800.jpg";
-import remittanceStoryWideWebp from "@assets/home-ceremony.webp";
-import remittanceStoryWide800Webp from "@assets/home-ceremony-800.webp";
-import remittanceStoryTall from "@assets/jebena-pour-banner.jpg";
-import remittanceStoryTall480 from "@assets/jebena-pour-banner-480.jpg";
-import remittanceStoryTallWebp from "@assets/jebena-pour-banner.webp";
-import remittanceStoryTall480Webp from "@assets/jebena-pour-banner-480.webp";
-import { CreditCard, Card3DWrapper } from "@/components/credit-card";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
-import { useRef } from "react";
+import { type FormEvent, useId, useState } from "react";
+import {
+  ArrowRight,
+  Gift,
+  LockKeyhole,
+  PieChart,
+  Send,
+  ShieldCheck,
+  TrendingUp,
+} from "lucide-react";
+import { ComingSoonFooter, ComingSoonHeader } from "@/components/coming-soon-shell";
+import { PublicFaqAccordion } from "@/components/public-faq";
+import { homeFaqItems } from "@/content/public-faq";
+import { localized, usePublicLanguage } from "@/lib/public-i18n";
+import { usePublicPageMeta } from "@/lib/public-page-meta";
+import { subscribePublicWaitlist } from "@/lib/public-waitlist";
+import "./coming-soon.css";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0 }
+const homeMeta = {
+  title: localized("Samra Pay — U.S. & Canada Alpha, April 2027", "Samra Pay — የU.S. እና Canada Alpha፣ April 2027"),
+  description: localized(
+    "Samra Pay is building a financial home for Ethiopians in the U.S. and Canada. Limited Alpha is planned for April 2027.",
+    "Samra Pay በU.S. እና Canada ለሚኖሩ ኢትዮጵያውያን የገንዘብ ቤት እየገነባ ነው። የተወሰነ Alpha በApril 2027 ለመጀመር ታቅዷል።",
+  ),
 };
 
-export default function Home() {
-  const containerRef = useRef(null);
-  const prefersReducedMotion = useReducedMotion();
-  const storyReveal = (hidden: { opacity: number; x?: number; y?: number }) =>
-    prefersReducedMotion
-      ? {}
-      : {
-          initial: hidden,
-          whileInView: { opacity: 1, x: 0, y: 0 },
-          viewport: { once: true, margin: "-100px" },
-        };
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"]
-  });
+const siteContent = {
+  features: [
+    {
+      icon: TrendingUp,
+      title: localized("Build credit through everyday payments", "በዕለታዊ ክፍያዎች የክሬዲት ታሪክዎን ያጠናክሩ።"),
+      description: localized(
+        "Designed to help eligible payments you already make support your credit journey, with reporting and eligibility tailored to each market—without taking on unnecessary debt.",
+        "አስፈላጊ ያልሆነ ዕዳ ሳይወስዱ፣ አስቀድመው የሚከፍሏቸው ብቁ ክፍያዎች የክሬዲት ጉዞዎን እንዲደግፉ በየገበያው ሁኔታ የተነደፈ።",
+      ),
+    },
+    {
+      icon: Send,
+      title: localized("More value reaches home", "የበለጠ ዋጋ ወደ አገር ቤት ይድረስ።"),
+      description: localized(
+        "See the rate, fees, delivery estimate, and amount your loved one is expected to receive before you send. We’re building toward highly competitive pricing with no last-step surprises.",
+        "ከመላክዎ በፊት የምንዛሬ ተመኑን፣ ክፍያውን፣ የመድረሻ ግምቱንና የሚወዱት ሰው የሚቀበለውን መጠን ይመልከቱ። በመጨረሻው ደረጃ ድንገተኛ ክፍያ የሌለበት ተወዳዳሪ ተመን እየገነባን ነው።",
+      ),
+    },
+    {
+      icon: Gift,
+      title: localized("Rewards for everyday spending", "በዕለታዊ ወጪዎች ሽልማት ያግኙ።"),
+      description: localized(
+        "Designed so eligible purchases can earn rewards that add value to life here and strengthen your connection to home.",
+        "ብቁ ግዢዎች እዚህ ለሚኖረው ሕይወትዎ ዋጋ የሚጨምሩና ከቤት ጋር ያለዎትን ግንኙነት የሚያጠናክሩ ሽልማቶችን እንዲያገኙ የተነደፈ።",
+      ),
+    },
+  ],
+  capabilities: [
+    { icon: TrendingUp, label: localized("Explore all four card paths", "አራቱንም የካርድ አማራጮች ያስሱ"), href: "/features#progression-title" },
+    { icon: Send, label: localized("See what is planned across the portfolio", "በካርድ ስብስቡ ውስጥ የታቀደውን ይመልከቱ"), href: "/features#included-title" },
+    { icon: Gift, label: localized("Compare tiers, rewards, and access", "ደረጃዎችን፣ ሽልማቶችንና መዳረሻን ያወዳድሩ"), href: "/features#compare-title" },
+    { icon: PieChart, label: localized("Understand what is still in development", "አሁንም በልማት ላይ ያለውን ይረዱ"), href: "/features#disclosure-title" },
+    { icon: LockKeyhole, label: localized("Read the values guiding the product", "ምርቱን የሚመሩትን እሴቶች ያንብቡ"), href: "/values" },
+  ],
+};
 
-  const yBg = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const opacityBg = useTransform(scrollYProgress, [0, 0.5], [0.4, 0]);
+function EarlyAccessForm({ compact = false }: { compact?: boolean }) {
+  const emailId = useId();
+  const consentId = useId();
+  const { language, text } = usePublicLanguage();
+  const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
+  const [consented, setConsented] = useState(false);
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!event.currentTarget.checkValidity()) return;
+    setStatus("submitting");
+    try {
+      await subscribePublicWaitlist({ email, locale: language, website });
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  if (status === "success") {
+    return (
+      <div className="early-access-success" role="status">
+        <ShieldCheck aria-hidden="true" />
+        <div>
+          <strong>{text(localized("You’re on the list.", "በዝርዝሩ ውስጥ ገብተዋል።"))}</strong>
+          <span>{text(localized(
+            "We’ll email you when Samra Pay launch updates are ready.",
+            "የSamra Pay የመክፈቻ ዜናዎች ሲዘጋጁ በኢሜይል እናሳውቅዎታለን።",
+          ))}</span>
+        </div>
+        <button type="button" onClick={() => setStatus("idle")}>
+          {text(localized("Use another email", "ሌላ ኢሜይል ይጠቀሙ"))}
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <PageTransition>
-      <div className="w-full" ref={containerRef}>
+    <form className={compact ? "early-access-form is-compact" : "early-access-form"} onSubmit={(event) => void handleSubmit(event)}>
+      <label className="sr-only" htmlFor={emailId}>
+        {text(localized("Email address", "የኢሜይል አድራሻ"))}
+      </label>
+      <input
+        id={emailId}
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        placeholder={text(localized("Email address", "የኢሜይል አድራሻ"))}
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        required
+      />
+      <input
+        className="waitlist-honeypot"
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        value={website}
+        onChange={(event) => setWebsite(event.target.value)}
+        aria-hidden="true"
+      />
+      <button type="submit" disabled={status === "submitting" || !consented}>
+        {status === "submitting"
+          ? text(localized("Joining…", "በመመዝገብ ላይ…"))
+          : text(localized("Join the waitlist", "የጥበቃ ዝርዝሩን ይቀላቀሉ"))}
+      </button>
+      <label className="waitlist-consent" htmlFor={consentId}>
+        <input
+          id={consentId}
+          type="checkbox"
+          checked={consented}
+          onChange={(event) => setConsented(event.target.checked)}
+          required
+        />
+        <span>{text(localized(
+          "I agree to receive Samra Pay launch updates by email. I can unsubscribe at any time.",
+          "የSamra Pay የመክፈቻ ዜናዎችን በኢሜይል ለመቀበል እስማማለሁ። በማንኛውም ጊዜ ምዝገባዬን ማቋረጥ እችላለሁ።",
+        ))} <a href="/privacy">{text(localized("Privacy", "ግላዊነት"))}</a></span>
+      </label>
+      {status === "error" ? (
+        <p className="waitlist-error" role="alert">
+          {text(localized(
+            "We couldn’t save your signup. Please try again.",
+            "ምዝገባዎን ማስቀመጥ አልቻልንም። እባክዎ ዳግም ይሞክሩ።",
+          ))}
+        </p>
+      ) : null}
+    </form>
+  );
+}
 
-        {/* HERO SECTION */}
-        <section className="relative min-h-[auto] lg:min-h-[min(100dvh,960px)] flex items-center overflow-hidden pt-24 pb-16 lg:py-20">
-          <div className="absolute inset-0 z-0 bg-background">
-            <motion.div
-              style={{
-                y: prefersReducedMotion ? 0 : yBg,
-                opacity: prefersReducedMotion ? 0.4 : opacityBg,
-              }}
-              className="absolute inset-0 mix-blend-screen"
-            >
-              <picture>
-                <source
-                  type="image/webp"
-                  srcSet={`${heroBg640Webp} 640w, ${heroBgWebp} 1024w`}
-                  sizes="100vw"
-                />
-                <img
-                  src={heroBg}
-                  srcSet={`${heroBg640} 640w, ${heroBg} 1024w`}
-                  sizes="100vw"
-                  alt=""
-                  loading="eager"
-                  fetchPriority="high"
-                  className="w-full h-full object-cover"
-                />
-              </picture>
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/80" />
-            </motion.div>
-          </div>
+function HomeFaq() {
+  const { text } = usePublicLanguage();
 
-          <div className="container relative z-20 px-6 mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center h-full py-4 lg:py-0">
-            <motion.div
-              initial={prefersReducedMotion ? false : "hidden"}
-              animate={prefersReducedMotion ? undefined : "visible"}
-              transition={{ staggerChildren: 0.1, delayChildren: 0.2 }}
-              className="max-w-2xl"
-            >
-              <motion.div variants={fadeUp} className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium tracking-[0.2em] uppercase mb-6 md:mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(212,175,55,0.15)]">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
-                Designed in Addis. Polished in NY.
-              </motion.div>
-
-              <motion.h1 variants={fadeUp} className="font-serif text-5xl md:text-7xl lg:text-[5.5rem] font-normal leading-[1.05] tracking-tight mb-3 md:mb-4 text-[#F9F7F1]">
-                Your financial home.<br/>
-                Built for life here<br/>
-                <span className="italic text-primary">and home.</span>
-              </motion.h1>
-
-              <motion.p variants={fadeUp} lang="am" className="font-ethiopic text-2xl md:text-3xl text-primary/70 leading-relaxed mb-5 md:mb-6">
-                ቤቶ ቅርብ ነው።
-              </motion.p>
-
-              <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted-foreground mb-8 md:mb-10 leading-relaxed max-w-lg font-light">
-                A modern financial platform for the Ethiopian diaspora. One card builds your life here. The other brings you home.
-              </motion.p>
-
-              <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 sm:gap-5">
-                <Button asChild variant="gold" size="lg" className="rounded-full w-full sm:w-auto h-12 sm:h-14 px-8 text-base">
-                  <Link href="/cards">
-                    Explore Cards <ArrowRight className="ml-2 w-5 h-5" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="rounded-full w-full sm:w-auto h-12 sm:h-14 px-8 text-base border-white/20 hover:bg-white/5 hover:border-white/40 transition-all">
-                  <Link href="/remittance">
-                    View Remittance Rates
-                  </Link>
-                </Button>
-                <Link
-                  href="/remittance"
-                  className="mt-1 inline-flex items-center justify-center gap-2 text-xs tracking-[0.12em] uppercase text-primary/80 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:hidden"
-                >
-                  <Globe className="size-3.5" aria-hidden="true" />
-                  180 ETB / $1 illustrative demo rate
-                </Link>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9, x: 20 }}
-              animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, x: 0 }}
-              transition={{ delay: 0.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative lg:h-[700px] flex items-center justify-center lg:justify-end"
-            >
-              <div className="relative w-full max-w-[640px]">
-                {/* Floating stat chips */}
-                <div className="relative w-full max-w-[440px] ml-auto">
-                  <motion.div
-                    initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-                    animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-                    transition={{ delay: 1.2 }}
-                    className="absolute -left-16 -top-20 z-30 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center gap-3 animate-float-slow hidden md:flex"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-eucalyptus/10 flex items-center justify-center">
-                      <Star className="w-4 h-4 text-eucalyptus" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Credit Score</div>
-                      <div className="text-lg font-serif text-white/90">745 <span className="text-eucalyptus text-xs font-sans font-medium ml-1">+12</span></div>
-                    </div>
-                  </motion.div>
-
-                  <Card3DWrapper>
-                    <CreditCard variant="charge" showFlipHint />
-                  </Card3DWrapper>
-
-                  {/* Ambient glow behind card */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/10 blur-[100px] rounded-full -z-10" />
-                </div>
-
-                <Link
-                  href="/remittance"
-                  aria-label="View remittance rates, illustrative demo rate of 180 Ethiopian birr per US dollar"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden rounded-2xl md:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-                >
-                  <motion.div
-                    initial={false}
-                    animate={prefersReducedMotion ? undefined : { x: [0, 5, 0] }}
-                    transition={prefersReducedMotion ? undefined : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-[#111713]/95 p-4 shadow-[0_12px_36px_rgba(0,0,0,0.45),0_0_24px_rgba(212,175,55,0.12)] transition-colors hover:border-primary/60"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-primary" aria-hidden="true" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-primary/80 uppercase tracking-[0.18em]">Remittance promo</div>
-                      <div className="text-xl font-mono text-primary tracking-tight">180 ETB <span className="text-xs text-muted-foreground font-sans tracking-normal">/ $1</span></div>
-                      <div className="text-[9px] text-muted-foreground/80">Illustrative demo rate</div>
-                    </div>
-                  </motion.div>
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* SOCIAL PROOF BAND */}
-        <section className="border-y border-white/5 bg-background/50 relative z-20">
-          <div className="container mx-auto px-6 py-10">
-            <p className="mb-7 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground/70">Illustrative demo snapshot</p>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
-            <div>
-              <div className="text-3xl font-serif text-white/90 mb-1">$40M+</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Remitted Home</div>
-            </div>
-            <div className="w-px h-10 bg-white/10 hidden md:block" />
-            <div>
-              <div className="text-3xl font-serif text-primary mb-1">180 ETB</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Illustrative promo rate</div>
-            </div>
-            <div className="w-px h-10 bg-white/10 hidden md:block" />
-            <div>
-              <div className="text-3xl font-serif text-white/90 mb-1">12,000+</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Community Members</div>
-            </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURE GRID */}
-        <section className="py-32 relative">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-24">
-              <p className="mb-5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">Built around your whole life</p>
-              <h2 className="font-serif text-4xl md:text-5xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
-                Financial tools<br/>
-                <span className="italic text-primary">with soul.</span>
-              </h2>
-              <p className="text-xl text-muted-foreground font-light">
-                We didn't just put a new coat of paint on a banking app. We built features specifically designed for the financial reality of the diaspora.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: <ShieldCheck className="w-8 h-8 text-primary" />,
-                  title: "Credit, Without the Catch",
-                  desc: "A true charge card. Build your US credit history month-by-month without the indignity of tying up a security deposit."
-                },
-                {
-                  icon: <Plane className="w-8 h-8 text-primary" />,
-                  title: "Direct to Addis",
-                  desc: "Every swipe earns points. Upgrade to the Co-brand to earn 3x on Ethiopian Airlines and get priority toward your flight home."
-                },
-                {
-                  icon: <Users className="w-8 h-8 text-primary" />,
-                  title: "Tomoca Social House",
-                  desc: "Banking shouldn't be isolating. Join our physical hubs for traditional coffee ceremonies, pitch nights, and community wealth building."
-                }
-              ].map((feature, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-                  whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={prefersReducedMotion ? undefined : { delay: idx * 0.15, duration: 0.7 }}
-                  className="p-10 rounded-[2rem] border border-white/5 bg-gradient-to-b from-card to-background hover:border-primary/20 transition-colors group"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-8 group-hover:bg-primary/10 transition-colors">
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-2xl font-serif mb-4">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed font-light">
-                    {feature.desc}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* REMITTANCE STORY SECTION */}
-        <section className="py-24 md:py-40 bg-[#050505] border-y border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(212,175,55,0.08),_transparent_60%)] pointer-events-none" />
-          <div className="container mx-auto px-6 relative z-10">
-            <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-
-              {/* Text Content */}
-              <motion.div
-                {...storyReveal({ opacity: 0, x: -40 })}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                className="lg:col-span-5"
-              >
-                <div className="w-12 h-[1px] bg-primary mb-8" />
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif mb-8 leading-[1.1] tracking-tight font-normal text-[#F9F7F1]">
-                  Every transfer <br/>
-                  <span className="italic text-primary">ends like this.</span>
-                </h2>
-
-                <div className="space-y-6 text-lg md:text-xl text-white/60 font-light leading-[1.6] mb-12">
-                  <p>
-                    Sending money home isn't a transaction. It's participation in a shared life. It's the scent of popcorn roasting, the familiar bubble of the jebena, and the quiet assurance that family is taken care of.
-                  </p>
-                  <p className="font-medium text-white/80">
-                    Money here. Money home. More to build.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-4 mb-10">
-                  <Button asChild variant="gold" className="rounded-none px-8 py-6 text-sm tracking-widest uppercase self-start">
-                    <Link href="/remittance">Send Money Home</Link>
-                  </Button>
-                  <p lang="am" className="font-ethiopic text-xl text-primary/60 leading-relaxed">
-                    ገንዘብ ወደ ቤት ይላኩ።
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* Image Collage */}
-              <div className="lg:col-span-7 relative h-[470px] sm:h-[600px] lg:h-[700px]">
-                {/* Tall Banner Image */}
-                <motion.div
-                  {...storyReveal({ opacity: 0, y: 40 })}
-                  transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute right-0 top-0 w-2/3 sm:w-[55%] h-[80%] z-10 group"
-                >
-                  <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <picture>
-                    <source
-                      type="image/webp"
-                      srcSet={`${remittanceStoryTall480Webp} 480w, ${remittanceStoryTallWebp} 731w`}
-                      sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
-                    />
-                    <img
-                      src={remittanceStoryTall}
-                      srcSet={`${remittanceStoryTall480} 480w, ${remittanceStoryTall} 731w`}
-                      sizes="(max-width: 640px) 66vw, (max-width: 1024px) 55vw, 32vw"
-                      loading="lazy"
-                      decoding="async"
-                      alt="Jebena pouring fresh coffee"
-                      className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                    />
-                  </picture>
-                  <div className="absolute bottom-4 right-4 text-[10px] tracking-[0.2em] text-white/40 uppercase drop-shadow-md">
-                    Fig. 01 — The Pour
-                  </div>
-                </motion.div>
-
-                {/* Wide Gathering Image */}
-                <motion.div
-                  {...storyReveal({ opacity: 0, x: 40 })}
-                  transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute left-0 bottom-0 w-3/4 sm:w-[65%] h-[60%] z-20 group"
-                >
-                  <div className="absolute -inset-4 bg-primary/10 rounded-[2px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
-                  <picture>
-                    <source
-                      type="image/webp"
-                      srcSet={`${remittanceStoryWide800Webp} 800w, ${remittanceStoryWideWebp} 1600w`}
-                      sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
-                    />
-                    <img
-                      src={remittanceStoryWide}
-                      srcSet={`${remittanceStoryWide800} 800w, ${remittanceStoryWide} 1600w`}
-                      sizes="(max-width: 640px) 75vw, (max-width: 1024px) 65vw, 38vw"
-                      loading="lazy"
-                      decoding="async"
-                      alt="Intimate coffee ceremony gathering"
-                      className="w-full h-full object-cover border border-white/10 shadow-2xl filter brightness-90 group-hover:brightness-100 transition-all duration-700"
-                    />
-                  </picture>
-                  <div className="absolute bottom-4 left-4 text-[10px] tracking-[0.2em] text-white/50 uppercase drop-shadow-md">
-                    Fig. 02 — Family & Friends
-                  </div>
-                </motion.div>
-              </div>
-
-            </div>
-          </div>
-        </section>
-
-        {/* CO-BRAND HIGHLIGHT */}
-        <section className="py-24 relative overflow-hidden bg-[#0A0D0B] border-y border-white/5">
-          {/* Green/Gold atmospheric lighting */}
-          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_50%,_rgba(212,175,55,0.05),_rgba(27,59,43,0.2)_40%,_transparent_70%)] pointer-events-none" />
-
-          <div className="container mx-auto px-6 relative z-10">
-            <div className="grid lg:grid-cols-2 items-center gap-16 lg:gap-24">
-              <motion.div
-                initial={prefersReducedMotion ? false : { opacity: 0, x: -30 }}
-                whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={prefersReducedMotion ? undefined : { duration: 0.8 }}
-                className="order-2 lg:order-1"
-              >
-                <div className="relative w-full max-w-[500px] mx-auto perspective-[1200px]">
-                  <Card3DWrapper>
-                    <CreditCard variant="airlines" last4="1991" showFlipHint />
-                  </Card3DWrapper>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={prefersReducedMotion ? false : { opacity: 0, x: 30 }}
-                whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={prefersReducedMotion ? undefined : { duration: 0.8 }}
-                className="order-1 lg:order-2"
-              >
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-6">
-                  Premium Tier
-                </div>
-                <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl mb-6 leading-[1.05] tracking-tight font-normal text-[#F9F7F1]">
-                  The ultimate <br/><span className="italic text-primary">upgrade.</span>
-                </h2>
-                <p className="text-lg text-muted-foreground mb-8 font-light leading-relaxed">
-                  Elevate your travel with the Ethiopian Airlines Co-branded Card. Earn 3x points on eligible Ethiopian Airlines purchases and move toward the journey home with benefits designed for the distance between two places.
-                </p>
-                <Button asChild variant="link" className="p-0 h-auto text-primary text-lg group font-medium">
-                  <Link href="/cards/co-brand">
-                    Explore Co-brand Card <ChevronRight className="ml-1 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* FINAL CTA */}
-        <section className="py-32 relative">
-          <div className="absolute inset-0 bg-primary/5 pattern-dots" />
-          <div className="container mx-auto px-6 relative z-10 text-center">
-            <h2 className="font-serif text-5xl md:text-6xl mb-6 font-normal tracking-tight leading-[1.05] text-[#F9F7F1]">
-              Your next chapter<br/>
-              <span className="italic text-primary">starts here.</span>
-            </h2>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-light">
-              Explore the Samra Pay demo and see how your financial life here and home could work together.
-            </p>
-            <Button asChild variant="gold" size="lg" className="rounded-full h-16 px-10 text-lg shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:scale-105 transition-transform duration-300">
-              <Link href="/login">
-                Enter the demo
-              </Link>
-            </Button>
-          </div>
-        </section>
-
+  return (
+    <section className="faq-section" id="faq" aria-labelledby="faq-title">
+      <div className="coming-container faq-grid">
+        <div>
+          <p className="section-eyebrow">{text(localized("Three questions to start", "ለመጀመር ሦስት ጥያቄዎች"))}</p>
+          <h2 id="faq-title">{text(localized("The essentials, answered.", "ዋናዎቹ ጥያቄዎች፣ በግልጽ።"))}</h2>
+          <a className="section-text-link" href="/faq">
+            {text(localized("Visit the full FAQ", "ሙሉውን ጥያቄና መልስ ይመልከቱ"))}
+            <ArrowRight aria-hidden="true" />
+          </a>
+        </div>
+        <PublicFaqAccordion items={homeFaqItems} idPrefix="home-faq-answer" />
       </div>
-    </PageTransition>
+    </section>
+  );
+}
+
+export default function Home() {
+  const { language, text } = usePublicLanguage();
+  usePublicPageMeta({ language, ...homeMeta });
+
+  return (
+    <div className={`coming-soon-site ${language === "am" ? "is-amharic" : ""}`} id="top" lang={language}>
+      <ComingSoonHeader />
+
+      <main id="main-content" tabIndex={-1}>
+        <section className="coming-hero" aria-labelledby="coming-title">
+          <div className="coming-hero-copy">
+            <div className="coming-status">
+              <span aria-hidden="true" />
+              {text(localized("Alpha planned for April 2027", "Alpha ለApril 2027 ታቅዷል"))}
+            </div>
+            <h1 id="coming-title">
+              {language === "en" ? (
+                <>Banked <em>here</em>, care for family <em className="hero-phrase">at home</em></>
+              ) : (
+                <>የባንክ ጉዳይዎን <em>እዚህ</em> ያስተዳድሩ፤ <em className="hero-phrase">አገር ቤት</em> ያለውን ቤተሰብዎን ይንከባከቡ።</>
+              )}
+            </h1>
+            <p className="coming-hero-deck">
+              {text(localized(
+                "Launching in the U.S. and Canada: Direct deposit, credit building, remittance, and rewards on everyday spending—all in one place.",
+                "በአሜሪካና ካናዳ የሚጀምረው፦ ቀጥታ የደመወዝ ገቢ፣ የክሬዲት ታሪክ ግንባታ፣ የገንዘብ ልውውጥ እና በዕለታዊ ወጪ ሽልማቶች—ሁሉም በአንድ ቦታ።",
+              ))}
+            </p>
+            <EarlyAccessForm />
+            <p className="concept-note" id="concept-status">
+              <ShieldCheck aria-hidden="true" />
+              {text(localized(
+                "Samra Pay is in development",
+                "Samra Pay በልማት ላይ ነው",
+              ))}
+            </p>
+          </div>
+
+          <div className="coming-hero-media">
+            <img
+              src="/coming-soon/hero-woman-coffee.png"
+              alt={text(localized("Ethiopian diaspora woman holding a coffee cup", "የቡና ስኒ የያዘች በውጭ የምትኖር ኢትዮጵያዊት"))}
+            />
+          </div>
+        </section>
+
+        <section className="story-intro" id="story" aria-labelledby="story-title">
+          <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="section-pattern section-pattern-light" />
+          <div className="coming-container story-intro-grid">
+            <h2 id="story-title">{text(localized("One life. More than one home.", "አንድ ሕይወት። ከአንድ በላይ ቤት።"))}</h2>
+            <p>{text(localized(
+              "We build our lives here while the people we love are back home. Samra is being built for us, by us, to make managing and moving money simple, so staying connected never feels like a compromise. That’s how it should be.",
+              "ሕይወታችንን እዚህ እንገነባለን፤ የምንወዳቸው ሰዎች ግን አገር ቤት ናቸው። Samra የሚገነባው ለእኛ፣ በእኛ ነው—ገንዘብን ማስተዳደርና ማንቀሳቀስ ቀላል እንዲሆን እና ግንኙነታችንን ለመጠበቅ መደራደር እንዳያስፈልግ። መሆን ያለበት እንዲህ ነው።",
+            ))}</p>
+          </div>
+        </section>
+
+        <section className="feature-framework" id="features" aria-label={text(localized("Samra Pay product vision", "የSamra Pay የምርት ራዕይ"))}>
+          <div className="coming-container feature-framework-grid">
+            {siteContent.features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <article className={index === 2 ? "feature-framework-item is-wide" : "feature-framework-item"} key={feature.title.en}>
+                  <Icon aria-hidden="true" />
+                  <div>
+                    <h3>{text(feature.title)}</h3>
+                    <p>{text(feature.description)}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="capability-band" id="capabilities" aria-labelledby="capabilities-title">
+          <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="section-pattern section-pattern-dark" />
+          <div className="coming-container capability-grid">
+            <div>
+              <p className="section-eyebrow">{text(localized("What we are building", "እየገነባን ያለነው"))}</p>
+              <h2 id="capabilities-title">{text(localized("Everyday money should move you forward.", "ዕለታዊ ገንዘብዎ ወደፊት ሊያራምድዎት ይገባል።"))}</h2>
+            </div>
+            <div className="capability-list">
+              {siteContent.capabilities.map((capability) => {
+                const Icon = capability.icon;
+                return (
+                  <a key={capability.label.en} href={capability.href}>
+                    <Icon aria-hidden="true" />
+                    <span>{text(capability.label)}</span>
+                    <ArrowRight aria-hidden="true" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="proof-section proof-section-dark" id="values" aria-labelledby="approach-title">
+          <div className="coming-container proof-grid proof-grid-text-first">
+            <div className="proof-copy">
+              <p className="section-eyebrow">{text(localized("What guides us", "የሚመራን"))}</p>
+              <h2 id="approach-title">{text(localized("Culture is context. Not decoration.", "ባህል አውድ ነው። ጌጥ አይደለም።"))}</h2>
+              <p>{text(localized(
+                "We are designing Samra Pay around the realities generic financial products often overlook: family responsibility, trust across distance, multiple currencies, and a connection to home that is both practical and personal.",
+                "Samra Payን አጠቃላይ የገንዘብ ምርቶች ብዙ ጊዜ በሚዘነጉባቸው እውነታዎች ዙሪያ እየነደፍን ነው፦ የቤተሰብ ኃላፊነት፣ ከርቀት የሚገነባ እምነት፣ ብዙ ምንዛሬዎችና ከቤት ጋር ያለ ተግባራዊና የግል ግንኙነት።",
+              ))}</p>
+              <a className="proof-inline-link" href="/values">{text(localized("Explore our values", "እሴቶቻችንን ያስሱ"))}<ArrowRight aria-hidden="true" /></a>
+            </div>
+            <div className="proof-image-wrap">
+              <img src="/coming-soon/proof-man-laptop.png" alt={text(localized("Ethiopian diaspora professional working on a laptop in a coffee shop", "በቡና ቤት በላፕቶፕ ላይ የሚሰራ በውጭ የሚኖር ኢትዮጵያዊ"))} />
+              <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="proof-pattern" />
+            </div>
+          </div>
+        </section>
+
+        <section className="proof-section proof-section-light" id="blog" aria-labelledby="everyday-title">
+          <div className="coming-container proof-grid proof-grid-image-first">
+            <div className="proof-image-wrap proof-image-woman">
+              <img src="/coming-soon/woman-with-phone-diaspora.jpg" alt={text(localized("Ethiopian diaspora woman using her phone at home", "በቤቷ ስልኳን የምትጠቀም በውጭ የምትኖር ኢትዮጵያዊት"))} />
+            </div>
+            <div className="proof-copy">
+              <p className="section-eyebrow">{text(localized("From Samra Pay's founder", "ከSamra Pay መስራች"))}</p>
+              <h2 id="everyday-title">{text(localized("Money, identity, and life between worlds.", "ገንዘብ፣ ማንነትና በሁለት ዓለማት መካከል ያለ ሕይወት።"))}</h2>
+              <p>{text(localized(
+                "Founder notes, practical guidance, and honest conversations for Ethiopians building lives across borders. The first posts are coming soon.",
+                "ድንበር ተሻግረው ሕይወት ለሚገነቡ ኢትዮጵያውያን የመስራች ማስታወሻዎች፣ ተግባራዊ መመሪያዎችና ግልጽ ውይይቶች። የመጀመሪያዎቹ ጽሑፎች በቅርቡ ይመጣሉ።",
+              ))}</p>
+              <a className="proof-inline-link is-dark" href="/blog">{text(localized("Visit the blog", "ጽሑፎቹን ይመልከቱ"))}<ArrowRight aria-hidden="true" /></a>
+            </div>
+          </div>
+        </section>
+
+        <HomeFaq />
+
+        <section className="final-cta" aria-labelledby="final-cta-title">
+          <div className="coming-container final-cta-grid">
+            <div>
+              <h2 id="final-cta-title">{text(localized("Be first to know when Alpha opens.", "Alpha ሲከፈት መጀመሪያ ይወቁ።"))}</h2>
+              <p>{text(localized(
+                "Limited Alpha is planned for the U.S. and Canada in April 2027. Get product updates as Samra Pay moves toward release.",
+                "የተወሰነ Alpha በU.S. እና Canada በApril 2027 ለመጀመር ታቅዷል። Samra Pay ወደ ምረቃ ሲቀርብ የምርት ዜናዎችን ያግኙ።",
+              ))}</p>
+            </div>
+            <EarlyAccessForm compact />
+          </div>
+        </section>
+      </main>
+
+      <ComingSoonFooter />
+    </div>
   );
 }
