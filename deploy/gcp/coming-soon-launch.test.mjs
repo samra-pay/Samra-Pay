@@ -364,6 +364,13 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
   ]) {
     assert.ok(productionReview.includes(evidence), evidence);
   }
+  assert.equal(
+    productionReview.match(
+      /--billing-project="\$\{SOURCE_BILLING_PROJECT_ID\}"/gu,
+    )?.length,
+    4,
+    "every cloud inventory read must use the staging quota project",
+  );
   assert.doesNotMatch(
     productionReview,
     /gcloud (?:projects create|billing projects link|billing budgets create|services enable|artifacts repositories create|sql instances create|run deploy|compute .* create|dns .* create)/,

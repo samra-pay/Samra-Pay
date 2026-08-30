@@ -18,10 +18,10 @@ boundary without reading cloud state: project `samra-pay-production`, region
 the same billing account as staging, and canonical `www.samrapay.com`. Its later
 `--review` mode is read-only: after the project is separately created, it
 verifies the assigned project number, labels, billing-account match, and one
-exact project-scoped budget. Budget reads charge quota to the staging control
-project, where the required read API is enabled, so the reviewer does not
-enable an API on production. It cannot create infrastructure, deploy, collect
-waitlist data, route traffic, or change Squarespace DNS.
+exact project-scoped budget. Every cloud inventory read charges quota to the
+staging control project, where the required APIs are enabled, so the reviewer
+does not enable an API on production. It cannot create infrastructure, deploy,
+collect waitlist data, route traffic, or change Squarespace DNS.
 
 `coming-soon-production-project.json` and
 `provision-coming-soon-production-project.sh` implement the bounded missing
