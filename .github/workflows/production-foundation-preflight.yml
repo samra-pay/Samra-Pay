@@ -1,0 +1,97 @@
+name: Production foundation preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-foundation-preflight-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  SAMRA_GCP_PROJECT_ID: samra-pay-production
+  SAMRA_GCP_PROJECT_NUMBER: "382465561715"
+  SAMRA_GCP_STAGING_PROJECT_ID: samra-pay-staging
+  SAMRA_GCP_ORGANIZATION_ID: "614833350075"
+  SAMRA_GCP_REGION: us-east4
+  SAMRA_GCP_OPERATOR_ACCOUNT: samra-production-auditor@samra-pay-production.iam.gserviceaccount.com
+  SAMRA_GCP_EXPECTED_SHA: ${{ github.sha }}
+  SAMRA_GCP_DATA_CLASSIFICATION: customer-pii
+  SAMRA_GCP_MONTHLY_BUDGET_USD: "25"
+  SAMRA_GCP_QUOTA_PROJECT_ID: samra-pay-production
+  SAMRA_PUBLIC_APEX_DOMAIN: samrapay.com
+  SAMRA_PUBLIC_CANONICAL_HOST: www
+  SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER: projects/382465561715/locations/global/workloadIdentityPools/samra-production-review/providers/samra-foundation-preflight
+  SAMRA_GCP_AUDITOR_SERVICE_ACCOUNT: samra-production-auditor@samra-pay-production.iam.gserviceaccount.com
+  SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH: artifacts/production-foundation-preflight/${{ github.sha }}/evidence.json
+
+jobs:
+  preflight:
+    name: Read-only production foundation preflight
+    if: >-
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: production-foundation-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the exact main commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify source and workflow boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
+          [[ -z "$(git status --porcelain)" ]]
+          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]]
+          [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
+
+      - name: Obtain short-lived Google credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.SAMRA_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SAMRA_GCP_AUDITOR_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: ">= 540.0.0"
+          project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+
+      - name: Verify federated caller
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(gcloud config get-value account 2>/dev/null)" == "${SAMRA_GCP_AUDITOR_SERVICE_ACCOUNT}" ]]
+          [[ "$(gcloud config get-value project 2>/dev/null)" == "${SAMRA_GCP_PROJECT_ID}" ]]
+          [[ -z "$(gcloud iam service-accounts keys list \
+            --iam-account="${SAMRA_GCP_AUDITOR_SERVICE_ACCOUNT}" \
+            --project="${SAMRA_GCP_PROJECT_ID}" \
+            --managed-by=user --format='value(name)')" ]]
+
+      - name: Run read-only production boundary review
+        shell: bash
+        run: bash deploy/gcp/review-coming-soon-production.sh --review
+
+      - name: Preserve immutable preflight evidence
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-foundation-preflight-${{ github.sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: artifacts/production-foundation-preflight
+          if-no-files-found: error
+          retention-days: 365

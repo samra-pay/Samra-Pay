@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "status": "plan-only",
   "phase": "coming-soon-production-foundation",
-  "decisionStatus": "confirmed-not-applied",
+  "decisionStatus": "project-verified-foundation-not-applied",
   "applyAuthorized": false,
   "cloudStateReadByPlan": false,
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
   "productionBoundary": {
     "projectId": "samra-pay-production",
-    "projectNumber": "UNASSIGNED_UNTIL_PROJECT_CREATION",
+    "projectNumber": "382465561715",
     "organizationId": "614833350075",
     "region": "us-east4",
     "dataClassification": "customer-pii",
@@ -19,7 +19,11 @@
     "mustNotEqualProjectId": "samra-pay-staging",
     "projectCreationAuthorized": false,
     "billingMutationAuthorized": false,
-    "budgetMutationAuthorized": false
+    "budgetMutationAuthorized": false,
+    "projectStateVerified": true,
+    "billingMatchVerified": true,
+    "budgetVerified": true,
+    "verificationSourceSha": "7a28fb4df556a4a32f882544b9446275817b1c4f"
   },
   "projectLabels": {
     "environment": "production",
@@ -128,8 +132,7 @@
     ]
   },
   "blockedOn": [
-    "production project creation and assigned project number",
-    "same billing account as staging and project-scoped USD 25 budget verification",
-    "separate authorization to execute the production project, billing, and budget controller"
+    "keyless production foundation preflight trust and protected GitHub environment",
+    "separately reviewed and authorized production infrastructure foundation apply"
   ]
 }

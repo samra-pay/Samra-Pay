@@ -60,7 +60,7 @@ export function validateComingSoonProductionFoundation(
     foundation.schemaVersion === 1 &&
       foundation.status === "plan-only" &&
       foundation.phase === "coming-soon-production-foundation" &&
-      foundation.decisionStatus === "confirmed-not-applied" &&
+      foundation.decisionStatus === "project-verified-foundation-not-applied" &&
       foundation.applyAuthorized === false &&
       foundation.cloudStateReadByPlan === false,
     "The production foundation must remain a local plan only",
@@ -76,7 +76,7 @@ export function validateComingSoonProductionFoundation(
   const boundary = foundation.productionBoundary;
   assert(
     boundary.projectId === "samra-pay-production" &&
-      boundary.projectNumber === "UNASSIGNED_UNTIL_PROJECT_CREATION" &&
+      boundary.projectNumber === "382465561715" &&
       boundary.organizationId === "614833350075" &&
       boundary.region === "us-east4" &&
       boundary.dataClassification === "customer-pii" &&
@@ -87,7 +87,12 @@ export function validateComingSoonProductionFoundation(
       boundary.mustNotEqualProjectId === "samra-pay-staging" &&
       boundary.projectCreationAuthorized === false &&
       boundary.billingMutationAuthorized === false &&
-      boundary.budgetMutationAuthorized === false,
+      boundary.budgetMutationAuthorized === false &&
+      boundary.projectStateVerified === true &&
+      boundary.billingMatchVerified === true &&
+      boundary.budgetVerified === true &&
+      boundary.verificationSourceSha ===
+        "7a28fb4df556a4a32f882544b9446275817b1c4f",
     "The confirmed production identity, budget, region, and domain boundary drifted",
   );
   assert(
@@ -239,15 +244,12 @@ export function validateComingSoonProductionFoundation(
     "Production cost gates must remain explicit",
   );
   assert(
-    foundation.blockedOn.length === 3 &&
+    foundation.blockedOn.length === 2 &&
       foundation.blockedOn.includes(
-        "production project creation and assigned project number",
+        "keyless production foundation preflight trust and protected GitHub environment",
       ) &&
       foundation.blockedOn.includes(
-        "same billing account as staging and project-scoped USD 25 budget verification",
-      ) &&
-      foundation.blockedOn.includes(
-        "separate authorization to execute the production project, billing, and budget controller",
+        "separately reviewed and authorized production infrastructure foundation apply",
       ),
     "The production foundation blockers changed",
   );

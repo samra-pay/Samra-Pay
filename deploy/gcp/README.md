@@ -12,42 +12,43 @@ and its source-sync, release, rollback, and Squarespace DNS sequence is in the
 It does not reuse synthetic staging data or activate Auth0, Persona, Crossmint,
 financial APIs, public traffic, production spend, or DNS changes.
 
-`review-coming-soon-production.sh --plan` locks the confirmed production
-boundary without reading cloud state: project `samra-pay-production`, region
+`review-coming-soon-production.sh --plan` locks the production boundary without
+reading cloud state: project `samra-pay-production` (`382465561715`), region
 `us-east4`, `customer-pii` data classification, a USD 25 monthly budget alert,
-the same billing account as staging, and canonical `www.samrapay.com`. Its later
-`--review` mode is read-only: after the project is separately created, it
-verifies the assigned project number, labels, billing-account match, and one
-exact project-scoped budget. The account-level budget read charges quota to the
-staging control project, where the Budget API is enabled. Project and billing
-link reads retain their native resource context, avoiding an unnecessary Cloud
-Billing API prerequisite. The reviewer does not enable an API on production or
-create infrastructure, deploy, collect waitlist data, route traffic, or change
-Squarespace DNS.
+the same billing account as staging, and canonical `www.samrapay.com`. The
+project, labels, billing match, and exact project-scoped budget passed an
+independent read-only review at source SHA
+`7a28fb4df556a4a32f882544b9446275817b1c4f`. The reviewer does not create
+infrastructure, deploy, collect waitlist data, route traffic, or change DNS.
 
-`coming-soon-production-project.json` and
-`provision-coming-soon-production-project.sh` implement the bounded missing
-project, billing link, and USD 25 budget-alert phase. `--plan` is local-only;
-`--review` is read-only; and `--apply` additionally requires the exact
-`AUTHORIZED_COMING_SOON_PRODUCTION_PROJECT` environment authorization. Apply is
-resumable and stops on existing drift. It can create only the exact project,
-attach only the open billing account already used by staging, and create one
-project-only monthly alert. It cannot move a different billing link, enable an
-API, create infrastructure, deploy, route traffic, collect data, activate a
-vendor, or change DNS. Missing-project detection uses an exact organization
-inventory because Google Cloud may mask an absent global project ID as a
-permission error on direct lookup.
+`production-foundation-preflight.json` and
+`activate-production-foundation-preflight.sh` prepare the replacement for
+repeated Cloud Shell reviews. One separately authorized bootstrap can enable
+only seven control-plane APIs, create one dedicated keyless auditor and exact
+GitHub OIDC trust, grant five exact permissions on production, and grant only
+`resourcemanager.projects.get` on staging. It grants no billing-account role.
+The manual `Production foundation preflight` workflow then runs the same
+read-only review from `main` through the protected
+`production-foundation-review` environment and retains machine-readable
+evidence for 365 days. Moving the repository to the Enterprise organization
+requires an explicit trust-condition reissue.
+
+`coming-soon-production-project.json` now records that the bounded project,
+billing link, and USD 25 budget-alert phase was applied and independently
+verified. `provision-coming-soon-production-project.sh` remains a resumable,
+fail-closed recovery controller: it reuses exact state and rejects drift. Its
+scope still excludes API enablement, infrastructure, deployment, traffic,
+customer data, vendors, and DNS.
 
 `coming-soon-production-foundation.json` is the next plan-only boundary. It
 locks the exact 15-API allowlist, one immutable production image repository,
 five keyless identities, least-privilege IAM plan, and two empty database-secret
 metadata records. `plan-coming-soon-production-foundation.sh --plan` validates
 that contract locally for USD 0 and deliberately has no review or apply mode.
-The production project ID, region, classification, budget-alert amount, billing
-source, domain, and canonical host are confirmed but not applied. The project
-number remains unassigned until project creation, and the billing and budget
-must then pass the read-only preflight. Executing the prepared project
-controller remains a separate cloud-action authorization.
+The production project number, region, classification, billing match, exact
+budget, domain, and canonical host are verified. The infrastructure foundation
+itself remains unapplied. Its remaining gates are the keyless preflight trust
+and a separately reviewed infrastructure apply.
 
 ## Current verified staging state
 

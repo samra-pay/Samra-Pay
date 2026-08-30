@@ -26,12 +26,13 @@ Cloud or DNS state changed: no
 
 Confirmed production boundary:
   - Project ID: samra-pay-production
-  - Project number: unassigned until project creation
+  - Project number: 382465561715 (independently verified)
   - Organization: 614833350075
   - Region: us-east4
   - Data classification: customer-pii
   - Monthly budget alert: USD 25 with 50%, 90%, and 100% notifications
-  - Billing account: exact account currently attached to samra-pay-staging
+  - Billing account: verified exact match to samra-pay-staging
+  - Budget: verified exact project-scoped USD 25 alert
   - Domain: samrapay.com with canonical www.samrapay.com
 
 The USD 25 budget is an alert boundary, not a spending cap.
@@ -43,17 +44,16 @@ A later, separately authorized foundation apply would be limited to:
   4. the reviewed project-level and resource-level IAM boundaries; and
   5. empty runtime and migration database-secret metadata with zero versions.
 
-This plan cannot create or attach the production project, billing, or budget.
+This plan cannot modify the verified production project, billing, or budget.
 It cannot create a VPC, database, secret value, Cloud Run workload, load
 balancer, certificate, public endpoint, customer record, waitlist submission,
 vendor integration, production data, or Squarespace DNS record.
 
 Remaining blockers:
-  - production project creation and assigned project number;
-  - same billing account as staging and project-scoped USD 25 budget
-    verification; and
-  - separate authorization to execute the production project, billing, and
-    budget controller.
+  - keyless production foundation preflight trust and its protected GitHub
+    environment; and
+  - a separately reviewed and authorized production infrastructure foundation
+    apply.
 
 PLAN COMPLETE — NO CLOUD OR DNS CHANGES
 PLAN

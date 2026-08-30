@@ -27,7 +27,7 @@ const controllerSource = `${controllerScript}\n${controllerValidator}`;
 const exactProject = {
   projectId: "samra-pay-production",
   name: "Samra Pay Production",
-  projectNumber: "123456789012",
+  projectNumber: "382465561715",
   lifecycleState: "ACTIVE",
   parent: { type: "organization", id: "614833350075" },
   labels: {
@@ -50,12 +50,13 @@ const exactBudget = (projectResource = "projects/samra-pay-production") => ({
   ],
 });
 
-test("validates the bounded prepared production project controller", () => {
+test("validates the applied and independently verified production project controller", () => {
   assert.deepEqual(validateComingSoonProductionProject(), {
     schemaVersion: 1,
-    status: "validated-prepared-not-applied",
+    status: "validated-applied-verified",
     phase: "coming-soon-production-project",
     projectId: "samra-pay-production",
+    projectNumber: "382465561715",
     projectName: "Samra Pay Production",
     organizationId: "614833350075",
     sourceBillingProjectId: "samra-pay-staging",
@@ -72,7 +73,7 @@ test("validates the bounded prepared production project controller", () => {
 
 test("rejects project, billing, budget, and scope drift", () => {
   for (const mutate of [
-    (value) => (value.status = "applied"),
+    (value) => (value.status = "prepared-not-applied"),
     (value) => (value.applyAuthorized = true),
     (value) => (value.project.id = "samra-pay-staging"),
     (value) => (value.project.name = "Another Production"),
@@ -183,7 +184,7 @@ test("classifies a missing or exact project and rejects existing drift", () => {
   assert.deepEqual(classifyObservedProductionProject(exactProject), {
     state: "ready",
     projectId: "samra-pay-production",
-    projectNumber: "123456789012",
+    projectNumber: "382465561715",
   });
 
   for (const mutate of [
@@ -209,7 +210,7 @@ test("uses exact organization inventory when Google masks an absent project as p
   assert.deepEqual(classifyObservedProductionProjectInventory([exactProject]), {
     state: "ready",
     projectId: "samra-pay-production",
-    projectNumber: "123456789012",
+    projectNumber: "382465561715",
   });
   assert.throws(
     () =>
@@ -248,13 +249,13 @@ test("classifies only an absent or exact production billing link", () => {
 });
 
 test("accepts project-ID or project-number budget scope and rejects drift", () => {
-  assert.deepEqual(classifyObservedProductionBudgets([], "123456789012"), {
+  assert.deepEqual(classifyObservedProductionBudgets([], "382465561715"), {
     state: "missing",
   });
   assert.deepEqual(
     classifyObservedProductionBudgets(
       [exactBudget("projects/samra-pay-production")],
-      "123456789012",
+      "382465561715",
     ),
     {
       state: "ready",
@@ -265,8 +266,8 @@ test("accepts project-ID or project-number budget scope and rejects drift", () =
   );
   assert.deepEqual(
     classifyObservedProductionBudgets(
-      [exactBudget("projects/123456789012")],
-      "123456789012",
+      [exactBudget("projects/382465561715")],
+      "382465561715",
     ).state,
     "ready",
   );
@@ -308,15 +309,15 @@ test("accepts project-ID or project-number budget scope and rejects drift", () =
     ],
   ]) {
     assert.throws(
-      () => classifyObservedProductionBudgets(budgets, "123456789012"),
+      () => classifyObservedProductionBudgets(budgets, "382465561715"),
       /differs from the exact/,
     );
   }
   assert.throws(
     () =>
       classifyObservedProductionBudgets(
-        [exactBudget(), exactBudget("projects/123456789012")],
-        "123456789012",
+        [exactBudget(), exactBudget("projects/382465561715")],
+        "382465561715",
       ),
     /Multiple budgets/,
   );

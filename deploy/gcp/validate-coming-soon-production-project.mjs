@@ -54,10 +54,10 @@ export function validateComingSoonProductionProject(
 
   assert(
     controller.schemaVersion === 1 &&
-      controller.status === "prepared-not-applied" &&
+      controller.status === "applied-verified" &&
       controller.phase === "coming-soon-production-project" &&
       controller.applyAuthorized === false,
-    "The production project controller must remain prepared but unapplied",
+    "The production project controller must remain applied and independently verified",
   );
   assert(
     controller.linkedLaunchContract === "deploy/gcp/coming-soon-launch.json" &&
@@ -73,6 +73,8 @@ export function validateComingSoonProductionProject(
   assert(
     project.id === launch.productionBoundary.projectId &&
       project.id === foundation.productionBoundary.projectId &&
+      project.number === launch.productionBoundary.projectNumber &&
+      project.number === foundation.productionBoundary.projectNumber &&
       project.name === "Samra Pay Production" &&
       project.organizationId === launch.productionBoundary.organizationId &&
       project.organizationId === foundation.productionBoundary.organizationId &&
@@ -115,6 +117,18 @@ export function validateComingSoonProductionProject(
     "The project-scoped USD 25 monthly budget boundary drifted",
   );
 
+  const verification = controller.verification;
+  assert(
+    verification.status === "passed-read-only" &&
+      verification.sourceSha === "7a28fb4df556a4a32f882544b9446275817b1c4f" &&
+      verification.verifiedOn === "2026-08-30" &&
+      verification.projectLifecycle === "ACTIVE" &&
+      verification.billingAccountMatchesSourceProject === true &&
+      verification.budgetMatchesContract === true &&
+      verification.cloudOrDnsChangesMadeByVerification === false,
+    "The independent production project verification drifted",
+  );
+
   assert(
     controller.modes.plan === "local-only" &&
       controller.modes.review === "read-only" &&
@@ -136,7 +150,10 @@ export function validateComingSoonProductionProject(
       controller.applyNeverCreates.includes(
         "customer record, waitlist submission, or production data",
       ) &&
-      controller.remainingAuthorizationGates.length === 5,
+      controller.remainingAuthorizationGates.length === 4 &&
+      !controller.remainingAuthorizationGates.some((gate) =>
+        /production project, billing, and budget apply/iu.test(gate),
+      ),
     "The bounded create scope or remaining authorization gates drifted",
   );
 
@@ -150,9 +167,10 @@ export function validateComingSoonProductionProject(
 
   return Object.freeze({
     schemaVersion: controller.schemaVersion,
-    status: "validated-prepared-not-applied",
+    status: "validated-applied-verified",
     phase: controller.phase,
     projectId: project.id,
+    projectNumber: project.number,
     projectName: project.name,
     organizationId: project.organizationId,
     sourceBillingProjectId: project.sourceBillingProjectId,
@@ -244,7 +262,7 @@ export function classifyObservedProductionProject(
   assert(
     observed.projectId === controller.project.id &&
       observed.name === controller.project.name &&
-      /^\d{6,20}$/u.test(String(observed.projectNumber ?? "")) &&
+      String(observed.projectNumber ?? "") === controller.project.number &&
       observed.lifecycleState === "ACTIVE" &&
       observed.parent?.type === "organization" &&
       String(observed.parent?.id ?? "") === controller.project.organizationId &&

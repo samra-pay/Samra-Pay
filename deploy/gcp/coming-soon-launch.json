@@ -11,15 +11,16 @@
     "releaseSource": "FULL_GIT_SHA"
   },
   "productionBoundary": {
-    "decisionStatus": "confirmed-not-applied",
+    "decisionStatus": "project-verified-foundation-not-applied",
     "projectId": "samra-pay-production",
-    "projectNumber": "UNASSIGNED_UNTIL_PROJECT_CREATION",
+    "projectNumber": "382465561715",
     "organizationId": "614833350075",
     "region": "us-east4",
     "dataClassification": "customer-pii",
     "billingAccountSourceProjectId": "samra-pay-staging",
     "mustNotEqualProjectId": "samra-pay-staging",
     "billingAndBudgetApprovalRequired": true,
+    "billingAndBudgetVerified": true,
     "customerDataAllowedBeforeApproval": false
   },
   "productionReview": {
@@ -53,7 +54,17 @@
       "public traffic",
       "waitlist data collection",
       "DNS change"
-    ]
+    ],
+    "latestVerifiedBoundary": {
+      "status": "passed-read-only",
+      "sourceSha": "7a28fb4df556a4a32f882544b9446275817b1c4f",
+      "verifiedOn": "2026-08-30",
+      "projectNumber": "382465561715",
+      "billingAccountMatchesSourceProject": true,
+      "monthlyBudgetUsd": 25,
+      "thresholdPercents": [0.5, 0.9, 1],
+      "cloudOrDnsChangesMadeByReview": false
+    }
   },
   "images": {
     "registry": "REGION-docker.pkg.dev/PRODUCTION_PROJECT_ID/samra-production",
@@ -178,8 +189,7 @@
   },
   "blockedOn": [
     "final Sites refresh and visual approval",
-    "production project creation and assigned project number",
-    "same billing account as staging and project-scoped USD 25 budget verification",
+    "keyless production preflight trust and protected GitHub environment",
     "separate production PostgreSQL and pinned secret",
     "privacy notice and consent wording approval",
     "load balancer, Cloud Armor, alerting, and rollback review",

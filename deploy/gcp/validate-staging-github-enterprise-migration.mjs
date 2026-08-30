@@ -28,7 +28,7 @@ const EXPECTED_CUTOVER_ORDER = Object.freeze([
   "transfer-repository",
   "verify-repository-id-and-new-owner-id",
   "switch-repository-authority-contracts",
-  "reapply-five-google-workload-identity-boundaries",
+  "reapply-six-google-workload-identity-boundaries",
   "enforce-solo-founder-protected-environment-controls",
   "reconnect-qase-github-app",
   "audit-branch-actions-environment-and-cloud-controls",
@@ -151,8 +151,7 @@ export function validateStagingGithubEnterpriseMigration(
 
   assert(
     contract.observedEnterpriseState.billingStatus === "trial" &&
-      contract.observedEnterpriseState.billingInformationConfigured ===
-        false &&
+      contract.observedEnterpriseState.billingInformationConfigured === false &&
       contract.observedEnterpriseState.operatingModel === "solo-founder" &&
       contract.observedEnterpriseState.organizationMemberCount === 1 &&
       contract.observedEnterpriseState.organizationOwnerCount === 1 &&
@@ -169,11 +168,7 @@ export function validateStagingGithubEnterpriseMigration(
       contract.observedEnterpriseState.verifiedRecoveryEmailConfigured ===
         true &&
       JSON.stringify(contract.observedEnterpriseState.teams) ===
-        JSON.stringify([
-          "developers",
-          "platform-admins",
-          "staging-approvers",
-        ]),
+        JSON.stringify(["developers", "platform-admins", "staging-approvers"]),
     "Observed Enterprise state drifted",
   );
   assert(
@@ -235,7 +230,7 @@ export function validateStagingGithubEnterpriseMigration(
 
   const currentFiles = contract.operationalReferences.currentAuthorityFiles;
   assert(
-    currentFiles.length === 43 &&
+    currentFiles.length === 49 &&
       new Set(currentFiles).size === currentFiles.length &&
       JSON.stringify([...currentFiles].sort()) === JSON.stringify(currentFiles),
     "Current-authority inventory must be sorted, unique, and complete",

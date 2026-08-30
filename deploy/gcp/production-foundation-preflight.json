@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-applied",
+  "phase": "production-foundation-preflight-automation",
+  "environment": "production",
+  "dataClassification": "configuration-metadata-only",
+  "applyAuthorized": false,
+  "github": {
+    "owner": "haileleuld87",
+    "repository": "Samra-Pay",
+    "repositoryId": "1335175962",
+    "repositoryOwnerId": "237485986",
+    "defaultBranch": "main",
+    "allowedRef": "refs/heads/main",
+    "allowedEvent": "workflow_dispatch",
+    "workflowName": "Production foundation preflight",
+    "workflowPath": ".github/workflows/production-foundation-preflight.yml",
+    "protectedEnvironment": "production-foundation-review",
+    "enterpriseTransferRequiresTrustReissue": true
+  },
+  "googleCloud": {
+    "productionProjectId": "samra-pay-production",
+    "productionProjectNumber": "382465561715",
+    "stagingProjectId": "samra-pay-staging",
+    "stagingProjectNumber": "934122615631",
+    "organizationId": "614833350075",
+    "region": "us-east4",
+    "workloadIdentityLocation": "global",
+    "workloadIdentityPoolId": "samra-production-review",
+    "workloadIdentityProviderId": "samra-foundation-preflight",
+    "auditorServiceAccountId": "samra-production-auditor",
+    "productionCustomRoleId": "samraProductionBoundaryAuditor",
+    "stagingCustomRoleId": "samraProductionBillingSourceReader"
+  },
+  "provider": {
+    "issuerUri": "https://token.actions.githubusercontent.com",
+    "attributeMapping": {
+      "google.subject": "assertion.sub",
+      "attribute.repository": "assertion.repository",
+      "attribute.repository_id": "assertion.repository_id",
+      "attribute.repository_owner_id": "assertion.repository_owner_id",
+      "attribute.ref": "assertion.ref",
+      "attribute.event_name": "assertion.event_name",
+      "attribute.workflow": "assertion.workflow",
+      "attribute.workflow_ref": "assertion.workflow_ref",
+      "attribute.environment": "assertion.environment"
+    },
+    "attributeCondition": "assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Production foundation preflight' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main' && assertion.environment=='production-foundation-review'"
+  },
+  "iam": {
+    "productionCustomRolePermissions": [
+      "billing.resourcebudgets.read",
+      "iam.serviceAccountKeys.list",
+      "iam.serviceAccounts.get",
+      "resourcemanager.projects.get",
+      "serviceusage.services.use"
+    ],
+    "stagingCustomRolePermissions": ["resourcemanager.projects.get"],
+    "federationServiceAccountRole": "roles/iam.workloadIdentityUser",
+    "billingAccountRole": null
+  },
+  "workflow": {
+    "checkoutAction": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "authenticationAction": "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093",
+    "cloudSdkAction": "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db",
+    "artifactAction": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "permissions": {
+      "contents": "read",
+      "id-token": "write"
+    },
+    "automaticTriggers": false,
+    "readOnly": true,
+    "cloudMutation": false,
+    "serviceDeployment": false,
+    "trafficChange": false,
+    "dnsChange": false
+  },
+  "bootstrap": {
+    "authorizationEnvironment": "SAMRA_GCP_PRODUCTION_PREFLIGHT_APPLY",
+    "authorizationValue": "AUTHORIZED_PRODUCTION_FOUNDATION_PREFLIGHT",
+    "estimatedBaseMonthlyCostUsd": 0,
+    "requiredProductionApis": [
+      "billingbudgets.googleapis.com",
+      "cloudbilling.googleapis.com",
+      "cloudresourcemanager.googleapis.com",
+      "iam.googleapis.com",
+      "iamcredentials.googleapis.com",
+      "serviceusage.googleapis.com",
+      "sts.googleapis.com"
+    ],
+    "createsOnly": [
+      "seven exact production control-plane API enablements",
+      "one production workload identity pool and exact GitHub OIDC provider",
+      "one dedicated keyless production auditor service account",
+      "one exact production project custom read role and binding",
+      "one exact staging project billing-source read role and binding",
+      "one Workload Identity User binding on the production auditor"
+    ]
+  },
+  "prohibited": [
+    "billing-account-level IAM role",
+    "service-account key",
+    "stored Google credential secret",
+    "automatic pull-request, push, or scheduled cloud review",
+    "build or image publication",
+    "Artifact Registry mutation",
+    "Cloud SQL or database mutation",
+    "secret metadata or secret value access",
+    "Cloud Run deployment or traffic change",
+    "load balancer, Cloud Armor, certificate, CDN, or public endpoint",
+    "Squarespace DNS or registrar change",
+    "waitlist or customer data access",
+    "Auth0, Persona, Crossmint, Firebase, or financial-provider activation"
+  ]
+}
