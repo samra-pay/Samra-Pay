@@ -24,6 +24,18 @@ Plan cost: USD 0 per month
 Cloud state read: no
 Cloud or DNS state changed: no
 
+Confirmed production boundary:
+  - Project ID: samra-pay-production
+  - Project number: unassigned until project creation
+  - Organization: 614833350075
+  - Region: us-east4
+  - Data classification: customer-pii
+  - Monthly budget alert: USD 25 with 50%, 90%, and 100% notifications
+  - Billing account: exact account currently attached to samra-pay-staging
+  - Domain: samrapay.com with canonical www.samrapay.com
+
+The USD 25 budget is an alert boundary, not a spending cap.
+
 A later, separately authorized foundation apply would be limited to:
   1. the approved production labels and 15 explicitly reviewed APIs;
   2. one regional immutable samra-production Docker repository;
@@ -36,11 +48,10 @@ It cannot create a VPC, database, secret value, Cloud Run workload, load
 balancer, certificate, public endpoint, customer record, waitlist submission,
 vendor integration, production data, or Squarespace DNS record.
 
-Blocked decisions:
-  - production project ID and number;
-  - production region and non-synthetic data classification;
-  - monthly budget and billing owner;
-  - public apex domain and canonical apex-or-www choice; and
+Remaining blockers:
+  - production project creation and assigned project number;
+  - same billing account as staging and project-scoped USD 25 budget
+    verification; and
   - separate authorization to build an apply controller.
 
 PLAN COMPLETE — NO CLOUD OR DNS CHANGES

@@ -59,8 +59,9 @@ the first public submission.
 
 ## Release and rollback
 
-1. Resolve the production project, region, budget, public domain, and data
-   owner. The staging project is not eligible.
+1. Create the separately authorized `samra-pay-production` project in
+   `us-east4`, assign its project number, and verify the confirmed budget,
+   billing, domain, and data boundaries. The staging project is not eligible.
 2. Build the customer web, API, and migration images from one full Git SHA.
    Record each digest; do not deploy a floating tag.
 3. Apply the waitlist migration once through the dedicated migration identity.
@@ -80,19 +81,22 @@ Run the local plan before creating or changing any production resource:
 bash deploy/gcp/review-coming-soon-production.sh --plan
 ```
 
-The plan reads no cloud or DNS state. After the separate production project,
-billing relationship, labels, and monthly budget have been explicitly approved
-and created, `--review` can verify them without changing them. The review is
-bound to the exact active administrator, project ID and number, organization,
-region, non-synthetic data classification, whole-dollar monthly budget, apex
-domain, canonical `www`-or-apex choice, and full Git SHA.
+The plan reads no cloud or DNS state. The confirmed boundary is project
+`samra-pay-production`, organization `614833350075`, region `us-east4`,
+`customer-pii` data classification, apex `samrapay.com`, canonical
+`www.samrapay.com`, the same billing account as `samra-pay-staging`, and a USD
+25 monthly budget alert. These values are confirmed but not applied. After the
+project, labels, billing relationship, and monthly budget have been separately
+created, `--review` verifies them without changing them. The review is also
+bound to the assigned project number, exact active administrator, and full Git
+SHA.
 
-The budget must be scoped only to the production project, use USD, match the
-approved amount, and include 50%, 90%, and 100% alert thresholds. A Google
-Cloud budget is an alert, not a spending cap. A successful review authorizes
-nothing: infrastructure, the production database, deployment, traffic,
-waitlist collection, Auth0, Persona, Crossmint, and Squarespace DNS remain
-separate gates.
+The budget must be scoped only to the production project, use USD, equal USD
+25, and include 50%, 90%, and 100% notification thresholds. A Google Cloud
+budget is an alert, not a spending cap. A successful review authorizes nothing:
+infrastructure, the production database, deployment, traffic, waitlist
+collection, Auth0, Persona, Crossmint, and Squarespace DNS remain separate
+gates.
 
 ## Production foundation plan
 
@@ -110,10 +114,11 @@ It has no `--apply` mode.
 
 The foundation explicitly excludes the project, billing link, budget, VPC,
 Cloud SQL, secret values, Cloud Run, load balancer, certificate, public traffic,
-waitlist data, vendors, and DNS. An apply controller will not be built until the
-production project ID and number, region, non-synthetic data classification,
-monthly budget, apex domain, and canonical `www`-or-apex choice are confirmed
-and separately authorized.
+waitlist data, vendors, and DNS. The project ID, region, data classification,
+budget-alert amount, billing source, apex domain, and canonical host are locked
+in the plan. The assigned project number and same-account billing and budget
+verification remain blockers. Building an apply controller requires a separate
+authorization.
 
 ## Squarespace DNS cutover
 
@@ -126,8 +131,9 @@ authorization at the action boundary.
 
 ## Remaining launch decisions
 
-- production Google Cloud project ID, number, billing owner, budget, and region;
-- exact public domain and whether apex or `www` is canonical;
+- production project creation, assigned project number, and read-only
+  verification that billing matches staging and the project-scoped USD 25
+  budget exists;
 - production PostgreSQL cost and data-retention approval;
 - final privacy notice and consent language;
 - final refreshed Sites snapshot and desktop/mobile visual approval;

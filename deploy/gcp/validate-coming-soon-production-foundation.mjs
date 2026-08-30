@@ -60,6 +60,7 @@ export function validateComingSoonProductionFoundation(
     foundation.schemaVersion === 1 &&
       foundation.status === "plan-only" &&
       foundation.phase === "coming-soon-production-foundation" &&
+      foundation.decisionStatus === "confirmed-not-applied" &&
       foundation.applyAuthorized === false &&
       foundation.cloudStateReadByPlan === false,
     "The production foundation must remain a local plan only",
@@ -74,26 +75,40 @@ export function validateComingSoonProductionFoundation(
 
   const boundary = foundation.productionBoundary;
   assert(
-    boundary.projectId === "UNSET_PRODUCTION_PROJECT_ID" &&
-      boundary.projectNumber === "UNSET_PRODUCTION_PROJECT_NUMBER" &&
+    boundary.projectId === "samra-pay-production" &&
+      boundary.projectNumber === "UNASSIGNED_UNTIL_PROJECT_CREATION" &&
       boundary.organizationId === "614833350075" &&
-      boundary.region === "UNSET_APPROVED_REGION" &&
-      boundary.dataClassification ===
-        "UNSET_APPROVED_NON_SYNTHETIC_CLASSIFICATION" &&
-      boundary.monthlyBudgetUsd === "UNSET_APPROVED_MONTHLY_USD" &&
-      boundary.apexDomain === "UNSET_CUSTOM_DOMAIN" &&
-      boundary.canonicalHost === "UNSET_APEX_OR_WWW" &&
+      boundary.region === "us-east4" &&
+      boundary.dataClassification === "customer-pii" &&
+      boundary.monthlyBudgetUsd === 25 &&
+      boundary.apexDomain === "samrapay.com" &&
+      boundary.canonicalHost === "www" &&
+      boundary.billingAccountSourceProjectId === "samra-pay-staging" &&
       boundary.mustNotEqualProjectId === "samra-pay-staging" &&
       boundary.projectCreationAuthorized === false &&
       boundary.billingMutationAuthorized === false &&
       boundary.budgetMutationAuthorized === false,
-    "Production identity, budget, region, and domain decisions remain unresolved",
+    "The confirmed production identity, budget, region, and domain boundary drifted",
+  );
+  assert(
+    boundary.projectId === launch.productionBoundary.projectId &&
+      boundary.projectNumber === launch.productionBoundary.projectNumber &&
+      boundary.organizationId === launch.productionBoundary.organizationId &&
+      boundary.region === launch.productionBoundary.region &&
+      boundary.dataClassification ===
+        launch.productionBoundary.dataClassification &&
+      boundary.monthlyBudgetUsd ===
+        launch.productionReview.budget.approvedMonthlyAmount &&
+      boundary.apexDomain === launch.edge.domain &&
+      boundary.canonicalHost === launch.edge.canonicalHost &&
+      boundary.billingAccountSourceProjectId ===
+        launch.productionBoundary.billingAccountSourceProjectId,
+    "The production foundation and launch contract decisions must match",
   );
   assert(
     foundation.projectLabels.environment === "production" &&
       foundation.projectLabels.application === "samra-pay" &&
-      foundation.projectLabels.data_classification ===
-        "APPROVED_NON_SYNTHETIC_CLASSIFICATION",
+      foundation.projectLabels.data_classification === "customer-pii",
     "Production labels must remain explicit and non-synthetic",
   );
 
@@ -112,7 +127,7 @@ export function validateComingSoonProductionFoundation(
     foundation.artifactRegistry.repository === "samra-production" &&
       foundation.artifactRegistry.format === "docker" &&
       foundation.artifactRegistry.immutableTags === true &&
-      foundation.artifactRegistry.location === "APPROVED_PRODUCTION_REGION",
+      foundation.artifactRegistry.location === "us-east4",
     "Production images require one regional immutable Docker repository",
   );
 
@@ -224,11 +239,17 @@ export function validateComingSoonProductionFoundation(
     "Production cost gates must remain explicit",
   );
   assert(
-    foundation.blockedOn.length === 6 &&
+    foundation.blockedOn.length === 3 &&
+      foundation.blockedOn.includes(
+        "production project creation and assigned project number",
+      ) &&
+      foundation.blockedOn.includes(
+        "same billing account as staging and project-scoped USD 25 budget verification",
+      ) &&
       foundation.blockedOn.includes(
         "separate authorization to build an apply controller",
       ),
-    "The production foundation cannot be applied while decisions are unresolved",
+    "The production foundation blockers changed",
   );
 
   const source = JSON.stringify(foundation);
@@ -243,6 +264,13 @@ export function validateComingSoonProductionFoundation(
     schemaVersion: foundation.schemaVersion,
     status: "validated-plan-only",
     phase: foundation.phase,
+    boundaryStatus: foundation.decisionStatus,
+    projectId: boundary.projectId,
+    monthlyBudgetUsd: boundary.monthlyBudgetUsd,
+    canonicalDomain:
+      boundary.canonicalHost === "www"
+        ? `www.${boundary.apexDomain}`
+        : boundary.apexDomain,
     apiCount: foundation.samraManagedApis.length,
     serviceAccountCount: accountIds.length,
     secretMetadataCount: foundation.secretMetadata.length,

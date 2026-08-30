@@ -12,11 +12,15 @@ const planScript = await readFile(
   "utf8",
 );
 
-test("validates one unresolved and non-mutating production foundation plan", () => {
+test("validates one confirmed and non-mutating production foundation plan", () => {
   assert.deepEqual(validateComingSoonProductionFoundation(), {
     schemaVersion: 1,
     status: "validated-plan-only",
     phase: "coming-soon-production-foundation",
+    boundaryStatus: "confirmed-not-applied",
+    projectId: "samra-pay-production",
+    monthlyBudgetUsd: 25,
+    canonicalDomain: "www.samrapay.com",
     apiCount: 15,
     serviceAccountCount: 5,
     secretMetadataCount: 2,
@@ -27,12 +31,20 @@ test("validates one unresolved and non-mutating production foundation plan", () 
   });
 });
 
-test("rejects resolved-looking values, staging reuse, and an apply authorization", () => {
+test("rejects confirmed boundary drift and an apply authorization", () => {
   for (const mutate of [
-    (value) => (value.productionBoundary.projectId = "samra-pay-production"),
+    (value) =>
+      (value.productionBoundary.projectId = "samra-pay-production-alt"),
     (value) => (value.productionBoundary.projectId = "samra-pay-staging"),
-    (value) => (value.productionBoundary.region = "us-east4"),
-    (value) => (value.productionBoundary.monthlyBudgetUsd = 100),
+    (value) => (value.productionBoundary.projectNumber = "123456789012"),
+    (value) => (value.productionBoundary.region = "us-west1"),
+    (value) => (value.productionBoundary.dataClassification = "synthetic"),
+    (value) => (value.productionBoundary.monthlyBudgetUsd = 26),
+    (value) => (value.productionBoundary.apexDomain = "example.com"),
+    (value) => (value.productionBoundary.canonicalHost = "apex"),
+    (value) =>
+      (value.productionBoundary.billingAccountSourceProjectId =
+        "another-project"),
     (value) => (value.applyAuthorized = true),
   ]) {
     const foundation = structuredClone(readComingSoonProductionFoundation());
@@ -125,6 +137,13 @@ test("runs only a local zero-cost plan and exposes no apply mode", () => {
   assert.match(output, /COMING-SOON PRODUCTION FOUNDATION PLAN PASS/);
   assert.match(output, /Plan cost: USD 0 per month/);
   assert.match(output, /Cloud state read: no/);
+  assert.match(output, /Project ID: samra-pay-production/);
+  assert.match(output, /Region: us-east4/);
+  assert.match(output, /Data classification: customer-pii/);
+  assert.match(output, /Monthly budget alert: USD 25/);
+  assert.match(output, /same billing account as staging/);
+  assert.match(output, /canonical www\.samrapay\.com/);
+  assert.match(output, /alert boundary, not a spending cap/);
   assert.match(output, /five distinct keyless/);
   assert.match(output, /zero versions/);
   assert.match(output, /PLAN COMPLETE — NO CLOUD OR DNS CHANGES/);

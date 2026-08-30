@@ -11,9 +11,13 @@
     "releaseSource": "FULL_GIT_SHA"
   },
   "productionBoundary": {
-    "projectId": "UNSET_PRODUCTION_PROJECT_ID",
-    "projectNumber": "UNSET_PRODUCTION_PROJECT_NUMBER",
+    "decisionStatus": "confirmed-not-applied",
+    "projectId": "samra-pay-production",
+    "projectNumber": "UNASSIGNED_UNTIL_PROJECT_CREATION",
     "organizationId": "614833350075",
+    "region": "us-east4",
+    "dataClassification": "customer-pii",
+    "billingAccountSourceProjectId": "samra-pay-staging",
     "mustNotEqualProjectId": "samra-pay-staging",
     "billingAndBudgetApprovalRequired": true,
     "customerDataAllowedBeforeApproval": false
@@ -22,12 +26,13 @@
     "mode": "read-only",
     "requiredProjectLabels": {
       "environment": "production",
-      "application": "samra-pay"
+      "application": "samra-pay",
+      "data_classification": "customer-pii"
     },
     "forbiddenDataClassifications": ["synthetic", "public"],
     "budget": {
       "currency": "USD",
-      "approvedMonthlyAmount": "UNSET_APPROVED_MONTHLY_USD",
+      "approvedMonthlyAmount": 25,
       "thresholdPercents": [0.5, 0.9, 1],
       "budgetIsSpendingCap": false
     },
@@ -58,7 +63,9 @@
     "workloads": ["samra-customer-web", "samra-api", "samra-migrations"]
   },
   "edge": {
-    "domain": "UNSET_CUSTOM_DOMAIN",
+    "domain": "samrapay.com",
+    "canonicalHost": "www",
+    "canonicalDomain": "www.samrapay.com",
     "dnsOwner": "Squarespace",
     "loadBalancer": "global-external-application-load-balancer",
     "tls": "google-managed-certificate",
@@ -171,12 +178,12 @@
   },
   "blockedOn": [
     "final Sites refresh and visual approval",
-    "confirmed production project ID and number",
-    "confirmed public domain and canonical www/apex choice",
-    "production billing, budget, and cost authorization",
+    "production project creation and assigned project number",
+    "same billing account as staging and project-scoped USD 25 budget verification",
     "separate production PostgreSQL and pinned secret",
     "privacy notice and consent wording approval",
     "load balancer, Cloud Armor, alerting, and rollback review",
+    "separate foundation, database, and deployment apply authorizations",
     "explicit deployment and DNS cutover authorization"
   ],
   "excluded": [

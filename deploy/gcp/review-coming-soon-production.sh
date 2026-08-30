@@ -23,13 +23,12 @@ was read or changed.
 
 The read-only production foundation review will:
   1. bind the review to one clean full Git SHA and the active administrator;
-  2. reject the staging project and verify the exact production project number,
-     organization, ACTIVE lifecycle, and production labels;
-  3. verify billing is enabled on a concrete billing account;
-  4. require one exact project-scoped USD monthly budget with 50%, 90%, and
-     100% alert thresholds, while warning that a budget is not a spending cap;
-  5. record the region, approved non-synthetic data classification, public apex
-     domain, and canonical apex-or-www choice; and
+  2. verify samra-pay-production, its assigned project number, organization,
+     ACTIVE lifecycle, and exact production labels;
+  3. verify billing uses the same concrete account as samra-pay-staging;
+  4. require one exact project-scoped USD 25 monthly alert with 50%, 90%, and
+     100% notification thresholds; the alert is not a spending cap;
+  5. verify us-east4, customer-pii, samrapay.com, and canonical www; and
   6. report the remaining design, privacy, database, edge, alerting, rollback,
      deployment, public-traffic, and DNS authorization gates.
 
@@ -45,16 +44,16 @@ command -v gcloud >/dev/null 2>&1 || {
   exit 1
 }
 
-: "${SAMRA_GCP_PROJECT_ID:=}"
+: "${SAMRA_GCP_PROJECT_ID:=samra-pay-production}"
 : "${SAMRA_GCP_PROJECT_NUMBER:=}"
 : "${SAMRA_GCP_ORGANIZATION_ID:=614833350075}"
-: "${SAMRA_GCP_REGION:=}"
+: "${SAMRA_GCP_REGION:=us-east4}"
 : "${SAMRA_GCP_OPERATOR_ACCOUNT:=}"
 : "${SAMRA_GCP_EXPECTED_SHA:=}"
-: "${SAMRA_GCP_DATA_CLASSIFICATION:=}"
-: "${SAMRA_GCP_MONTHLY_BUDGET_USD:=}"
-: "${SAMRA_PUBLIC_APEX_DOMAIN:=}"
-: "${SAMRA_PUBLIC_CANONICAL_HOST:=}"
+: "${SAMRA_GCP_DATA_CLASSIFICATION:=customer-pii}"
+: "${SAMRA_GCP_MONTHLY_BUDGET_USD:=25}"
+: "${SAMRA_PUBLIC_APEX_DOMAIN:=samrapay.com}"
+: "${SAMRA_PUBLIC_CANONICAL_HOST:=www}"
 
 export SAMRA_GCP_PROJECT_ID
 export SAMRA_GCP_PROJECT_NUMBER
@@ -107,13 +106,17 @@ PROJECT_RESULT="$(
 BILLING_JSON="$(
   gcloud billing projects describe "${SAMRA_GCP_PROJECT_ID}" --format=json
 )"
+SOURCE_BILLING_PROJECT_ID="samra-pay-staging"
+SOURCE_BILLING_JSON="$(
+  gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}" --format=json
+)"
 BILLING_RESULT="$(
-  printf '%s' "${BILLING_JSON}" | node --input-type=module -e '
-    import { readFileSync } from "node:fs";
+  node --input-type=module -e '
     const module = await import(process.argv[1]);
-    const observed = JSON.parse(readFileSync(0, "utf8"));
-    process.stdout.write(JSON.stringify(module.validateObservedProductionBilling(observed)));
-  ' "${VALIDATOR_URL}"
+    const observed = JSON.parse(process.argv[2]);
+    const sourceObserved = JSON.parse(process.argv[3]);
+    process.stdout.write(JSON.stringify(module.validateObservedProductionBilling(observed, sourceObserved)));
+  ' "${VALIDATOR_URL}" "${BILLING_JSON}" "${SOURCE_BILLING_JSON}"
 )"
 BILLING_ACCOUNT="$(
   node -e '
@@ -160,6 +163,7 @@ Source: ${SAMRA_GCP_EXPECTED_SHA}
 Data classification: ${SAMRA_GCP_DATA_CLASSIFICATION}
 Canonical domain: ${CANONICAL_DOMAIN}
 Billing account: billingAccounts/${BILLING_ACCOUNT}
+Billing source project: ${SOURCE_BILLING_PROJECT_ID} (exact account match)
 Monthly budget: ${BUDGET_NAME} (USD ${SAMRA_GCP_MONTHLY_BUDGET_USD})
 Budget alerts: 50%, 90%, and 100%; this is not a spending cap
 
