@@ -90,8 +90,12 @@ REVIEW_INPUT="$(
   exit 1
 }
 
+SOURCE_BILLING_PROJECT_ID="samra-pay-staging"
 PROJECT_JSON="$(
-  gcloud projects describe "${SAMRA_GCP_PROJECT_ID}" --format=json
+  gcloud projects describe "${SAMRA_GCP_PROJECT_ID}" \
+    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
+    --quiet \
+    --format=json
 )"
 PROJECT_RESULT="$(
   printf '%s' "${PROJECT_JSON}" | node --input-type=module -e '
@@ -104,11 +108,16 @@ PROJECT_RESULT="$(
 )"
 
 BILLING_JSON="$(
-  gcloud billing projects describe "${SAMRA_GCP_PROJECT_ID}" --format=json
+  gcloud billing projects describe "${SAMRA_GCP_PROJECT_ID}" \
+    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
+    --quiet \
+    --format=json
 )"
-SOURCE_BILLING_PROJECT_ID="samra-pay-staging"
 SOURCE_BILLING_JSON="$(
-  gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}" --format=json
+  gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}" \
+    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
+    --quiet \
+    --format=json
 )"
 BILLING_RESULT="$(
   node --input-type=module -e '
