@@ -368,8 +368,8 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
     productionReview.match(
       /--billing-project="\$\{SOURCE_BILLING_PROJECT_ID\}"/gu,
     )?.length,
-    4,
-    "every cloud inventory read must use the staging quota project",
+    1,
+    "only the account-level budget inventory uses the staging quota project",
   );
   assert.doesNotMatch(
     productionReview,

@@ -89,8 +89,10 @@ The plan reads no cloud or DNS state. The confirmed boundary is project
 project, labels, billing relationship, and monthly budget have been separately
 created, `--review` verifies them without changing them. The review is also
 bound to the assigned project number, exact active administrator, and full Git
-SHA. It uses `samra-pay-staging` only as the quota project for every cloud
-inventory read, so the independent review does not enable an API on production.
+SHA. It uses `samra-pay-staging` as the quota project only for the account-level
+budget read. Project and billing-link reads retain their native resource
+context, so the independent review does not require the Cloud Billing API on
+staging or enable an API on production.
 
 The budget must be scoped only to the production project, use USD, equal USD
 25, and include 50%, 90%, and 100% notification thresholds. A Google Cloud
