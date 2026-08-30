@@ -26,10 +26,15 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     "Launch and DNS must remain review-only",
   );
   assert(
-    contract.productionBoundary.projectId === "UNSET_PRODUCTION_PROJECT_ID" &&
+    contract.productionBoundary.decisionStatus === "confirmed-not-applied" &&
+      contract.productionBoundary.projectId === "samra-pay-production" &&
       contract.productionBoundary.projectNumber ===
-        "UNSET_PRODUCTION_PROJECT_NUMBER" &&
+        "UNASSIGNED_UNTIL_PROJECT_CREATION" &&
       contract.productionBoundary.organizationId === "614833350075" &&
+      contract.productionBoundary.region === "us-east4" &&
+      contract.productionBoundary.dataClassification === "customer-pii" &&
+      contract.productionBoundary.billingAccountSourceProjectId ===
+        "samra-pay-staging" &&
       contract.productionBoundary.mustNotEqualProjectId ===
         "samra-pay-staging" &&
       contract.productionBoundary.billingAndBudgetApprovalRequired === true &&
@@ -42,11 +47,12 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
         "production" &&
       contract.productionReview.requiredProjectLabels.application ===
         "samra-pay" &&
+      contract.productionReview.requiredProjectLabels.data_classification ===
+        "customer-pii" &&
       JSON.stringify(contract.productionReview.forbiddenDataClassifications) ===
         JSON.stringify(["synthetic", "public"]) &&
       contract.productionReview.budget.currency === "USD" &&
-      contract.productionReview.budget.approvedMonthlyAmount ===
-        "UNSET_APPROVED_MONTHLY_USD" &&
+      contract.productionReview.budget.approvedMonthlyAmount === 25 &&
       JSON.stringify(contract.productionReview.budget.thresholdPercents) ===
         JSON.stringify([0.5, 0.9, 1]) &&
       contract.productionReview.budget.budgetIsSpendingCap === false &&
@@ -116,7 +122,9 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
   );
   assert(
     contract.edge.dnsOwner === "Squarespace" &&
-      contract.edge.domain === "UNSET_CUSTOM_DOMAIN" &&
+      contract.edge.domain === "samrapay.com" &&
+      contract.edge.canonicalHost === "www" &&
+      contract.edge.canonicalDomain === "www.samrapay.com" &&
       contract.edge.loadBalancer ===
         "global-external-application-load-balancer" &&
       contract.edge.tls === "google-managed-certificate" &&
@@ -162,6 +170,9 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     schemaVersion: contract.schemaVersion,
     status: "validated-review-only",
     launchPhase: contract.launchPhase,
+    boundaryStatus: contract.productionBoundary.decisionStatus,
+    projectId: contract.productionBoundary.projectId,
+    canonicalDomain: contract.edge.canonicalDomain,
     publicRouteCount: web.publicApiRoutes.length,
     productionReviewMode: contract.productionReview.mode,
     deploymentAuthorized: false,
@@ -215,8 +226,9 @@ export function validateComingSoonProductionReviewEnvironment(
 
   assert(
     /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/u.test(projectId) &&
+      projectId === contract.productionBoundary.projectId &&
       projectId !== contract.productionBoundary.mustNotEqualProjectId,
-    "SAMRA_GCP_PROJECT_ID must be a valid non-staging Google Cloud project ID",
+    "SAMRA_GCP_PROJECT_ID must exactly match the confirmed production project ID",
   );
   assert(
     /^\d{6,20}$/u.test(projectNumber),
@@ -227,8 +239,8 @@ export function validateComingSoonProductionReviewEnvironment(
     "SAMRA_GCP_ORGANIZATION_ID must match the reviewed organization",
   );
   assert(
-    /^[a-z]+-[a-z0-9]+\d$/u.test(region),
-    "SAMRA_GCP_REGION must be an explicit Google Cloud region",
+    region === contract.productionBoundary.region,
+    "SAMRA_GCP_REGION must exactly match the confirmed production region",
   );
   assert(
     /^[^@\s]+@davidhaile\.com$/u.test(operator),
@@ -239,25 +251,29 @@ export function validateComingSoonProductionReviewEnvironment(
     "SAMRA_GCP_EXPECTED_SHA must be a full lowercase Git SHA",
   );
   assert(
-    /^[a-z][a-z0-9_-]{1,62}$/u.test(dataClassification) &&
+    dataClassification === contract.productionBoundary.dataClassification &&
       !contract.productionReview.forbiddenDataClassifications.includes(
         dataClassification,
       ),
-    "SAMRA_GCP_DATA_CLASSIFICATION must be an approved non-synthetic classification",
+    "SAMRA_GCP_DATA_CLASSIFICATION must exactly match the confirmed classification",
   );
   assert(
-    /^[1-9]\d{0,5}$/u.test(budgetRaw),
-    "SAMRA_GCP_MONTHLY_BUDGET_USD must be an approved whole-dollar amount",
+    /^[1-9]\d{0,5}$/u.test(budgetRaw) &&
+      Number(budgetRaw) ===
+        contract.productionReview.budget.approvedMonthlyAmount,
+    "SAMRA_GCP_MONTHLY_BUDGET_USD must exactly match the confirmed monthly alert",
   );
   assert(
     /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/u.test(
       apexDomain,
-    ) && !apexDomain.startsWith("www."),
-    "SAMRA_PUBLIC_APEX_DOMAIN must be a bare apex domain without a protocol",
+    ) &&
+      !apexDomain.startsWith("www.") &&
+      apexDomain === contract.edge.domain,
+    "SAMRA_PUBLIC_APEX_DOMAIN must exactly match the confirmed apex domain",
   );
   assert(
-    canonicalHost === "apex" || canonicalHost === "www",
-    "SAMRA_PUBLIC_CANONICAL_HOST must be apex or www",
+    canonicalHost === contract.edge.canonicalHost,
+    "SAMRA_PUBLIC_CANONICAL_HOST must exactly match the confirmed canonical host",
   );
 
   return Object.freeze({
@@ -303,14 +319,24 @@ export function validateObservedProductionProject(
   });
 }
 
-export function validateObservedProductionBilling(observed) {
+export function validateObservedProductionBilling(
+  observed,
+  sourceObserved,
+  contract = readComingSoonLaunch(),
+) {
   const billingAccount = String(observed?.billingAccountName ?? "");
+  const sourceBillingAccount = String(sourceObserved?.billingAccountName ?? "");
   assert(
     observed?.billingEnabled === true &&
-      /^billingAccounts\/[A-Z0-9-]+$/u.test(billingAccount),
-    "Production billing is not enabled on a concrete billing account",
+      sourceObserved?.billingEnabled === true &&
+      /^billingAccounts\/[A-Z0-9-]+$/u.test(billingAccount) &&
+      billingAccount === sourceBillingAccount,
+    `Production billing must use the exact account attached to ${contract.productionBoundary.billingAccountSourceProjectId}`,
   );
-  return Object.freeze({ billingAccount });
+  return Object.freeze({
+    billingAccount,
+    sourceProjectId: contract.productionBoundary.billingAccountSourceProjectId,
+  });
 }
 
 export function validateObservedProductionBudgets(

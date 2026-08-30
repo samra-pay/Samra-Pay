@@ -24,7 +24,7 @@ const reviewEnvironment = {
   SAMRA_GCP_OPERATOR_ACCOUNT: "me@davidhaile.com",
   SAMRA_GCP_EXPECTED_SHA: "a".repeat(40),
   SAMRA_GCP_DATA_CLASSIFICATION: "customer-pii",
-  SAMRA_GCP_MONTHLY_BUDGET_USD: "100",
+  SAMRA_GCP_MONTHLY_BUDGET_USD: "25",
   SAMRA_PUBLIC_APEX_DOMAIN: "samrapay.com",
   SAMRA_PUBLIC_CANONICAL_HOST: "www",
 };
@@ -34,6 +34,9 @@ test("validates the review-only coming-soon launch boundary", () => {
     schemaVersion: 1,
     status: "validated-review-only",
     launchPhase: "production-coming-soon",
+    boundaryStatus: "confirmed-not-applied",
+    projectId: "samra-pay-production",
+    canonicalDomain: "www.samrapay.com",
     publicRouteCount: 1,
     productionReviewMode: "read-only",
     deploymentAuthorized: false,
@@ -78,7 +81,7 @@ test("validates exact production review inputs without authorizing a change", ()
       operator: "me@davidhaile.com",
       expectedSha: "a".repeat(40),
       dataClassification: "customer-pii",
-      monthlyBudgetUsd: 100,
+      monthlyBudgetUsd: 25,
       apexDomain: "samrapay.com",
       canonicalHost: "www",
       canonicalDomain: "www.samrapay.com",
@@ -86,16 +89,20 @@ test("validates exact production review inputs without authorizing a change", ()
   );
 });
 
-test("rejects staging reuse and unresolved production decisions", () => {
+test("rejects confirmed production boundary drift", () => {
   for (const [name, value] of [
+    ["SAMRA_GCP_PROJECT_ID", "samra-pay-production-alt"],
     ["SAMRA_GCP_PROJECT_ID", "samra-pay-staging"],
     ["SAMRA_GCP_PROJECT_NUMBER", "UNSET"],
     ["SAMRA_GCP_ORGANIZATION_ID", "999999999999"],
-    ["SAMRA_GCP_REGION", "UNSET"],
+    ["SAMRA_GCP_REGION", "us-west1"],
     ["SAMRA_GCP_OPERATOR_ACCOUNT", "founder@gmail.com"],
     ["SAMRA_GCP_EXPECTED_SHA", "abc123"],
+    ["SAMRA_GCP_DATA_CLASSIFICATION", "restricted"],
     ["SAMRA_GCP_DATA_CLASSIFICATION", "synthetic"],
     ["SAMRA_GCP_MONTHLY_BUDGET_USD", "0"],
+    ["SAMRA_GCP_MONTHLY_BUDGET_USD", "26"],
+    ["SAMRA_PUBLIC_APEX_DOMAIN", "example.com"],
     ["SAMRA_PUBLIC_APEX_DOMAIN", "https://samrapay.com"],
     ["SAMRA_PUBLIC_CANONICAL_HOST", "both"],
   ]) {
@@ -136,11 +143,20 @@ test("validates exact observed project, billing, and project-scoped budget", () 
     },
   );
   assert.deepEqual(
-    validateObservedProductionBilling({
-      billingEnabled: true,
-      billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
-    }),
-    { billingAccount: "billingAccounts/ABCDEF-123456-ABCDEF" },
+    validateObservedProductionBilling(
+      {
+        billingEnabled: true,
+        billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
+      },
+      {
+        billingEnabled: true,
+        billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
+      },
+    ),
+    {
+      billingAccount: "billingAccounts/ABCDEF-123456-ABCDEF",
+      sourceProjectId: "samra-pay-staging",
+    },
   );
   assert.deepEqual(
     validateObservedProductionBudgets(
@@ -148,7 +164,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
         {
           displayName: "Samra Pay production monthly budget",
           amount: {
-            specifiedAmount: { currencyCode: "USD", units: "100" },
+            specifiedAmount: { currencyCode: "USD", units: "25" },
           },
           budgetFilter: { projects: ["projects/123456789012"] },
           thresholdRules: [
@@ -162,7 +178,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
     ),
     {
       displayName: "Samra Pay production monthly budget",
-      monthlyBudgetUsd: 100,
+      monthlyBudgetUsd: 25,
       projectResource: "projects/123456789012",
     },
   );
@@ -191,11 +207,31 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
   );
   assert.throws(
     () =>
-      validateObservedProductionBilling({
-        billingEnabled: false,
-        billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
-      }),
-    /not enabled/,
+      validateObservedProductionBilling(
+        {
+          billingEnabled: false,
+          billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
+        },
+        {
+          billingEnabled: true,
+          billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
+        },
+      ),
+    /exact account attached/,
+  );
+  assert.throws(
+    () =>
+      validateObservedProductionBilling(
+        {
+          billingEnabled: true,
+          billingAccountName: "billingAccounts/ABCDEF-123456-ABCDEF",
+        },
+        {
+          billingEnabled: true,
+          billingAccountName: "billingAccounts/DIFFER-123456-ABCDEF",
+        },
+      ),
+    /exact account attached/,
   );
   assert.throws(
     () =>
@@ -204,7 +240,7 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
           {
             displayName: "Shared budget",
             amount: {
-              specifiedAmount: { currencyCode: "USD", units: "100" },
+              specifiedAmount: { currencyCode: "USD", units: "25" },
             },
             budgetFilter: {
               projects: ["projects/123456789012", "projects/999999999999"],
@@ -229,6 +265,8 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
     { encoding: "utf8" },
   );
   assert.match(output, /Plan only\. No Google Cloud, Squarespace DNS/);
+  assert.match(output, /USD 25 monthly alert/);
+  assert.match(output, /same concrete account as samra-pay-staging/);
   assert.match(output, /cannot create a project or budget/);
   assert.match(output, /activate Auth0\/Persona\/Crossmint/);
 
@@ -239,6 +277,8 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
     "source working tree is not clean",
     "READ-ONLY COMING-SOON PRODUCTION FOUNDATION REVIEW PASS",
     "this is not a spending cap",
+    'gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}"',
+    "Billing source project: ${SOURCE_BILLING_PROJECT_ID} (exact account match)",
     "remain unauthorized",
     "REVIEW COMPLETE — NO CLOUD OR DNS CHANGES",
   ]) {

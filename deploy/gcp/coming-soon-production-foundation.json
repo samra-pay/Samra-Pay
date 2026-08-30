@@ -2,18 +2,20 @@
   "schemaVersion": 1,
   "status": "plan-only",
   "phase": "coming-soon-production-foundation",
+  "decisionStatus": "confirmed-not-applied",
   "applyAuthorized": false,
   "cloudStateReadByPlan": false,
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
   "productionBoundary": {
-    "projectId": "UNSET_PRODUCTION_PROJECT_ID",
-    "projectNumber": "UNSET_PRODUCTION_PROJECT_NUMBER",
+    "projectId": "samra-pay-production",
+    "projectNumber": "UNASSIGNED_UNTIL_PROJECT_CREATION",
     "organizationId": "614833350075",
-    "region": "UNSET_APPROVED_REGION",
-    "dataClassification": "UNSET_APPROVED_NON_SYNTHETIC_CLASSIFICATION",
-    "monthlyBudgetUsd": "UNSET_APPROVED_MONTHLY_USD",
-    "apexDomain": "UNSET_CUSTOM_DOMAIN",
-    "canonicalHost": "UNSET_APEX_OR_WWW",
+    "region": "us-east4",
+    "dataClassification": "customer-pii",
+    "monthlyBudgetUsd": 25,
+    "apexDomain": "samrapay.com",
+    "canonicalHost": "www",
+    "billingAccountSourceProjectId": "samra-pay-staging",
     "mustNotEqualProjectId": "samra-pay-staging",
     "projectCreationAuthorized": false,
     "billingMutationAuthorized": false,
@@ -22,7 +24,7 @@
   "projectLabels": {
     "environment": "production",
     "application": "samra-pay",
-    "data_classification": "APPROVED_NON_SYNTHETIC_CLASSIFICATION"
+    "data_classification": "customer-pii"
   },
   "samraManagedApis": [
     "artifactregistry.googleapis.com",
@@ -45,7 +47,7 @@
     "repository": "samra-production",
     "format": "docker",
     "immutableTags": true,
-    "location": "APPROVED_PRODUCTION_REGION"
+    "location": "us-east4"
   },
   "serviceAccounts": {
     "build": "samra-cloud-build-production",
@@ -126,11 +128,8 @@
     ]
   },
   "blockedOn": [
-    "confirmed production project ID and number",
-    "confirmed production region",
-    "approved non-synthetic data classification",
-    "approved monthly budget and billing owner",
-    "confirmed apex domain and canonical apex-or-www choice",
+    "production project creation and assigned project number",
+    "same billing account as staging and project-scoped USD 25 budget verification",
     "separate authorization to build an apply controller"
   ]
 }
