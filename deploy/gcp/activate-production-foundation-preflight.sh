@@ -29,6 +29,7 @@ EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 LOCATION="global"
 POOL_ID="samra-production-review"
 PROVIDER_ID="samra-foundation-preflight"
+PROVIDER_DISPLAY_NAME="Samra production preflight"
 AUDITOR_ID="samra-production-auditor"
 AUDITOR_SERVICE_ACCOUNT="${AUDITOR_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
 PRODUCTION_ROLE_ID="samraProductionBoundaryAuditor"
@@ -202,6 +203,7 @@ provider_state() {
       const canonical = (value) => JSON.stringify(Object.fromEntries(Object.entries(value).sort()));
       if (
         provider.state !== "ACTIVE" ||
+        provider.displayName !== process.argv[3] ||
         provider.oidc?.issuerUri !== "https://token.actions.githubusercontent.com" ||
         canonical(provider.attributeMapping || {}) !== canonical(expectedMapping) ||
         provider.attributeCondition !== process.argv[2]
@@ -210,7 +212,7 @@ provider_state() {
         process.exit(1);
       }
       process.stdout.write("ready");
-    ' "${ATTRIBUTE_MAPPING}" "${ATTRIBUTE_CONDITION}"
+    ' "${ATTRIBUTE_MAPPING}" "${ATTRIBUTE_CONDITION}" "${PROVIDER_DISPLAY_NAME}"
 }
 
 project_binding_state() {
@@ -331,7 +333,7 @@ if [[ "${PROVIDER_STATE}" == "missing" ]]; then
   gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_ID}" \
     --project="${PROJECT_ID}" --location="${LOCATION}" \
     --workload-identity-pool="${POOL_ID}" \
-    --display-name="Samra production foundation preflight" \
+    --display-name="${PROVIDER_DISPLAY_NAME}" \
     --issuer-uri="https://token.actions.githubusercontent.com" \
     --attribute-mapping="${ATTRIBUTE_MAPPING}" \
     --attribute-condition="${ATTRIBUTE_CONDITION}" --quiet

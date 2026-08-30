@@ -19,6 +19,7 @@ const EXACT = Object.freeze({
   environment: "production-foundation-review",
   poolId: "samra-production-review",
   providerId: "samra-foundation-preflight",
+  providerDisplayName: "Samra production preflight",
   auditorId: "samra-production-auditor",
   productionRoleId: "samraProductionBoundaryAuditor",
   stagingRoleId: "samraProductionBillingSourceReader",
@@ -142,11 +143,13 @@ export function validateProductionFoundationPreflight(
     "assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main' && " +
     "assertion.environment=='production-foundation-review'";
   assert(
-    provider.issuerUri === "https://token.actions.githubusercontent.com" &&
+    provider.displayName === EXACT.providerDisplayName &&
+      provider.displayName.length <= 32 &&
+      provider.issuerUri === "https://token.actions.githubusercontent.com" &&
       JSON.stringify(provider.attributeMapping) ===
         JSON.stringify(EXPECTED_MAPPING) &&
       provider.attributeCondition === expectedCondition,
-    "Production GitHub OIDC boundary drifted",
+    "Production GitHub OIDC boundary or display-name limit drifted",
   );
 
   assert(

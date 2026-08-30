@@ -33,6 +33,7 @@
     "stagingCustomRoleId": "samraProductionBillingSourceReader"
   },
   "provider": {
+    "displayName": "Samra production preflight",
     "issuerUri": "https://token.actions.githubusercontent.com",
     "attributeMapping": {
       "google.subject": "assertion.sub",

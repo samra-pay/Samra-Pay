@@ -18,6 +18,7 @@ OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 POOL_ID="samra-production-review"
 PROVIDER_ID="samra-foundation-preflight"
+PROVIDER_DISPLAY_NAME="Samra production preflight"
 LOCATION="global"
 AUDITOR_SERVICE_ACCOUNT="samra-production-auditor@${PROJECT_ID}.iam.gserviceaccount.com"
 PRODUCTION_ROLE_NAME="projects/${PROJECT_ID}/roles/samraProductionBoundaryAuditor"
@@ -107,6 +108,7 @@ gcloud iam workload-identity-pools providers describe "${PROVIDER_ID}" \
     const provider = JSON.parse(fs.readFileSync(0, "utf8"));
     if (
       provider.state !== "ACTIVE" ||
+      provider.displayName !== process.argv[2] ||
       provider.oidc?.issuerUri !== "https://token.actions.githubusercontent.com" ||
       provider.attributeCondition !== process.argv[1]
     ) {
@@ -128,7 +130,7 @@ gcloud iam workload-identity-pools providers describe "${PROVIDER_ID}" \
       process.stderr.write("STOP: production review identity mapping drifted\n");
       process.exit(1);
     }
-  ' "${ATTRIBUTE_CONDITION}"
+  ' "${ATTRIBUTE_CONDITION}" "${PROVIDER_DISPLAY_NAME}"
 
 verify_project_binding() {
   local project_id="$1"
