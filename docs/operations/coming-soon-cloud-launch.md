@@ -94,6 +94,27 @@ nothing: infrastructure, the production database, deployment, traffic,
 waitlist collection, Auth0, Persona, Crossmint, and Squarespace DNS remain
 separate gates.
 
+## Production foundation plan
+
+After the preflight contract, review the bounded foundation locally:
+
+```sh
+bash deploy/gcp/plan-coming-soon-production-foundation.sh --plan
+```
+
+This second plan also reads no cloud or DNS state and costs USD 0. It fixes the
+future foundation scope to 15 approved APIs, one regional immutable
+`samra-production` image repository, five dedicated keyless identities,
+least-privilege IAM, and separate empty runtime and migration secret metadata.
+It has no `--apply` mode.
+
+The foundation explicitly excludes the project, billing link, budget, VPC,
+Cloud SQL, secret values, Cloud Run, load balancer, certificate, public traffic,
+waitlist data, vendors, and DNS. An apply controller will not be built until the
+production project ID and number, region, non-synthetic data classification,
+monthly budget, apex domain, and canonical `www`-or-apex choice are confirmed
+and separately authorized.
+
 ## Squarespace DNS cutover
 
 Squarespace remains the registrar and DNS owner. Do not transfer the domain.

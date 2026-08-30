@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "status": "plan-only",
+  "phase": "coming-soon-production-foundation",
+  "applyAuthorized": false,
+  "cloudStateReadByPlan": false,
+  "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
+  "productionBoundary": {
+    "projectId": "UNSET_PRODUCTION_PROJECT_ID",
+    "projectNumber": "UNSET_PRODUCTION_PROJECT_NUMBER",
+    "organizationId": "614833350075",
+    "region": "UNSET_APPROVED_REGION",
+    "dataClassification": "UNSET_APPROVED_NON_SYNTHETIC_CLASSIFICATION",
+    "monthlyBudgetUsd": "UNSET_APPROVED_MONTHLY_USD",
+    "apexDomain": "UNSET_CUSTOM_DOMAIN",
+    "canonicalHost": "UNSET_APEX_OR_WWW",
+    "mustNotEqualProjectId": "samra-pay-staging",
+    "projectCreationAuthorized": false,
+    "billingMutationAuthorized": false,
+    "budgetMutationAuthorized": false
+  },
+  "projectLabels": {
+    "environment": "production",
+    "application": "samra-pay",
+    "data_classification": "APPROVED_NON_SYNTHETIC_CLASSIFICATION"
+  },
+  "samraManagedApis": [
+    "artifactregistry.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "containeranalysis.googleapis.com",
+    "compute.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
+    "servicenetworking.googleapis.com",
+    "serviceusage.googleapis.com",
+    "sqladmin.googleapis.com",
+    "sts.googleapis.com"
+  ],
+  "artifactRegistry": {
+    "repository": "samra-production",
+    "format": "docker",
+    "immutableTags": true,
+    "location": "APPROVED_PRODUCTION_REGION"
+  },
+  "serviceAccounts": {
+    "build": "samra-cloud-build-production",
+    "deployer": "samra-deployer-production",
+    "api": "samra-api-production",
+    "customerWeb": "samra-customer-web-production",
+    "migrations": "samra-migrations-production"
+  },
+  "projectRoleBindings": {
+    "build": [
+      "roles/logging.logWriter",
+      "roles/serviceusage.serviceUsageConsumer"
+    ],
+    "deployer": ["roles/run.admin", "roles/serviceusage.serviceUsageConsumer"],
+    "api": ["roles/cloudsql.client"],
+    "migrations": ["roles/cloudsql.client"]
+  },
+  "resourceRoleBindings": {
+    "artifactRegistryWriter": "build",
+    "artifactRegistryReaders": ["deployer"],
+    "runtimeDatabaseSecretAccessors": ["api"],
+    "migrationDatabaseSecretAccessors": ["migrations"],
+    "runtimeServiceAccountUser": {
+      "principal": "deployer",
+      "targets": ["api", "customerWeb", "migrations"]
+    },
+    "privateApiInvoker": {
+      "principal": "customerWeb",
+      "target": "api"
+    }
+  },
+  "secretMetadata": [
+    {
+      "id": "samra-production-runtime-database-url",
+      "purpose": "least-privilege application database connection",
+      "replication": "regional",
+      "createVersion": false
+    },
+    {
+      "id": "samra-production-migration-database-url",
+      "purpose": "separate migration database connection",
+      "replication": "regional",
+      "createVersion": false
+    }
+  ],
+  "plannedFoundationCreates": [
+    "approved project labels",
+    "approved API allowlist",
+    "one immutable Artifact Registry repository",
+    "five dedicated keyless service accounts",
+    "least-privilege project and resource IAM bindings",
+    "two empty database-secret metadata records"
+  ],
+  "foundationDoesNotCreate": [
+    "Google Cloud project, billing link, or budget",
+    "VPC, private service connection, Cloud SQL instance, database, or user",
+    "secret version, credential, or service-account key",
+    "Cloud Run service, job, revision, or traffic",
+    "load balancer, Cloud Armor policy, certificate, CDN, or public endpoint",
+    "Squarespace DNS record or registrar change",
+    "Auth0, Persona, Crossmint, Firebase, or financial-provider integration",
+    "customer record, waitlist submission, or production data"
+  ],
+  "costBoundary": {
+    "budgetApprovalRequiredBeforeAnyApply": true,
+    "budgetIsSpendingCap": false,
+    "planEstimatedMonthlyCostUsd": 0,
+    "foundationCostRisksAfterSeparateApply": [
+      "Artifact Registry storage",
+      "Cloud Build execution and source/log storage when builds run",
+      "Cloud Logging and Monitoring ingestion beyond free allowances"
+    ],
+    "excludedCostRisksUntilLaterAuthorization": [
+      "Cloud SQL compute, storage, backups, and networking",
+      "Cloud Run compute and network egress",
+      "global load balancer, Cloud Armor, certificate, and CDN",
+      "vendor and financial-provider fees"
+    ]
+  },
+  "blockedOn": [
+    "confirmed production project ID and number",
+    "confirmed production region",
+    "approved non-synthetic data classification",
+    "approved monthly budget and billing owner",
+    "confirmed apex domain and canonical apex-or-www choice",
+    "separate authorization to build an apply controller"
+  ]
+}

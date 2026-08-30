@@ -19,6 +19,16 @@ mode is read-only: it verifies a separately created production project and one
 exact project-scoped budget, but cannot create infrastructure, deploy, collect
 waitlist data, route traffic, or change Squarespace DNS.
 
+`coming-soon-production-foundation.json` is the next plan-only boundary. It
+locks the exact 15-API allowlist, one immutable production image repository,
+five keyless identities, least-privilege IAM plan, and two empty database-secret
+metadata records. `plan-coming-soon-production-foundation.sh --plan` validates
+that contract locally for USD 0 and deliberately has no review or apply mode.
+The production project, number, region, non-synthetic data classification,
+monthly budget, domain, and canonical host remain unresolved values. A later
+apply controller requires a separate authorization after those decisions and
+the read-only production preflight pass.
+
 ## Current verified staging state
 
 The authorized synthetic staging foundation now contains:
