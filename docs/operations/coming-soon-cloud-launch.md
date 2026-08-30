@@ -72,6 +72,28 @@ the first public submission.
    uptime, 5xx, latency, database, and waitlist-acceptance alerts.
 8. If a gate fails, restore the recorded prior revisions without rebuilding.
 
+## Production foundation preflight
+
+Run the local plan before creating or changing any production resource:
+
+```sh
+bash deploy/gcp/review-coming-soon-production.sh --plan
+```
+
+The plan reads no cloud or DNS state. After the separate production project,
+billing relationship, labels, and monthly budget have been explicitly approved
+and created, `--review` can verify them without changing them. The review is
+bound to the exact active administrator, project ID and number, organization,
+region, non-synthetic data classification, whole-dollar monthly budget, apex
+domain, canonical `www`-or-apex choice, and full Git SHA.
+
+The budget must be scoped only to the production project, use USD, match the
+approved amount, and include 50%, 90%, and 100% alert thresholds. A Google
+Cloud budget is an alert, not a spending cap. A successful review authorizes
+nothing: infrastructure, the production database, deployment, traffic,
+waitlist collection, Auth0, Persona, Crossmint, and Squarespace DNS remain
+separate gates.
+
 ## Squarespace DNS cutover
 
 Squarespace remains the registrar and DNS owner. Do not transfer the domain.
