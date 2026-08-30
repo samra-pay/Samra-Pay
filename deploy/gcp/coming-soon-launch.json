@@ -13,9 +13,42 @@
   "productionBoundary": {
     "projectId": "UNSET_PRODUCTION_PROJECT_ID",
     "projectNumber": "UNSET_PRODUCTION_PROJECT_NUMBER",
+    "organizationId": "614833350075",
     "mustNotEqualProjectId": "samra-pay-staging",
     "billingAndBudgetApprovalRequired": true,
     "customerDataAllowedBeforeApproval": false
+  },
+  "productionReview": {
+    "mode": "read-only",
+    "requiredProjectLabels": {
+      "environment": "production",
+      "application": "samra-pay"
+    },
+    "forbiddenDataClassifications": ["synthetic", "public"],
+    "budget": {
+      "currency": "USD",
+      "approvedMonthlyAmount": "UNSET_APPROVED_MONTHLY_USD",
+      "thresholdPercents": [0.5, 0.9, 1],
+      "budgetIsSpendingCap": false
+    },
+    "requiredInputs": [
+      "production project ID and number",
+      "operator and organization",
+      "region",
+      "non-synthetic data classification",
+      "approved monthly budget",
+      "public apex domain and canonical host",
+      "full Git SHA"
+    ],
+    "doesNotAuthorize": [
+      "project or billing mutation",
+      "infrastructure apply",
+      "database creation",
+      "deployment",
+      "public traffic",
+      "waitlist data collection",
+      "DNS change"
+    ]
   },
   "images": {
     "registry": "REGION-docker.pkg.dev/PRODUCTION_PROJECT_ID/samra-production",

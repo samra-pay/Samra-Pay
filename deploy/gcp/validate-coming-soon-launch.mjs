@@ -10,6 +10,12 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function requiredEnvironmentValue(environment, name) {
+  const value = String(environment[name] ?? "").trim();
+  assert(value.length > 0, `${name} is required`);
+  return value;
+}
+
 export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
   assert(contract.schemaVersion === 1, "Unsupported launch schema");
   assert(
@@ -23,11 +29,31 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     contract.productionBoundary.projectId === "UNSET_PRODUCTION_PROJECT_ID" &&
       contract.productionBoundary.projectNumber ===
         "UNSET_PRODUCTION_PROJECT_NUMBER" &&
+      contract.productionBoundary.organizationId === "614833350075" &&
       contract.productionBoundary.mustNotEqualProjectId ===
         "samra-pay-staging" &&
       contract.productionBoundary.billingAndBudgetApprovalRequired === true &&
       contract.productionBoundary.customerDataAllowedBeforeApproval === false,
     "A separate approved production project is required",
+  );
+  assert(
+    contract.productionReview.mode === "read-only" &&
+      contract.productionReview.requiredProjectLabels.environment ===
+        "production" &&
+      contract.productionReview.requiredProjectLabels.application ===
+        "samra-pay" &&
+      JSON.stringify(contract.productionReview.forbiddenDataClassifications) ===
+        JSON.stringify(["synthetic", "public"]) &&
+      contract.productionReview.budget.currency === "USD" &&
+      contract.productionReview.budget.approvedMonthlyAmount ===
+        "UNSET_APPROVED_MONTHLY_USD" &&
+      JSON.stringify(contract.productionReview.budget.thresholdPercents) ===
+        JSON.stringify([0.5, 0.9, 1]) &&
+      contract.productionReview.budget.budgetIsSpendingCap === false &&
+      contract.productionReview.requiredInputs.length === 7 &&
+      contract.productionReview.doesNotAuthorize.includes("DNS change") &&
+      contract.productionReview.doesNotAuthorize.includes("public traffic"),
+    "The production foundation review must remain read-only and budget-gated",
   );
   assert(
     contract.source.refreshAtCutoverRequired === true &&
@@ -137,8 +163,195 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     status: "validated-review-only",
     launchPhase: contract.launchPhase,
     publicRouteCount: web.publicApiRoutes.length,
+    productionReviewMode: contract.productionReview.mode,
     deploymentAuthorized: false,
     dnsAuthorized: false,
+  });
+}
+
+export function validateComingSoonProductionReviewEnvironment(
+  environment = process.env,
+  contract = readComingSoonLaunch(),
+) {
+  validateComingSoonLaunch(contract);
+
+  const projectId = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_PROJECT_ID",
+  );
+  const projectNumber = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_PROJECT_NUMBER",
+  );
+  const organizationId = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_ORGANIZATION_ID",
+  );
+  const region = requiredEnvironmentValue(environment, "SAMRA_GCP_REGION");
+  const operator = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_OPERATOR_ACCOUNT",
+  );
+  const expectedSha = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_EXPECTED_SHA",
+  );
+  const dataClassification = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_DATA_CLASSIFICATION",
+  );
+  const budgetRaw = requiredEnvironmentValue(
+    environment,
+    "SAMRA_GCP_MONTHLY_BUDGET_USD",
+  );
+  const apexDomain = requiredEnvironmentValue(
+    environment,
+    "SAMRA_PUBLIC_APEX_DOMAIN",
+  ).toLowerCase();
+  const canonicalHost = requiredEnvironmentValue(
+    environment,
+    "SAMRA_PUBLIC_CANONICAL_HOST",
+  ).toLowerCase();
+
+  assert(
+    /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/u.test(projectId) &&
+      projectId !== contract.productionBoundary.mustNotEqualProjectId,
+    "SAMRA_GCP_PROJECT_ID must be a valid non-staging Google Cloud project ID",
+  );
+  assert(
+    /^\d{6,20}$/u.test(projectNumber),
+    "SAMRA_GCP_PROJECT_NUMBER must be numeric",
+  );
+  assert(
+    organizationId === contract.productionBoundary.organizationId,
+    "SAMRA_GCP_ORGANIZATION_ID must match the reviewed organization",
+  );
+  assert(
+    /^[a-z]+-[a-z0-9]+\d$/u.test(region),
+    "SAMRA_GCP_REGION must be an explicit Google Cloud region",
+  );
+  assert(
+    /^[^@\s]+@davidhaile\.com$/u.test(operator),
+    "SAMRA_GCP_OPERATOR_ACCOUNT must be a davidhaile.com administrator",
+  );
+  assert(
+    /^[0-9a-f]{40}$/u.test(expectedSha),
+    "SAMRA_GCP_EXPECTED_SHA must be a full lowercase Git SHA",
+  );
+  assert(
+    /^[a-z][a-z0-9_-]{1,62}$/u.test(dataClassification) &&
+      !contract.productionReview.forbiddenDataClassifications.includes(
+        dataClassification,
+      ),
+    "SAMRA_GCP_DATA_CLASSIFICATION must be an approved non-synthetic classification",
+  );
+  assert(
+    /^[1-9]\d{0,5}$/u.test(budgetRaw),
+    "SAMRA_GCP_MONTHLY_BUDGET_USD must be an approved whole-dollar amount",
+  );
+  assert(
+    /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/u.test(
+      apexDomain,
+    ) && !apexDomain.startsWith("www."),
+    "SAMRA_PUBLIC_APEX_DOMAIN must be a bare apex domain without a protocol",
+  );
+  assert(
+    canonicalHost === "apex" || canonicalHost === "www",
+    "SAMRA_PUBLIC_CANONICAL_HOST must be apex or www",
+  );
+
+  return Object.freeze({
+    projectId,
+    projectNumber,
+    organizationId,
+    region,
+    operator,
+    expectedSha,
+    dataClassification,
+    monthlyBudgetUsd: Number(budgetRaw),
+    apexDomain,
+    canonicalHost,
+    canonicalDomain: canonicalHost === "www" ? `www.${apexDomain}` : apexDomain,
+  });
+}
+
+export function validateObservedProductionProject(
+  observed,
+  expected,
+  contract = readComingSoonLaunch(),
+) {
+  const labels = observed?.labels ?? {};
+  assert(
+    observed?.projectId === expected.projectId &&
+      String(observed?.projectNumber ?? "") === expected.projectNumber &&
+      observed?.lifecycleState === "ACTIVE" &&
+      observed?.parent?.type === "organization" &&
+      String(observed?.parent?.id ?? "") === expected.organizationId &&
+      labels.environment ===
+        contract.productionReview.requiredProjectLabels.environment &&
+      labels.application ===
+        contract.productionReview.requiredProjectLabels.application &&
+      labels.data_classification === expected.dataClassification,
+    "Production project identity, organization, lifecycle, or labels drifted",
+  );
+
+  return Object.freeze({
+    projectId: observed.projectId,
+    projectNumber: String(observed.projectNumber),
+    organizationId: String(observed.parent.id),
+    dataClassification: labels.data_classification,
+  });
+}
+
+export function validateObservedProductionBilling(observed) {
+  const billingAccount = String(observed?.billingAccountName ?? "");
+  assert(
+    observed?.billingEnabled === true &&
+      /^billingAccounts\/[A-Z0-9-]+$/u.test(billingAccount),
+    "Production billing is not enabled on a concrete billing account",
+  );
+  return Object.freeze({ billingAccount });
+}
+
+export function validateObservedProductionBudgets(
+  observed,
+  expected,
+  contract = readComingSoonLaunch(),
+) {
+  assert(
+    Array.isArray(observed),
+    "Production budget observation must be a list",
+  );
+  const projectResource = `projects/${expected.projectNumber}`;
+  const requiredThresholds = contract.productionReview.budget.thresholdPercents;
+
+  const match = observed.find((budget) => {
+    const filter = budget?.budgetFilter ?? budget?.filter ?? {};
+    const projects = filter.projects ?? [];
+    const amount = budget?.amount?.specifiedAmount ?? {};
+    const thresholds = (budget?.thresholdRules ?? [])
+      .map((rule) => Number(rule.thresholdPercent))
+      .filter(Number.isFinite);
+    return (
+      projects.length === 1 &&
+      projects[0] === projectResource &&
+      amount.currencyCode === contract.productionReview.budget.currency &&
+      Number(amount.units ?? 0) === expected.monthlyBudgetUsd &&
+      Number(amount.nanos ?? 0) === 0 &&
+      requiredThresholds.every((threshold) => thresholds.includes(threshold))
+    );
+  });
+
+  assert(
+    match &&
+      typeof match.displayName === "string" &&
+      match.displayName.length > 0,
+    "No exact project-scoped approved production budget was found",
+  );
+  return Object.freeze({
+    displayName: match.displayName,
+    monthlyBudgetUsd: expected.monthlyBudgetUsd,
+    projectResource,
   });
 }
 

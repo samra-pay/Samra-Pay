@@ -12,6 +12,13 @@ and its source-sync, release, rollback, and Squarespace DNS sequence is in the
 It does not reuse synthetic staging data or activate Auth0, Persona, Crossmint,
 financial APIs, public traffic, production spend, or DNS changes.
 
+`review-coming-soon-production.sh --plan` turns the unresolved production
+project, billing, budget, region, data-classification, domain, and source choices
+into an executable review without reading cloud state. Its later `--review`
+mode is read-only: it verifies a separately created production project and one
+exact project-scoped budget, but cannot create infrastructure, deploy, collect
+waitlist data, route traffic, or change Squarespace DNS.
+
 ## Current verified staging state
 
 The authorized synthetic staging foundation now contains:
