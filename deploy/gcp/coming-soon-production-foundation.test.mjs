@@ -146,6 +146,10 @@ test("runs only a local zero-cost plan and exposes no apply mode", () => {
   assert.match(output, /alert boundary, not a spending cap/);
   assert.match(output, /five distinct keyless/);
   assert.match(output, /zero versions/);
+  assert.match(
+    output,
+    /separate authorization to execute the production project, billing, and\n    budget controller/,
+  );
   assert.match(output, /PLAN COMPLETE — NO CLOUD OR DNS CHANGES/);
 
   const rejectedApply = spawnSync(

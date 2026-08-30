@@ -21,6 +21,17 @@ verifies the assigned project number, labels, billing-account match, and one
 exact project-scoped budget. It cannot create infrastructure, deploy, collect
 waitlist data, route traffic, or change Squarespace DNS.
 
+`coming-soon-production-project.json` and
+`provision-coming-soon-production-project.sh` implement the bounded missing
+project, billing link, and USD 25 budget-alert phase. `--plan` is local-only;
+`--review` is read-only; and `--apply` additionally requires the exact
+`AUTHORIZED_COMING_SOON_PRODUCTION_PROJECT` environment authorization. Apply is
+resumable and stops on existing drift. It can create only the exact project,
+attach only the open billing account already used by staging, and create one
+project-only monthly alert. It cannot move a different billing link, enable an
+API, create infrastructure, deploy, route traffic, collect data, activate a
+vendor, or change DNS.
+
 `coming-soon-production-foundation.json` is the next plan-only boundary. It
 locks the exact 15-API allowlist, one immutable production image repository,
 five keyless identities, least-privilege IAM plan, and two empty database-secret
@@ -29,8 +40,8 @@ that contract locally for USD 0 and deliberately has no review or apply mode.
 The production project ID, region, classification, budget-alert amount, billing
 source, domain, and canonical host are confirmed but not applied. The project
 number remains unassigned until project creation, and the billing and budget
-must then pass the read-only preflight. A later apply controller still requires
-a separate authorization.
+must then pass the read-only preflight. Executing the prepared project
+controller remains a separate cloud-action authorization.
 
 ## Current verified staging state
 

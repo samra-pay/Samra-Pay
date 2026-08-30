@@ -247,7 +247,7 @@ export function validateComingSoonProductionFoundation(
         "same billing account as staging and project-scoped USD 25 budget verification",
       ) &&
       foundation.blockedOn.includes(
-        "separate authorization to build an apply controller",
+        "separate authorization to execute the production project, billing, and budget controller",
       ),
     "The production foundation blockers changed",
   );

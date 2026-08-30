@@ -117,8 +117,34 @@ Cloud SQL, secret values, Cloud Run, load balancer, certificate, public traffic,
 waitlist data, vendors, and DNS. The project ID, region, data classification,
 budget-alert amount, billing source, apex domain, and canonical host are locked
 in the plan. The assigned project number and same-account billing and budget
-verification remain blockers. Building an apply controller requires a separate
+verification remain blockers. The bounded project controller is now prepared;
+executing its cloud changes still requires a separate action-boundary
 authorization.
+
+## Production project, billing, and budget controller
+
+Review the prepared controller locally before reading or changing cloud state:
+
+```sh
+bash deploy/gcp/provision-coming-soon-production-project.sh --plan
+```
+
+The local plan costs USD 0 and reads no Google Cloud or DNS state. In Cloud
+Shell, `--review` inventories the exact project, the open billing account
+already attached to `samra-pay-staging`, and all budgets on that account. It
+accepts a missing project as resumable state but rejects any existing project,
+billing link, or production-targeted budget that differs from the confirmed
+boundary.
+
+Only `--apply` with the exact one-time environment authorization can create the
+project, link that same billing account, and create one project-only USD 25
+monthly alert. The controller is idempotent: it reuses exact state and creates
+only missing state. It does not move a different billing link, create a second
+production budget, enable an API, create infrastructure, deploy, route traffic,
+collect data, activate vendors, or change Squarespace DNS. Project creation,
+billing linkage, and the budget alert are therefore one explicit cloud-action
+gate; the production foundation, database, deployment, traffic, and DNS remain
+later gates.
 
 ## Squarespace DNS cutover
 
