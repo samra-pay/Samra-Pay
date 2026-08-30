@@ -35,11 +35,7 @@
     "recoveryCodesGeneratedAndViewed": true,
     "recoveryCodesExternalStorageVerified": false,
     "verifiedRecoveryEmailConfigured": true,
-    "teams": [
-      "developers",
-      "platform-admins",
-      "staging-approvers"
-    ]
+    "teams": ["developers", "platform-admins", "staging-approvers"]
   },
   "governance": {
     "operatingModel": "solo-founder",
@@ -91,27 +87,29 @@
     "readOnlyReleaseWorkflowMustPassBeforePublication": true
   },
   "operationalReferences": {
-    "scanRoots": [
-      ".github/workflows",
-      "deploy/gcp"
-    ],
+    "scanRoots": [".github/workflows", "deploy/gcp"],
     "currentAuthorityFiles": [
+      ".github/workflows/production-foundation-preflight.yml",
       ".github/workflows/staging-image-publication.yml",
       ".github/workflows/staging-image-verification.yml",
       ".github/workflows/staging-traffic-control.yml",
       ".github/workflows/staging-verification-probe.yml",
       ".github/workflows/staging-zero-traffic-deployment.yml",
       "deploy/gcp/README.md",
+      "deploy/gcp/activate-production-foundation-preflight.sh",
       "deploy/gcp/activate-staging-github-federation.sh",
       "deploy/gcp/activate-staging-image-verification-federation.sh",
       "deploy/gcp/activate-staging-revision-probe-federation.sh",
       "deploy/gcp/activate-staging-traffic-federation.sh",
       "deploy/gcp/activate-staging-zero-traffic-federation.sh",
+      "deploy/gcp/audit-production-foundation-preflight.sh",
       "deploy/gcp/audit-staging-github-federation.sh",
       "deploy/gcp/audit-staging-image-verification-federation.sh",
       "deploy/gcp/audit-staging-revision-probe-federation.sh",
       "deploy/gcp/audit-staging-traffic-federation.sh",
       "deploy/gcp/audit-staging-zero-traffic-federation.sh",
+      "deploy/gcp/production-foundation-preflight.json",
+      "deploy/gcp/production-foundation-preflight.test.mjs",
       "deploy/gcp/publish-staging-images.sh",
       "deploy/gcp/record-staging-image-publication.mjs",
       "deploy/gcp/record-staging-image-verification.mjs",
@@ -132,6 +130,7 @@
       "deploy/gcp/staging-verification.test.mjs",
       "deploy/gcp/staging-zero-traffic-deployment.json",
       "deploy/gcp/staging-zero-traffic-deployment.test.mjs",
+      "deploy/gcp/validate-production-foundation-preflight.mjs",
       "deploy/gcp/validate-staging-github-federation.mjs",
       "deploy/gcp/validate-staging-image-verification.mjs",
       "deploy/gcp/validate-staging-release-control-plane.mjs",
@@ -155,7 +154,7 @@
     "transfer-repository",
     "verify-repository-id-and-new-owner-id",
     "switch-repository-authority-contracts",
-    "reapply-five-google-workload-identity-boundaries",
+    "reapply-six-google-workload-identity-boundaries",
     "enforce-solo-founder-protected-environment-controls",
     "reconnect-qase-github-app",
     "audit-branch-actions-environment-and-cloud-controls",

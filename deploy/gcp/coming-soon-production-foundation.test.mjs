@@ -17,7 +17,7 @@ test("validates one confirmed and non-mutating production foundation plan", () =
     schemaVersion: 1,
     status: "validated-plan-only",
     phase: "coming-soon-production-foundation",
-    boundaryStatus: "confirmed-not-applied",
+    boundaryStatus: "project-verified-foundation-not-applied",
     projectId: "samra-pay-production",
     monthlyBudgetUsd: 25,
     canonicalDomain: "www.samrapay.com",
@@ -36,7 +36,7 @@ test("rejects confirmed boundary drift and an apply authorization", () => {
     (value) =>
       (value.productionBoundary.projectId = "samra-pay-production-alt"),
     (value) => (value.productionBoundary.projectId = "samra-pay-staging"),
-    (value) => (value.productionBoundary.projectNumber = "123456789012"),
+    (value) => (value.productionBoundary.projectNumber = "1"),
     (value) => (value.productionBoundary.region = "us-west1"),
     (value) => (value.productionBoundary.dataClassification = "synthetic"),
     (value) => (value.productionBoundary.monthlyBudgetUsd = 26),
@@ -141,15 +141,13 @@ test("runs only a local zero-cost plan and exposes no apply mode", () => {
   assert.match(output, /Region: us-east4/);
   assert.match(output, /Data classification: customer-pii/);
   assert.match(output, /Monthly budget alert: USD 25/);
-  assert.match(output, /same billing account as staging/);
+  assert.match(output, /verified exact match to samra-pay-staging/);
   assert.match(output, /canonical www\.samrapay\.com/);
   assert.match(output, /alert boundary, not a spending cap/);
   assert.match(output, /five distinct keyless/);
   assert.match(output, /zero versions/);
-  assert.match(
-    output,
-    /separate authorization to execute the production project, billing, and\n    budget controller/,
-  );
+  assert.match(output, /keyless production foundation preflight trust/);
+  assert.match(output, /separately reviewed and authorized production/);
   assert.match(output, /PLAN COMPLETE — NO CLOUD OR DNS CHANGES/);
 
   const rejectedApply = spawnSync(

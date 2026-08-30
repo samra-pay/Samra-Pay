@@ -18,7 +18,7 @@ const productionReview = await readFile(
 
 const reviewEnvironment = {
   SAMRA_GCP_PROJECT_ID: "samra-pay-production",
-  SAMRA_GCP_PROJECT_NUMBER: "123456789012",
+  SAMRA_GCP_PROJECT_NUMBER: "382465561715",
   SAMRA_GCP_ORGANIZATION_ID: "614833350075",
   SAMRA_GCP_REGION: "us-east4",
   SAMRA_GCP_OPERATOR_ACCOUNT: "me@davidhaile.com",
@@ -34,7 +34,7 @@ test("validates the review-only coming-soon launch boundary", () => {
     schemaVersion: 1,
     status: "validated-review-only",
     launchPhase: "production-coming-soon",
-    boundaryStatus: "confirmed-not-applied",
+    boundaryStatus: "project-verified-foundation-not-applied",
     projectId: "samra-pay-production",
     canonicalDomain: "www.samrapay.com",
     publicRouteCount: 1,
@@ -75,7 +75,7 @@ test("validates exact production review inputs without authorizing a change", ()
     validateComingSoonProductionReviewEnvironment(reviewEnvironment),
     {
       projectId: "samra-pay-production",
-      projectNumber: "123456789012",
+      projectNumber: "382465561715",
       organizationId: "614833350075",
       region: "us-east4",
       operator: "me@davidhaile.com",
@@ -86,6 +86,14 @@ test("validates exact production review inputs without authorizing a change", ()
       canonicalHost: "www",
       canonicalDomain: "www.samrapay.com",
     },
+  );
+  assert.equal(
+    validateComingSoonProductionReviewEnvironment({
+      ...reviewEnvironment,
+      SAMRA_GCP_OPERATOR_ACCOUNT:
+        "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com",
+    }).operator,
+    "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com",
   );
 });
 
@@ -124,7 +132,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
     validateObservedProductionProject(
       {
         projectId: "samra-pay-production",
-        projectNumber: "123456789012",
+        projectNumber: "382465561715",
         lifecycleState: "ACTIVE",
         parent: { type: "organization", id: "614833350075" },
         labels: {
@@ -137,7 +145,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
     ),
     {
       projectId: "samra-pay-production",
-      projectNumber: "123456789012",
+      projectNumber: "382465561715",
       organizationId: "614833350075",
       dataClassification: "customer-pii",
     },
@@ -166,7 +174,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
           amount: {
             specifiedAmount: { currencyCode: "USD", units: "25" },
           },
-          budgetFilter: { projects: ["projects/123456789012"] },
+          budgetFilter: { projects: ["projects/382465561715"] },
           thresholdRules: [
             { thresholdPercent: 0.5 },
             { thresholdPercent: 0.9 },
@@ -179,7 +187,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
     {
       displayName: "Samra Pay production monthly budget",
       monthlyBudgetUsd: 25,
-      projectResource: "projects/123456789012",
+      projectResource: "projects/382465561715",
     },
   );
   assert.deepEqual(
@@ -215,7 +223,7 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
       validateObservedProductionProject(
         {
           projectId: "samra-pay-production",
-          projectNumber: "123456789012",
+          projectNumber: "382465561715",
           lifecycleState: "ACTIVE",
           parent: { type: "organization", id: "614833350075" },
           labels: {
@@ -266,7 +274,7 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
               specifiedAmount: { currencyCode: "USD", units: "25" },
             },
             budgetFilter: {
-              projects: ["projects/123456789012", "projects/999999999999"],
+              projects: ["projects/382465561715", "projects/999999999999"],
             },
             thresholdRules: [
               { thresholdPercent: 0.5 },
@@ -288,7 +296,7 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
             amount: {
               specifiedAmount: { currencyCode: "USD", units: "25" },
             },
-            budgetFilter: { projects: ["projects/123456789012"] },
+            budgetFilter: { projects: ["projects/382465561715"] },
             thresholdRules: [
               { thresholdPercent: 0.5 },
               { thresholdPercent: 0.9 },
@@ -323,7 +331,7 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
             amount: {
               specifiedAmount: { currencyCode: "USD", units: "25" },
             },
-            budgetFilter: { projects: ["projects/123456789012"] },
+            budgetFilter: { projects: ["projects/382465561715"] },
             thresholdRules: [
               { thresholdPercent: 0.5, spendBasis: "CURRENT_SPEND" },
               { thresholdPercent: 0.9, spendBasis: "FORECASTED_SPEND" },
@@ -376,8 +384,9 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
     "READ-ONLY COMING-SOON PRODUCTION FOUNDATION REVIEW PASS",
     "this is not a spending cap",
     'gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}"',
-    '--billing-project="${SOURCE_BILLING_PROJECT_ID}"',
-    "Billing source project: ${SOURCE_BILLING_PROJECT_ID} (exact account match)",
+    '--billing-project="${SAMRA_GCP_QUOTA_PROJECT_ID}"',
+    "Billing account: verified exact source-project match",
+    "Billing source project: ${SOURCE_BILLING_PROJECT_ID}",
     "remain unauthorized",
     "REVIEW COMPLETE — NO CLOUD OR DNS CHANGES",
   ]) {
@@ -385,10 +394,10 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
   }
   assert.equal(
     productionReview.match(
-      /--billing-project="\$\{SOURCE_BILLING_PROJECT_ID\}"/gu,
+      /--billing-project="\$\{SAMRA_GCP_QUOTA_PROJECT_ID\}"/gu,
     )?.length,
     1,
-    "only the account-level budget inventory uses the staging quota project",
+    "only the single-project budget inventory uses the production quota project",
   );
   assert.doesNotMatch(
     productionReview,

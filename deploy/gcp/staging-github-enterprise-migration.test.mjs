@@ -26,7 +26,7 @@ test("validates the prepared but unauthorized Enterprise migration", () => {
       twoFactorAuthenticationEnabled: true,
       passkeyOrSecurityKeyConfigured: false,
       blockerCount: 3,
-      currentAuthorityFileCount: 43,
+      currentAuthorityFileCount: 49,
       transferAuthorized: false,
     },
   );
@@ -82,7 +82,7 @@ test("runs an offline review without mutating GitHub or Google Cloud", () => {
     output,
     /Account recovery: blocked; 2FA: enabled; passkey\/security key: missing/,
   );
-  assert.match(output, /Operational authority references inventoried: 43/);
+  assert.match(output, /Operational authority references inventoried: 49/);
   assert.match(output, /TRANSFER NOT AUTHORIZED/);
   assert.doesNotMatch(output, /APPLIED|TRANSFER COMPLETE|TRUST UPDATED/);
 });

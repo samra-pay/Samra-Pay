@@ -27,10 +27,10 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     "Launch and DNS must remain review-only",
   );
   assert(
-    contract.productionBoundary.decisionStatus === "confirmed-not-applied" &&
+    contract.productionBoundary.decisionStatus ===
+      "project-verified-foundation-not-applied" &&
       contract.productionBoundary.projectId === "samra-pay-production" &&
-      contract.productionBoundary.projectNumber ===
-        "UNASSIGNED_UNTIL_PROJECT_CREATION" &&
+      contract.productionBoundary.projectNumber === "382465561715" &&
       contract.productionBoundary.organizationId === "614833350075" &&
       contract.productionBoundary.region === "us-east4" &&
       contract.productionBoundary.dataClassification === "customer-pii" &&
@@ -39,8 +39,9 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
       contract.productionBoundary.mustNotEqualProjectId ===
         "samra-pay-staging" &&
       contract.productionBoundary.billingAndBudgetApprovalRequired === true &&
+      contract.productionBoundary.billingAndBudgetVerified === true &&
       contract.productionBoundary.customerDataAllowedBeforeApproval === false,
-    "A separate approved production project is required",
+    "The verified project boundary or separate infrastructure gate drifted",
   );
   assert(
     contract.productionReview.mode === "read-only" &&
@@ -61,6 +62,21 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
       contract.productionReview.doesNotAuthorize.includes("DNS change") &&
       contract.productionReview.doesNotAuthorize.includes("public traffic"),
     "The production foundation review must remain read-only and budget-gated",
+  );
+  const verification = contract.productionReview.latestVerifiedBoundary;
+  assert(
+    verification.status === "passed-read-only" &&
+      verification.sourceSha === "7a28fb4df556a4a32f882544b9446275817b1c4f" &&
+      verification.verifiedOn === "2026-08-30" &&
+      verification.projectNumber ===
+        contract.productionBoundary.projectNumber &&
+      verification.billingAccountMatchesSourceProject === true &&
+      verification.monthlyBudgetUsd ===
+        contract.productionReview.budget.approvedMonthlyAmount &&
+      JSON.stringify(verification.thresholdPercents) ===
+        JSON.stringify(contract.productionReview.budget.thresholdPercents) &&
+      verification.cloudOrDnsChangesMadeByReview === false,
+    "The independent production boundary evidence drifted",
   );
   assert(
     contract.source.refreshAtCutoverRequired === true &&
@@ -157,7 +173,16 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
       `Missing exclusion: ${exclusion}`,
     );
   }
-  assert(contract.blockedOn.length === 8, "Launch blockers changed");
+  assert(
+    contract.blockedOn.length === 7 &&
+      contract.blockedOn.includes(
+        "keyless production preflight trust and protected GitHub environment",
+      ) &&
+      !contract.blockedOn.some((blocker) =>
+        /project creation|billing account as staging/iu.test(blocker),
+      ),
+    "Launch blockers changed",
+  );
 
   const source = JSON.stringify(contract);
   assert(
@@ -232,8 +257,9 @@ export function validateComingSoonProductionReviewEnvironment(
     "SAMRA_GCP_PROJECT_ID must exactly match the confirmed production project ID",
   );
   assert(
-    /^\d{6,20}$/u.test(projectNumber),
-    "SAMRA_GCP_PROJECT_NUMBER must be numeric",
+    /^\d{6,20}$/u.test(projectNumber) &&
+      projectNumber === contract.productionBoundary.projectNumber,
+    "SAMRA_GCP_PROJECT_NUMBER must exactly match the verified production project number",
   );
   assert(
     organizationId === contract.productionBoundary.organizationId,
@@ -244,8 +270,10 @@ export function validateComingSoonProductionReviewEnvironment(
     "SAMRA_GCP_REGION must exactly match the confirmed production region",
   );
   assert(
-    /^[^@\s]+@davidhaile\.com$/u.test(operator),
-    "SAMRA_GCP_OPERATOR_ACCOUNT must be a davidhaile.com administrator",
+    /^[^@\s]+@davidhaile\.com$/u.test(operator) ||
+      operator ===
+        "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com",
+    "SAMRA_GCP_OPERATOR_ACCOUNT must be the reviewed administrator or keyless production auditor",
   );
   assert(
     /^[0-9a-f]{40}$/u.test(expectedSha),

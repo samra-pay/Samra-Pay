@@ -45,7 +45,7 @@ command -v gcloud >/dev/null 2>&1 || {
 }
 
 : "${SAMRA_GCP_PROJECT_ID:=samra-pay-production}"
-: "${SAMRA_GCP_PROJECT_NUMBER:=}"
+: "${SAMRA_GCP_PROJECT_NUMBER:=382465561715}"
 : "${SAMRA_GCP_ORGANIZATION_ID:=614833350075}"
 : "${SAMRA_GCP_REGION:=us-east4}"
 : "${SAMRA_GCP_OPERATOR_ACCOUNT:=}"
@@ -54,6 +54,8 @@ command -v gcloud >/dev/null 2>&1 || {
 : "${SAMRA_GCP_MONTHLY_BUDGET_USD:=25}"
 : "${SAMRA_PUBLIC_APEX_DOMAIN:=samrapay.com}"
 : "${SAMRA_PUBLIC_CANONICAL_HOST:=www}"
+: "${SAMRA_GCP_QUOTA_PROJECT_ID:=samra-pay-production}"
+: "${SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH:=}"
 
 export SAMRA_GCP_PROJECT_ID
 export SAMRA_GCP_PROJECT_NUMBER
@@ -65,6 +67,8 @@ export SAMRA_GCP_DATA_CLASSIFICATION
 export SAMRA_GCP_MONTHLY_BUDGET_USD
 export SAMRA_PUBLIC_APEX_DOMAIN
 export SAMRA_PUBLIC_CANONICAL_HOST
+export SAMRA_GCP_QUOTA_PROJECT_ID
+export SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH
 
 REVIEW_INPUT="$(
   node --input-type=module -e '
@@ -134,7 +138,7 @@ BILLING_ACCOUNT="$(
 BUDGETS_JSON="$(
   gcloud billing budgets list \
     --billing-account="${BILLING_ACCOUNT}" \
-    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
+    --billing-project="${SAMRA_GCP_QUOTA_PROJECT_ID}" \
     --quiet \
     --format=json
 )"
@@ -170,8 +174,8 @@ Region: ${SAMRA_GCP_REGION}
 Source: ${SAMRA_GCP_EXPECTED_SHA}
 Data classification: ${SAMRA_GCP_DATA_CLASSIFICATION}
 Canonical domain: ${CANONICAL_DOMAIN}
-Billing account: billingAccounts/${BILLING_ACCOUNT}
-Billing source project: ${SOURCE_BILLING_PROJECT_ID} (exact account match)
+Billing account: verified exact source-project match
+Billing source project: ${SOURCE_BILLING_PROJECT_ID}
 Monthly budget: ${BUDGET_NAME} (USD ${SAMRA_GCP_MONTHLY_BUDGET_USD})
 Budget alerts: 50%, 90%, and 100%; this is not a spending cap
 
@@ -182,4 +186,39 @@ and Squarespace DNS changes remain unauthorized.
 REVIEW
 
 printf 'Verified project state: %s\n' "${PROJECT_RESULT}"
+
+if [[ -n "${SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH}" ]]; then
+  mkdir -p "$(dirname "${SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH}")"
+  node -e '
+    const fs = require("fs");
+    const evidence = {
+      schemaVersion: 1,
+      status: "passed",
+      mode: "read-only",
+      sourceSha: process.env.SAMRA_GCP_EXPECTED_SHA,
+      operator: process.env.SAMRA_GCP_OPERATOR_ACCOUNT,
+      githubRunId: process.env.GITHUB_RUN_ID || null,
+      githubRunAttempt: process.env.GITHUB_RUN_ATTEMPT || null,
+      project: JSON.parse(process.argv[1]),
+      billing: {
+        sourceProjectId: "samra-pay-staging",
+        exactAccountMatch: true,
+      },
+      budget: JSON.parse(process.argv[2]),
+      canonicalDomain: process.argv[3],
+      boundaries: {
+        cloudMutation: false,
+        infrastructureApply: false,
+        databaseCreation: false,
+        deployment: false,
+        publicTraffic: false,
+        customerData: false,
+        vendorActivation: false,
+        dnsChange: false,
+      },
+    };
+    fs.writeFileSync(process.argv[4], `${JSON.stringify(evidence, null, 2)}\n`, { flag: "wx" });
+  ' "${PROJECT_RESULT}" "${BUDGET_RESULT}" "${CANONICAL_DOMAIN}" "${SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH}"
+  echo "Evidence: ${SAMRA_PRODUCTION_REVIEW_EVIDENCE_PATH}"
+fi
 echo "REVIEW COMPLETE — NO CLOUD OR DNS CHANGES"

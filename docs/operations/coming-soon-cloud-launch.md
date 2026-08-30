@@ -59,9 +59,9 @@ the first public submission.
 
 ## Release and rollback
 
-1. Create the separately authorized `samra-pay-production` project in
-   `us-east4`, assign its project number, and verify the confirmed budget,
-   billing, domain, and data boundaries. The staging project is not eligible.
+1. Re-verify the existing `samra-pay-production` project (`382465561715`) in
+   `us-east4`, its budget, billing, domain, and data boundaries. The staging
+   project is not eligible.
 2. Build the customer web, API, and migration images from one full Git SHA.
    Record each digest; do not deploy a floating tag.
 3. Apply the waitlist migration once through the dedicated migration identity.
@@ -81,18 +81,29 @@ Run the local plan before creating or changing any production resource:
 bash deploy/gcp/review-coming-soon-production.sh --plan
 ```
 
-The plan reads no cloud or DNS state. The confirmed boundary is project
-`samra-pay-production`, organization `614833350075`, region `us-east4`,
+The plan reads no cloud or DNS state. The verified boundary is project
+`samra-pay-production` (`382465561715`), organization `614833350075`, region `us-east4`,
 `customer-pii` data classification, apex `samrapay.com`, canonical
 `www.samrapay.com`, the same billing account as `samra-pay-staging`, and a USD
-25 monthly budget alert. These values are confirmed but not applied. After the
-project, labels, billing relationship, and monthly budget have been separately
-created, `--review` verifies them without changing them. The review is also
-bound to the assigned project number, exact active administrator, and full Git
-SHA. It uses `samra-pay-staging` as the quota project only for the account-level
-budget read. Project and billing-link reads retain their native resource
-context, so the independent review does not require the Cloud Billing API on
-staging or enable an API on production.
+25 monthly budget alert. The project, labels, exact billing-account match, and
+budget passed independent read-only review at source SHA
+`7a28fb4df556a4a32f882544b9446275817b1c4f`. No cloud or DNS state changed.
+
+Future reviews move out of Cloud Shell. The prepared keyless controller uses a
+dedicated production auditor, project-scoped budget access, and only
+`resourcemanager.projects.get` on staging. It intentionally grants no
+billing-account role. Review its zero-cost bootstrap locally:
+
+```sh
+bash deploy/gcp/activate-production-foundation-preflight.sh --plan
+```
+
+After that bootstrap and an independent post-audit are separately authorized
+and complete, the manual `Production foundation preflight` GitHub workflow runs
+from `main` through the protected `production-foundation-review` environment.
+It retains machine-readable evidence for 365 days. A later repository transfer
+to the Enterprise organization requires the OIDC trust condition to be reissued
+before authentication resumes.
 
 The budget must be scoped only to the production project, use USD, equal USD
 25, and include 50%, 90%, and 100% notification thresholds. A Google Cloud
@@ -119,36 +130,24 @@ The foundation explicitly excludes the project, billing link, budget, VPC,
 Cloud SQL, secret values, Cloud Run, load balancer, certificate, public traffic,
 waitlist data, vendors, and DNS. The project ID, region, data classification,
 budget-alert amount, billing source, apex domain, and canonical host are locked
-in the plan. The assigned project number and same-account billing and budget
-verification remain blockers. The bounded project controller is now prepared;
-executing its cloud changes still requires a separate action-boundary
-authorization.
+in the plan. The project number, same-account billing match, and exact budget
+are verified. The remaining blockers are the keyless preflight trust and a
+separately reviewed and authorized infrastructure foundation apply.
 
 ## Production project, billing, and budget controller
 
-Review the prepared controller locally before reading or changing cloud state:
+The controller phase is applied and independently verified. Keep its local plan
+as a fail-closed recovery reference:
 
 ```sh
 bash deploy/gcp/provision-coming-soon-production-project.sh --plan
 ```
 
-The local plan costs USD 0 and reads no Google Cloud or DNS state. In Cloud
-Shell, `--review` inventories the exact project, the open billing account
-already attached to `samra-pay-staging`, and all budgets on that account. It
-accepts a missing project as resumable state but rejects any existing project,
-billing link, or production-targeted budget that differs from the confirmed
-boundary. The project check uses an exact organization inventory rather than a
-direct lookup because Google Cloud can mask an absent global project ID as a
-permission error.
-
-Only `--apply` with the exact one-time environment authorization can create the
-project, link that same billing account, and create one project-only USD 25
-monthly alert. The controller is idempotent: it reuses exact state and creates
-only missing state. It does not move a different billing link, create a second
-production budget, enable an API, create infrastructure, deploy, route traffic,
-collect data, activate vendors, or change Squarespace DNS. Project creation,
-billing linkage, and the budget alert are therefore one explicit cloud-action
-gate; the production foundation, database, deployment, traffic, and DNS remain
+The local plan costs USD 0 and reads no Google Cloud or DNS state. The recovery
+controller is idempotent: it reuses exact state and rejects any project,
+billing, or budget drift. It cannot enable an API, create infrastructure,
+deploy, route traffic, collect data, activate vendors, or change Squarespace
+DNS. The production foundation, database, deployment, traffic, and DNS remain
 later gates.
 
 ## Squarespace DNS cutover
@@ -162,9 +161,7 @@ authorization at the action boundary.
 
 ## Remaining launch decisions
 
-- production project creation, assigned project number, and read-only
-  verification that billing matches staging and the project-scoped USD 25
-  budget exists;
+- keyless production preflight trust and protected GitHub environment;
 - production PostgreSQL cost and data-retention approval;
 - final privacy notice and consent language;
 - final refreshed Sites snapshot and desktop/mobile visual approval;

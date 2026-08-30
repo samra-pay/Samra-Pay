@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
-  "status": "prepared-not-applied",
+  "status": "applied-verified",
   "phase": "coming-soon-production-project",
   "applyAuthorized": false,
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
   "linkedFoundationContract": "deploy/gcp/coming-soon-production-foundation.json",
   "project": {
     "id": "samra-pay-production",
+    "number": "382465561715",
     "name": "Samra Pay Production",
     "organizationId": "614833350075",
     "sourceBillingProjectId": "samra-pay-staging",
@@ -33,6 +34,15 @@
     "budgetIsSpendingCap": false,
     "duplicateAllowed": false
   },
+  "verification": {
+    "status": "passed-read-only",
+    "sourceSha": "7a28fb4df556a4a32f882544b9446275817b1c4f",
+    "verifiedOn": "2026-08-30",
+    "projectLifecycle": "ACTIVE",
+    "billingAccountMatchesSourceProject": true,
+    "budgetMatchesContract": true,
+    "cloudOrDnsChangesMadeByVerification": false
+  },
   "modes": {
     "plan": "local-only",
     "review": "read-only",
@@ -56,7 +66,6 @@
     "customer record, waitlist submission, or production data"
   ],
   "remainingAuthorizationGates": [
-    "execute this production project, billing, and budget apply",
     "apply the separately reviewed production foundation",
     "create the private production database and approve its cost and retention",
     "deploy zero-traffic workloads and prove the candidate release",
