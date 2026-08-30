@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-applied",
+  "phase": "coming-soon-production-project",
+  "applyAuthorized": false,
+  "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
+  "linkedFoundationContract": "deploy/gcp/coming-soon-production-foundation.json",
+  "project": {
+    "id": "samra-pay-production",
+    "name": "Samra Pay Production",
+    "organizationId": "614833350075",
+    "sourceBillingProjectId": "samra-pay-staging",
+    "createWithCloudApisEnabled": false,
+    "labels": {
+      "environment": "production",
+      "application": "samra-pay",
+      "data_classification": "customer-pii"
+    }
+  },
+  "billing": {
+    "mustMatchSourceProject": true,
+    "accountMustBeOpen": true,
+    "moveFromDifferentAccountAllowed": false
+  },
+  "budget": {
+    "displayName": "Samra Pay production monthly budget",
+    "currency": "USD",
+    "amount": 25,
+    "calendarPeriod": "MONTH",
+    "projectFilter": "projects/samra-pay-production",
+    "thresholdPercents": [0.5, 0.9, 1],
+    "thresholdSpendBasis": "CURRENT_SPEND",
+    "budgetIsSpendingCap": false,
+    "duplicateAllowed": false
+  },
+  "modes": {
+    "plan": "local-only",
+    "review": "read-only",
+    "applyAuthorizationEnvironment": "SAMRA_GCP_PRODUCTION_PROJECT_APPLY",
+    "applyAuthorizationValue": "AUTHORIZED_COMING_SOON_PRODUCTION_PROJECT"
+  },
+  "applyCreatesOnly": [
+    "one exact production Google Cloud project when absent",
+    "one exact link to the open billing account already attached to staging when absent",
+    "one exact project-scoped USD 25 monthly budget alert when absent"
+  ],
+  "applyNeverCreates": [
+    "enabled Google Cloud API",
+    "Artifact Registry repository, service account, IAM binding, or credential",
+    "VPC, private service connection, Cloud SQL resource, database, or user",
+    "secret metadata, secret version, or secret value",
+    "Cloud Run service, job, revision, or traffic",
+    "load balancer, Cloud Armor policy, certificate, CDN, or public endpoint",
+    "Squarespace DNS record or registrar change",
+    "Auth0, Persona, Crossmint, Firebase, or financial-provider integration",
+    "customer record, waitlist submission, or production data"
+  ],
+  "remainingAuthorizationGates": [
+    "execute this production project, billing, and budget apply",
+    "apply the separately reviewed production foundation",
+    "create the private production database and approve its cost and retention",
+    "deploy zero-traffic workloads and prove the candidate release",
+    "authorize public traffic, waitlist collection, and Squarespace DNS changes"
+  ]
+}

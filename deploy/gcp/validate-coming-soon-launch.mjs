@@ -348,36 +348,53 @@ export function validateObservedProductionBudgets(
     Array.isArray(observed),
     "Production budget observation must be a list",
   );
-  const projectResource = `projects/${expected.projectNumber}`;
+  const acceptedProjectResources = new Set([
+    `projects/${expected.projectId}`,
+    `projects/${expected.projectNumber}`,
+  ]);
   const requiredThresholds = contract.productionReview.budget.thresholdPercents;
-
-  const match = observed.find((budget) => {
+  const candidates = observed.filter((budget) => {
     const filter = budget?.budgetFilter ?? budget?.filter ?? {};
     const projects = filter.projects ?? [];
-    const amount = budget?.amount?.specifiedAmount ?? {};
-    const thresholds = (budget?.thresholdRules ?? [])
-      .map((rule) => Number(rule.thresholdPercent))
-      .filter(Number.isFinite);
-    return (
-      projects.length === 1 &&
-      projects[0] === projectResource &&
+    return projects.some((project) => acceptedProjectResources.has(project));
+  });
+  assert(
+    candidates.length === 1,
+    candidates.length === 0
+      ? "No exact project-scoped approved production budget was found"
+      : "Multiple budgets target the production project",
+  );
+
+  const match = candidates[0];
+  const filter = match?.budgetFilter ?? match?.filter ?? {};
+  const projects = filter.projects ?? [];
+  const amount = match?.amount?.specifiedAmount ?? {};
+  const thresholdRules = match?.thresholdRules ?? [];
+  const thresholds = thresholdRules
+    .map((rule) => Number(rule.thresholdPercent))
+    .filter(Number.isFinite)
+    .sort((left, right) => left - right);
+  assert(
+    projects.length === 1 &&
+      acceptedProjectResources.has(projects[0]) &&
+      match.displayName === "Samra Pay production monthly budget" &&
       amount.currencyCode === contract.productionReview.budget.currency &&
       Number(amount.units ?? 0) === expected.monthlyBudgetUsd &&
       Number(amount.nanos ?? 0) === 0 &&
-      requiredThresholds.every((threshold) => thresholds.includes(threshold))
-    );
-  });
-
-  assert(
-    match &&
-      typeof match.displayName === "string" &&
-      match.displayName.length > 0,
+      (filter.calendarPeriod === undefined ||
+        filter.calendarPeriod === "MONTH") &&
+      thresholdRules.length === requiredThresholds.length &&
+      thresholdRules.every(
+        (rule) =>
+          rule?.spendBasis === undefined || rule.spendBasis === "CURRENT_SPEND",
+      ) &&
+      JSON.stringify(thresholds) === JSON.stringify(requiredThresholds),
     "No exact project-scoped approved production budget was found",
   );
   return Object.freeze({
     displayName: match.displayName,
     monthlyBudgetUsd: expected.monthlyBudgetUsd,
-    projectResource,
+    projectResource: projects[0],
   });
 }
 

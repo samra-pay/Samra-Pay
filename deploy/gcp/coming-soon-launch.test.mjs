@@ -182,6 +182,29 @@ test("validates exact observed project, billing, and project-scoped budget", () 
       projectResource: "projects/123456789012",
     },
   );
+  assert.deepEqual(
+    validateObservedProductionBudgets(
+      [
+        {
+          displayName: "Samra Pay production monthly budget",
+          amount: {
+            specifiedAmount: { currencyCode: "USD", units: "25" },
+          },
+          budgetFilter: {
+            projects: ["projects/samra-pay-production"],
+            calendarPeriod: "MONTH",
+          },
+          thresholdRules: [
+            { thresholdPercent: 1 },
+            { thresholdPercent: 0.5 },
+            { thresholdPercent: 0.9 },
+          ],
+        },
+      ],
+      expected,
+    ).projectResource,
+    "projects/samra-pay-production",
+  );
 });
 
 test("rejects project drift, disabled billing, and broad or mismatched budgets", () => {
@@ -249,6 +272,62 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
               { thresholdPercent: 0.5 },
               { thresholdPercent: 0.9 },
               { thresholdPercent: 1 },
+            ],
+          },
+        ],
+        expected,
+      ),
+    /No exact project-scoped approved production budget/,
+  );
+  assert.throws(
+    () =>
+      validateObservedProductionBudgets(
+        [
+          {
+            displayName: "Samra Pay production monthly budget",
+            amount: {
+              specifiedAmount: { currencyCode: "USD", units: "25" },
+            },
+            budgetFilter: { projects: ["projects/123456789012"] },
+            thresholdRules: [
+              { thresholdPercent: 0.5 },
+              { thresholdPercent: 0.9 },
+              { thresholdPercent: 1 },
+            ],
+          },
+          {
+            displayName: "Samra Pay production monthly budget",
+            amount: {
+              specifiedAmount: { currencyCode: "USD", units: "25" },
+            },
+            budgetFilter: {
+              projects: ["projects/samra-pay-production"],
+            },
+            thresholdRules: [
+              { thresholdPercent: 0.5 },
+              { thresholdPercent: 0.9 },
+              { thresholdPercent: 1 },
+            ],
+          },
+        ],
+        expected,
+      ),
+    /Multiple budgets target/,
+  );
+  assert.throws(
+    () =>
+      validateObservedProductionBudgets(
+        [
+          {
+            displayName: "Samra Pay production monthly budget",
+            amount: {
+              specifiedAmount: { currencyCode: "USD", units: "25" },
+            },
+            budgetFilter: { projects: ["projects/123456789012"] },
+            thresholdRules: [
+              { thresholdPercent: 0.5, spendBasis: "CURRENT_SPEND" },
+              { thresholdPercent: 0.9, spendBasis: "FORECASTED_SPEND" },
+              { thresholdPercent: 1, spendBasis: "CURRENT_SPEND" },
             ],
           },
         ],

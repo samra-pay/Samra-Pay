@@ -52,7 +52,8 @@ Remaining blockers:
   - production project creation and assigned project number;
   - same billing account as staging and project-scoped USD 25 budget
     verification; and
-  - separate authorization to build an apply controller.
+  - separate authorization to execute the production project, billing, and
+    budget controller.
 
 PLAN COMPLETE — NO CLOUD OR DNS CHANGES
 PLAN
