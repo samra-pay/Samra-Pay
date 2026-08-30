@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "status": "plan-only",
+  "status": "prepared-not-applied",
   "phase": "coming-soon-production-foundation",
-  "decisionStatus": "project-verified-foundation-not-applied",
+  "decisionStatus": "preflight-verified-foundation-not-applied",
   "applyAuthorized": false,
   "cloudStateReadByPlan": false,
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
@@ -24,6 +24,17 @@
     "billingMatchVerified": true,
     "budgetVerified": true,
     "verificationSourceSha": "7a28fb4df556a4a32f882544b9446275817b1c4f"
+  },
+  "preflightEvidence": {
+    "status": "passed",
+    "mode": "read-only",
+    "sourceSha": "22e7d644c25d169532018534fa25ce8b6801744a",
+    "workflowRunId": "33334655501",
+    "workflowRunUrl": "https://github.com/haileleuld87/Samra-Pay/actions/runs/33334655501",
+    "artifactName": "production-foundation-preflight-22e7d644c25d169532018534fa25ce8b6801744a-run-33334655501-attempt-1",
+    "sha256": "083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b",
+    "operator": "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com",
+    "cloudMutation": false
   },
   "projectLabels": {
     "environment": "production",
@@ -60,6 +71,13 @@
     "customerWeb": "samra-customer-web-production",
     "migrations": "samra-migrations-production"
   },
+  "serviceAccountDisplayNames": {
+    "build": "Samra production Cloud Build",
+    "deployer": "Samra production deployer",
+    "api": "Samra production API",
+    "customerWeb": "Samra production customer web",
+    "migrations": "Samra production migrations"
+  },
   "projectRoleBindings": {
     "build": [
       "roles/logging.logWriter",
@@ -77,10 +95,14 @@
     "runtimeServiceAccountUser": {
       "principal": "deployer",
       "targets": ["api", "customerWeb", "migrations"]
-    },
+    }
+  },
+  "deferredRoleBindings": {
     "privateApiInvoker": {
       "principal": "customerWeb",
-      "target": "api"
+      "target": "api",
+      "applyPhase": "api-service-deployment",
+      "reason": "Cloud Run service IAM cannot exist before the private API service"
     }
   },
   "secretMetadata": [
@@ -131,8 +153,20 @@
       "vendor and financial-provider fees"
     ]
   },
+  "activation": {
+    "controller": "deploy/gcp/activate-coming-soon-production-foundation.sh",
+    "inspector": "deploy/gcp/inspect-coming-soon-production-foundation.mjs",
+    "postAudit": "deploy/gcp/audit-coming-soon-production-foundation.sh",
+    "operator": "me@davidhaile.com",
+    "authorizationEnvironment": "SAMRA_GCP_PRODUCTION_FOUNDATION_APPLY",
+    "authorizationValue": "AUTHORIZED_COMING_SOON_PRODUCTION_FOUNDATION",
+    "reviewBeforeApply": true,
+    "postAuditRequired": true,
+    "resumable": true,
+    "automaticApply": false,
+    "githubWorkflowAuthorized": false
+  },
   "blockedOn": [
-    "keyless production foundation preflight trust and protected GitHub environment",
     "separately reviewed and authorized production infrastructure foundation apply"
   ]
 }

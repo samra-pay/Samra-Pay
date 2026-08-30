@@ -7,10 +7,11 @@ transaction product. Ongoing Sites edits do not block engineering. Sites is the
 design workspace; a refreshed, reviewed snapshot becomes a Git commit, and the
 immutable Git commit becomes the Google Cloud release.
 
-This runbook is preparation only. It does not authorize production resources,
-cloud spend, public traffic, waitlist data collection, or Squarespace DNS
-changes. Those decisions remain explicit gates in
-`deploy/gcp/coming-soon-launch.json`.
+The bounded production project, billing link, USD 25 alert, and read-only
+preflight trust now exist. This runbook does not authorize workload
+infrastructure, database spend, deployment, public traffic, waitlist data
+collection, vendors, or Squarespace DNS changes. Those decisions remain
+explicit gates in `deploy/gcp/coming-soon-launch.json`.
 
 ## Launch topology
 
@@ -86,24 +87,24 @@ The plan reads no cloud or DNS state. The verified boundary is project
 `customer-pii` data classification, apex `samrapay.com`, canonical
 `www.samrapay.com`, the same billing account as `samra-pay-staging`, and a USD
 25 monthly budget alert. The project, labels, exact billing-account match, and
-budget passed independent read-only review at source SHA
-`7a28fb4df556a4a32f882544b9446275817b1c4f`. No cloud or DNS state changed.
+budget passed independent read-only review. No workload or DNS state changed.
 
-Future reviews move out of Cloud Shell. The prepared keyless controller uses a
-dedicated production auditor, project-scoped budget access, and only
-`resourcemanager.projects.get` on staging. It intentionally grants no
-billing-account role. Review its zero-cost bootstrap locally:
+The keyless controller uses a dedicated production auditor, project-scoped
+budget access, and only `resourcemanager.projects.get` on staging. It grants no
+billing-account role. Its one-time zero-cost trust bootstrap and independent
+audit are complete. The offline recovery plan remains:
 
 ```sh
 bash deploy/gcp/activate-production-foundation-preflight.sh --plan
 ```
 
-After that bootstrap and an independent post-audit are separately authorized
-and complete, the manual `Production foundation preflight` GitHub workflow runs
-from `main` through the protected `production-foundation-review` environment.
-It retains machine-readable evidence for 365 days. A later repository transfer
-to the Enterprise organization requires the OIDC trust condition to be reissued
-before authentication resumes.
+The manual `Production foundation preflight` workflow passed from `main` at
+`22e7d644c25d169532018534fa25ce8b6801744a` through the protected
+`production-foundation-review` environment in run `33334655501`. Its retained
+evidence checksum is
+`083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b`. A later
+repository transfer to the Enterprise organization requires the OIDC trust
+condition to be reissued before authentication resumes.
 
 The budget must be scoped only to the production project, use USD, equal USD
 25, and include 50%, 90%, and 100% notification thresholds. A Google Cloud
@@ -121,18 +122,35 @@ bash deploy/gcp/plan-coming-soon-production-foundation.sh --plan
 ```
 
 This second plan also reads no cloud or DNS state and costs USD 0. It fixes the
-future foundation scope to 15 approved APIs, one regional immutable
+foundation scope to 15 approved APIs, one regional immutable
 `samra-production` image repository, five dedicated keyless identities,
 least-privilege IAM, and separate empty runtime and migration secret metadata.
-It has no `--apply` mode.
+The plan entrypoint has no `--apply` mode.
+
+The separate activation controller is implemented but unapplied. Its live
+review must run from one clean exact source SHA and the exact human
+administrator:
+
+```sh
+SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
+SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash deploy/gcp/activate-coming-soon-production-foundation.sh --review
+```
+
+The review inventories every targeted API, label, repository, service account,
+project and resource IAM binding, secret metadata record, user-managed key, and
+secret version. Existing exact state is reusable; absent state is resumable;
+drift fails closed. The apply sentinel is accepted only after this review. A
+separate read-only post-audit is mandatory. No GitHub apply workflow exists.
 
 The foundation explicitly excludes the project, billing link, budget, VPC,
 Cloud SQL, secret values, Cloud Run, load balancer, certificate, public traffic,
 waitlist data, vendors, and DNS. The project ID, region, data classification,
 budget-alert amount, billing source, apex domain, and canonical host are locked
 in the plan. The project number, same-account billing match, and exact budget
-are verified. The remaining blockers are the keyless preflight trust and a
-separately reviewed and authorized infrastructure foundation apply.
+are verified. Private API invocation IAM is correctly deferred until the API
+service exists. The remaining blocker is a separately reviewed and authorized
+infrastructure foundation apply.
 
 ## Production project, billing, and budget controller
 
@@ -161,7 +179,7 @@ authorization at the action boundary.
 
 ## Remaining launch decisions
 
-- keyless production preflight trust and protected GitHub environment;
+- production infrastructure foundation apply;
 - production PostgreSQL cost and data-retention approval;
 - final privacy notice and consent language;
 - final refreshed Sites snapshot and desktop/mobile visual approval;

@@ -15,15 +15,18 @@ const planScript = await readFile(
 test("validates one confirmed and non-mutating production foundation plan", () => {
   assert.deepEqual(validateComingSoonProductionFoundation(), {
     schemaVersion: 1,
-    status: "validated-plan-only",
+    status: "validated-prepared-not-applied",
     phase: "coming-soon-production-foundation",
-    boundaryStatus: "project-verified-foundation-not-applied",
+    boundaryStatus: "preflight-verified-foundation-not-applied",
     projectId: "samra-pay-production",
     monthlyBudgetUsd: 25,
     canonicalDomain: "www.samrapay.com",
     apiCount: 15,
     serviceAccountCount: 5,
     secretMetadataCount: 2,
+    preflightEvidenceStatus: "passed",
+    activationController:
+      "deploy/gcp/activate-coming-soon-production-foundation.sh",
     estimatedMonthlyPlanCostUsd: 0,
     cloudStateRead: false,
     cloudMutationAuthorized: false,
@@ -45,6 +48,8 @@ test("rejects confirmed boundary drift and an apply authorization", () => {
     (value) =>
       (value.productionBoundary.billingAccountSourceProjectId =
         "another-project"),
+    (value) => (value.preflightEvidence.workflowRunId = "1"),
+    (value) => (value.activation.automaticApply = true),
     (value) => (value.applyAuthorized = true),
   ]) {
     const foundation = structuredClone(readComingSoonProductionFoundation());
@@ -144,9 +149,11 @@ test("runs only a local zero-cost plan and exposes no apply mode", () => {
   assert.match(output, /verified exact match to samra-pay-staging/);
   assert.match(output, /canonical www\.samrapay\.com/);
   assert.match(output, /alert boundary, not a spending cap/);
+  assert.match(output, /Protected preflight evidence:/);
+  assert.match(output, /GitHub run: 33334655501/);
   assert.match(output, /five distinct keyless/);
   assert.match(output, /zero versions/);
-  assert.match(output, /keyless production foundation preflight trust/);
+  assert.match(output, /automatic or GitHub-based apply remains disabled/);
   assert.match(output, /separately reviewed and authorized production/);
   assert.match(output, /PLAN COMPLETE — NO CLOUD OR DNS CHANGES/);
 
