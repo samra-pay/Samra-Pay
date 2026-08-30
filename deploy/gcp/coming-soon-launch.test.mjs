@@ -357,6 +357,7 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
     "READ-ONLY COMING-SOON PRODUCTION FOUNDATION REVIEW PASS",
     "this is not a spending cap",
     'gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}"',
+    '--billing-project="${SOURCE_BILLING_PROJECT_ID}"',
     "Billing source project: ${SOURCE_BILLING_PROJECT_ID} (exact account match)",
     "remain unauthorized",
     "REVIEW COMPLETE — NO CLOUD OR DNS CHANGES",
@@ -370,5 +371,9 @@ test("plans locally and contains no cloud, deployment, data, or DNS mutation", (
   assert.doesNotMatch(
     productionReview,
     /--allow-unauthenticated|gcloud secrets versions access|gcloud secrets versions add|curl .*squarespace|POST .*waitlist/iu,
+  );
+  assert.doesNotMatch(
+    productionReview,
+    /gcloud services enable|billingbudgets\.googleapis\.com/iu,
   );
 });
