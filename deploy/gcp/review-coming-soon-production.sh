@@ -128,6 +128,8 @@ BILLING_ACCOUNT="$(
 BUDGETS_JSON="$(
   gcloud billing budgets list \
     --billing-account="${BILLING_ACCOUNT}" \
+    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
+    --quiet \
     --format=json
 )"
 BUDGET_RESULT="$(
