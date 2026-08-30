@@ -5,6 +5,36 @@
  * Samra Pay synthetic architecture-foundation API
  * OpenAPI spec version: 0.2.0
  */
+export type SubscribeWaitlistRequestLocale =
+  (typeof SubscribeWaitlistRequestLocale)[keyof typeof SubscribeWaitlistRequestLocale];
+
+export const SubscribeWaitlistRequestLocale = {
+  en: "en",
+  am: "am",
+} as const;
+
+export interface SubscribeWaitlistRequest {
+  /**
+   * @minLength 3
+   * @maxLength 254
+   */
+  email: string;
+  consent: true;
+  /** @pattern ^coming-soon-[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  consentVersion: string;
+  locale: SubscribeWaitlistRequestLocale;
+  /**
+   * Honeypot field. Real clients must leave it empty.
+   * @maxLength 0
+   */
+  website?: string;
+}
+
+export interface WaitlistSubscriptionReceipt {
+  accepted: true;
+  acceptedAt: string;
+}
+
 export type CustomerOnboardingState =
   (typeof CustomerOnboardingState)[keyof typeof CustomerOnboardingState];
 

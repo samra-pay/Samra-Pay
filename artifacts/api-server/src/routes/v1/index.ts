@@ -56,6 +56,9 @@ import {
   SubmitCustomerConsentBundleBody,
   SubmitCustomerConsentBundleHeader,
   SubmitCustomerConsentBundleResponse,
+  SubscribeWaitlistBody,
+  SubscribeWaitlistHeader,
+  SubscribeWaitlistResponse,
   UpdateBeneficiaryBody,
   UpdateBeneficiaryParams,
   UpdateBeneficiaryResponse,
@@ -228,6 +231,23 @@ export function createV1Router(
   }> = {},
 ): Router {
   const router = Router();
+
+  router.post(
+    "/waitlist/subscriptions",
+    asyncRoute(async (req, res) => {
+      const header = parseSchema(SubscribeWaitlistHeader, {
+        "Idempotency-Key": req.header("Idempotency-Key"),
+      });
+      const body = parseSchema(SubscribeWaitlistBody.strict(), req.body);
+      const receipt = await runtime.marketingWaitlistStore.subscribe({
+        email: body.email,
+        consentVersion: body.consentVersion,
+        locale: body.locale,
+        idempotencyKey: header["Idempotency-Key"],
+      });
+      res.status(202).json(SubscribeWaitlistResponse.parse(receipt));
+    }),
+  );
 
   if (runtime.customerFunnelStore) {
     const funnel = runtime.customerFunnelStore;

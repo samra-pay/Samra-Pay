@@ -67,6 +67,7 @@ import type {
   SelectScenarioRequest,
   StartCustomerWalletProvisioningRequest,
   SubmitCustomerConsentBundleRequest,
+  SubscribeWaitlistRequest,
   Transfer,
   TransferPage,
   UnauthorizedProblemResponse,
@@ -74,6 +75,7 @@ import type {
   UpdateBeneficiaryRequest,
   UpdateOperationsCaseRequest,
   ValidationProblemResponse,
+  WaitlistSubscriptionReceipt,
   WorkforceLoginRequest,
   WorkforceSession,
 } from "./api.schemas";
@@ -431,6 +433,99 @@ export const useRecordCustomerAcquisitionEvent = <
   TContext
 > => {
   return useMutation(getRecordCustomerAcquisitionEventMutationOptions(options));
+};
+
+export const getSubscribeWaitlistUrl = () => {
+  return `/api/v1/waitlist/subscriptions`;
+};
+
+/**
+ * Stores the normalized email separately from acquisition telemetry and records the exact consent notice version, locale, server timestamp, and idempotency evidence. The endpoint accepts no customer, identity, device, or financial data.
+ * @summary Join the public launch waitlist with explicit consent
+ */
+export const subscribeWaitlist = async (
+  subscribeWaitlistRequest: SubscribeWaitlistRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<WaitlistSubscriptionReceipt> => {
+  return customFetch<WaitlistSubscriptionReceipt>(getSubscribeWaitlistUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(subscribeWaitlistRequest),
+  });
+};
+
+export const getSubscribeWaitlistMutationOptions = <
+  TError = ErrorType<
+    ConflictProblemResponse | ValidationProblemResponse | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof subscribeWaitlist>>,
+    TError,
+    { data: BodyType<SubscribeWaitlistRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof subscribeWaitlist>>,
+  TError,
+  { data: BodyType<SubscribeWaitlistRequest> },
+  TContext
+> => {
+  const mutationKey = ["subscribeWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof subscribeWaitlist>>,
+    { data: BodyType<SubscribeWaitlistRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return subscribeWaitlist(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubscribeWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof subscribeWaitlist>>
+>;
+export type SubscribeWaitlistMutationBody = BodyType<SubscribeWaitlistRequest>;
+export type SubscribeWaitlistMutationError = ErrorType<
+  ConflictProblemResponse | ValidationProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Join the public launch waitlist with explicit consent
+ */
+export const useSubscribeWaitlist = <
+  TError = ErrorType<
+    ConflictProblemResponse | ValidationProblemResponse | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof subscribeWaitlist>>,
+    TError,
+    { data: BodyType<SubscribeWaitlistRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof subscribeWaitlist>>,
+  TError,
+  { data: BodyType<SubscribeWaitlistRequest> },
+  TContext
+> => {
+  return useMutation(getSubscribeWaitlistMutationOptions(options));
 };
 
 export const getBindCustomerAcquisitionSessionUrl = () => {

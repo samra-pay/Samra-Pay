@@ -117,6 +117,49 @@ export const RecordCustomerAcquisitionEventResponse = zod.object({
 });
 
 /**
+ * Stores the normalized email separately from acquisition telemetry and records the exact consent notice version, locale, server timestamp, and idempotency evidence. The endpoint accepts no customer, identity, device, or financial data.
+ * @summary Join the public launch waitlist with explicit consent
+ */
+export const subscribeWaitlistHeaderIdempotencyKeyMin = 8;
+export const subscribeWaitlistHeaderIdempotencyKeyMax = 128;
+
+export const SubscribeWaitlistHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(subscribeWaitlistHeaderIdempotencyKeyMin)
+    .max(subscribeWaitlistHeaderIdempotencyKeyMax),
+});
+
+export const subscribeWaitlistBodyEmailMin = 3;
+export const subscribeWaitlistBodyEmailMax = 254;
+
+export const subscribeWaitlistBodyConsentVersionRegExp = new RegExp(
+  "^coming-soon-[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+);
+export const subscribeWaitlistBodyWebsiteMax = 0;
+
+export const SubscribeWaitlistBody = zod.object({
+  email: zod
+    .string()
+    .email()
+    .min(subscribeWaitlistBodyEmailMin)
+    .max(subscribeWaitlistBodyEmailMax),
+  consent: zod.literal(true),
+  consentVersion: zod.string().regex(subscribeWaitlistBodyConsentVersionRegExp),
+  locale: zod.enum(["en", "am"]),
+  website: zod
+    .string()
+    .max(subscribeWaitlistBodyWebsiteMax)
+    .optional()
+    .describe("Honeypot field. Real clients must leave it empty."),
+});
+
+export const SubscribeWaitlistResponse = zod.object({
+  accepted: zod.literal(true),
+  acceptedAt: zod.string().datetime({ offset: true }),
+});
+
+/**
  * Links a session exactly once after the Auth0 subject has a durable Samra customer binding. The Auth0 subject and customer identifiers are not returned in funnel reports.
  * @summary Bind an opaque acquisition session to the authenticated Samra customer
  */

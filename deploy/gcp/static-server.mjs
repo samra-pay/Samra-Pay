@@ -11,6 +11,9 @@ const cloudRunIdentityEndpoint =
   "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity";
 const cloudRunAuthorizationHeader = "x-serverless-authorization";
 const identityTokenRefreshSkewSeconds = 300;
+const waitlistSubscriptionPath = "/api/v1/waitlist/subscriptions";
+const defaultApiRequestBodyMaxBytes = 1024 * 1024;
+const waitlistRequestBodyMaxBytes = 16 * 1024;
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -77,9 +80,15 @@ export function loadServerConfig(environment = process.env) {
   }
 
   const apiServiceAuth = loadApiServiceAuthConfig(environment, apiOrigin);
+  const apiProxyPolicy = loadApiProxyPolicy(environment);
 
   return Object.freeze({
     apiOrigin,
+    apiProxyPolicy,
+    apiRequestBodyMaxBytes:
+      apiProxyPolicy === "waitlist-only"
+        ? waitlistRequestBodyMaxBytes
+        : defaultApiRequestBodyMaxBytes,
     apiServiceAuth,
     apiServiceIdentityTokenProvider:
       apiServiceAuth.mode === "cloud-run-iam"
@@ -92,6 +101,19 @@ export function loadServerConfig(environment = process.env) {
     publicDirectory:
       environment.SAMRA_PUBLIC_DIRECTORY ?? defaultPublicDirectory,
   });
+}
+
+export function loadApiProxyPolicy(environment = process.env) {
+  const policy = environment.SAMRA_API_PROXY_POLICY?.trim() || "all";
+  if (policy !== "all" && policy !== "waitlist-only") {
+    throw new Error('SAMRA_API_PROXY_POLICY must be "all" or "waitlist-only".');
+  }
+  return policy;
+}
+
+export function isApiRequestAllowed(policy, pathname, method) {
+  if (policy === "all") return true;
+  return pathname === waitlistSubscriptionPath && method === "POST";
 }
 
 function isLoopbackHostname(hostname) {
@@ -343,9 +365,18 @@ function servePublicRuntimeConfig(request, response, config) {
   response.end(request.method === "HEAD" ? undefined : body);
 }
 
-async function readRequestBody(request) {
+async function readRequestBody(request, maxBytes) {
   const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
+  let totalBytes = 0;
+  for await (const chunk of request) {
+    totalBytes += chunk.length;
+    if (totalBytes > maxBytes) {
+      const error = new Error("API request body is too large.");
+      error.code = "SAMRA_REQUEST_BODY_TOO_LARGE";
+      throw error;
+    }
+    chunks.push(chunk);
+  }
   return chunks.length === 0 ? undefined : Buffer.concat(chunks);
 }
 
@@ -390,10 +421,30 @@ async function proxyApiRequest(request, response, config) {
 
   const target = new URL(request.url ?? "/api", apiOrigin);
   const method = request.method ?? "GET";
-  const body =
-    method === "GET" || method === "HEAD"
-      ? undefined
-      : await readRequestBody(request);
+  let body;
+  try {
+    body =
+      method === "GET" || method === "HEAD"
+        ? undefined
+        : await readRequestBody(
+            request,
+            config.apiRequestBodyMaxBytes ?? defaultApiRequestBodyMaxBytes,
+          );
+  } catch (error) {
+    if (error?.code !== "SAMRA_REQUEST_BODY_TOO_LARGE") throw error;
+    response.writeHead(413, {
+      "cache-control": "no-store",
+      "content-type": "application/problem+json",
+    });
+    response.end(
+      JSON.stringify({
+        type: "about:blank",
+        title: "Request body too large",
+        status: 413,
+      }),
+    );
+    return;
+  }
 
   let serviceIdentityToken;
   if (config.apiServiceAuth?.mode === "cloud-run-iam") {
@@ -499,6 +550,26 @@ export function createStaticServer(config) {
     }
 
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
+      if (
+        !isApiRequestAllowed(
+          config.apiProxyPolicy ?? "all",
+          url.pathname,
+          request.method ?? "GET",
+        )
+      ) {
+        response.writeHead(404, {
+          "cache-control": "no-store",
+          "content-type": "application/problem+json",
+        });
+        response.end(
+          JSON.stringify({
+            type: "about:blank",
+            title: "Not found",
+            status: 404,
+          }),
+        );
+        return;
+      }
       await proxyApiRequest(request, response, config);
       return;
     }

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vitest run --config vitest.config.ts && vite build --config vite.config.ts",
+    "dev:legacy": "SAMRA_WEB_SURFACE=legacy vite --config vite.config.ts --host 0.0.0.0",
+    "build": "vitest run --config vitest.config.ts && vite build --config vite.config.ts && node scripts/check-public-build.mjs",
+    "build:legacy": "SAMRA_WEB_SURFACE=legacy vitest run --config vitest.config.ts && SAMRA_WEB_SURFACE=legacy vite build --config vite.config.ts",
+    "check:public-build": "node scripts/check-public-build.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts"

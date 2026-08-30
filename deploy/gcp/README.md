@@ -5,6 +5,13 @@ contains reviewed contracts, tests, container definitions, and guarded scripts
 for separately authorized staging phases. GitHub remains the source of truth;
 Replit remains a temporary preview and bounded rollback surface until cutover.
 
+The public coming-soon launch is a separate production boundary. Its
+review-only contract is [`coming-soon-launch.json`](coming-soon-launch.json),
+and its source-sync, release, rollback, and Squarespace DNS sequence is in the
+[`coming-soon cloud launch runbook`](../../docs/operations/coming-soon-cloud-launch.md).
+It does not reuse synthetic staging data or activate Auth0, Persona, Crossmint,
+financial APIs, public traffic, production spend, or DNS changes.
+
 ## Current verified staging state
 
 The authorized synthetic staging foundation now contains:

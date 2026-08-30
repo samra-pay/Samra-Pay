@@ -108,6 +108,68 @@ test("health remains available while disabled mode returns a stable 503 problem"
   });
 });
 
+test("public waitlist records explicit consent idempotently and rejects extra tracking data", async () => {
+  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+    const input = {
+      email: "Founder@Example.Test",
+      consent: true,
+      consentVersion: "coming-soon-2026-08-30",
+      locale: "en",
+      website: "",
+    };
+    const headers = { "Idempotency-Key": "waitlist-command-001" };
+    const accepted = await request(
+      origin,
+      "/api/v1/waitlist/subscriptions",
+      { method: "POST", headers, body: input },
+    );
+    assert.equal(accepted.status, 202);
+    assert.equal(accepted.body["accepted"], true);
+    assert.equal(typeof accepted.body["acceptedAt"], "string");
+
+    const replay = await request(origin, "/api/v1/waitlist/subscriptions", {
+      method: "POST",
+      headers,
+      body: input,
+    });
+    assert.equal(replay.status, 202);
+    assert.equal(replay.body["acceptedAt"], accepted.body["acceptedAt"]);
+
+    const conflictingReplay = await request(
+      origin,
+      "/api/v1/waitlist/subscriptions",
+      {
+        method: "POST",
+        headers,
+        body: { ...input, email: "different@example.test" },
+      },
+    );
+    assert.equal(conflictingReplay.status, 409);
+
+    const trackingRejected = await request(
+      origin,
+      "/api/v1/waitlist/subscriptions",
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": "waitlist-command-002" },
+        body: { ...input, deviceId: "do-not-collect" },
+      },
+    );
+    assert.equal(trackingRejected.status, 422);
+
+    const botRejected = await request(
+      origin,
+      "/api/v1/waitlist/subscriptions",
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": "waitlist-command-003" },
+        body: { ...input, website: "https://spam.example" },
+      },
+    );
+    assert.equal(botRejected.status, 422);
+  });
+});
+
 test("readiness fails closed without exposing persistence errors", async () => {
   const runtime = new DemoRuntime({
     readiness: async () => {

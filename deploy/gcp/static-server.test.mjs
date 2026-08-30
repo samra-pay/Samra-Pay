@@ -7,7 +7,9 @@ import test from "node:test";
 import {
   createCloudRunIdentityTokenProvider,
   createStaticServer,
+  isApiRequestAllowed,
   loadApiServiceAuthConfig,
+  loadApiProxyPolicy,
   loadPublicRuntimeConfig,
   loadServerConfig,
   resolvePublicFile,
@@ -41,6 +43,8 @@ test("accepts the Cloud Run port and an HTTPS API origin", () => {
 
   assert.equal(config.port, 8080);
   assert.equal(config.apiOrigin.href, "https://api.example.test/");
+  assert.equal(config.apiProxyPolicy, "all");
+  assert.equal(config.apiRequestBodyMaxBytes, 1024 * 1024);
   assert.equal(config.publicDirectory, "/srv/public");
   assert.deepEqual(config.publicRuntimeConfig, {});
   assert.deepEqual(config.apiServiceAuth, {
@@ -59,6 +63,47 @@ test("accepts the Cloud Run port and an HTTPS API origin", () => {
     audience: null,
   });
   assert.equal(loopback.apiServiceIdentityTokenProvider, null);
+});
+
+test("restricts the public launch proxy to waitlist submissions", () => {
+  assert.equal(loadApiProxyPolicy({}), "all");
+  assert.equal(
+    loadApiProxyPolicy({ SAMRA_API_PROXY_POLICY: "waitlist-only" }),
+    "waitlist-only",
+  );
+  assert.equal(
+    loadServerConfig({
+      PORT: "8080",
+      SAMRA_API_PROXY_POLICY: "waitlist-only",
+    }).apiRequestBodyMaxBytes,
+    16 * 1024,
+  );
+  assert.throws(
+    () => loadApiProxyPolicy({ SAMRA_API_PROXY_POLICY: "public" }),
+    /must be "all" or "waitlist-only"/,
+  );
+
+  assert.equal(
+    isApiRequestAllowed(
+      "waitlist-only",
+      "/api/v1/waitlist/subscriptions",
+      "POST",
+    ),
+    true,
+  );
+  assert.equal(
+    isApiRequestAllowed("waitlist-only", "/api/v1/me", "GET"),
+    false,
+  );
+  assert.equal(
+    isApiRequestAllowed(
+      "waitlist-only",
+      "/api/v1/waitlist/subscriptions",
+      "GET",
+    ),
+    false,
+  );
+  assert.equal(isApiRequestAllowed("all", "/api/v1/me", "GET"), true);
 });
 
 test("requires exact Cloud Run service authentication for a remote API", () => {
@@ -410,6 +455,98 @@ test("returns an explicit 502 when no API target is configured", async () => {
     });
   } finally {
     await close(web);
+    await rm(publicDirectory, { recursive: true, force: true });
+  }
+});
+
+test("waitlist-only mode hides every other API route before proxying", async () => {
+  const publicDirectory = await mkdtemp(path.join(tmpdir(), "samra-web-"));
+  let upstreamRequests = 0;
+  const upstream = createServer((_request, response) => {
+    upstreamRequests += 1;
+    response.end("unexpected");
+  });
+  const upstreamOrigin = await listen(upstream);
+  const web = createStaticServer({
+    apiOrigin: new URL(upstreamOrigin),
+    apiProxyPolicy: "waitlist-only",
+    port: 0,
+    publicRuntimeConfig: Object.freeze({}),
+    publicDirectory,
+  });
+  const webOrigin = await listen(web);
+
+  try {
+    const response = await fetch(`${webOrigin}/api/v1/me`);
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), {
+      type: "about:blank",
+      title: "Not found",
+      status: 404,
+    });
+    assert.equal(upstreamRequests, 0);
+  } finally {
+    await close(web);
+    await close(upstream);
+    await rm(publicDirectory, { recursive: true, force: true });
+  }
+});
+
+test("waitlist-only mode proxies one bounded submission", async () => {
+  const publicDirectory = await mkdtemp(path.join(tmpdir(), "samra-web-"));
+  const upstream = createServer(async (request, response) => {
+    assert.equal(request.url, "/api/v1/waitlist/subscriptions");
+    assert.equal(request.method, "POST");
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    assert.deepEqual(JSON.parse(body), {
+      email: "founder@example.test",
+      consent: true,
+    });
+    response.writeHead(202, { "content-type": "application/json" });
+    response.end(JSON.stringify({ accepted: true }));
+  });
+  const upstreamOrigin = await listen(upstream);
+  const web = createStaticServer({
+    apiOrigin: new URL(upstreamOrigin),
+    apiProxyPolicy: "waitlist-only",
+    apiRequestBodyMaxBytes: 128,
+    port: 0,
+    publicRuntimeConfig: Object.freeze({}),
+    publicDirectory,
+  });
+  const webOrigin = await listen(web);
+
+  try {
+    const accepted = await fetch(`${webOrigin}/api/v1/waitlist/subscriptions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "founder@example.test",
+        consent: true,
+      }),
+    });
+    assert.equal(accepted.status, 202);
+    assert.deepEqual(await accepted.json(), { accepted: true });
+
+    const oversized = await fetch(
+      `${webOrigin}/api/v1/waitlist/subscriptions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "x".repeat(256), consent: true }),
+      },
+    );
+    assert.equal(oversized.status, 413);
+    assert.deepEqual(await oversized.json(), {
+      type: "about:blank",
+      title: "Request body too large",
+      status: 413,
+    });
+  } finally {
+    await close(web);
+    await close(upstream);
     await rm(publicDirectory, { recursive: true, force: true });
   }
 });

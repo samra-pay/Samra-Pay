@@ -6,9 +6,11 @@ import type {
   PostgresWorkforceAuthStore,
   PostgresOperationsCaseStore,
   CustomerFunnelStore,
+  MarketingWaitlistStore,
   CustomerOnboardingStore,
   WorkflowClaim,
 } from "@workspace/db";
+import { InMemoryMarketingWaitlistStore } from "@workspace/db";
 import {
   DeterministicFakeProviders,
   DomainError,
@@ -161,6 +163,7 @@ export type DemoRuntimeDependencies = Readonly<{
   personaWebhookService?: PersonaWebhookService;
   customerWalletProvisioningService?: CustomerWalletProvisioningService;
   customerFunnelStore?: CustomerFunnelStore;
+  marketingWaitlistStore?: MarketingWaitlistStore;
   publishOutbox?: (event: ClaimedOutboxEvent) => Promise<void>;
   readiness?: () => Promise<void>;
   close?: () => Promise<void>;
@@ -187,6 +190,7 @@ export class DemoRuntime {
   readonly personaWebhookService?: PersonaWebhookService;
   readonly customerWalletProvisioningService?: CustomerWalletProvisioningService;
   readonly customerFunnelStore?: CustomerFunnelStore;
+  readonly marketingWaitlistStore: MarketingWaitlistStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #beneficiaryStore: BeneficiaryStore;
@@ -220,6 +224,9 @@ export class DemoRuntime {
     this.customerWalletProvisioningService =
       dependencies.customerWalletProvisioningService;
     this.customerFunnelStore = dependencies.customerFunnelStore;
+    this.marketingWaitlistStore =
+      dependencies.marketingWaitlistStore ??
+      new InMemoryMarketingWaitlistStore();
     this.#reconciliationStore =
       dependencies.reconciliationStore ?? new InMemoryReconciliationStore();
     this.#beneficiaryStore =
