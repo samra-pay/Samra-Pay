@@ -93,7 +93,6 @@ REVIEW_INPUT="$(
 SOURCE_BILLING_PROJECT_ID="samra-pay-staging"
 PROJECT_JSON="$(
   gcloud projects describe "${SAMRA_GCP_PROJECT_ID}" \
-    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
     --quiet \
     --format=json
 )"
@@ -109,13 +108,11 @@ PROJECT_RESULT="$(
 
 BILLING_JSON="$(
   gcloud billing projects describe "${SAMRA_GCP_PROJECT_ID}" \
-    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
     --quiet \
     --format=json
 )"
 SOURCE_BILLING_JSON="$(
   gcloud billing projects describe "${SOURCE_BILLING_PROJECT_ID}" \
-    --billing-project="${SOURCE_BILLING_PROJECT_ID}" \
     --quiet \
     --format=json
 )"
