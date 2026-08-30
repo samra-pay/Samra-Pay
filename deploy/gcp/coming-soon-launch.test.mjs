@@ -337,6 +337,25 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
   );
 });
 
+test("imports the validator without executing its command-line entrypoint", () => {
+  const validatorUrl = new URL(
+    "./validate-coming-soon-launch.mjs",
+    import.meta.url,
+  ).href;
+  const output = execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      "await import(process.argv[1]);",
+      validatorUrl,
+    ],
+    { encoding: "utf8" },
+  );
+
+  assert.equal(output, "");
+});
+
 test("plans locally and contains no cloud, deployment, data, or DNS mutation", () => {
   const output = execFileSync(
     "bash",
