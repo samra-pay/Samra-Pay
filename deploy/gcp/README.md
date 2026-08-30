@@ -17,17 +17,20 @@ reading cloud state: project `samra-pay-production` (`382465561715`), region
 `us-east4`, `customer-pii` data classification, a USD 25 monthly budget alert,
 the same billing account as staging, and canonical `www.samrapay.com`. The
 project, labels, billing match, and exact project-scoped budget passed an
-independent read-only review at source SHA
-`7a28fb4df556a4a32f882544b9446275817b1c4f`. The reviewer does not create
-infrastructure, deploy, collect waitlist data, route traffic, or change DNS.
+independent read-only review. The protected keyless workflow repeated that
+review at source SHA `22e7d644c25d169532018534fa25ce8b6801744a` in GitHub run
+`33334655501`; its evidence checksum is
+`083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b`. The
+reviewer does not create infrastructure, deploy, collect waitlist data, route
+traffic, or change DNS.
 
 `production-foundation-preflight.json` and
-`activate-production-foundation-preflight.sh` prepare the replacement for
-repeated Cloud Shell reviews. One separately authorized bootstrap can enable
-only seven control-plane APIs, create one dedicated keyless auditor and exact
-GitHub OIDC trust, grant five exact permissions on production, and grant only
-`resourcemanager.projects.get` on staging. It grants no billing-account role.
-The manual `Production foundation preflight` workflow then runs the same
+`activate-production-foundation-preflight.sh` replaced repeated Cloud Shell
+reviews. The authorized bootstrap enabled only seven control-plane APIs,
+created one dedicated keyless auditor and exact GitHub OIDC trust, granted five
+exact permissions on production, and granted only
+`resourcemanager.projects.get` on staging. It granted no billing-account role.
+The manual `Production foundation preflight` workflow now runs the same
 read-only review from `main` through the protected
 `production-foundation-review` environment and retains machine-readable
 evidence for 365 days. Moving the repository to the Enterprise organization
@@ -40,15 +43,20 @@ fail-closed recovery controller: it reuses exact state and rejects drift. Its
 scope still excludes API enablement, infrastructure, deployment, traffic,
 customer data, vendors, and DNS.
 
-`coming-soon-production-foundation.json` is the next plan-only boundary. It
-locks the exact 15-API allowlist, one immutable production image repository,
-five keyless identities, least-privilege IAM plan, and two empty database-secret
-metadata records. `plan-coming-soon-production-foundation.sh --plan` validates
-that contract locally for USD 0 and deliberately has no review or apply mode.
-The production project number, region, classification, billing match, exact
-budget, domain, and canonical host are verified. The infrastructure foundation
-itself remains unapplied. Its remaining gates are the keyless preflight trust
-and a separately reviewed infrastructure apply.
+`coming-soon-production-foundation.json` is now a prepared but unapplied
+boundary. It locks the exact 15-API allowlist, one immutable production image
+repository, five keyless identities, least-privilege IAM plan, and two empty
+database-secret metadata records. `plan-coming-soon-production-foundation.sh
+--plan` remains an offline USD 0 plan with no apply mode.
+
+`activate-coming-soon-production-foundation.sh` is the separate human-admin
+controller. Its `--review` mode reverifies project, billing, budget, Git SHA,
+existing resources, keys, IAM, and secret-version absence before the exact
+authorization sentinel is accepted. It is resumable and rejects drift instead
+of overwriting it. `audit-coming-soon-production-foundation.sh` then performs a
+fresh read-only post-audit. No GitHub apply workflow is authorized. The
+infrastructure foundation remains unapplied; its only remaining gate is a
+separately reviewed and authorized foundation apply.
 
 ## Current verified staging state
 

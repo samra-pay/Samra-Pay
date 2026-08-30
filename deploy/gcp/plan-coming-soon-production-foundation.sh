@@ -37,6 +37,12 @@ Confirmed production boundary:
 
 The USD 25 budget is an alert boundary, not a spending cap.
 
+Protected preflight evidence:
+  - Status: passed, read-only
+  - Source: 22e7d644c25d169532018534fa25ce8b6801744a
+  - GitHub run: 33334655501
+  - Evidence SHA-256: 083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b
+
 A later, separately authorized foundation apply would be limited to:
   1. the approved production labels and 15 explicitly reviewed APIs;
   2. one regional immutable samra-production Docker repository;
@@ -49,11 +55,12 @@ It cannot create a VPC, database, secret value, Cloud Run workload, load
 balancer, certificate, public endpoint, customer record, waitlist submission,
 vendor integration, production data, or Squarespace DNS record.
 
-Remaining blockers:
-  - keyless production foundation preflight trust and its protected GitHub
-    environment; and
+The guarded activation controller and independent post-audit are implemented,
+but automatic or GitHub-based apply remains disabled.
+
+Remaining blocker:
   - a separately reviewed and authorized production infrastructure foundation
-    apply.
+    apply using the exact human-admin controller.
 
 PLAN COMPLETE — NO CLOUD OR DNS CHANGES
 PLAN

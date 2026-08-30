@@ -31,6 +31,14 @@ const SERVICE_ACCOUNTS = {
   migrations: "samra-migrations-production",
 };
 
+const SERVICE_ACCOUNT_DISPLAY_NAMES = {
+  build: "Samra production Cloud Build",
+  deployer: "Samra production deployer",
+  api: "Samra production API",
+  customerWeb: "Samra production customer web",
+  migrations: "Samra production migrations",
+};
+
 const PERMITTED_PROJECT_ROLES = new Set([
   "roles/logging.logWriter",
   "roles/serviceusage.serviceUsageConsumer",
@@ -58,12 +66,13 @@ export function validateComingSoonProductionFoundation(
   const validatedLaunch = validateComingSoonLaunch(launch);
   assert(
     foundation.schemaVersion === 1 &&
-      foundation.status === "plan-only" &&
+      foundation.status === "prepared-not-applied" &&
       foundation.phase === "coming-soon-production-foundation" &&
-      foundation.decisionStatus === "project-verified-foundation-not-applied" &&
+      foundation.decisionStatus ===
+        "preflight-verified-foundation-not-applied" &&
       foundation.applyAuthorized === false &&
       foundation.cloudStateReadByPlan === false,
-    "The production foundation must remain a local plan only",
+    "The production foundation must remain prepared but unapplied",
   );
   assert(
     foundation.linkedLaunchContract === "deploy/gcp/coming-soon-launch.json" &&
@@ -110,6 +119,23 @@ export function validateComingSoonProductionFoundation(
         launch.productionBoundary.billingAccountSourceProjectId,
     "The production foundation and launch contract decisions must match",
   );
+  const preflight = foundation.preflightEvidence;
+  assert(
+    preflight.status === "passed" &&
+      preflight.mode === "read-only" &&
+      preflight.sourceSha === "22e7d644c25d169532018534fa25ce8b6801744a" &&
+      preflight.workflowRunId === "33334655501" &&
+      preflight.workflowRunUrl ===
+        "https://github.com/haileleuld87/Samra-Pay/actions/runs/33334655501" &&
+      preflight.artifactName ===
+        "production-foundation-preflight-22e7d644c25d169532018534fa25ce8b6801744a-run-33334655501-attempt-1" &&
+      preflight.sha256 ===
+        "083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b" &&
+      preflight.operator ===
+        "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com" &&
+      preflight.cloudMutation === false,
+    "The protected keyless production preflight evidence drifted",
+  );
   assert(
     foundation.projectLabels.environment === "production" &&
       foundation.projectLabels.application === "samra-pay" &&
@@ -140,6 +166,11 @@ export function validateComingSoonProductionFoundation(
     JSON.stringify(foundation.serviceAccounts) ===
       JSON.stringify(SERVICE_ACCOUNTS),
     "The five production trust boundaries changed",
+  );
+  assert(
+    JSON.stringify(foundation.serviceAccountDisplayNames) ===
+      JSON.stringify(SERVICE_ACCOUNT_DISPLAY_NAMES),
+    "The production service-account display names changed",
   );
   const accountIds = Object.values(foundation.serviceAccounts);
   assert(
@@ -189,10 +220,18 @@ export function validateComingSoonProductionFoundation(
         JSON.stringify(["migrations"]) &&
       resources.runtimeServiceAccountUser.principal === "deployer" &&
       JSON.stringify(resources.runtimeServiceAccountUser.targets) ===
-        JSON.stringify(["api", "customerWeb", "migrations"]) &&
-      resources.privateApiInvoker.principal === "customerWeb" &&
-      resources.privateApiInvoker.target === "api",
+        JSON.stringify(["api", "customerWeb", "migrations"]),
     "Resource-level production trust boundaries changed",
+  );
+  assert(
+    foundation.deferredRoleBindings.privateApiInvoker.principal ===
+      "customerWeb" &&
+      foundation.deferredRoleBindings.privateApiInvoker.target === "api" &&
+      foundation.deferredRoleBindings.privateApiInvoker.applyPhase ===
+        "api-service-deployment" &&
+      foundation.deferredRoleBindings.privateApiInvoker.reason ===
+        "Cloud Run service IAM cannot exist before the private API service",
+    "Private API invocation must remain deferred until service deployment",
   );
 
   assert(
@@ -244,10 +283,26 @@ export function validateComingSoonProductionFoundation(
     "Production cost gates must remain explicit",
   );
   assert(
-    foundation.blockedOn.length === 2 &&
-      foundation.blockedOn.includes(
-        "keyless production foundation preflight trust and protected GitHub environment",
-      ) &&
+    foundation.activation.controller ===
+      "deploy/gcp/activate-coming-soon-production-foundation.sh" &&
+      foundation.activation.inspector ===
+        "deploy/gcp/inspect-coming-soon-production-foundation.mjs" &&
+      foundation.activation.postAudit ===
+        "deploy/gcp/audit-coming-soon-production-foundation.sh" &&
+      foundation.activation.operator === "me@davidhaile.com" &&
+      foundation.activation.authorizationEnvironment ===
+        "SAMRA_GCP_PRODUCTION_FOUNDATION_APPLY" &&
+      foundation.activation.authorizationValue ===
+        "AUTHORIZED_COMING_SOON_PRODUCTION_FOUNDATION" &&
+      foundation.activation.reviewBeforeApply === true &&
+      foundation.activation.postAuditRequired === true &&
+      foundation.activation.resumable === true &&
+      foundation.activation.automaticApply === false &&
+      foundation.activation.githubWorkflowAuthorized === false,
+    "The guarded production foundation activation boundary changed",
+  );
+  assert(
+    foundation.blockedOn.length === 1 &&
       foundation.blockedOn.includes(
         "separately reviewed and authorized production infrastructure foundation apply",
       ),
@@ -264,7 +319,7 @@ export function validateComingSoonProductionFoundation(
 
   return Object.freeze({
     schemaVersion: foundation.schemaVersion,
-    status: "validated-plan-only",
+    status: "validated-prepared-not-applied",
     phase: foundation.phase,
     boundaryStatus: foundation.decisionStatus,
     projectId: boundary.projectId,
@@ -276,10 +331,42 @@ export function validateComingSoonProductionFoundation(
     apiCount: foundation.samraManagedApis.length,
     serviceAccountCount: accountIds.length,
     secretMetadataCount: foundation.secretMetadata.length,
+    preflightEvidenceStatus: preflight.status,
+    activationController: foundation.activation.controller,
     estimatedMonthlyPlanCostUsd: 0,
     cloudStateRead: false,
     cloudMutationAuthorized: false,
     dnsMutationAuthorized: false,
+  });
+}
+
+export function validateProductionFoundationActivationEnvironment(
+  environment = process.env,
+) {
+  const expected = {
+    projectId: "samra-pay-production",
+    projectNumber: "382465561715",
+    organizationId: "614833350075",
+    region: "us-east4",
+    operator: "me@davidhaile.com",
+    dataClassification: "customer-pii",
+    monthlyBudgetUsd: "25",
+  };
+  assert(
+    environment.SAMRA_GCP_PROJECT_ID === expected.projectId &&
+      environment.SAMRA_GCP_PROJECT_NUMBER === expected.projectNumber &&
+      environment.SAMRA_GCP_ORGANIZATION_ID === expected.organizationId &&
+      environment.SAMRA_GCP_REGION === expected.region &&
+      environment.SAMRA_GCP_OPERATOR_ACCOUNT === expected.operator &&
+      environment.SAMRA_GCP_DATA_CLASSIFICATION ===
+        expected.dataClassification &&
+      environment.SAMRA_GCP_MONTHLY_BUDGET_USD === expected.monthlyBudgetUsd &&
+      /^[0-9a-f]{40}$/u.test(environment.SAMRA_GCP_EXPECTED_SHA ?? ""),
+    "The production foundation activation environment drifted",
+  );
+  return Object.freeze({
+    ...expected,
+    expectedSha: environment.SAMRA_GCP_EXPECTED_SHA,
   });
 }
 
