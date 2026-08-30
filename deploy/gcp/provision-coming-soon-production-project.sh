@@ -123,25 +123,17 @@ SOURCE_BILLING_RESULT="$(
   ' "${VALIDATOR_URL}" "${SOURCE_BILLING_JSON}" "${BILLING_ACCOUNT_JSON}"
 )"
 
-describe_production_project() {
-  local output
-  if output="$(gcloud projects describe "${PROJECT_ID}" --format=json 2>&1)"; then
-    printf '%s' "${output}"
-    return 0
-  fi
-  if [[ "${output}" == *"NOT_FOUND"* || "${output}" == *"not found"* || "${output}" == *"was not found"* ]]; then
-    printf 'null'
-    return 0
-  fi
-  printf '%s\n' "${output}" >&2
-  echo "STOP: production project state could not be read safely" >&2
-  return 1
+list_production_project_inventory() {
+  gcloud projects list \
+    --filter="parent.type=organization AND parent.id=${ORGANIZATION_ID} AND projectId=${PROJECT_ID}" \
+    --limit=2 \
+    --format=json
 }
 
-classify_project() {
+classify_project_inventory() {
   node --input-type=module -e '
     const module = await import(process.argv[1]);
-    process.stdout.write(JSON.stringify(module.classifyObservedProductionProject(JSON.parse(process.argv[2]))));
+    process.stdout.write(JSON.stringify(module.classifyObservedProductionProjectInventory(JSON.parse(process.argv[2]))));
   ' "${VALIDATOR_URL}" "$1"
 }
 
@@ -167,8 +159,8 @@ json_field() {
   ' "$1" "$2"
 }
 
-PROJECT_JSON="$(describe_production_project)"
-PROJECT_STATE_JSON="$(classify_project "${PROJECT_JSON}")"
+PROJECT_INVENTORY_JSON="$(list_production_project_inventory)"
+PROJECT_STATE_JSON="$(classify_project_inventory "${PROJECT_INVENTORY_JSON}")"
 PROJECT_STATE="$(json_field "${PROJECT_STATE_JSON}" state)"
 PROJECT_NUMBER="$(json_field "${PROJECT_STATE_JSON}" projectNumber)"
 
@@ -221,20 +213,21 @@ if [[ "${PROJECT_STATE}" == "missing" ]]; then
     --no-enable-cloud-apis \
     --quiet
 
-  PROJECT_JSON='null'
+  PROJECT_STATE="missing"
   for attempt in {1..12}; do
-    if PROJECT_JSON="$(gcloud projects describe "${PROJECT_ID}" --format=json 2>/dev/null)"; then
+    PROJECT_INVENTORY_JSON="$(list_production_project_inventory)"
+    PROJECT_STATE_JSON="$(classify_project_inventory "${PROJECT_INVENTORY_JSON}")"
+    PROJECT_STATE="$(json_field "${PROJECT_STATE_JSON}" state)"
+    PROJECT_NUMBER="$(json_field "${PROJECT_STATE_JSON}" projectNumber)"
+    if [[ "${PROJECT_STATE}" == "ready" ]]; then
       break
     fi
     sleep 5
   done
-  [[ "${PROJECT_JSON}" != "null" ]] || {
+  [[ "${PROJECT_STATE}" == "ready" ]] || {
     echo "STOP: created project did not become readable within 60 seconds" >&2
     exit 1
   }
-  PROJECT_STATE_JSON="$(classify_project "${PROJECT_JSON}")"
-  PROJECT_STATE="$(json_field "${PROJECT_STATE_JSON}" state)"
-  PROJECT_NUMBER="$(json_field "${PROJECT_STATE_JSON}" projectNumber)"
 fi
 [[ "${PROJECT_STATE}" == "ready" ]] || {
   echo "STOP: production project did not reach the exact ready state" >&2

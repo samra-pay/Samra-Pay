@@ -30,7 +30,9 @@ resumable and stops on existing drift. It can create only the exact project,
 attach only the open billing account already used by staging, and create one
 project-only monthly alert. It cannot move a different billing link, enable an
 API, create infrastructure, deploy, route traffic, collect data, activate a
-vendor, or change DNS.
+vendor, or change DNS. Missing-project detection uses an exact organization
+inventory because Google Cloud may mask an absent global project ID as a
+permission error on direct lookup.
 
 `coming-soon-production-foundation.json` is the next plan-only boundary. It
 locks the exact 15-API allowlist, one immutable production image repository,
