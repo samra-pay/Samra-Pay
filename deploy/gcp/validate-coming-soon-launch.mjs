@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 export function readComingSoonLaunch() {
   return JSON.parse(
@@ -398,7 +399,10 @@ export function validateObservedProductionBudgets(
   });
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1])) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   try {
     process.stdout.write(`${JSON.stringify(validateComingSoonLaunch())}\n`);
   } catch (error) {
