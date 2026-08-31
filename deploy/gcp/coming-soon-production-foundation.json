@@ -182,6 +182,7 @@
     "githubWorkflowAuthorized": false
   },
   "blockedOn": [
-    "separately reviewed and authorized production data foundation apply"
+    "separately reviewed database-credential, migration, and deployment applies",
+    "privacy approval before customer data or public traffic"
   ]
 }

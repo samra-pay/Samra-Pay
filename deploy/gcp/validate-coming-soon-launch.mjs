@@ -28,7 +28,7 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
   );
   assert(
     contract.productionBoundary.decisionStatus ===
-      "foundation-applied-verified-data-foundation-not-applied" &&
+      "foundation-and-data-foundation-applied-verified-deployment-not-applied" &&
       contract.productionBoundary.projectId === "samra-pay-production" &&
       contract.productionBoundary.projectNumber === "382465561715" &&
       contract.productionBoundary.organizationId === "614833350075" &&
@@ -177,10 +177,10 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     JSON.stringify(contract.blockedOn) ===
       JSON.stringify([
         "final Sites refresh and visual approval",
-        "separate production data foundation and pinned database secrets",
+        "pinned production database credentials and migration review",
         "privacy notice and consent wording approval",
         "load balancer, Cloud Armor, alerting, and rollback review",
-        "separate data-foundation, database-credential, migration, and deployment apply authorizations",
+        "separate database-credential, migration, and deployment apply authorizations",
         "explicit deployment and DNS cutover authorization",
       ]),
     "Launch blockers changed",

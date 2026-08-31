@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
-  "status": "controller-prepared-not-applied",
+  "status": "applied-verified",
   "phase": "coming-soon-production-data-foundation",
+  "decisionStatus": "data-foundation-applied-verified",
   "applyAuthorized": false,
   "cloudStateReadByPlan": false,
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
@@ -13,6 +14,31 @@
     "serviceAccountCount": 5,
     "secretMetadataCount": 2,
     "secretVersionCount": 0
+  },
+  "activationEvidence": {
+    "status": "passed-independent-post-audit",
+    "sourceSha": "7977afc1a550521fefe1ae6df9acb787f75b1ed4",
+    "appliedOn": "2026-08-31",
+    "operator": "me@davidhaile.com",
+    "observedState": "ready",
+    "networkCount": 1,
+    "subnetCount": 1,
+    "privateServicesAccessCount": 1,
+    "serviceConnectionCount": 1,
+    "instanceCount": 1,
+    "databaseCount": 1,
+    "secretVersionCount": 0,
+    "cloudRunServiceCount": 0,
+    "cloudRunJobCount": 0,
+    "cloudSqlCreateOperationId": "dd0e1c32-0518-4468-ad9d-beb70000002c",
+    "cloudSqlCreateOperationStatus": "DONE",
+    "cloudSqlCreateOperationCompletedAt": "2026-08-31T20:47:25.294Z",
+    "postAuditCompletedAt": "2026-08-31T20:50:09Z",
+    "guardedMonthlyEstimateUsd": 81.92,
+    "approvedMaximumMonthlyInfrastructureSpendUsd": 100,
+    "applyLogSha256": "f5f488b460d3d7833840471c3a0aff7217972a2bea616ee98b4f1885e19269f4",
+    "cloudChangesLimitedToDataFoundation": true,
+    "cloudOrDnsChangesMadeByPostAudit": false
   },
   "productionBoundary": {
     "projectId": "samra-pay-production",
@@ -127,13 +153,12 @@
     "privacyNoticeApproved": false
   },
   "plan": {
-    "mode": "guarded-review-apply-controller",
+    "mode": "guarded-review-recovery-controller",
     "hasReviewMode": true,
     "hasApplyMode": true,
-    "futureApplyMustBeSeparateController": false,
-    "futureApplyMustReverifyFoundation": true,
-    "futureApplyMustBeResumableAndRejectDrift": true,
-    "futureApplyProposalCreatesOnly": [
+    "recoveryMustReverifyFoundation": true,
+    "recoveryMustBeResumableAndRejectDrift": true,
+    "recoveryCreatesOrReusesOnly": [
       "one custom-mode production VPC",
       "one regional private production subnet",
       "one private services access allocation and connection",
@@ -168,7 +193,7 @@
     "customerDataExists": false
   },
   "blockedOn": [
-    "exact-SHA live review and separately authorized production data foundation apply",
-    "retention, deletion, access ownership, and privacy approval before customer data"
+    "retention, deletion, access ownership, and privacy approval before customer data",
+    "separately reviewed database-credential, migration, deployment, public-traffic, and DNS authorizations"
   ]
 }

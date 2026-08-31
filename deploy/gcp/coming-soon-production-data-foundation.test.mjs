@@ -86,11 +86,12 @@ function readyObservation() {
   };
 }
 
-test("locks an approved, guarded private production data controller", () => {
+test("locks one applied and independently verified private data foundation", () => {
   assert.deepEqual(validateComingSoonProductionDataFoundation(), {
     schemaVersion: 1,
-    status: "validated-controller-prepared-not-applied",
+    status: "validated-applied-verified",
     phase: "coming-soon-production-data-foundation",
+    boundaryStatus: "data-foundation-applied-verified",
     projectId: "samra-pay-production",
     region: "us-east4",
     network: "samra-production-vpc",
@@ -106,6 +107,9 @@ test("locks an approved, guarded private production data controller", () => {
     guardedMonthlyEstimateUsd: 81.92,
     estimateValidThrough: "2026-09-07",
     temporaryZonalPostureAccepted: true,
+    activationEvidenceStatus: "passed-independent-post-audit",
+    activationSourceSha: "7977afc1a550521fefe1ae6df9acb787f75b1ed4",
+    observedState: "ready",
     liveCostDecisionRequired: false,
     customerDataAuthorized: false,
     cloudStateRead: false,
@@ -132,6 +136,11 @@ test("rejects project, network, database, cost, and customer-data drift", () => 
     (value) =>
       (value.availabilityDecision.temporaryZonalPostureAccepted = false),
     (value) => (value.customerDataGate.customerDataCreationAuthorized = true),
+    (value) => (value.activationEvidence.sourceSha = "a".repeat(40)),
+    (value) => (value.activationEvidence.observedState = "missing-exact-state"),
+    (value) => (value.activationEvidence.secretVersionCount = 1),
+    (value) => (value.activationEvidence.cloudRunServiceCount = 1),
+    (value) => (value.activationEvidence.applyLogSha256 = "a".repeat(64)),
     (value) => (value.applyAuthorized = true),
   ]) {
     const contract = structuredClone(readComingSoonProductionDataFoundation());

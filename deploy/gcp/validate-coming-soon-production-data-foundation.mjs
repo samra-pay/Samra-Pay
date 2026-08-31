@@ -62,11 +62,12 @@ export function validateComingSoonProductionDataFoundation(
   const validatedLaunch = validateComingSoonLaunch(launch);
   assert(
     contract.schemaVersion === 1 &&
-      contract.status === "controller-prepared-not-applied" &&
+      contract.status === "applied-verified" &&
       contract.phase === "coming-soon-production-data-foundation" &&
+      contract.decisionStatus === "data-foundation-applied-verified" &&
       contract.applyAuthorized === false &&
       contract.cloudStateReadByPlan === false,
-    "The production data foundation must remain controller-prepared and unapplied",
+    "The production data foundation must remain applied, verified, and closed to standing apply authorization",
   );
   assert(
     contract.linkedLaunchContract === "deploy/gcp/coming-soon-launch.json" &&
@@ -88,6 +89,38 @@ export function validateComingSoonProductionDataFoundation(
       evidence.secretMetadataCount === foundation.secretMetadata.length &&
       evidence.secretVersionCount === 0,
     "The production foundation prerequisite evidence drifted",
+  );
+
+  const activationEvidence = contract.activationEvidence;
+  assert(
+    activationEvidence.status === "passed-independent-post-audit" &&
+      activationEvidence.sourceSha ===
+        "7977afc1a550521fefe1ae6df9acb787f75b1ed4" &&
+      activationEvidence.appliedOn === "2026-08-31" &&
+      activationEvidence.operator === "me@davidhaile.com" &&
+      activationEvidence.observedState === "ready" &&
+      activationEvidence.networkCount === 1 &&
+      activationEvidence.subnetCount === 1 &&
+      activationEvidence.privateServicesAccessCount === 1 &&
+      activationEvidence.serviceConnectionCount === 1 &&
+      activationEvidence.instanceCount === 1 &&
+      activationEvidence.databaseCount === 1 &&
+      activationEvidence.secretVersionCount === 0 &&
+      activationEvidence.cloudRunServiceCount === 0 &&
+      activationEvidence.cloudRunJobCount === 0 &&
+      activationEvidence.cloudSqlCreateOperationId ===
+        "dd0e1c32-0518-4468-ad9d-beb70000002c" &&
+      activationEvidence.cloudSqlCreateOperationStatus === "DONE" &&
+      activationEvidence.cloudSqlCreateOperationCompletedAt ===
+        "2026-08-31T20:47:25.294Z" &&
+      activationEvidence.postAuditCompletedAt === "2026-08-31T20:50:09Z" &&
+      activationEvidence.guardedMonthlyEstimateUsd === 81.92 &&
+      activationEvidence.approvedMaximumMonthlyInfrastructureSpendUsd === 100 &&
+      activationEvidence.applyLogSha256 ===
+        "f5f488b460d3d7833840471c3a0aff7217972a2bea616ee98b4f1885e19269f4" &&
+      activationEvidence.cloudChangesLimitedToDataFoundation === true &&
+      activationEvidence.cloudOrDnsChangesMadeByPostAudit === false,
+    "The production data foundation activation evidence drifted",
   );
 
   const boundary = contract.productionBoundary;
@@ -256,13 +289,12 @@ export function validateComingSoonProductionDataFoundation(
 
   const plan = contract.plan;
   assert(
-    plan.mode === "guarded-review-apply-controller" &&
+    plan.mode === "guarded-review-recovery-controller" &&
       plan.hasReviewMode === true &&
       plan.hasApplyMode === true &&
-      plan.futureApplyMustBeSeparateController === false &&
-      plan.futureApplyMustReverifyFoundation === true &&
-      plan.futureApplyMustBeResumableAndRejectDrift === true &&
-      plan.futureApplyProposalCreatesOnly.length === 5 &&
+      plan.recoveryMustReverifyFoundation === true &&
+      plan.recoveryMustBeResumableAndRejectDrift === true &&
+      plan.recoveryCreatesOrReusesOnly.length === 5 &&
       plan.doesNotCreate.length === 6 &&
       plan.doesNotCreate.some((value) => /customer data/u.test(value)) &&
       plan.doesNotCreate.some((value) => /Cloud Run/u.test(value)) &&
@@ -296,11 +328,11 @@ export function validateComingSoonProductionDataFoundation(
     "The production data rollback boundary drifted",
   );
   assert(
-    contract.blockedOn.length === 2 &&
-      contract.blockedOn.some((value) =>
-        /exact-SHA live review/u.test(value),
-      ) &&
-      contract.blockedOn.some((value) => /privacy/u.test(value)),
+    JSON.stringify(contract.blockedOn) ===
+      JSON.stringify([
+        "retention, deletion, access ownership, and privacy approval before customer data",
+        "separately reviewed database-credential, migration, deployment, public-traffic, and DNS authorizations",
+      ]),
     "The production data decision gates drifted",
   );
 
@@ -314,8 +346,9 @@ export function validateComingSoonProductionDataFoundation(
 
   return Object.freeze({
     schemaVersion: contract.schemaVersion,
-    status: "validated-controller-prepared-not-applied",
+    status: "validated-applied-verified",
     phase: contract.phase,
+    boundaryStatus: contract.decisionStatus,
     projectId: boundary.projectId,
     region: boundary.region,
     network: network.name,
@@ -332,6 +365,9 @@ export function validateComingSoonProductionDataFoundation(
     guardedMonthlyEstimateUsd: estimate.guardedMonthlyEstimateUsd,
     estimateValidThrough: estimate.validThrough,
     temporaryZonalPostureAccepted: true,
+    activationEvidenceStatus: activationEvidence.status,
+    activationSourceSha: activationEvidence.sourceSha,
+    observedState: activationEvidence.observedState,
     liveCostDecisionRequired: false,
     customerDataAuthorized: false,
     cloudStateRead: false,
