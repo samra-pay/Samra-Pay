@@ -14,6 +14,10 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function ceilMoney(value) {
+  return Math.ceil((value - Number.EPSILON) * 100) / 100;
+}
+
 function ipv4ToNumber(address) {
   assert(isIP(address) === 4, `Invalid IPv4 address: ${address}`);
   return address
@@ -58,11 +62,11 @@ export function validateComingSoonProductionDataFoundation(
   const validatedLaunch = validateComingSoonLaunch(launch);
   assert(
     contract.schemaVersion === 1 &&
-      contract.status === "decision-required-not-applied" &&
+      contract.status === "controller-prepared-not-applied" &&
       contract.phase === "coming-soon-production-data-foundation" &&
       contract.applyAuthorized === false &&
       contract.cloudStateReadByPlan === false,
-    "The production data foundation must remain decision-gated and unapplied",
+    "The production data foundation must remain controller-prepared and unapplied",
   );
   assert(
     contract.linkedLaunchContract === "deploy/gcp/coming-soon-launch.json" &&
@@ -165,16 +169,79 @@ export function validateComingSoonProductionDataFoundation(
   );
 
   const cost = contract.costGate;
+  const estimate = cost.estimate;
+  const components = estimate.components;
+  const calculatedBaseline = ceilMoney(
+    components.oneVcpuHourlyUsd * estimate.hoursPerMonth +
+      components.memoryGib *
+        components.memoryGibHourlyUsd *
+        estimate.hoursPerMonth +
+      components.ssdStorageGib *
+        components.ssdStorageGibHourlyUsd *
+        estimate.hoursPerMonth +
+      components.estimatedBackupGib *
+        components.backupGibHourlyUsd *
+        estimate.hoursPerMonth,
+  );
+  const calculatedContingency = ceilMoney(
+    calculatedBaseline * (estimate.contingencyPercent / 100),
+  );
+  const calculatedGuardedEstimate = ceilMoney(
+    calculatedBaseline + calculatedContingency,
+  );
   assert(
     cost.monthlyBudgetAlertUsd ===
       foundation.productionBoundary.monthlyBudgetUsd &&
       cost.budgetIsSpendingCap === false &&
       cost.localPlanExecutionCostUsd === 0 &&
       cost.liveGoogleCloudEstimateRequiredBeforeApply === true &&
-      cost.estimateApproved === false &&
-      cost.approvedMaximumMonthlyInfrastructureSpendUsd === null &&
+      cost.estimateApproved === true &&
+      cost.approvedBy === "David Haile" &&
+      cost.approvedOn === "2026-08-31" &&
+      cost.approvedMaximumMonthlyInfrastructureSpendUsd === 100 &&
       cost.budgetCompatibilityClaim === false,
-    "The live cost decision must remain unresolved before apply",
+    "The production data cost approval drifted",
+  );
+  assert(
+    estimate.currency === "USD" &&
+      estimate.region === boundary.region &&
+      estimate.asOf === "2026-08-31" &&
+      estimate.validThrough === "2026-09-07" &&
+      estimate.hoursPerMonth === 730 &&
+      components.oneVcpuHourlyUsd === 0.054 &&
+      components.memoryGib === 3.75 &&
+      components.memoryGibHourlyUsd === 0.009 &&
+      components.ssdStorageGib === database.diskSizeGb &&
+      components.ssdStorageGibHourlyUsd === 0.000465753 &&
+      components.estimatedBackupGib === database.diskSizeGb &&
+      components.backupGibHourlyUsd === 0.000109589 &&
+      estimate.baselineMonthlyUsd === calculatedBaseline &&
+      estimate.contingencyPercent === 20 &&
+      estimate.contingencyMonthlyUsd === calculatedContingency &&
+      estimate.guardedMonthlyEstimateUsd === calculatedGuardedEstimate &&
+      estimate.guardedMonthlyEstimateUsd <
+        cost.approvedMaximumMonthlyInfrastructureSpendUsd &&
+      estimate.headroomBelowMaximumUsd ===
+        ceilMoney(
+          cost.approvedMaximumMonthlyInfrastructureSpendUsd -
+            estimate.guardedMonthlyEstimateUsd,
+        ) &&
+      estimate.excludes.length === 4 &&
+      JSON.stringify(estimate.sources) ===
+        JSON.stringify([
+          "https://cloud.google.com/sql/pricing",
+          "https://cloud.google.com/sql/docs/postgres/machine-series-overview",
+        ]),
+    "The production data estimate or USD 100 hard stop drifted",
+  );
+  const availability = contract.availabilityDecision;
+  assert(
+    availability.temporaryZonalPostureAccepted === true &&
+      availability.acceptedBy === "David Haile" &&
+      availability.acceptedOn === "2026-08-31" &&
+      availability.scope === "coming-soon foundation only" &&
+      availability.regionalHaRequiredBeforeFinancialWorkloads === true,
+    "The temporary zonal availability decision drifted",
   );
   const customerData = contract.customerDataGate;
   assert(
@@ -189,10 +256,10 @@ export function validateComingSoonProductionDataFoundation(
 
   const plan = contract.plan;
   assert(
-    plan.mode === "local-only" &&
-      plan.hasReviewMode === false &&
-      plan.hasApplyMode === false &&
-      plan.futureApplyMustBeSeparateController === true &&
+    plan.mode === "guarded-review-apply-controller" &&
+      plan.hasReviewMode === true &&
+      plan.hasApplyMode === true &&
+      plan.futureApplyMustBeSeparateController === false &&
       plan.futureApplyMustReverifyFoundation === true &&
       plan.futureApplyMustBeResumableAndRejectDrift === true &&
       plan.futureApplyProposalCreatesOnly.length === 5 &&
@@ -200,14 +267,38 @@ export function validateComingSoonProductionDataFoundation(
       plan.doesNotCreate.some((value) => /customer data/u.test(value)) &&
       plan.doesNotCreate.some((value) => /Cloud Run/u.test(value)) &&
       plan.doesNotCreate.some((value) => /Squarespace DNS/u.test(value)),
-    "The local-only plan or future apply boundary drifted",
+    "The guarded plan or apply boundary drifted",
+  );
+  const activation = contract.activation;
+  assert(
+    activation.controller ===
+      "deploy/gcp/activate-coming-soon-production-data-foundation.sh" &&
+      activation.inspector ===
+        "deploy/gcp/inspect-coming-soon-production-data-foundation.mjs" &&
+      activation.postAudit ===
+        "deploy/gcp/audit-coming-soon-production-data-foundation.sh" &&
+      activation.authorizationEnvironment ===
+        "SAMRA_GCP_PRODUCTION_DATA_FOUNDATION_APPLY" &&
+      activation.authorizationValue ===
+        "AUTHORIZED_COMING_SOON_PRODUCTION_DATA_FOUNDATION" &&
+      activation.reviewBeforeApply === true &&
+      activation.postAuditRequired === true &&
+      activation.resumable === true &&
+      activation.automaticApply === false &&
+      activation.githubWorkflowAuthorized === false,
+    "The production data activation controller boundary drifted",
   );
   assert(
-    contract.blockedOn.length === 4 &&
-      contract.blockedOn.some((value) => /maximum monthly/u.test(value)) &&
-      contract.blockedOn.some((value) => /zonal/u.test(value)) &&
+    contract.rollback.automaticDestructiveRollback === false &&
+      /resume only/u.test(contract.rollback.partialApplyRecovery) &&
+      contract.rollback.destructiveRemovalRequiresSeparateApproval === true &&
+      contract.rollback.customerDataExists === false,
+    "The production data rollback boundary drifted",
+  );
+  assert(
+    contract.blockedOn.length === 2 &&
       contract.blockedOn.some((value) =>
-        /authorized production data/u.test(value),
+        /exact-SHA live review/u.test(value),
       ) &&
       contract.blockedOn.some((value) => /privacy/u.test(value)),
     "The production data decision gates drifted",
@@ -223,7 +314,7 @@ export function validateComingSoonProductionDataFoundation(
 
   return Object.freeze({
     schemaVersion: contract.schemaVersion,
-    status: "validated-decision-required-not-applied",
+    status: "validated-controller-prepared-not-applied",
     phase: contract.phase,
     projectId: boundary.projectId,
     region: boundary.region,
@@ -236,13 +327,134 @@ export function validateComingSoonProductionDataFoundation(
     availabilityType: database.availabilityType,
     database: database.applicationDatabase.name,
     monthlyBudgetAlertUsd: cost.monthlyBudgetAlertUsd,
-    liveCostDecisionRequired: true,
+    approvedMaximumMonthlyInfrastructureSpendUsd:
+      cost.approvedMaximumMonthlyInfrastructureSpendUsd,
+    guardedMonthlyEstimateUsd: estimate.guardedMonthlyEstimateUsd,
+    estimateValidThrough: estimate.validThrough,
+    temporaryZonalPostureAccepted: true,
+    liveCostDecisionRequired: false,
     customerDataAuthorized: false,
     cloudStateRead: false,
     cloudMutationAuthorized: false,
     deploymentAuthorized: false,
     dnsAuthorized: false,
   });
+}
+
+export function validateProductionDataCostEstimateFreshness(
+  contract = readComingSoonProductionDataFoundation(),
+  now = new Date(),
+) {
+  validateComingSoonProductionDataFoundation(contract);
+  const estimate = contract.costGate.estimate;
+  const currentDate = now.toISOString().slice(0, 10);
+  assert(
+    currentDate >= estimate.asOf && currentDate <= estimate.validThrough,
+    `The reviewed production data estimate expired on ${estimate.validThrough}`,
+  );
+  return Object.freeze({
+    asOf: estimate.asOf,
+    validThrough: estimate.validThrough,
+    guardedMonthlyEstimateUsd: estimate.guardedMonthlyEstimateUsd,
+    approvedMaximumMonthlyInfrastructureSpendUsd:
+      contract.costGate.approvedMaximumMonthlyInfrastructureSpendUsd,
+    headroomBelowMaximumUsd: estimate.headroomBelowMaximumUsd,
+  });
+}
+
+export function validateProductionDataActivationEnvironment(
+  environment = process.env,
+  contract = readComingSoonProductionDataFoundation(),
+) {
+  const validated = validateComingSoonProductionDataFoundation(contract);
+  const expected = {
+    projectId: "samra-pay-production",
+    projectNumber: "382465561715",
+    organizationId: "614833350075",
+    region: "us-east4",
+    operator: "me@davidhaile.com",
+    dataClassification: "customer-pii",
+    monthlyBudgetAlertUsd: "25",
+    maximumMonthlyInfrastructureSpendUsd: "100",
+    guardedMonthlyEstimateUsd: "81.92",
+  };
+  assert(
+    environment.SAMRA_GCP_PROJECT_ID === expected.projectId &&
+      environment.SAMRA_GCP_PROJECT_NUMBER === expected.projectNumber &&
+      environment.SAMRA_GCP_ORGANIZATION_ID === expected.organizationId &&
+      environment.SAMRA_GCP_REGION === expected.region &&
+      environment.SAMRA_GCP_OPERATOR_ACCOUNT === expected.operator &&
+      environment.SAMRA_GCP_DATA_CLASSIFICATION ===
+        expected.dataClassification &&
+      environment.SAMRA_GCP_MONTHLY_BUDGET_USD ===
+        expected.monthlyBudgetAlertUsd &&
+      environment.SAMRA_GCP_MAX_MONTHLY_INFRASTRUCTURE_SPEND_USD ===
+        expected.maximumMonthlyInfrastructureSpendUsd &&
+      environment.SAMRA_GCP_GUARDED_MONTHLY_ESTIMATE_USD ===
+        expected.guardedMonthlyEstimateUsd &&
+      /^[0-9a-f]{40}$/u.test(environment.SAMRA_GCP_EXPECTED_SHA ?? "") &&
+      validated.guardedMonthlyEstimateUsd <
+        validated.approvedMaximumMonthlyInfrastructureSpendUsd,
+    "The production data activation environment or USD 100 hard stop drifted",
+  );
+  return Object.freeze({
+    ...expected,
+    expectedSha: environment.SAMRA_GCP_EXPECTED_SHA,
+  });
+}
+
+export function validateObservedProductionDataSqlInstance(
+  observed,
+  contract = readComingSoonProductionDataFoundation(),
+) {
+  validateComingSoonProductionDataFoundation(contract);
+  const desired = contract.database;
+  const settings = observed.settings ?? {};
+  const ip = settings.ipConfiguration ?? {};
+  const backup = settings.backupConfiguration ?? {};
+  const retention = backup.backupRetentionSettings ?? {};
+  const expectedNetwork = `projects/${contract.productionBoundary.projectId}/global/networks/${contract.network.name}`;
+  const observedNetwork = ip.privateNetwork?.replace(/^\/(?=projects\/)/u, "");
+  const publicAddresses = (observed.ipAddresses ?? []).filter(
+    (entry) => entry.type === "PRIMARY",
+  );
+  const checks = {
+    name: observed.name === desired.name,
+    project: observed.project === contract.productionBoundary.projectId,
+    region: observed.region === contract.productionBoundary.region,
+    state: observed.state === "RUNNABLE",
+    databaseVersion: observed.databaseVersion === desired.databaseVersion,
+    tier: settings.tier === desired.tier,
+    availabilityType: settings.availabilityType === desired.availabilityType,
+    diskType: settings.dataDiskType === desired.diskType,
+    diskSize: Number(settings.dataDiskSizeGb) === desired.diskSizeGb,
+    autoResize: settings.storageAutoResize === desired.storageAutoResize,
+    autoResizeLimit:
+      Number(settings.storageAutoResizeLimit) ===
+      desired.storageAutoResizeLimitGb,
+    privateNetwork: observedNetwork === expectedNetwork,
+    publicIpDisabled: ip.ipv4Enabled === false && publicAddresses.length === 0,
+    dataApiAccessDisabled:
+      (settings.dataApiAccess ?? observed.dataApiAccess) !== "ALLOW_DATA_API",
+    backupEnabled: backup.enabled === true,
+    backupStart: backup.startTime === desired.backup.startTimeUtc,
+    backupLocation: backup.location === desired.backup.location,
+    retainedBackups:
+      Number(retention.retainedBackups) === desired.backup.retainedBackups,
+    pointInTimeRecovery: backup.pointInTimeRecoveryEnabled === true,
+    transactionLogRetention:
+      Number(backup.transactionLogRetentionDays) ===
+      desired.backup.transactionLogRetentionDays,
+    deletionProtection: settings.deletionProtectionEnabled === true,
+  };
+  const failed = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  assert(
+    failed.length === 0,
+    `Production Cloud SQL drift detected: ${failed.join(", ")}`,
+  );
+  return Object.freeze(checks);
 }
 
 if (

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "decision-required-not-applied",
+  "status": "controller-prepared-not-applied",
   "phase": "coming-soon-production-data-foundation",
   "applyAuthorized": false,
   "cloudStateReadByPlan": false,
@@ -74,9 +74,49 @@
     "budgetIsSpendingCap": false,
     "localPlanExecutionCostUsd": 0,
     "liveGoogleCloudEstimateRequiredBeforeApply": true,
-    "estimateApproved": false,
-    "approvedMaximumMonthlyInfrastructureSpendUsd": null,
-    "budgetCompatibilityClaim": false
+    "estimateApproved": true,
+    "approvedBy": "David Haile",
+    "approvedOn": "2026-08-31",
+    "approvedMaximumMonthlyInfrastructureSpendUsd": 100,
+    "budgetCompatibilityClaim": false,
+    "estimate": {
+      "currency": "USD",
+      "region": "us-east4",
+      "asOf": "2026-08-31",
+      "validThrough": "2026-09-07",
+      "hoursPerMonth": 730,
+      "components": {
+        "oneVcpuHourlyUsd": 0.054,
+        "memoryGib": 3.75,
+        "memoryGibHourlyUsd": 0.009,
+        "ssdStorageGib": 10,
+        "ssdStorageGibHourlyUsd": 0.000465753,
+        "estimatedBackupGib": 10,
+        "backupGibHourlyUsd": 0.000109589
+      },
+      "baselineMonthlyUsd": 68.26,
+      "contingencyPercent": 20,
+      "contingencyMonthlyUsd": 13.66,
+      "guardedMonthlyEstimateUsd": 81.92,
+      "headroomBelowMaximumUsd": 18.08,
+      "excludes": [
+        "application traffic and network egress",
+        "storage growth above the initial 10 GiB",
+        "backup usage above the estimated 10 GiB",
+        "later Cloud Run, load balancer, logging, monitoring, and DNS charges"
+      ],
+      "sources": [
+        "https://cloud.google.com/sql/pricing",
+        "https://cloud.google.com/sql/docs/postgres/machine-series-overview"
+      ]
+    }
+  },
+  "availabilityDecision": {
+    "temporaryZonalPostureAccepted": true,
+    "acceptedBy": "David Haile",
+    "acceptedOn": "2026-08-31",
+    "scope": "coming-soon foundation only",
+    "regionalHaRequiredBeforeFinancialWorkloads": true
   },
   "customerDataGate": {
     "customerDataCreationAuthorized": false,
@@ -87,10 +127,10 @@
     "privacyNoticeApproved": false
   },
   "plan": {
-    "mode": "local-only",
-    "hasReviewMode": false,
-    "hasApplyMode": false,
-    "futureApplyMustBeSeparateController": true,
+    "mode": "guarded-review-apply-controller",
+    "hasReviewMode": true,
+    "hasApplyMode": true,
+    "futureApplyMustBeSeparateController": false,
     "futureApplyMustReverifyFoundation": true,
     "futureApplyMustBeResumableAndRejectDrift": true,
     "futureApplyProposalCreatesOnly": [
@@ -109,10 +149,26 @@
       "Squarespace DNS record or registrar change"
     ]
   },
+  "activation": {
+    "controller": "deploy/gcp/activate-coming-soon-production-data-foundation.sh",
+    "inspector": "deploy/gcp/inspect-coming-soon-production-data-foundation.mjs",
+    "postAudit": "deploy/gcp/audit-coming-soon-production-data-foundation.sh",
+    "authorizationEnvironment": "SAMRA_GCP_PRODUCTION_DATA_FOUNDATION_APPLY",
+    "authorizationValue": "AUTHORIZED_COMING_SOON_PRODUCTION_DATA_FOUNDATION",
+    "reviewBeforeApply": true,
+    "postAuditRequired": true,
+    "resumable": true,
+    "automaticApply": false,
+    "githubWorkflowAuthorized": false
+  },
+  "rollback": {
+    "automaticDestructiveRollback": false,
+    "partialApplyRecovery": "resume only when every existing resource matches the reviewed contract",
+    "destructiveRemovalRequiresSeparateApproval": true,
+    "customerDataExists": false
+  },
   "blockedOn": [
-    "current Google Cloud estimate and maximum monthly infrastructure spend approval",
-    "explicit acceptance of zonal coming-soon availability before regional HA",
-    "separately reviewed and authorized production data foundation apply",
+    "exact-SHA live review and separately authorized production data foundation apply",
     "retention, deletion, access ownership, and privacy approval before customer data"
   ]
 }
