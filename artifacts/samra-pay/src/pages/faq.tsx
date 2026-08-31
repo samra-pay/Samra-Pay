@@ -85,7 +85,7 @@ export default function FaqPage() {
         <section className="page-cta" aria-labelledby="faq-cta-title">
           <div className="coming-container page-cta-grid">
             <div><p className="section-eyebrow">{text(localized("Follow the build", "ግንባታውን ይከተሉ"))}</p><h2 id="faq-cta-title">{text(localized("Get the answer when a final term is confirmed.", "የመጨረሻ ውል ሲረጋገጥ መልሱን ያግኙ።"))}</h2></div>
-            <a className="portfolio-primary-link" href="/#concept-status">{text(localized("Join the waitlist", "የጥበቃ ዝርዝሩን ይቀላቀሉ"))}<ArrowRight aria-hidden="true" /></a>
+            <a className="portfolio-primary-link" href="/features">{text(localized("Explore the product vision", "የምርት ራዕዩን ያስሱ"))}<ArrowRight aria-hidden="true" /></a>
           </div>
         </section>
       </main>

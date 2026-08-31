@@ -46,4 +46,19 @@ describe("public build boundary", () => {
       "assets/vendor-456.js: contains Continue with Auth0",
     ]);
   });
+
+  it("rejects email collection from the static informational release", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
+    temporaryDirectories.push(root);
+    await mkdir(path.join(root, "assets"));
+    await writeFile(
+      path.join(root, "assets", "home-123.js"),
+      'fetch("/api/v1/waitlist/subscriptions"); const label = "Preview Alpha signup";',
+    );
+
+    await expect(inspectPublicBuild(root)).resolves.toEqual([
+      "assets/home-123.js: contains \\/api\\/v1\\/waitlist\\/subscriptions",
+      "assets/home-123.js: contains Preview Alpha signup",
+    ]);
+  });
 });

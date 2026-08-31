@@ -96,7 +96,7 @@ export default function Blog() {
         <section className="page-cta" aria-labelledby="blog-cta-title">
           <div className="coming-container page-cta-grid">
             <div><p className="section-eyebrow">{text(localized("Launching the conversation", "ውይይቱን መጀመር"))}</p><h2 id="blog-cta-title">{text(localized("Follow Samra as the first notes take shape.", "የመጀመሪያዎቹ ማስታወሻዎች ሲቀረጹ Samraን ይከተሉ።"))}</h2></div>
-            <a className="portfolio-primary-link" href="/#concept-status">{text(localized("Join the waitlist", "የጥበቃ ዝርዝሩን ይቀላቀሉ"))}<ArrowRight aria-hidden="true" /></a>
+            <a className="portfolio-primary-link" href="/values">{text(localized("Read what guides us", "የሚመራንን ያንብቡ"))}<ArrowRight aria-hidden="true" /></a>
           </div>
         </section>
       </main>

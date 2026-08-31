@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "status": "approved-not-applied",
+  "phase": "coming-soon-static-informational-launch",
+  "decision": {
+    "approvedOn": "2026-08-31",
+    "approvedBy": "David Haile",
+    "scope": "public static informational website",
+    "emailCollectionDeferred": true,
+    "standingApplyAuthorization": false
+  },
+  "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
+  "source": {
+    "repository": "haileleuld87/Samra-Pay",
+    "canonicalDesign": "Sites project appgprj_6a938306c6c08191a5d582603a18a2fe",
+    "snapshotVersion": 13,
+    "snapshotCommit": "4669b3482761373121b4ce06d0f1b20835181d2d",
+    "releaseSource": "FULL_GIT_SHA",
+    "buildCommand": "pnpm --filter @workspace/samra-pay run build",
+    "buildDirectory": "artifacts/samra-pay/dist/public",
+    "hostingConfig": "firebase.json"
+  },
+  "productionBoundary": {
+    "projectId": "samra-pay-production",
+    "projectNumber": "382465561715",
+    "organizationId": "614833350075",
+    "operator": "me@davidhaile.com",
+    "region": "us-east4",
+    "dataClassification": "public-informational",
+    "existingInfrastructureGuardedEstimateUsd": 81.92,
+    "monthlyInfrastructureHardStopUsd": 100,
+    "remainingGuardedHeadroomUsd": 18.08
+  },
+  "hosting": {
+    "provider": "firebase-hosting",
+    "siteId": "samra-pay-production",
+    "defaultUrl": "https://samra-pay-production.web.app",
+    "cdn": true,
+    "automaticTls": true,
+    "singlePageApplication": true,
+    "projectAliasFileAllowed": false,
+    "deployOnly": "hosting"
+  },
+  "publicBoundary": {
+    "informationalOnly": true,
+    "formsAllowed": false,
+    "emailCollectionAllowed": false,
+    "apiRoutes": [],
+    "databaseAccess": false,
+    "secrets": [],
+    "analytics": false,
+    "advertisingPixels": false,
+    "customerAuthentication": false,
+    "kyc": false,
+    "wallet": false,
+    "moneyMovement": false,
+    "vendorActivation": false,
+    "ordinaryHostingRequestLogsOnly": true
+  },
+  "security": {
+    "contentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
+    "referrerPolicy": "strict-origin-when-cross-origin",
+    "xContentTypeOptions": "nosniff",
+    "xFrameOptions": "DENY",
+    "permissionsPolicy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+    "hsts": "max-age=31536000",
+    "hstsIncludeSubDomains": false
+  },
+  "providerManagedEffects": {
+    "firebaseProjectLinkageAllowed": true,
+    "providerManagedApiAndServiceAgentCreationAllowed": true,
+    "firebaseAuthenticationAllowed": false,
+    "firestoreDatabaseAllowed": false,
+    "realtimeDatabaseAllowed": false,
+    "cloudStorageBucketAllowed": false,
+    "firebaseAppRegistrationAllowed": false
+  },
+  "cost": {
+    "currency": "USD",
+    "expectedIncrementalMonthlyCostUsd": 0,
+    "noCostStorageGib": 10,
+    "noCostMonthlyTransferGib": 10,
+    "storageAboveNoCostUsdPerGib": 0.026,
+    "transferAboveNoCostUsdPerGib": 0.15,
+    "usageDependent": true,
+    "spendingCap": false,
+    "hardStopRequiresReassessmentAtTotalMonthlyEstimateUsd": 100
+  },
+  "domain": {
+    "dnsOwner": "Squarespace",
+    "apex": "samrapay.com",
+    "canonicalDomain": "www.samrapay.com",
+    "apexBehavior": "redirect-to-canonical",
+    "preserveDnsRecordTypes": ["MX", "TXT", "SPF", "DKIM", "DMARC"],
+    "preserveUnrelatedRecords": true,
+    "decisionApproved": true,
+    "standingDnsAuthorization": false
+  },
+  "release": {
+    "activationEnvironment": "SAMRA_GCP_STATIC_HOSTING_APPLY",
+    "activationSentinel": "AUTHORIZED_COMING_SOON_STATIC_HOSTING",
+    "exactShaRequired": true,
+    "cleanWorkingTreeRequired": true,
+    "reviewBeforeApply": true,
+    "postAuditRequired": true,
+    "recordPriorReleaseRequired": true,
+    "rollback": "restore the recorded prior Firebase Hosting release without rebuilding"
+  },
+  "postLaunchVerification": [
+    "default Firebase Hosting HTTPS URL",
+    "custom-domain HTTPS after DNS validation",
+    "home, features, values, FAQ, blog, privacy, and terms routes",
+    "English and Amharic controls",
+    "no form or email input",
+    "no waitlist or API endpoint in the public bundle",
+    "security headers",
+    "email and verification DNS records preserved"
+  ],
+  "excluded": [
+    "Cloud Run deployment",
+    "load balancer",
+    "Cloud Armor",
+    "database credential",
+    "database migration",
+    "customer data",
+    "email collection",
+    "Auth0",
+    "Persona",
+    "Crossmint",
+    "financial APIs",
+    "Squarespace registrar transfer"
+  ]
+}

@@ -16,7 +16,56 @@ credentials, migrations, deployment, public traffic, waitlist data collection,
 vendors, or Squarespace DNS changes. Those decisions remain explicit gates in
 `deploy/gcp/coming-soon-launch.json`.
 
-## Launch topology
+## Static public release for August 31, 2026
+
+David approved an exact-SHA static informational release without email
+collection so the public site can launch before the interactive application.
+`deploy/gcp/coming-soon-static-hosting.json` is the controlling contract for
+this release. It is additive and does not authorize the deferred API, database,
+identity, KYC, wallet, or money-movement path below.
+
+```mermaid
+flowchart LR
+  V[Public visitor] --> DNS[Squarespace web DNS records]
+  DNS --> FH[Firebase Hosting\nglobal CDN + managed TLS]
+  G[Reviewed Git full SHA] --> B[Static public bundle]
+  B --> FH
+  FH -. no connection .-> API[No API]
+  FH -. no connection .-> DB[(Production database unused)]
+```
+
+The public bundle contains no form, email field, waitlist endpoint, analytics,
+advertising pixel, secret, database access, customer authentication, KYC,
+wallet, or vendor integration. Its Content Security Policy sets
+`connect-src 'none'` and `form-action 'none'`. Google-hosted delivery systems
+may retain ordinary request logs, but the Samra Pay application collects no
+visitor-submitted data in this release.
+
+Run the no-cost local plan from the repository root:
+
+```sh
+bash deploy/gcp/activate-coming-soon-static-hosting.sh --plan
+```
+
+The reviewed apply is limited to Firebase project linkage when absent, the
+single `samra-pay-production` Hosting site, and `firebase deploy --only
+hosting`. It requires the exact Git SHA, clean tree, production operator and
+project, and the `AUTHORIZED_COMING_SOON_STATIC_HOSTING` sentinel. It does not
+change Squarespace DNS. The default HTTPS URL is verified before any custom
+domain change.
+
+Expected incremental Hosting cost is USD 0 while usage stays within 10 GiB of
+stored data and 10 GiB of monthly transfer. Usage above those allowances is
+billable. This is not a spending cap. The existing guarded infrastructure
+estimate remains USD 81.92 per month, leaving USD 18.08 below the USD 100
+total-estimate reassessment boundary.
+
+For the custom domain, preserve MX, TXT, SPF, DKIM, DMARC, and every unrelated
+record. Change only the exact web records returned by Firebase for
+`www.samrapay.com` and the apex redirect. Verify managed TLS and all public
+routes after DNS validation.
+
+## Deferred interactive topology
 
 ```mermaid
 flowchart LR
@@ -30,7 +79,8 @@ flowchart LR
   G -->|immutable image digest| API
 ```
 
-The browser never receives a database credential or calls the private API
+This topology is the later email-collection/application path. It is not part of
+the static release. The browser never receives a database credential or calls the private API
 directly. The public web service strips client-supplied service authorization,
 uses its short-lived Google identity to invoke the private API, and refuses to
 proxy every API route except the waitlist submission. Auth, KYC, wallet, and
@@ -43,8 +93,10 @@ financial routes stay dormant.
    independently in Git.
 3. At the cutover gate, capture the newest Sites version and compare it with the
    pinned snapshot in the launch contract.
-4. Sync only reviewed public UI and copy changes. Do not overwrite the waitlist
-   client, API, database, build boundary, or deployment controls.
+4. Sync only reviewed public UI and copy changes. For the static release, keep
+   the future waitlist module unreferenced and enforce its absence from the
+   public bundle. Do not overwrite the API, database, build boundary, or
+   deployment controls.
 5. Re-run public tests, type checks, production build, visual QA, API tests,
    database tests, container tests, and the launch-contract validator.
 

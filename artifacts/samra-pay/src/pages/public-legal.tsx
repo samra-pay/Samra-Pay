@@ -33,15 +33,15 @@ const legalContent: Record<LegalKind, {
       {
         title: localized("What this website stores", "ይህ ድረ ገጽ የሚያከማቸው"),
         body: localized(
-          "The language switch stores your English or Amharic preference in your browser. If you join the waitlist, Samra Pay stores your normalized email address, the consent-notice version, language, and server timestamp. Waitlist contact data is kept separate from acquisition telemetry and is not used for financial onboarding.",
-          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ውስጥ ያስቀምጣል። የጥበቃ ዝርዝሩን ከተቀላቀሉ፣ Samra Pay የተስተካከለውን ኢሜይል አድራሻዎን፣ የፈቃድ ማስታወቂያውን ስሪት፣ ቋንቋና የአገልጋዩን የጊዜ ማህተም ያከማቻል። የጥበቃ ዝርዝር መረጃ ከግብይት መለኪያዎች ተለይቶ ይቀመጣል እና ለፋይናንስ ምዝገባ አይውልም።",
+          "The language switch stores your English or Amharic preference in your browser. The current informational website has no signup form and does not collect an email address, identity document, account credential, bank detail, or payment information.",
+          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ውስጥ ያስቀምጣል። የአሁኑ የመረጃ ድረ ገጽ የምዝገባ ቅጽ የለውም እና የኢሜይል አድራሻ፣ የማንነት ሰነድ፣ የአካውንት ማስረጃ፣ የባንክ ዝርዝር ወይም የክፍያ መረጃ አይሰበስብም።",
         ),
       },
       {
         title: localized("Standard website data", "መደበኛ የድረ ገጽ መረጃ"),
         body: localized(
-          "Hosting and security providers may process ordinary request data such as an IP address, browser type, and timestamp. Final providers, retention periods, and rights will be identified before public launch.",
-          "የድረ ገጽ ማስተናገጃና የደህንነት አቅራቢዎች እንደ IP አድራሻ፣ የአሳሽ ዓይነትና የጊዜ ማህተም ያሉ መደበኛ የጥያቄ መረጃዎችን ሊያስኬዱ ይችላሉ። የመጨረሻ አቅራቢዎች፣ የማቆያ ጊዜዎችና መብቶች ከሕዝብ ምረቃ በፊት ይገለጻሉ።",
+          "Google-hosted delivery and security systems may process ordinary request data such as an IP address, browser type, requested page, and timestamp to deliver and protect the site. A separate privacy notice will govern any future signup or financial service.",
+          "በGoogle የሚስተናገዱ የማቅረቢያና የደህንነት ስርዓቶች ድረ ገጹን ለማቅረብና ለመጠበቅ እንደ IP አድራሻ፣ የአሳሽ ዓይነት፣ የተጠየቀው ገጽና የጊዜ ማህተም ያሉ መደበኛ የጥያቄ መረጃዎችን ሊያስኬዱ ይችላሉ። ማንኛውም የወደፊት ምዝገባ ወይም የፋይናንስ አገልግሎት በተለየ የግላዊነት ማስታወቂያ ይመራል።",
         ),
       },
       {
@@ -117,7 +117,7 @@ export default function PublicLegalPage() {
             </div>
             <div className="editorial-hero-deck">
               <p>{text(content.deck)}</p>
-              <p className="editorial-launch-note"><ShieldCheck aria-hidden="true" />{text(localized("Interim website notice · August 30, 2026", "ጊዜያዊ የድረ ገጽ ማስታወቂያ · August 30, 2026"))}</p>
+              <p className="editorial-launch-note"><ShieldCheck aria-hidden="true" />{text(localized("Interim website notice · August 31, 2026", "ጊዜያዊ የድረ ገጽ ማስታወቂያ · August 31, 2026"))}</p>
             </div>
           </div>
         </section>

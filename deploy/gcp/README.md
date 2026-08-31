@@ -12,6 +12,17 @@ and its source-sync, release, rollback, and Squarespace DNS sequence is in the
 It does not reuse synthetic staging data or activate Auth0, Persona, Crossmint,
 financial APIs, public traffic, production spend, or DNS changes.
 
+The approved August 31 static-only release is governed separately by
+[`coming-soon-static-hosting.json`](coming-soon-static-hosting.json) and
+[`activate-coming-soon-static-hosting.sh`](activate-coming-soon-static-hosting.sh).
+It deploys the reviewed public bundle only to Firebase Hosting in
+`samra-pay-production`. The bundle contains no form, email collection, API,
+database access, analytics, authentication, KYC, wallet, or vendor activation.
+The existing interactive Cloud Run and waitlist contract remains deferred and
+unchanged. The default Firebase HTTPS URL must pass independent verification
+before the exact Squarespace web records are changed; email and unrelated DNS
+records must remain untouched.
+
 `review-coming-soon-production.sh --plan` locks the production boundary without
 reading cloud state: project `samra-pay-production` (`382465561715`), region
 `us-east4`, `customer-pii` data classification, a USD 25 monthly budget alert,
