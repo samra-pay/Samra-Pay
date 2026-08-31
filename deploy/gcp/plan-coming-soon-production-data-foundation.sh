@@ -31,7 +31,7 @@ Verified prerequisite:
   - secret versions: 0; and
   - Cloud Run and private API invocation remain deferred.
 
-Recommended coming-soon data shape for review:
+Approved coming-soon data shape:
   - one custom VPC with distinct 10.50.0.0/24 application and
     10.51.0.0/24 Private Services Access ranges;
   - one private-only PostgreSQL 16 Enterprise instance;
@@ -42,17 +42,19 @@ Recommended coming-soon data shape for review:
   - no database user, credential, secret version, migration, or customer row.
 
 This is a cost-conscious coming-soon profile, not a financial-workload
-availability claim. Regional HA is required before transaction workloads.
+availability claim. The temporary zonal posture is accepted for this phase;
+regional HA is required before transaction workloads.
 
-Decisions still required before a separate apply controller is built:
-  1. approve a current Google Cloud estimate and a maximum monthly spend;
-  2. accept the temporary zonal availability posture for the coming-soon phase;
-  3. separately authorize the production data foundation apply; and
-  4. approve retention, deletion, access ownership, and privacy before any
-     waitlist or customer data is collected.
+Approved cost boundary:
+  - reviewed base estimate: USD 68.26 per month;
+  - guarded estimate with 20% contingency: USD 81.92 per month;
+  - maximum monthly infrastructure spend: USD 100; and
+  - estimate valid through 2026-09-07.
 
-The USD 25 budget is an alert, not a spending cap. This plan makes no claim
-that the proposed infrastructure fits inside USD 25.
+The USD 25 budget remains an early alert, not a spending cap. The separate
+controller still requires an exact-SHA live review and explicit apply sentinel.
+Retention, deletion, access ownership, and privacy remain required before any
+waitlist or customer data is collected.
 
 PLAN COMPLETE — NO CLOUD, CUSTOMER DATA, DEPLOYMENT, TRAFFIC, OR DNS CHANGES
 PLAN

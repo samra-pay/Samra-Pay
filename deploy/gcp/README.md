@@ -61,14 +61,22 @@ read-only post-audit at source
 `c328ba56b6e15d42e6fd80024160c4e3b7db9c42`. No GitHub apply workflow is
 authorized.
 
-`coming-soon-production-data-foundation.json` is the next local-only decision
-contract. It proposes a separate private production VPC, distinct `/24`
-application and Private Services Access ranges, and one dedicated zonal
-PostgreSQL 16 profile for the coming-soon waitlist. Its plan has no review or
-apply mode. A current Google Cloud estimate, maximum monthly spend, temporary
-zonal posture, and separate apply authorization remain unresolved. It creates
-no credential, secret version, migration, customer row, Cloud Run workload,
-edge resource, vendor integration, or DNS record.
+`coming-soon-production-data-foundation.json` now locks the approved controller
+boundary for a separate private production VPC, distinct `/24` application and
+Private Services Access ranges, and one dedicated zonal PostgreSQL 16 profile.
+The reviewed base estimate is USD 68.26 per month and the guarded estimate is
+USD 81.92 with 20% contingency. The USD 25 budget remains an early alert; USD
+100 is the apply-time maximum. The estimate expires on 2026-09-07 and must be
+refreshed after that date. The temporary zonal posture is accepted only for the
+coming-soon phase, with regional HA required before financial workloads.
+
+`activate-coming-soon-production-data-foundation.sh` provides separate local
+plan, authenticated read-only review, and explicit-sentinel apply modes. It is
+resumable and rejects existing-resource drift. Its independent post-audit is
+`audit-coming-soon-production-data-foundation.sh`. No GitHub apply workflow is
+authorized, and the phase creates no credential, secret version, migration,
+customer row, Cloud Run workload, edge resource, vendor integration, or DNS
+record.
 
 ## Current verified staging state
 

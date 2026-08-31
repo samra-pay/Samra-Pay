@@ -157,12 +157,12 @@ host are locked in the plan. The project number, same-account billing match,
 and exact budget are verified. Private API invocation IAM is correctly deferred
 until the API service exists.
 
-## Production data foundation plan
+## Production data foundation controller
 
-The next no-cost increment is now encoded locally:
+The local no-cost plan is:
 
 ```sh
-bash deploy/gcp/plan-coming-soon-production-data-foundation.sh --plan
+bash deploy/gcp/activate-coming-soon-production-data-foundation.sh --plan
 ```
 
 The proposal uses one dedicated production VPC with `10.50.0.0/24` for the
@@ -174,11 +174,18 @@ secret version, migration, customer row, runtime, public endpoint, or DNS
 record.
 
 This is a coming-soon availability posture, not approval for transaction
-workloads. Regional HA is required before financial workloads. The USD 25
-budget is only an alert and the plan does not claim this shape fits under USD 25. A current Google Cloud estimate, maximum monthly spend, temporary zonal
-posture, and separate data-foundation apply authorization are required before a
-live controller can be built. Retention, deletion, access ownership, and the
-privacy notice remain required before the first waitlist record.
+workloads. Regional HA is required before financial workloads. The reviewed
+base estimate is USD 68.26 per month; the guarded estimate is USD 81.92 with a
+20% contingency. The USD 25 budget remains an early alert and USD 100 is the
+apply-time maximum. The estimate is valid through 2026-09-07 and must be
+refreshed after that date.
+
+The temporary zonal posture and USD 100 maximum are accepted. The guarded
+controller still requires an authenticated exact-SHA review and the explicit
+`AUTHORIZED_COMING_SOON_PRODUCTION_DATA_FOUNDATION` sentinel before it can
+create the network and empty database. It is resumable, rejects drift, and runs
+an independent read-only post-audit. Retention, deletion, access ownership, and
+the privacy notice remain required before the first waitlist record.
 
 ## Production project, billing, and budget controller
 
@@ -207,7 +214,7 @@ authorization at the action boundary.
 
 ## Remaining launch decisions
 
-- production data-foundation cost, zonal posture, and apply approval;
+- exact-SHA production data-foundation live review and apply approval;
 - production PostgreSQL retention, deletion, access-owner, and privacy approval;
 - final privacy notice and consent language;
 - final refreshed Sites snapshot and desktop/mobile visual approval;
