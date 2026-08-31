@@ -43,20 +43,32 @@ fail-closed recovery controller: it reuses exact state and rejects drift. Its
 scope still excludes API enablement, infrastructure, deployment, traffic,
 customer data, vendors, and DNS.
 
-`coming-soon-production-foundation.json` is now a prepared but unapplied
-boundary. It locks the exact 15-API allowlist, one immutable production image
-repository, five keyless identities, least-privilege IAM plan, and two empty
-database-secret metadata records. `plan-coming-soon-production-foundation.sh
---plan` remains an offline USD 0 plan with no apply mode.
+`coming-soon-production-foundation.json` now records the applied and
+independently audited production foundation. The exact 15-API allowlist, one
+immutable production image repository, five keyless identities,
+least-privilege IAM, and two empty database-secret metadata records are ready.
+Both secret records still have zero versions. The offline
+`plan-coming-soon-production-foundation.sh --plan` remains a USD 0 recovery
+reference with no apply mode.
 
-`activate-coming-soon-production-foundation.sh` is the separate human-admin
-controller. Its `--review` mode reverifies project, billing, budget, Git SHA,
-existing resources, keys, IAM, and secret-version absence before the exact
-authorization sentinel is accepted. It is resumable and rejects drift instead
-of overwriting it. `audit-coming-soon-production-foundation.sh` then performs a
-fresh read-only post-audit. No GitHub apply workflow is authorized. The
-infrastructure foundation remains unapplied; its only remaining gate is a
-separately reviewed and authorized foundation apply.
+`activate-coming-soon-production-foundation.sh` remains the separate
+human-admin recovery controller. Its `--review` mode reverifies project,
+billing, budget, Git SHA, existing resources, keys, IAM, and secret-version
+absence before the exact authorization sentinel is accepted. It is resumable
+and rejects drift instead of overwriting it.
+`audit-coming-soon-production-foundation.sh` performed the independent
+read-only post-audit at source
+`c328ba56b6e15d42e6fd80024160c4e3b7db9c42`. No GitHub apply workflow is
+authorized.
+
+`coming-soon-production-data-foundation.json` is the next local-only decision
+contract. It proposes a separate private production VPC, distinct `/24`
+application and Private Services Access ranges, and one dedicated zonal
+PostgreSQL 16 profile for the coming-soon waitlist. Its plan has no review or
+apply mode. A current Google Cloud estimate, maximum monthly spend, temporary
+zonal posture, and separate apply authorization remain unresolved. It creates
+no credential, secret version, migration, customer row, Cloud Run workload,
+edge resource, vendor integration, or DNS record.
 
 ## Current verified staging state
 

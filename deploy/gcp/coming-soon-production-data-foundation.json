@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "status": "decision-required-not-applied",
+  "phase": "coming-soon-production-data-foundation",
+  "applyAuthorized": false,
+  "cloudStateReadByPlan": false,
+  "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
+  "linkedFoundationContract": "deploy/gcp/coming-soon-production-foundation.json",
+  "prerequisiteEvidence": {
+    "status": "foundation-applied-verified",
+    "sourceSha": "c328ba56b6e15d42e6fd80024160c4e3b7db9c42",
+    "apiCount": 15,
+    "serviceAccountCount": 5,
+    "secretMetadataCount": 2,
+    "secretVersionCount": 0
+  },
+  "productionBoundary": {
+    "projectId": "samra-pay-production",
+    "projectNumber": "382465561715",
+    "organizationId": "614833350075",
+    "region": "us-east4",
+    "dataClassification": "customer-pii",
+    "mustNotEqualProjectId": "samra-pay-staging"
+  },
+  "network": {
+    "name": "samra-production-vpc",
+    "subnetMode": "custom",
+    "routingMode": "REGIONAL",
+    "subnet": {
+      "name": "samra-production-us-east4",
+      "cidr": "10.50.0.0/24",
+      "privateGoogleAccess": true
+    },
+    "privateServicesAccess": {
+      "rangeName": "google-managed-services-samra-production-vpc",
+      "address": "10.51.0.0",
+      "prefixLength": 24,
+      "purpose": "VPC_PEERING",
+      "service": "servicenetworking.googleapis.com"
+    }
+  },
+  "database": {
+    "name": "samra-production-postgres",
+    "databaseVersion": "POSTGRES_16",
+    "edition": "ENTERPRISE",
+    "tier": "db-custom-1-3840",
+    "availabilityType": "ZONAL",
+    "launchProfile": "coming-soon-dedicated-zonal",
+    "financialWorkloadAllowed": false,
+    "regionalHaUpgradeRequiredBeforeFinancialWorkloads": true,
+    "diskType": "PD_SSD",
+    "diskSizeGb": 10,
+    "storageAutoResize": true,
+    "storageAutoResizeLimitGb": 100,
+    "ipv4Enabled": false,
+    "dataApiAccess": "DISALLOW_DATA_API",
+    "privateIpRequired": true,
+    "deletionProtection": true,
+    "backup": {
+      "enabled": true,
+      "startTimeUtc": "06:00",
+      "location": "us",
+      "retainedBackups": 14,
+      "pointInTimeRecoveryEnabled": true,
+      "transactionLogRetentionDays": 7
+    },
+    "applicationDatabase": {
+      "name": "samra_production",
+      "emptyAtCreation": true
+    }
+  },
+  "costGate": {
+    "monthlyBudgetAlertUsd": 25,
+    "budgetIsSpendingCap": false,
+    "localPlanExecutionCostUsd": 0,
+    "liveGoogleCloudEstimateRequiredBeforeApply": true,
+    "estimateApproved": false,
+    "approvedMaximumMonthlyInfrastructureSpendUsd": null,
+    "budgetCompatibilityClaim": false
+  },
+  "customerDataGate": {
+    "customerDataCreationAuthorized": false,
+    "waitlistRetentionDays": null,
+    "retentionApproval": "pending",
+    "deletionProcedureApproved": false,
+    "accessOwnerApproved": false,
+    "privacyNoticeApproved": false
+  },
+  "plan": {
+    "mode": "local-only",
+    "hasReviewMode": false,
+    "hasApplyMode": false,
+    "futureApplyMustBeSeparateController": true,
+    "futureApplyMustReverifyFoundation": true,
+    "futureApplyMustBeResumableAndRejectDrift": true,
+    "futureApplyProposalCreatesOnly": [
+      "one custom-mode production VPC",
+      "one regional private production subnet",
+      "one private services access allocation and connection",
+      "one private PostgreSQL 16 coming-soon instance",
+      "one empty production application database"
+    ],
+    "doesNotCreate": [
+      "database user, credential, secret value, or Secret Manager version",
+      "schema migration, seed row, waitlist submission, or customer data",
+      "Cloud Run service, job, revision, image, or traffic",
+      "load balancer, Cloud Armor policy, certificate, CDN, or public endpoint",
+      "Auth0, Persona, Crossmint, Firebase, or financial-provider integration",
+      "Squarespace DNS record or registrar change"
+    ]
+  },
+  "blockedOn": [
+    "current Google Cloud estimate and maximum monthly infrastructure spend approval",
+    "explicit acceptance of zonal coming-soon availability before regional HA",
+    "separately reviewed and authorized production data foundation apply",
+    "retention, deletion, access ownership, and privacy approval before customer data"
+  ]
+}

@@ -7,11 +7,13 @@ transaction product. Ongoing Sites edits do not block engineering. Sites is the
 design workspace; a refreshed, reviewed snapshot becomes a Git commit, and the
 immutable Git commit becomes the Google Cloud release.
 
-The bounded production project, billing link, USD 25 alert, and read-only
-preflight trust now exist. This runbook does not authorize workload
-infrastructure, database spend, deployment, public traffic, waitlist data
-collection, vendors, or Squarespace DNS changes. Those decisions remain
-explicit gates in `deploy/gcp/coming-soon-launch.json`.
+The bounded production project, billing link, USD 25 alert, keyless preflight
+trust, APIs, immutable image repository, five workload identities, exact IAM,
+and two empty secret metadata records now exist and passed independent audit.
+This runbook does not authorize the private data foundation, database spend,
+deployment, public traffic, waitlist data collection, vendors, or Squarespace
+DNS changes. Those decisions remain explicit gates in
+`deploy/gcp/coming-soon-launch.json`.
 
 ## Launch topology
 
@@ -113,7 +115,7 @@ infrastructure, the production database, deployment, traffic, waitlist
 collection, Auth0, Persona, Crossmint, and Squarespace DNS remain separate
 gates.
 
-## Production foundation plan
+## Applied production foundation
 
 After the preflight contract, review the bounded foundation locally:
 
@@ -121,15 +123,16 @@ After the preflight contract, review the bounded foundation locally:
 bash deploy/gcp/plan-coming-soon-production-foundation.sh --plan
 ```
 
-This second plan also reads no cloud or DNS state and costs USD 0. It fixes the
+This recovery plan reads no cloud or DNS state and costs USD 0. It fixes the
 foundation scope to 15 approved APIs, one regional immutable
 `samra-production` image repository, five dedicated keyless identities,
 least-privilege IAM, and separate empty runtime and migration secret metadata.
 The plan entrypoint has no `--apply` mode.
 
-The separate activation controller is implemented but unapplied. Its live
-review must run from one clean exact source SHA and the exact human
-administrator:
+The separate activation controller was applied from source
+`c328ba56b6e15d42e6fd80024160c4e3b7db9c42`. Its live review and apply ran from
+one clean exact source SHA and the exact human administrator. The controller is
+retained only as a recovery path:
 
 ```sh
 SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
@@ -137,20 +140,45 @@ SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
   bash deploy/gcp/activate-coming-soon-production-foundation.sh --review
 ```
 
-The review inventories every targeted API, label, repository, service account,
-project and resource IAM binding, secret metadata record, user-managed key, and
-secret version. Existing exact state is reusable; absent state is resumable;
-drift fails closed. The apply sentinel is accepted only after this review. A
-separate read-only post-audit is mandatory. No GitHub apply workflow exists.
+The controller inventories every targeted API, label, repository, service
+account, project and resource IAM binding, secret metadata record,
+user-managed key, and secret version. Existing exact state is reusable; absent
+state is resumable; drift fails closed. The apply sentinel is accepted only
+after review. Its independent post-audit passed with 15 APIs, one immutable
+repository, five service accounts, two secret metadata records, zero secret
+versions, and the private API invoker correctly deferred. No GitHub apply
+workflow exists.
 
-The foundation explicitly excludes the project, billing link, budget, VPC,
-Cloud SQL, secret values, Cloud Run, load balancer, certificate, public traffic,
-waitlist data, vendors, and DNS. The project ID, region, data classification,
-budget-alert amount, billing source, apex domain, and canonical host are locked
-in the plan. The project number, same-account billing match, and exact budget
-are verified. Private API invocation IAM is correctly deferred until the API
-service exists. The remaining blocker is a separately reviewed and authorized
-infrastructure foundation apply.
+The applied foundation explicitly excludes the project, billing link, budget,
+VPC, Cloud SQL, secret values, Cloud Run, load balancer, certificate, public
+traffic, waitlist data, vendors, and DNS. The project ID, region, data
+classification, budget-alert amount, billing source, apex domain, and canonical
+host are locked in the plan. The project number, same-account billing match,
+and exact budget are verified. Private API invocation IAM is correctly deferred
+until the API service exists.
+
+## Production data foundation plan
+
+The next no-cost increment is now encoded locally:
+
+```sh
+bash deploy/gcp/plan-coming-soon-production-data-foundation.sh --plan
+```
+
+The proposal uses one dedicated production VPC with `10.50.0.0/24` for the
+regional application subnet and `10.51.0.0/24` for Private Services Access. It
+pins PostgreSQL 16 to a private-only `db-custom-1-3840` zonal profile with 10 GB
+SSD, bounded growth to 100 GB, deletion protection, 14 retained backups, and
+seven-day point-in-time recovery. It creates no database user, credential,
+secret version, migration, customer row, runtime, public endpoint, or DNS
+record.
+
+This is a coming-soon availability posture, not approval for transaction
+workloads. Regional HA is required before financial workloads. The USD 25
+budget is only an alert and the plan does not claim this shape fits under USD 25. A current Google Cloud estimate, maximum monthly spend, temporary zonal
+posture, and separate data-foundation apply authorization are required before a
+live controller can be built. Retention, deletion, access ownership, and the
+privacy notice remain required before the first waitlist record.
 
 ## Production project, billing, and budget controller
 
@@ -165,8 +193,8 @@ The local plan costs USD 0 and reads no Google Cloud or DNS state. The recovery
 controller is idempotent: it reuses exact state and rejects any project,
 billing, or budget drift. It cannot enable an API, create infrastructure,
 deploy, route traffic, collect data, activate vendors, or change Squarespace
-DNS. The production foundation, database, deployment, traffic, and DNS remain
-later gates.
+DNS. The data foundation, database credentials and migration, deployment,
+traffic, and DNS remain later gates.
 
 ## Squarespace DNS cutover
 
@@ -179,8 +207,8 @@ authorization at the action boundary.
 
 ## Remaining launch decisions
 
-- production infrastructure foundation apply;
-- production PostgreSQL cost and data-retention approval;
+- production data-foundation cost, zonal posture, and apply approval;
+- production PostgreSQL retention, deletion, access-owner, and privacy approval;
 - final privacy notice and consent language;
 - final refreshed Sites snapshot and desktop/mobile visual approval;
 - Cloud Armor thresholds, alert recipients, rollback owner, and launch window;

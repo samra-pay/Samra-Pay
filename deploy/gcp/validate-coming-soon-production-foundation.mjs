@@ -66,13 +66,12 @@ export function validateComingSoonProductionFoundation(
   const validatedLaunch = validateComingSoonLaunch(launch);
   assert(
     foundation.schemaVersion === 1 &&
-      foundation.status === "prepared-not-applied" &&
+      foundation.status === "applied-verified" &&
       foundation.phase === "coming-soon-production-foundation" &&
-      foundation.decisionStatus ===
-        "preflight-verified-foundation-not-applied" &&
+      foundation.decisionStatus === "foundation-applied-verified" &&
       foundation.applyAuthorized === false &&
       foundation.cloudStateReadByPlan === false,
-    "The production foundation must remain prepared but unapplied",
+    "The production foundation must remain applied and independently verified",
   );
   assert(
     foundation.linkedLaunchContract === "deploy/gcp/coming-soon-launch.json" &&
@@ -135,6 +134,23 @@ export function validateComingSoonProductionFoundation(
         "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com" &&
       preflight.cloudMutation === false,
     "The protected keyless production preflight evidence drifted",
+  );
+  const activation = foundation.activationEvidence;
+  assert(
+    activation.status === "passed-independent-post-audit" &&
+      activation.sourceSha === "c328ba56b6e15d42e6fd80024160c4e3b7db9c42" &&
+      activation.appliedOn === "2026-08-31" &&
+      activation.operator === "me@davidhaile.com" &&
+      activation.observedState === "ready" &&
+      activation.apiCount === PRODUCTION_APIS.length &&
+      activation.repositoryCount === 1 &&
+      activation.serviceAccountCount === 5 &&
+      activation.secretMetadataCount === 2 &&
+      activation.secretVersionCount === 0 &&
+      activation.deferredPrivateApiInvoker === true &&
+      activation.cloudChangesLimitedToFoundation === true &&
+      activation.cloudOrDnsChangesMadeByPostAudit === false,
+    "The production foundation activation evidence drifted",
   );
   assert(
     foundation.projectLabels.environment === "production" &&
@@ -304,7 +320,7 @@ export function validateComingSoonProductionFoundation(
   assert(
     foundation.blockedOn.length === 1 &&
       foundation.blockedOn.includes(
-        "separately reviewed and authorized production infrastructure foundation apply",
+        "separately reviewed and authorized production data foundation apply",
       ),
     "The production foundation blockers changed",
   );
@@ -319,7 +335,7 @@ export function validateComingSoonProductionFoundation(
 
   return Object.freeze({
     schemaVersion: foundation.schemaVersion,
-    status: "validated-prepared-not-applied",
+    status: "validated-applied-verified",
     phase: foundation.phase,
     boundaryStatus: foundation.decisionStatus,
     projectId: boundary.projectId,
@@ -332,6 +348,7 @@ export function validateComingSoonProductionFoundation(
     serviceAccountCount: accountIds.length,
     secretMetadataCount: foundation.secretMetadata.length,
     preflightEvidenceStatus: preflight.status,
+    activationEvidenceStatus: activation.status,
     activationController: foundation.activation.controller,
     estimatedMonthlyPlanCostUsd: 0,
     cloudStateRead: false,

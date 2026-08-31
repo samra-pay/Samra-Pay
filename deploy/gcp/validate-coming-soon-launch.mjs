@@ -28,7 +28,7 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
   );
   assert(
     contract.productionBoundary.decisionStatus ===
-      "project-verified-foundation-not-applied" &&
+      "foundation-applied-verified-data-foundation-not-applied" &&
       contract.productionBoundary.projectId === "samra-pay-production" &&
       contract.productionBoundary.projectNumber === "382465561715" &&
       contract.productionBoundary.organizationId === "614833350075" &&
@@ -174,13 +174,15 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
     );
   }
   assert(
-    contract.blockedOn.length === 7 &&
-      contract.blockedOn.includes(
-        "keyless production preflight trust and protected GitHub environment",
-      ) &&
-      !contract.blockedOn.some((blocker) =>
-        /project creation|billing account as staging/iu.test(blocker),
-      ),
+    JSON.stringify(contract.blockedOn) ===
+      JSON.stringify([
+        "final Sites refresh and visual approval",
+        "separate production data foundation and pinned database secrets",
+        "privacy notice and consent wording approval",
+        "load balancer, Cloud Armor, alerting, and rollback review",
+        "separate data-foundation, database-credential, migration, and deployment apply authorizations",
+        "explicit deployment and DNS cutover authorization",
+      ]),
     "Launch blockers changed",
   );
 

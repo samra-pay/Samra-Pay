@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "status": "prepared-not-applied",
+  "status": "applied-verified",
   "phase": "coming-soon-production-foundation",
-  "decisionStatus": "preflight-verified-foundation-not-applied",
+  "decisionStatus": "foundation-applied-verified",
   "applyAuthorized": false,
   "cloudStateReadByPlan": false,
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
@@ -35,6 +35,21 @@
     "sha256": "083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b",
     "operator": "samra-production-auditor@samra-pay-production.iam.gserviceaccount.com",
     "cloudMutation": false
+  },
+  "activationEvidence": {
+    "status": "passed-independent-post-audit",
+    "sourceSha": "c328ba56b6e15d42e6fd80024160c4e3b7db9c42",
+    "appliedOn": "2026-08-31",
+    "operator": "me@davidhaile.com",
+    "observedState": "ready",
+    "apiCount": 15,
+    "repositoryCount": 1,
+    "serviceAccountCount": 5,
+    "secretMetadataCount": 2,
+    "secretVersionCount": 0,
+    "deferredPrivateApiInvoker": true,
+    "cloudChangesLimitedToFoundation": true,
+    "cloudOrDnsChangesMadeByPostAudit": false
   },
   "projectLabels": {
     "environment": "production",
@@ -167,6 +182,6 @@
     "githubWorkflowAuthorized": false
   },
   "blockedOn": [
-    "separately reviewed and authorized production infrastructure foundation apply"
+    "separately reviewed and authorized production data foundation apply"
   ]
 }

@@ -34,7 +34,7 @@ test("validates the review-only coming-soon launch boundary", () => {
     schemaVersion: 1,
     status: "validated-review-only",
     launchPhase: "production-coming-soon",
-    boundaryStatus: "project-verified-foundation-not-applied",
+    boundaryStatus: "foundation-applied-verified-data-foundation-not-applied",
     projectId: "samra-pay-production",
     canonicalDomain: "www.samrapay.com",
     publicRouteCount: 1,
