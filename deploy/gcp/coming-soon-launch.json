@@ -187,6 +187,18 @@
     ],
     "changesAuthorized": false
   },
+  "staticInformationalOverride": {
+    "decisionStatus": "approved-for-exact-sha-release",
+    "approvedOn": "2026-08-31",
+    "linkedContract": "deploy/gcp/coming-soon-static-hosting.json",
+    "hostingProvider": "firebase-hosting",
+    "publicInformationOnly": true,
+    "emailCollection": false,
+    "apiDeployment": false,
+    "databaseUse": false,
+    "vendorActivation": false,
+    "supersedesInteractiveLaunch": false
+  },
   "blockedOn": [
     "final Sites refresh and visual approval",
     "pinned production database credentials and migration review",

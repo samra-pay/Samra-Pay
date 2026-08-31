@@ -1,4 +1,3 @@
-import { type FormEvent, useId, useState } from "react";
 import {
   ArrowRight,
   Gift,
@@ -13,7 +12,6 @@ import { PublicFaqAccordion } from "@/components/public-faq";
 import { homeFaqItems } from "@/content/public-faq";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 import { usePublicPageMeta } from "@/lib/public-page-meta";
-import { subscribePublicWaitlist } from "@/lib/public-waitlist";
 import "./coming-soon.css";
 
 const homeMeta = {
@@ -59,100 +57,6 @@ const siteContent = {
     { icon: LockKeyhole, label: localized("Read the values guiding the product", "ምርቱን የሚመሩትን እሴቶች ያንብቡ"), href: "/values" },
   ],
 };
-
-function EarlyAccessForm({ compact = false }: { compact?: boolean }) {
-  const emailId = useId();
-  const consentId = useId();
-  const { language, text } = usePublicLanguage();
-  const [email, setEmail] = useState("");
-  const [website, setWebsite] = useState("");
-  const [consented, setConsented] = useState(false);
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!event.currentTarget.checkValidity()) return;
-    setStatus("submitting");
-    try {
-      await subscribePublicWaitlist({ email, locale: language, website });
-      setStatus("success");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  if (status === "success") {
-    return (
-      <div className="early-access-success" role="status">
-        <ShieldCheck aria-hidden="true" />
-        <div>
-          <strong>{text(localized("You’re on the list.", "በዝርዝሩ ውስጥ ገብተዋል።"))}</strong>
-          <span>{text(localized(
-            "We’ll email you when Samra Pay launch updates are ready.",
-            "የSamra Pay የመክፈቻ ዜናዎች ሲዘጋጁ በኢሜይል እናሳውቅዎታለን።",
-          ))}</span>
-        </div>
-        <button type="button" onClick={() => setStatus("idle")}>
-          {text(localized("Use another email", "ሌላ ኢሜይል ይጠቀሙ"))}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <form className={compact ? "early-access-form is-compact" : "early-access-form"} onSubmit={(event) => void handleSubmit(event)}>
-      <label className="sr-only" htmlFor={emailId}>
-        {text(localized("Email address", "የኢሜይል አድራሻ"))}
-      </label>
-      <input
-        id={emailId}
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        placeholder={text(localized("Email address", "የኢሜይል አድራሻ"))}
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        required
-      />
-      <input
-        className="waitlist-honeypot"
-        type="text"
-        name="website"
-        tabIndex={-1}
-        autoComplete="off"
-        value={website}
-        onChange={(event) => setWebsite(event.target.value)}
-        aria-hidden="true"
-      />
-      <button type="submit" disabled={status === "submitting" || !consented}>
-        {status === "submitting"
-          ? text(localized("Joining…", "በመመዝገብ ላይ…"))
-          : text(localized("Join the waitlist", "የጥበቃ ዝርዝሩን ይቀላቀሉ"))}
-      </button>
-      <label className="waitlist-consent" htmlFor={consentId}>
-        <input
-          id={consentId}
-          type="checkbox"
-          checked={consented}
-          onChange={(event) => setConsented(event.target.checked)}
-          required
-        />
-        <span>{text(localized(
-          "I agree to receive Samra Pay launch updates by email. I can unsubscribe at any time.",
-          "የSamra Pay የመክፈቻ ዜናዎችን በኢሜይል ለመቀበል እስማማለሁ። በማንኛውም ጊዜ ምዝገባዬን ማቋረጥ እችላለሁ።",
-        ))} <a href="/privacy">{text(localized("Privacy", "ግላዊነት"))}</a></span>
-      </label>
-      {status === "error" ? (
-        <p className="waitlist-error" role="alert">
-          {text(localized(
-            "We couldn’t save your signup. Please try again.",
-            "ምዝገባዎን ማስቀመጥ አልቻልንም። እባክዎ ዳግም ይሞክሩ።",
-          ))}
-        </p>
-      ) : null}
-    </form>
-  );
-}
 
 function HomeFaq() {
   const { text } = usePublicLanguage();
@@ -202,7 +106,15 @@ export default function Home() {
                 "በአሜሪካና ካናዳ የሚጀምረው፦ ቀጥታ የደመወዝ ገቢ፣ የክሬዲት ታሪክ ግንባታ፣ የገንዘብ ልውውጥ እና በዕለታዊ ወጪ ሽልማቶች—ሁሉም በአንድ ቦታ።",
               ))}
             </p>
-            <EarlyAccessForm />
+            <div className="static-launch-actions" aria-label={text(localized("Explore Samra Pay", "Samra Payን ያስሱ"))}>
+              <a className="static-launch-primary" href="/features">
+                {text(localized("Explore what we’re building", "እየገነባን ያለነውን ያስሱ"))}
+                <ArrowRight aria-hidden="true" />
+              </a>
+              <a className="static-launch-secondary" href="/faq">
+                {text(localized("Read the FAQ", "ጥያቄና መልሱን ያንብቡ"))}
+              </a>
+            </div>
             <p className="concept-note" id="concept-status">
               <ShieldCheck aria-hidden="true" />
               {text(localized(
@@ -310,13 +222,21 @@ export default function Home() {
         <section className="final-cta" aria-labelledby="final-cta-title">
           <div className="coming-container final-cta-grid">
             <div>
-              <h2 id="final-cta-title">{text(localized("Be first to know when Alpha opens.", "Alpha ሲከፈት መጀመሪያ ይወቁ።"))}</h2>
+              <h2 id="final-cta-title">{text(localized("See what Samra Pay is building toward.", "Samra Pay ወደ ምን እየገነባ እንደሆነ ይመልከቱ።"))}</h2>
               <p>{text(localized(
-                "Limited Alpha is planned for the U.S. and Canada in April 2027. Get product updates as Samra Pay moves toward release.",
-                "የተወሰነ Alpha በU.S. እና Canada በApril 2027 ለመጀመር ታቅዷል። Samra Pay ወደ ምረቃ ሲቀርብ የምርት ዜናዎችን ያግኙ።",
+                "Limited Alpha is planned for the U.S. and Canada in April 2027. This public website is informational only; a separate updates option will be added later.",
+                "የተወሰነ Alpha በU.S. እና Canada በApril 2027 ለመጀመር ታቅዷል። ይህ የሕዝብ ድረ ገጽ ለመረጃ ብቻ ነው፤ የተለየ የዜና ምዝገባ አማራጭ በኋላ ይጨመራል።",
               ))}</p>
             </div>
-            <EarlyAccessForm compact />
+            <div className="static-launch-actions is-final" aria-label={text(localized("Public site links", "የሕዝብ ድረ ገጽ አገናኞች"))}>
+              <a className="static-launch-primary" href="/features">
+                {text(localized("Explore the product vision", "የምርት ራዕዩን ያስሱ"))}
+                <ArrowRight aria-hidden="true" />
+              </a>
+              <a className="static-launch-secondary" href="/values">
+                {text(localized("Read our values", "እሴቶቻችንን ያንብቡ"))}
+              </a>
+            </div>
           </div>
         </section>
       </main>

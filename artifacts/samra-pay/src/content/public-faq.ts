@@ -192,8 +192,8 @@ export const fullFaqItems: PublicFaqItem[] = [
     category: "company",
     question: localized("How can I get updates?", "ዜናዎችን እንዴት ማግኘት እችላለሁ?"),
     answer: localized(
-      "Join the waitlist with your email and explicit consent to receive launch updates. Samra Pay stores the address separately from acquisition telemetry, records the notice version and server time, and will include an unsubscribe option in every update.",
-      "የመክፈቻ ዜናዎችን ለመቀበል ኢሜይልዎንና ግልጽ ፈቃድዎን በመስጠት የጥበቃ ዝርዝሩን ይቀላቀሉ። Samra Pay አድራሻውን ከግብይት መለኪያዎች ለይቶ ያከማቻል፣ የማስታወቂያውን ስሪትና የአገልጋዩን ጊዜ ይመዘግባል፣ እና በእያንዳንዱ ዜና የምዝገባ ማቋረጫ ያካትታል።",
+      "The current website does not collect email addresses. Check this site for public product updates; Samra Pay plans to add a separate, consent-based updates option later.",
+      "የአሁኑ ድረ ገጽ የኢሜይል አድራሻ አይሰበስብም። የሕዝብ የምርት ዜናዎችን በዚህ ድረ ገጽ ይመልከቱ፤ Samra Pay በፈቃድ ላይ የተመሠረተ የተለየ የዜና አማራጭ በኋላ ለመጨመር አቅዷል።",
     ),
   },
 ];
