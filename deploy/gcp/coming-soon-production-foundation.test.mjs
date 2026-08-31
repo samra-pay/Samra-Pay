@@ -12,12 +12,12 @@ const planScript = await readFile(
   "utf8",
 );
 
-test("validates one confirmed and non-mutating production foundation plan", () => {
+test("validates one applied and independently verified production foundation", () => {
   assert.deepEqual(validateComingSoonProductionFoundation(), {
     schemaVersion: 1,
-    status: "validated-prepared-not-applied",
+    status: "validated-applied-verified",
     phase: "coming-soon-production-foundation",
-    boundaryStatus: "preflight-verified-foundation-not-applied",
+    boundaryStatus: "foundation-applied-verified",
     projectId: "samra-pay-production",
     monthlyBudgetUsd: 25,
     canonicalDomain: "www.samrapay.com",
@@ -25,6 +25,7 @@ test("validates one confirmed and non-mutating production foundation plan", () =
     serviceAccountCount: 5,
     secretMetadataCount: 2,
     preflightEvidenceStatus: "passed",
+    activationEvidenceStatus: "passed-independent-post-audit",
     activationController:
       "deploy/gcp/activate-coming-soon-production-foundation.sh",
     estimatedMonthlyPlanCostUsd: 0,
@@ -49,6 +50,8 @@ test("rejects confirmed boundary drift and an apply authorization", () => {
       (value.productionBoundary.billingAccountSourceProjectId =
         "another-project"),
     (value) => (value.preflightEvidence.workflowRunId = "1"),
+    (value) => (value.activationEvidence.sourceSha = "a".repeat(40)),
+    (value) => (value.activationEvidence.secretVersionCount = 1),
     (value) => (value.activation.automaticApply = true),
     (value) => (value.applyAuthorized = true),
   ]) {
@@ -139,7 +142,7 @@ test("runs only a local zero-cost plan and exposes no apply mode", () => {
     ["deploy/gcp/plan-coming-soon-production-foundation.sh", "--plan"],
     { encoding: "utf8" },
   );
-  assert.match(output, /COMING-SOON PRODUCTION FOUNDATION PLAN PASS/);
+  assert.match(output, /COMING-SOON PRODUCTION FOUNDATION RECOVERY PLAN PASS/);
   assert.match(output, /Plan cost: USD 0 per month/);
   assert.match(output, /Cloud state read: no/);
   assert.match(output, /Project ID: samra-pay-production/);

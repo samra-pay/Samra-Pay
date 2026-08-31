@@ -19,7 +19,7 @@ VALIDATED="$(
 
 printf '%s\n' "${VALIDATED}"
 cat <<'PLAN'
-COMING-SOON PRODUCTION FOUNDATION PLAN PASS
+COMING-SOON PRODUCTION FOUNDATION RECOVERY PLAN PASS
 Plan cost: USD 0 per month
 Cloud state read: no
 Cloud or DNS state changed: no
@@ -43,7 +43,9 @@ Protected preflight evidence:
   - GitHub run: 33334655501
   - Evidence SHA-256: 083bd82259bd54f5fab76ef08f9fab5701a45d59fcd6611d7ea5231b9a66d48b
 
-A later, separately authorized foundation apply would be limited to:
+The foundation was applied and independently verified at source
+c328ba56b6e15d42e6fd80024160c4e3b7db9c42. A later, separately authorized
+recovery apply would remain limited to:
   1. the approved production labels and 15 explicitly reviewed APIs;
   2. one regional immutable samra-production Docker repository;
   3. five distinct keyless build, deploy, web, API, and migration identities;
@@ -58,9 +60,8 @@ vendor integration, production data, or Squarespace DNS record.
 The guarded activation controller and independent post-audit are implemented,
 but automatic or GitHub-based apply remains disabled.
 
-Remaining blocker:
-  - a separately reviewed and authorized production infrastructure foundation
-    apply using the exact human-admin controller.
+Next blocker:
+  - a separately reviewed and authorized production data foundation apply.
 
 PLAN COMPLETE — NO CLOUD OR DNS CHANGES
 PLAN

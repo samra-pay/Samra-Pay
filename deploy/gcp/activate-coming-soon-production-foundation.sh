@@ -24,7 +24,7 @@ Plan cost: USD 0 per month
 Cloud state read: no
 Cloud or DNS state changed: no
 
-A separately authorized human-admin apply is limited to:
+A separately authorized human-admin recovery apply is limited to:
   1. reverify the exact production project, billing account, USD 25 project
      budget, source SHA, administrator, organization, and region;
   2. enable only the 15 reviewed foundation APIs and enforce three labels;
