@@ -11,7 +11,7 @@
     "releaseSource": "FULL_GIT_SHA"
   },
   "productionBoundary": {
-    "decisionStatus": "foundation-applied-verified-data-foundation-not-applied",
+    "decisionStatus": "foundation-and-data-foundation-applied-verified-deployment-not-applied",
     "projectId": "samra-pay-production",
     "projectNumber": "382465561715",
     "organizationId": "614833350075",
@@ -189,10 +189,10 @@
   },
   "blockedOn": [
     "final Sites refresh and visual approval",
-    "separate production data foundation and pinned database secrets",
+    "pinned production database credentials and migration review",
     "privacy notice and consent wording approval",
     "load balancer, Cloud Armor, alerting, and rollback review",
-    "separate data-foundation, database-credential, migration, and deployment apply authorizations",
+    "separate database-credential, migration, and deployment apply authorizations",
     "explicit deployment and DNS cutover authorization"
   ],
   "excluded": [

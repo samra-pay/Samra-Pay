@@ -9,10 +9,11 @@ immutable Git commit becomes the Google Cloud release.
 
 The bounded production project, billing link, USD 25 alert, keyless preflight
 trust, APIs, immutable image repository, five workload identities, exact IAM,
-and two empty secret metadata records now exist and passed independent audit.
-This runbook does not authorize the private data foundation, database spend,
-deployment, public traffic, waitlist data collection, vendors, or Squarespace
-DNS changes. Those decisions remain explicit gates in
+two empty secret metadata records, private VPC, subnet, Private Services
+Access, zonal PostgreSQL 16 instance, and empty application database now exist
+and passed independent audit. This runbook does not authorize database
+credentials, migrations, deployment, public traffic, waitlist data collection,
+vendors, or Squarespace DNS changes. Those decisions remain explicit gates in
 `deploy/gcp/coming-soon-launch.json`.
 
 ## Launch topology
@@ -157,15 +158,23 @@ host are locked in the plan. The project number, same-account billing match,
 and exact budget are verified. Private API invocation IAM is correctly deferred
 until the API service exists.
 
-## Production data foundation controller
+## Applied production data foundation
 
-The local no-cost plan is:
+The production data foundation was applied from exact source
+`7977afc1a550521fefe1ae6df9acb787f75b1ed4` on 2026-08-31 and passed its
+independent post-audit. It contains exactly one dedicated production VPC,
+regional application subnet, Private Services Access allocation and
+connection, private-only PostgreSQL 16 instance, and empty `samra_production`
+database. The Cloud SQL create operation
+`dd0e1c32-0518-4468-ad9d-beb70000002c` finished with status `DONE`.
+
+The local no-cost plan remains the fail-closed recovery reference:
 
 ```sh
 bash deploy/gcp/activate-coming-soon-production-data-foundation.sh --plan
 ```
 
-The proposal uses one dedicated production VPC with `10.50.0.0/24` for the
+The controller uses one dedicated production VPC with `10.50.0.0/24` for the
 regional application subnet and `10.51.0.0/24` for Private Services Access. It
 pins PostgreSQL 16 to a private-only `db-custom-1-3840` zonal profile with 10 GB
 SSD, bounded growth to 100 GB, deletion protection, 14 retained backups, and
@@ -180,12 +189,21 @@ base estimate is USD 68.26 per month; the guarded estimate is USD 81.92 with a
 apply-time maximum. The estimate is valid through 2026-09-07 and must be
 refreshed after that date.
 
-The temporary zonal posture and USD 100 maximum are accepted. The guarded
-controller still requires an authenticated exact-SHA review and the explicit
-`AUTHORIZED_COMING_SOON_PRODUCTION_DATA_FOUNDATION` sentinel before it can
-create the network and empty database. It is resumable, rejects drift, and runs
-an independent read-only post-audit. Retention, deletion, access ownership, and
-the privacy notice remain required before the first waitlist record.
+The temporary zonal posture and USD 100 maximum were accepted for this apply.
+The USD 25 budget remains an early alert, not a spending cap. The guarded
+estimate was USD 81.92 per month, below the USD 100 action-time hard stop;
+actual billing remains usage-dependent. The apply log was captured with
+SHA-256
+`f5f488b460d3d7833840471c3a0aff7217972a2bea616ee98b4f1885e19269f4`.
+
+The retained recovery controller still requires an authenticated exact-SHA
+review and the explicit `AUTHORIZED_COMING_SOON_PRODUCTION_DATA_FOUNDATION`
+sentinel before any recovery mutation. It is resumable, reuses exact state,
+rejects drift, and runs an independent read-only post-audit. The verified state
+has zero secret versions, Cloud Run services, and Cloud Run jobs. No database
+user, credential, migration, customer row, public endpoint, vendor integration,
+or DNS record exists. Retention, deletion, access ownership, and the privacy
+notice remain required before the first waitlist record.
 
 ## Production project, billing, and budget controller
 
@@ -200,8 +218,8 @@ The local plan costs USD 0 and reads no Google Cloud or DNS state. The recovery
 controller is idempotent: it reuses exact state and rejects any project,
 billing, or budget drift. It cannot enable an API, create infrastructure,
 deploy, route traffic, collect data, activate vendors, or change Squarespace
-DNS. The data foundation, database credentials and migration, deployment,
-traffic, and DNS remain later gates.
+DNS. Database credentials and migration, deployment, traffic, and DNS remain
+later gates.
 
 ## Squarespace DNS cutover
 
@@ -214,8 +232,8 @@ authorization at the action boundary.
 
 ## Remaining launch decisions
 
-- exact-SHA production data-foundation live review and apply approval;
 - production PostgreSQL retention, deletion, access-owner, and privacy approval;
+- separately reviewed pinned database credentials and migration;
 - final privacy notice and consent language;
 - final refreshed Sites snapshot and desktop/mobile visual approval;
 - Cloud Armor thresholds, alert recipients, rollback owner, and launch window;

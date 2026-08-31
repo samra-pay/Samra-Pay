@@ -318,10 +318,11 @@ export function validateComingSoonProductionFoundation(
     "The guarded production foundation activation boundary changed",
   );
   assert(
-    foundation.blockedOn.length === 1 &&
-      foundation.blockedOn.includes(
-        "separately reviewed and authorized production data foundation apply",
-      ),
+    JSON.stringify(foundation.blockedOn) ===
+      JSON.stringify([
+        "separately reviewed database-credential, migration, and deployment applies",
+        "privacy approval before customer data or public traffic",
+      ]),
     "The production foundation blockers changed",
   );
 
