@@ -16,6 +16,10 @@ const generatedDirectory = path.join(
   packageRoot,
   "src/assets/coming-soon/generated",
 );
+const generationFingerprintPath = path.join(
+  generatedDirectory,
+  ".generation-fingerprint",
+);
 const publicDirectory = path.join(packageRoot, "public");
 const publicIconsDirectory = path.join(publicDirectory, "icons");
 
@@ -78,6 +82,60 @@ const imagePlans = [
     maximumBytes: 80_000,
   },
 ];
+
+function expectedGeneratedFileNames() {
+  return imagePlans.flatMap((plan) =>
+    plan.widths.flatMap((width) => [
+      `${plan.name}-${width}.avif`,
+      `${plan.name}-${width}.webp`,
+    ]),
+  );
+}
+
+async function generationFingerprint() {
+  const hash = createHash("sha256");
+  hash.update(await readFile(new URL(import.meta.url)));
+  hash.update(
+    JSON.stringify({
+      architecture: process.arch,
+      platform: process.platform,
+      sharp: sharp.versions,
+    }),
+  );
+
+  const sourceNames = [
+    ...new Set([
+      ...imagePlans.map((plan) => plan.source),
+      "og-preview.png",
+      "samra-pay-icon-source.png",
+    ]),
+  ].sort();
+  for (const name of sourceNames) {
+    hash.update(name);
+    hash.update(await readFile(path.join(sourceDirectory, name)));
+  }
+  return hash.digest("hex");
+}
+
+async function generatedCacheIsCurrent(fingerprint) {
+  try {
+    if (
+      (await readFile(generationFingerprintPath, "utf8")).trim() !==
+      fingerprint
+    ) {
+      return false;
+    }
+    const generatedImages = (await readdir(generatedDirectory))
+      .filter((name) => /\.(?:avif|webp)$/u.test(name))
+      .sort();
+    return (
+      JSON.stringify(generatedImages) ===
+      JSON.stringify(expectedGeneratedFileNames().sort())
+    );
+  } catch {
+    return false;
+  }
+}
 
 function contentHash(buffer) {
   return createHash("sha256").update(buffer).digest("hex").slice(0, 10);
@@ -255,15 +313,8 @@ async function verifyGeneratedDimensions() {
   }
 }
 
-async function main() {
-  await generateResponsiveImages();
-  const ogFileName = await generateOpenGraphImage();
-  const iconNames = await generateIcons();
-  await updateStaticReferences(ogFileName, iconNames);
-  await verifyGeneratedDimensions();
-
-  const generatedFiles = await readdir(generatedDirectory);
-  for (const name of generatedFiles) {
+async function verifyGeneratedImageCeilings() {
+  for (const name of expectedGeneratedFileNames()) {
     const bytes = (await stat(path.join(generatedDirectory, name))).size;
     if (bytes > 200_000) {
       throw new Error(
@@ -271,6 +322,24 @@ async function main() {
       );
     }
   }
+}
+
+async function main() {
+  const fingerprint = await generationFingerprint();
+  if (await generatedCacheIsCurrent(fingerprint)) {
+    await verifyGeneratedDimensions();
+    await verifyGeneratedImageCeilings();
+    process.stdout.write("Public image derivatives are current.\n");
+    return;
+  }
+
+  await generateResponsiveImages();
+  const ogFileName = await generateOpenGraphImage();
+  const iconNames = await generateIcons();
+  await updateStaticReferences(ogFileName, iconNames);
+  await verifyGeneratedDimensions();
+  await verifyGeneratedImageCeilings();
+  await writeFile(generationFingerprintPath, `${fingerprint}\n`);
 }
 
 await main();
