@@ -22,6 +22,8 @@ export type ExperienceBudget = Readonly<{
   expectedMatches: number;
   maximumBytes?: number;
   maximumGzipBytes?: number;
+  maximumTotalBytes?: number;
+  maximumTotalGzipBytes?: number;
 }>;
 
 export type ExperienceBudgetContract = Readonly<{
@@ -34,11 +36,18 @@ export type ExperienceBudgetResult = Readonly<{
   surface: string;
   status: "passed" | "failed";
   matchedFiles: readonly string[];
+  fileMeasurements: readonly Readonly<{
+    file: string;
+    bytes: number;
+    gzipBytes: number;
+  }>[];
   expectedMatches: number;
   bytes: number | null;
   gzipBytes: number | null;
   maximumBytes: number | null;
   maximumGzipBytes: number | null;
+  maximumTotalBytes: number | null;
+  maximumTotalGzipBytes: number | null;
   failures: readonly string[];
 }>;
 
@@ -74,27 +83,66 @@ export async function evaluateExperienceBudgets(
       .filter((file) => expression.test(file))
       .sort((left, right) => left.localeCompare(right));
     const failures: string[] = [];
-    let bytes: number | null = null;
-    let gzipBytes: number | null = null;
+    const fileMeasurements = await Promise.all(
+      matchedFiles.map(async (file) => {
+        const content = await readFile(path.join(directory, file));
+        return Object.freeze({
+          file: path.posix.join(budget.directory.replaceAll("\\", "/"), file),
+          bytes: content.byteLength,
+          gzipBytes: gzipSync(content, { level: 9 }).byteLength,
+        });
+      }),
+    );
+    const bytes =
+      fileMeasurements.length === 0
+        ? null
+        : fileMeasurements.reduce((total, file) => total + file.bytes, 0);
+    const gzipBytes =
+      fileMeasurements.length === 0
+        ? null
+        : fileMeasurements.reduce((total, file) => total + file.gzipBytes, 0);
 
     if (matchedFiles.length !== budget.expectedMatches) {
       failures.push(
         `expected ${budget.expectedMatches} matching artifact(s), found ${matchedFiles.length}`,
       );
-    } else if (budget.expectedMatches === 1 && matchedFiles.length === 1) {
-      const content = await readFile(path.join(directory, matchedFiles[0]!));
-      bytes = content.byteLength;
-      gzipBytes = gzipSync(content, { level: 9 }).byteLength;
-      if (bytes > budget.maximumBytes!) {
+    }
+
+    for (const measurement of fileMeasurements) {
+      if (
+        budget.maximumBytes !== undefined &&
+        measurement.bytes > budget.maximumBytes
+      ) {
         failures.push(
-          `raw bytes ${bytes} exceed maximum ${budget.maximumBytes!}`,
+          `${measurement.file} raw bytes ${measurement.bytes} exceed per-file maximum ${budget.maximumBytes}`,
         );
       }
-      if (gzipBytes > budget.maximumGzipBytes!) {
+      if (
+        budget.maximumGzipBytes !== undefined &&
+        measurement.gzipBytes > budget.maximumGzipBytes
+      ) {
         failures.push(
-          `gzip bytes ${gzipBytes} exceed maximum ${budget.maximumGzipBytes!}`,
+          `${measurement.file} gzip bytes ${measurement.gzipBytes} exceed per-file maximum ${budget.maximumGzipBytes}`,
         );
       }
+    }
+    if (
+      bytes !== null &&
+      budget.maximumTotalBytes !== undefined &&
+      bytes > budget.maximumTotalBytes
+    ) {
+      failures.push(
+        `total raw bytes ${bytes} exceed aggregate maximum ${budget.maximumTotalBytes}`,
+      );
+    }
+    if (
+      gzipBytes !== null &&
+      budget.maximumTotalGzipBytes !== undefined &&
+      gzipBytes > budget.maximumTotalGzipBytes
+    ) {
+      failures.push(
+        `total gzip bytes ${gzipBytes} exceed aggregate maximum ${budget.maximumTotalGzipBytes}`,
+      );
     }
 
     results.push(
@@ -107,13 +155,14 @@ export async function evaluateExperienceBudgets(
             path.posix.join(budget.directory.replaceAll("\\", "/"), file),
           ),
         ),
+        fileMeasurements: Object.freeze(fileMeasurements),
         expectedMatches: budget.expectedMatches,
         bytes,
         gzipBytes,
-        maximumBytes:
-          budget.expectedMatches === 1 ? budget.maximumBytes! : null,
-        maximumGzipBytes:
-          budget.expectedMatches === 1 ? budget.maximumGzipBytes! : null,
+        maximumBytes: budget.maximumBytes ?? null,
+        maximumGzipBytes: budget.maximumGzipBytes ?? null,
+        maximumTotalBytes: budget.maximumTotalBytes ?? null,
+        maximumTotalGzipBytes: budget.maximumTotalGzipBytes ?? null,
         failures: Object.freeze(failures),
       }),
     );
@@ -133,12 +182,12 @@ export async function evaluateExperienceBudgets(
 
 export function validateContract(contract: ExperienceBudgetContract): void {
   if (
-    contract.version !== 2 ||
+    contract.version !== 3 ||
     !Array.isArray(contract.budgets) ||
     contract.budgets.length === 0
   ) {
     throw new Error(
-      "Experience budget contract must use version 2 and define budgets.",
+      "Experience budget contract must use version 3 and define budgets.",
     );
   }
   const ids = contract.budgets.map(({ id }) => id);
@@ -165,15 +214,20 @@ export function validateContract(contract: ExperienceBudgetContract): void {
         `Budget ${budget.id} contains an invalid match expression.`,
       );
     }
-    if (budget.expectedMatches !== 0 && budget.expectedMatches !== 1) {
+    if (
+      !Number.isSafeInteger(budget.expectedMatches) ||
+      budget.expectedMatches < 0
+    ) {
       throw new Error(
-        `Budget ${budget.id} must expect zero or exactly one artifact.`,
+        `Budget ${budget.id} requires an exact non-negative expectedMatches count.`,
       );
     }
     if (budget.expectedMatches === 0) {
       if (
         budget.maximumBytes !== undefined ||
-        budget.maximumGzipBytes !== undefined
+        budget.maximumGzipBytes !== undefined ||
+        budget.maximumTotalBytes !== undefined ||
+        budget.maximumTotalGzipBytes !== undefined
       ) {
         throw new Error(
           `Forbidden budget ${budget.id} must not define size limits.`,
@@ -181,11 +235,23 @@ export function validateContract(contract: ExperienceBudgetContract): void {
       }
       continue;
     }
+    if (
+      budget.maximumBytes === undefined &&
+      budget.maximumGzipBytes === undefined &&
+      budget.maximumTotalBytes === undefined &&
+      budget.maximumTotalGzipBytes === undefined
+    ) {
+      throw new Error(
+        `Budget ${budget.id} requires at least one positive size limit.`,
+      );
+    }
     for (const [label, value] of [
       ["maximumBytes", budget.maximumBytes],
       ["maximumGzipBytes", budget.maximumGzipBytes],
+      ["maximumTotalBytes", budget.maximumTotalBytes],
+      ["maximumTotalGzipBytes", budget.maximumTotalGzipBytes],
     ] as const) {
-      if (!Number.isSafeInteger(value) || (value ?? 0) < 1) {
+      if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
         throw new Error(`Budget ${budget.id} requires a positive ${label}.`);
       }
     }
@@ -285,7 +351,7 @@ async function main(): Promise<void> {
         ? `${result.matchedFiles.length} forbidden artifact(s)`
         : result.bytes === null
           ? "artifact mismatch"
-          : `${result.bytes} B raw / ${result.gzipBytes} B gzip`;
+          : `${result.matchedFiles.length} artifact(s), ${result.bytes} B total raw / ${result.gzipBytes} B total gzip`;
     console.log(
       `${result.status === "passed" ? "PASS" : "FAIL"} ${result.id}: ${measured}`,
     );

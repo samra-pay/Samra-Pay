@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "budgets": [
     {
       "id": "customer-web-entry-javascript",
@@ -16,8 +16,8 @@
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^coming-soon-[A-Za-z0-9_-]+\\.js$",
       "expectedMatches": 1,
-      "maximumBytes": 15000,
-      "maximumGzipBytes": 6000
+      "maximumBytes": 13059,
+      "maximumGzipBytes": 4903
     },
     {
       "id": "customer-web-public-home-javascript",
@@ -25,8 +25,8 @@
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^home-[A-Za-z0-9_-]+\\.js$",
       "expectedMatches": 1,
-      "maximumBytes": 25000,
-      "maximumGzipBytes": 9000
+      "maximumBytes": 16125,
+      "maximumGzipBytes": 5733
     },
     {
       "id": "customer-web-onboarding-javascript",
@@ -48,8 +48,54 @@
       "directory": "artifacts/samra-pay/dist/public/assets",
       "match": "^coming-soon-[A-Za-z0-9_-]+\\.css$",
       "expectedMatches": 1,
-      "maximumBytes": 80000,
-      "maximumGzipBytes": 18000
+      "maximumBytes": 68706,
+      "maximumGzipBytes": 13562
+    },
+    {
+      "id": "customer-web-public-production-images",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public",
+      "match": "\\.(?:avif|webp|png|svg|ico|gif|jpe?g)$",
+      "expectedMatches": 32,
+      "maximumBytes": 200000
+    },
+    {
+      "id": "customer-web-public-home-mobile-images",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^(?:hero-woman-coffee|proof-man-laptop|woman-with-phone-diaspora|tibeb-pattern-gold)-640-[A-Za-z0-9_-]+\\.avif$",
+      "expectedMatches": 4,
+      "maximumTotalBytes": 400000
+    },
+    {
+      "id": "customer-web-public-home-mobile-images-webp",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public/assets",
+      "match": "^(?:hero-woman-coffee|proof-man-laptop|woman-with-phone-diaspora|tibeb-pattern-gold)-640-[A-Za-z0-9_-]+\\.webp$",
+      "expectedMatches": 4,
+      "maximumTotalBytes": 400000
+    },
+    {
+      "id": "customer-web-public-home-first-load-transfer",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public",
+      "match": "^(?:index\\.html|assets/(?:(?:index|coming-soon|home)-[A-Za-z0-9_-]+\\.js|coming-soon-[A-Za-z0-9_-]+\\.css|(?:hero-woman-coffee|proof-man-laptop|woman-with-phone-diaspora|tibeb-pattern-gold)-640-[A-Za-z0-9_-]+\\.avif)|icons/samra-pay-icon-32-[a-f0-9]{10}\\.png)$",
+      "expectedMatches": 10,
+      "maximumTotalGzipBytes": 575000
+    },
+    {
+      "id": "customer-web-public-source-maps",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public",
+      "match": "\\.map$",
+      "expectedMatches": 0
+    },
+    {
+      "id": "customer-web-public-runtime-config",
+      "surface": "customer-web-public",
+      "directory": "artifacts/samra-pay/dist/public",
+      "match": "^samra-runtime-config\\.js$",
+      "expectedMatches": 0
     },
     {
       "id": "operations-entry-javascript",

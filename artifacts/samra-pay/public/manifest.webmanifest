@@ -8,20 +8,14 @@
   "theme_color": "#12100C",
   "icons": [
     {
-      "src": "/icons/samra-pay-icon-192.png",
+      "src": "/icons/samra-pay-icon-192-4e6866a209.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/samra-pay-icon-512.png",
+      "src": "/icons/samra-pay-icon-512-f9d31a8db7.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/samra-pay-icon-1024.png",
-      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     }
