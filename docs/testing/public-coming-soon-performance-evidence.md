@@ -82,9 +82,9 @@ After the exact candidate SHA is deployed, record these live checks before
 closing the performance work:
 
 ```sh
-curl -sSI https://samrapay.com/assets/hero-woman-coffee-640-DUx7i8hG.avif
-curl -sSI -H 'Accept-Encoding: br' https://samrapay.com/assets/index-C9q8tkoP.js
-curl -sSI -H 'Accept-Encoding: br' https://samrapay.com/assets/coming-soon-D2LklIXY.css
+curl -sSI https://www.samrapay.com/assets/hero-woman-coffee-640-DUx7i8hG.avif
+curl -sSI -H 'Accept-Encoding: br' https://www.samrapay.com/assets/index-C9q8tkoP.js
+curl -sSI -H 'Accept-Encoding: br' https://www.samrapay.com/assets/coming-soon-D2LklIXY.css
 ```
 
 The image must return
