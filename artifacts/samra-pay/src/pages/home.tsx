@@ -7,7 +7,17 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
-import { ComingSoonFooter, ComingSoonHeader } from "@/components/coming-soon-shell";
+import {
+  heroWomanCoffee,
+  proofManLaptop,
+  tibebPattern,
+  womanWithPhone,
+} from "@/assets/coming-soon/images";
+import {
+  ComingSoonFooter,
+  ComingSoonHeader,
+} from "@/components/coming-soon-shell";
+import { OptimizedPicture } from "@/components/optimized-picture";
 import { PublicFaqAccordion } from "@/components/public-faq";
 import { homeFaqItems } from "@/content/public-faq";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
@@ -15,7 +25,10 @@ import { usePublicPageMeta } from "@/lib/public-page-meta";
 import "./coming-soon.css";
 
 const homeMeta = {
-  title: localized("Samra Pay — U.S. & Canada Alpha, April 2027", "Samra Pay — የU.S. እና Canada Alpha፣ April 2027"),
+  title: localized(
+    "Samra Pay — U.S. & Canada Alpha, April 2027",
+    "Samra Pay — የU.S. እና Canada Alpha፣ April 2027",
+  ),
   description: localized(
     "Samra Pay is building a financial home for Ethiopians in the U.S. and Canada. Limited Alpha is planned for April 2027.",
     "Samra Pay በU.S. እና Canada ለሚኖሩ ኢትዮጵያውያን የገንዘብ ቤት እየገነባ ነው። የተወሰነ Alpha በApril 2027 ለመጀመር ታቅዷል።",
@@ -26,7 +39,10 @@ const siteContent = {
   features: [
     {
       icon: TrendingUp,
-      title: localized("Build credit through everyday payments", "በዕለታዊ ክፍያዎች የክሬዲት ታሪክዎን ያጠናክሩ።"),
+      title: localized(
+        "Build credit through everyday payments",
+        "በዕለታዊ ክፍያዎች የክሬዲት ታሪክዎን ያጠናክሩ።",
+      ),
       description: localized(
         "Designed to help eligible payments you already make support your credit journey, with reporting and eligibility tailored to each market—without taking on unnecessary debt.",
         "አስፈላጊ ያልሆነ ዕዳ ሳይወስዱ፣ አስቀድመው የሚከፍሏቸው ብቁ ክፍያዎች የክሬዲት ጉዞዎን እንዲደግፉ በየገበያው ሁኔታ የተነደፈ።",
@@ -50,11 +66,43 @@ const siteContent = {
     },
   ],
   capabilities: [
-    { icon: TrendingUp, label: localized("Explore all four card paths", "አራቱንም የካርድ አማራጮች ያስሱ"), href: "/features#progression-title" },
-    { icon: Send, label: localized("See what is planned across the portfolio", "በካርድ ስብስቡ ውስጥ የታቀደውን ይመልከቱ"), href: "/features#included-title" },
-    { icon: Gift, label: localized("Compare tiers, rewards, and access", "ደረጃዎችን፣ ሽልማቶችንና መዳረሻን ያወዳድሩ"), href: "/features#compare-title" },
-    { icon: PieChart, label: localized("Understand what is still in development", "አሁንም በልማት ላይ ያለውን ይረዱ"), href: "/features#disclosure-title" },
-    { icon: LockKeyhole, label: localized("Read the values guiding the product", "ምርቱን የሚመሩትን እሴቶች ያንብቡ"), href: "/values" },
+    {
+      icon: TrendingUp,
+      label: localized("Explore all four card paths", "አራቱንም የካርድ አማራጮች ያስሱ"),
+      href: "/features#progression-title",
+    },
+    {
+      icon: Send,
+      label: localized(
+        "See what is planned across the portfolio",
+        "በካርድ ስብስቡ ውስጥ የታቀደውን ይመልከቱ",
+      ),
+      href: "/features#included-title",
+    },
+    {
+      icon: Gift,
+      label: localized(
+        "Compare tiers, rewards, and access",
+        "ደረጃዎችን፣ ሽልማቶችንና መዳረሻን ያወዳድሩ",
+      ),
+      href: "/features#compare-title",
+    },
+    {
+      icon: PieChart,
+      label: localized(
+        "Understand what is still in development",
+        "አሁንም በልማት ላይ ያለውን ይረዱ",
+      ),
+      href: "/features#disclosure-title",
+    },
+    {
+      icon: LockKeyhole,
+      label: localized(
+        "Read the values guiding the product",
+        "ምርቱን የሚመሩትን እሴቶች ያንብቡ",
+      ),
+      href: "/values",
+    },
   ],
 };
 
@@ -65,8 +113,12 @@ function HomeFaq() {
     <section className="faq-section" id="faq" aria-labelledby="faq-title">
       <div className="coming-container faq-grid">
         <div>
-          <p className="section-eyebrow">{text(localized("Three questions to start", "ለመጀመር ሦስት ጥያቄዎች"))}</p>
-          <h2 id="faq-title">{text(localized("The essentials, answered.", "ዋናዎቹ ጥያቄዎች፣ በግልጽ።"))}</h2>
+          <p className="section-eyebrow">
+            {text(localized("Three questions to start", "ለመጀመር ሦስት ጥያቄዎች"))}
+          </p>
+          <h2 id="faq-title">
+            {text(localized("The essentials, answered.", "ዋናዎቹ ጥያቄዎች፣ በግልጽ።"))}
+          </h2>
           <a className="section-text-link" href="/faq">
             {text(localized("Visit the full FAQ", "ሙሉውን ጥያቄና መልስ ይመልከቱ"))}
             <ArrowRight aria-hidden="true" />
@@ -83,7 +135,11 @@ export default function Home() {
   usePublicPageMeta({ language, ...homeMeta });
 
   return (
-    <div className={`coming-soon-site ${language === "am" ? "is-amharic" : ""}`} id="top" lang={language}>
+    <div
+      className={`coming-soon-site ${language === "am" ? "is-amharic" : ""}`}
+      id="top"
+      lang={language}
+    >
       <ComingSoonHeader />
 
       <main id="main-content" tabIndex={-1}>
@@ -91,24 +147,44 @@ export default function Home() {
           <div className="coming-hero-copy">
             <div className="coming-status">
               <span aria-hidden="true" />
-              {text(localized("Alpha planned for April 2027", "Alpha ለApril 2027 ታቅዷል"))}
+              {text(
+                localized(
+                  "Alpha planned for April 2027",
+                  "Alpha ለApril 2027 ታቅዷል",
+                ),
+              )}
             </div>
             <h1 id="coming-title">
               {language === "en" ? (
-                <>Banked <em>here</em>, care for family <em className="hero-phrase">at home</em></>
+                <>
+                  Banked <em>here</em>, care for family{" "}
+                  <em className="hero-phrase">at home</em>
+                </>
               ) : (
-                <>የባንክ ጉዳይዎን <em>እዚህ</em> ያስተዳድሩ፤ <em className="hero-phrase">አገር ቤት</em> ያለውን ቤተሰብዎን ይንከባከቡ።</>
+                <>
+                  የባንክ ጉዳይዎን <em>እዚህ</em> ያስተዳድሩ፤{" "}
+                  <em className="hero-phrase">አገር ቤት</em> ያለውን ቤተሰብዎን ይንከባከቡ።
+                </>
               )}
             </h1>
             <p className="coming-hero-deck">
-              {text(localized(
-                "Launching in the U.S. and Canada: Direct deposit, credit building, remittance, and rewards on everyday spending—all in one place.",
-                "በአሜሪካና ካናዳ የሚጀምረው፦ ቀጥታ የደመወዝ ገቢ፣ የክሬዲት ታሪክ ግንባታ፣ የገንዘብ ልውውጥ እና በዕለታዊ ወጪ ሽልማቶች—ሁሉም በአንድ ቦታ።",
-              ))}
+              {text(
+                localized(
+                  "Launching in the U.S. and Canada: Direct deposit, credit building, remittance, and rewards on everyday spending—all in one place.",
+                  "በአሜሪካና ካናዳ የሚጀምረው፦ ቀጥታ የደመወዝ ገቢ፣ የክሬዲት ታሪክ ግንባታ፣ የገንዘብ ልውውጥ እና በዕለታዊ ወጪ ሽልማቶች—ሁሉም በአንድ ቦታ።",
+                ),
+              )}
             </p>
-            <div className="static-launch-actions" aria-label={text(localized("Explore Samra Pay", "Samra Payን ያስሱ"))}>
+            <div
+              className="static-launch-actions"
+              aria-label={text(
+                localized("Explore Samra Pay", "Samra Payን ያስሱ"),
+              )}
+            >
               <a className="static-launch-primary" href="/features">
-                {text(localized("Explore what we’re building", "እየገነባን ያለነውን ያስሱ"))}
+                {text(
+                  localized("Explore what we’re building", "እየገነባን ያለነውን ያስሱ"),
+                )}
                 <ArrowRight aria-hidden="true" />
               </a>
               <a className="static-launch-secondary" href="/faq">
@@ -117,38 +193,84 @@ export default function Home() {
             </div>
             <p className="concept-note" id="concept-status">
               <ShieldCheck aria-hidden="true" />
-              {text(localized(
-                "Samra Pay is in development",
-                "Samra Pay በልማት ላይ ነው",
-              ))}
+              {text(
+                localized(
+                  "Samra Pay is in development",
+                  "Samra Pay በልማት ላይ ነው",
+                ),
+              )}
             </p>
           </div>
 
           <div className="coming-hero-media">
-            <img
-              src="/coming-soon/hero-woman-coffee.png"
-              alt={text(localized("Ethiopian diaspora woman holding a coffee cup", "የቡና ስኒ የያዘች በውጭ የምትኖር ኢትዮጵያዊት"))}
+            <OptimizedPicture
+              asset={heroWomanCoffee}
+              pictureClassName="coming-hero-picture"
+              alt={text(
+                localized(
+                  "Ethiopian diaspora woman holding a coffee cup",
+                  "የቡና ስኒ የያዘች በውጭ የምትኖር ኢትዮጵያዊት",
+                ),
+              )}
+              decoding="async"
+              fetchPriority="high"
             />
           </div>
         </section>
 
-        <section className="story-intro" id="story" aria-labelledby="story-title">
-          <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="section-pattern section-pattern-light" />
+        <section
+          className="story-intro"
+          id="story"
+          aria-labelledby="story-title"
+        >
+          <OptimizedPicture
+            asset={tibebPattern}
+            alt=""
+            aria-hidden="true"
+            className="section-pattern section-pattern-light"
+            pictureClassName="public-picture-contents"
+            loading="lazy"
+            decoding="async"
+          />
           <div className="coming-container story-intro-grid">
-            <h2 id="story-title">{text(localized("One life. More than one home.", "አንድ ሕይወት። ከአንድ በላይ ቤት።"))}</h2>
-            <p>{text(localized(
-              "We build our lives here while the people we love are back home. Samra is being built for us, by us, to make managing and moving money simple, so staying connected never feels like a compromise. That’s how it should be.",
-              "ሕይወታችንን እዚህ እንገነባለን፤ የምንወዳቸው ሰዎች ግን አገር ቤት ናቸው። Samra የሚገነባው ለእኛ፣ በእኛ ነው—ገንዘብን ማስተዳደርና ማንቀሳቀስ ቀላል እንዲሆን እና ግንኙነታችንን ለመጠበቅ መደራደር እንዳያስፈልግ። መሆን ያለበት እንዲህ ነው።",
-            ))}</p>
+            <h2 id="story-title">
+              {text(
+                localized(
+                  "One life. More than one home.",
+                  "አንድ ሕይወት። ከአንድ በላይ ቤት።",
+                ),
+              )}
+            </h2>
+            <p>
+              {text(
+                localized(
+                  "We build our lives here while the people we love are back home. Samra is being built for us, by us, to make managing and moving money simple, so staying connected never feels like a compromise. That’s how it should be.",
+                  "ሕይወታችንን እዚህ እንገነባለን፤ የምንወዳቸው ሰዎች ግን አገር ቤት ናቸው። Samra የሚገነባው ለእኛ፣ በእኛ ነው—ገንዘብን ማስተዳደርና ማንቀሳቀስ ቀላል እንዲሆን እና ግንኙነታችንን ለመጠበቅ መደራደር እንዳያስፈልግ። መሆን ያለበት እንዲህ ነው።",
+                ),
+              )}
+            </p>
           </div>
         </section>
 
-        <section className="feature-framework" id="features" aria-label={text(localized("Samra Pay product vision", "የSamra Pay የምርት ራዕይ"))}>
+        <section
+          className="feature-framework"
+          id="features"
+          aria-label={text(
+            localized("Samra Pay product vision", "የSamra Pay የምርት ራዕይ"),
+          )}
+        >
           <div className="coming-container feature-framework-grid">
             {siteContent.features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <article className={index === 2 ? "feature-framework-item is-wide" : "feature-framework-item"} key={feature.title.en}>
+                <article
+                  className={
+                    index === 2
+                      ? "feature-framework-item is-wide"
+                      : "feature-framework-item"
+                  }
+                  key={feature.title.en}
+                >
                   <Icon aria-hidden="true" />
                   <div>
                     <h3>{text(feature.title)}</h3>
@@ -160,12 +282,33 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="capability-band" id="capabilities" aria-labelledby="capabilities-title">
-          <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="section-pattern section-pattern-dark" />
+        <section
+          className="capability-band"
+          id="capabilities"
+          aria-labelledby="capabilities-title"
+        >
+          <OptimizedPicture
+            asset={tibebPattern}
+            alt=""
+            aria-hidden="true"
+            className="section-pattern section-pattern-dark"
+            pictureClassName="public-picture-contents"
+            loading="lazy"
+            decoding="async"
+          />
           <div className="coming-container capability-grid">
             <div>
-              <p className="section-eyebrow">{text(localized("What we are building", "እየገነባን ያለነው"))}</p>
-              <h2 id="capabilities-title">{text(localized("Everyday money should move you forward.", "ዕለታዊ ገንዘብዎ ወደፊት ሊያራምድዎት ይገባል።"))}</h2>
+              <p className="section-eyebrow">
+                {text(localized("What we are building", "እየገነባን ያለነው"))}
+              </p>
+              <h2 id="capabilities-title">
+                {text(
+                  localized(
+                    "Everyday money should move you forward.",
+                    "ዕለታዊ ገንዘብዎ ወደፊት ሊያራምድዎት ይገባል።",
+                  ),
+                )}
+              </h2>
             </div>
             <div className="capability-list">
               {siteContent.capabilities.map((capability) => {
@@ -182,37 +325,107 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="proof-section proof-section-dark" id="values" aria-labelledby="approach-title">
+        <section
+          className="proof-section proof-section-dark"
+          id="values"
+          aria-labelledby="approach-title"
+        >
           <div className="coming-container proof-grid proof-grid-text-first">
             <div className="proof-copy">
-              <p className="section-eyebrow">{text(localized("What guides us", "የሚመራን"))}</p>
-              <h2 id="approach-title">{text(localized("Culture is context. Not decoration.", "ባህል አውድ ነው። ጌጥ አይደለም።"))}</h2>
-              <p>{text(localized(
-                "We are designing Samra Pay around the realities generic financial products often overlook: family responsibility, trust across distance, multiple currencies, and a connection to home that is both practical and personal.",
-                "Samra Payን አጠቃላይ የገንዘብ ምርቶች ብዙ ጊዜ በሚዘነጉባቸው እውነታዎች ዙሪያ እየነደፍን ነው፦ የቤተሰብ ኃላፊነት፣ ከርቀት የሚገነባ እምነት፣ ብዙ ምንዛሬዎችና ከቤት ጋር ያለ ተግባራዊና የግል ግንኙነት።",
-              ))}</p>
-              <a className="proof-inline-link" href="/values">{text(localized("Explore our values", "እሴቶቻችንን ያስሱ"))}<ArrowRight aria-hidden="true" /></a>
+              <p className="section-eyebrow">
+                {text(localized("What guides us", "የሚመራን"))}
+              </p>
+              <h2 id="approach-title">
+                {text(
+                  localized(
+                    "Culture is context. Not decoration.",
+                    "ባህል አውድ ነው። ጌጥ አይደለም።",
+                  ),
+                )}
+              </h2>
+              <p>
+                {text(
+                  localized(
+                    "We are designing Samra Pay around the realities generic financial products often overlook: family responsibility, trust across distance, multiple currencies, and a connection to home that is both practical and personal.",
+                    "Samra Payን አጠቃላይ የገንዘብ ምርቶች ብዙ ጊዜ በሚዘነጉባቸው እውነታዎች ዙሪያ እየነደፍን ነው፦ የቤተሰብ ኃላፊነት፣ ከርቀት የሚገነባ እምነት፣ ብዙ ምንዛሬዎችና ከቤት ጋር ያለ ተግባራዊና የግል ግንኙነት።",
+                  ),
+                )}
+              </p>
+              <a className="proof-inline-link" href="/values">
+                {text(localized("Explore our values", "እሴቶቻችንን ያስሱ"))}
+                <ArrowRight aria-hidden="true" />
+              </a>
             </div>
             <div className="proof-image-wrap">
-              <img src="/coming-soon/proof-man-laptop.png" alt={text(localized("Ethiopian diaspora professional working on a laptop in a coffee shop", "በቡና ቤት በላፕቶፕ ላይ የሚሰራ በውጭ የሚኖር ኢትዮጵያዊ"))} />
-              <img src="/coming-soon/tibeb-pattern-gold.jpg" alt="" aria-hidden="true" className="proof-pattern" />
+              <OptimizedPicture
+                asset={proofManLaptop}
+                pictureClassName="proof-photo-picture"
+                alt={text(
+                  localized(
+                    "Ethiopian diaspora professional working on a laptop in a coffee shop",
+                    "በቡና ቤት በላፕቶፕ ላይ የሚሰራ በውጭ የሚኖር ኢትዮጵያዊ",
+                  ),
+                )}
+                loading="lazy"
+                decoding="async"
+              />
+              <OptimizedPicture
+                asset={tibebPattern}
+                alt=""
+                aria-hidden="true"
+                className="proof-pattern"
+                pictureClassName="public-picture-contents"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
           </div>
         </section>
 
-        <section className="proof-section proof-section-light" id="blog" aria-labelledby="everyday-title">
+        <section
+          className="proof-section proof-section-light"
+          id="blog"
+          aria-labelledby="everyday-title"
+        >
           <div className="coming-container proof-grid proof-grid-image-first">
             <div className="proof-image-wrap proof-image-woman">
-              <img src="/coming-soon/woman-with-phone-diaspora.jpg" alt={text(localized("Ethiopian diaspora woman using her phone at home", "በቤቷ ስልኳን የምትጠቀም በውጭ የምትኖር ኢትዮጵያዊት"))} />
+              <OptimizedPicture
+                asset={womanWithPhone}
+                pictureClassName="proof-photo-picture"
+                alt={text(
+                  localized(
+                    "Ethiopian diaspora woman using her phone at home",
+                    "በቤቷ ስልኳን የምትጠቀም በውጭ የምትኖር ኢትዮጵያዊት",
+                  ),
+                )}
+                loading="lazy"
+                decoding="async"
+              />
             </div>
             <div className="proof-copy">
-              <p className="section-eyebrow">{text(localized("From Samra Pay's founder", "ከSamra Pay መስራች"))}</p>
-              <h2 id="everyday-title">{text(localized("Money, identity, and life between worlds.", "ገንዘብ፣ ማንነትና በሁለት ዓለማት መካከል ያለ ሕይወት።"))}</h2>
-              <p>{text(localized(
-                "Founder notes, practical guidance, and honest conversations for Ethiopians building lives across borders. The first posts are coming soon.",
-                "ድንበር ተሻግረው ሕይወት ለሚገነቡ ኢትዮጵያውያን የመስራች ማስታወሻዎች፣ ተግባራዊ መመሪያዎችና ግልጽ ውይይቶች። የመጀመሪያዎቹ ጽሑፎች በቅርቡ ይመጣሉ።",
-              ))}</p>
-              <a className="proof-inline-link is-dark" href="/blog">{text(localized("Visit the blog", "ጽሑፎቹን ይመልከቱ"))}<ArrowRight aria-hidden="true" /></a>
+              <p className="section-eyebrow">
+                {text(localized("From Samra Pay's founder", "ከSamra Pay መስራች"))}
+              </p>
+              <h2 id="everyday-title">
+                {text(
+                  localized(
+                    "Money, identity, and life between worlds.",
+                    "ገንዘብ፣ ማንነትና በሁለት ዓለማት መካከል ያለ ሕይወት።",
+                  ),
+                )}
+              </h2>
+              <p>
+                {text(
+                  localized(
+                    "Founder notes, practical guidance, and honest conversations for Ethiopians building lives across borders. The first posts are coming soon.",
+                    "ድንበር ተሻግረው ሕይወት ለሚገነቡ ኢትዮጵያውያን የመስራች ማስታወሻዎች፣ ተግባራዊ መመሪያዎችና ግልጽ ውይይቶች። የመጀመሪያዎቹ ጽሑፎች በቅርቡ ይመጣሉ።",
+                  ),
+                )}
+              </p>
+              <a className="proof-inline-link is-dark" href="/blog">
+                {text(localized("Visit the blog", "ጽሑፎቹን ይመልከቱ"))}
+                <ArrowRight aria-hidden="true" />
+              </a>
             </div>
           </div>
         </section>
@@ -222,13 +435,29 @@ export default function Home() {
         <section className="final-cta" aria-labelledby="final-cta-title">
           <div className="coming-container final-cta-grid">
             <div>
-              <h2 id="final-cta-title">{text(localized("See what Samra Pay is building toward.", "Samra Pay ወደ ምን እየገነባ እንደሆነ ይመልከቱ።"))}</h2>
-              <p>{text(localized(
-                "Limited Alpha is planned for the U.S. and Canada in April 2027. This public website is informational only; a separate updates option will be added later.",
-                "የተወሰነ Alpha በU.S. እና Canada በApril 2027 ለመጀመር ታቅዷል። ይህ የሕዝብ ድረ ገጽ ለመረጃ ብቻ ነው፤ የተለየ የዜና ምዝገባ አማራጭ በኋላ ይጨመራል።",
-              ))}</p>
+              <h2 id="final-cta-title">
+                {text(
+                  localized(
+                    "See what Samra Pay is building toward.",
+                    "Samra Pay ወደ ምን እየገነባ እንደሆነ ይመልከቱ።",
+                  ),
+                )}
+              </h2>
+              <p>
+                {text(
+                  localized(
+                    "Limited Alpha is planned for the U.S. and Canada in April 2027. This public website is informational only; a separate updates option will be added later.",
+                    "የተወሰነ Alpha በU.S. እና Canada በApril 2027 ለመጀመር ታቅዷል። ይህ የሕዝብ ድረ ገጽ ለመረጃ ብቻ ነው፤ የተለየ የዜና ምዝገባ አማራጭ በኋላ ይጨመራል።",
+                  ),
+                )}
+              </p>
             </div>
-            <div className="static-launch-actions is-final" aria-label={text(localized("Public site links", "የሕዝብ ድረ ገጽ አገናኞች"))}>
+            <div
+              className="static-launch-actions is-final"
+              aria-label={text(
+                localized("Public site links", "የሕዝብ ድረ ገጽ አገናኞች"),
+              )}
+            >
               <a className="static-launch-primary" href="/features">
                 {text(localized("Explore the product vision", "የምርት ራዕዩን ያስሱ"))}
                 <ArrowRight aria-hidden="true" />
