@@ -71,6 +71,9 @@ the LCP element on both mobile and desktop. Home CLS was 0.0084 on mobile and
 - Mobile `/` candidate set: 133,758 AVIF bytes; WebP fallback: 163,668 bytes.
 - No JPEG photograph, source map, public runtime configuration, or browser-side
   image optimizer ships in the public build.
+- Responsive derivatives are regenerated from tracked source photographs into
+  a gitignored, input-and-tool-versioned build cache. The release controller
+  rejects any build that changes tracked exact-SHA source.
 - OG PNG: 12,113 bytes at 1200 x 630. Largest icon PNG: 5,526 bytes.
 - Public shell, home, and CSS ceilings equal the measured baseline plus 15%
   headroom. The version 3 validator fails closed on count, per-file size,

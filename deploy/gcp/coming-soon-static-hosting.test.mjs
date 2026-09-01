@@ -130,6 +130,40 @@ test("keeps the public source informational and free of signup controls", async 
   assert.match(source, /informational only/iu);
 });
 
+test("generates platform-specific image derivatives outside release source", async () => {
+  const [ignore, packageJson, optimizer] = await Promise.all([
+    readFile(new URL("../../.gitignore", import.meta.url), "utf8"),
+    readFile(
+      new URL("../../artifacts/samra-pay/package.json", import.meta.url),
+      "utf8",
+    ).then(JSON.parse),
+    readFile(
+      new URL(
+        "../../artifacts/samra-pay/scripts/optimize-public-images.mjs",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(
+    ignore,
+    /artifacts\/samra-pay\/src\/assets\/coming-soon\/generated\//u,
+  );
+  for (const script of [
+    "dev",
+    "dev:legacy",
+    "build",
+    "build:legacy",
+    "typecheck",
+    "test",
+  ]) {
+    assert.match(packageJson.scripts[script], /prepare:public-images/u);
+  }
+  assert.match(optimizer, /generatedCacheIsCurrent/u);
+  assert.match(optimizer, /sharp: sharp\.versions/u);
+});
+
 test("keeps planning local and rejects unrecognized modes", async () => {
   const script = "deploy/gcp/activate-coming-soon-static-hosting.sh";
   const output = execFileSync("bash", [script, "--plan"], {
@@ -153,6 +187,7 @@ test("keeps planning local and rejects unrecognized modes", async () => {
 
   const source = await readFile(script, "utf8");
   assert.match(source, /firebase deploy --only hosting/u);
+  assert.match(source, /public build changed tracked release source/u);
   assert.doesNotMatch(
     source,
     /run deploy|sql users create|sql databases create|secrets versions add|firestore databases create|database:instances:create|auth:import/iu,

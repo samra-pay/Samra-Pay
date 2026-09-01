@@ -102,6 +102,10 @@ ACTIVATION_INPUT="$(
 pnpm --dir "${ROOT_DIR}" --filter @workspace/samra-pay run build
 node "${ROOT_DIR}/artifacts/samra-pay/scripts/check-public-build.mjs" \
   "${ROOT_DIR}/artifacts/samra-pay/dist/public"
+[[ -z "$(git -C "${ROOT_DIR}" status --porcelain)" ]] || {
+  echo "STOP: public build changed tracked release source" >&2
+  exit 1
+}
 
 PROJECTS_JSON="$(firebase projects:list --json --non-interactive)"
 PROJECT_LINKED="$(
