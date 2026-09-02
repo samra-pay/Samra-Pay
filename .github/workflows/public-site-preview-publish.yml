@@ -1,0 +1,83 @@
+name: Public site preview publish
+
+on:
+  workflow_run:
+    workflows: [Public site preview build]
+    types: [completed]
+
+permissions: {}
+
+# Serialize writes. A canceled upload must not race a newer release or comment.
+concurrency:
+  group: public-site-preview-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      vars.SAMRA_PUBLIC_PREVIEWS_ENABLED == 'true' &&
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    name: Publish verified artifact to isolated preview project
+    environment: public-site-preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+      id-token: write
+    env:
+      PREVIEW_RUN_ID: ${{ github.event.workflow_run.id }}
+      PREVIEW_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+      PREVIEW_PROJECT_NUMBER: ${{ vars.SAMRA_PREVIEW_PROJECT_NUMBER }}
+    steps:
+      - name: Set isolated working paths
+        run: printf 'PREVIEW_ROOT=%s/samra-public-preview\n' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"
+      - name: Check out trusted main control code, never PR code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Use Node.js 24 without installing PR dependencies
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Verify upstream run, open PR, exact head, and artifact identity
+        id: source
+        run: node deploy/preview/github.mjs verify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Validate artifact as data using trusted boundary checks and budgets
+        run: node deploy/preview/bundle.mjs verify
+      - name: Obtain short-lived preview-only credentials
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: samra-pay-previews
+          workload_identity_provider: projects/${{ vars.SAMRA_PREVIEW_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/samra-public-preview/providers/github-main
+          service_account: samra-preview-publisher@samra-pay-previews.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/firebase.hosting
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Publish expiring preview and verify served bytes before posting link
+        run: node deploy/preview/publish.mjs
+        env:
+          PREVIEW_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Preserve release and verification evidence, never credentials
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: public-preview-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.PREVIEW_ROOT }}/identity.json
+            ${{ env.PREVIEW_ROOT }}/budgets.json
+            ${{ env.PREVIEW_ROOT }}/release.json
+          if-no-files-found: ignore
+          retention-days: 14

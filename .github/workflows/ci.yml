@@ -98,6 +98,9 @@ jobs:
       - name: Validate Google Cloud portability contracts
         run: pnpm run test:gcp-platform
 
+      - name: Validate static site preview controls
+        run: node --test deploy/preview/*.test.mjs
+
       - name: Build production artifacts
         run: pnpm -r --filter "!@workspace/samra-pay-commercial" --if-present run build
         env:
