@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@workspace/remittance": "workspace:*",
+    "drizzle-kit": "^0.31.10",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.22.0",
@@ -28,7 +29,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10",
     "tsx": "catalog:"
   }
 }

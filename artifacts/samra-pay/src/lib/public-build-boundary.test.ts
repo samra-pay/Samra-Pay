@@ -61,4 +61,44 @@ describe("public build boundary", () => {
       "assets/home-123.js: contains Preview Alpha signup",
     ]);
   });
+
+  it("rejects source maps, credentials, and sensitive deployment files", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
+    temporaryDirectories.push(root);
+    await mkdir(path.join(root, "assets"));
+    await writeFile(
+      path.join(root, "assets", "home-123.js"),
+      'const token = "ghp_123456789012345678901234567890"; //# sourceMappingURL=home.js.map',
+    );
+    await writeFile(path.join(root, "assets", "home.js.map"), "{}");
+    await writeFile(
+      path.join(root, "service-account.json"),
+      '{"type":"service_account"}',
+    );
+
+    await expect(inspectPublicBuild(root)).resolves.toEqual([
+      "assets/home-123.js: contains GitHub access token",
+      "assets/home-123.js: contains a source-map reference",
+      "assets/home.js.map: forbidden distribution path",
+      "assets/home.js.map: unapproved distribution file type",
+      "service-account.json: forbidden distribution path",
+      "service-account.json: contains Google service-account credential",
+    ]);
+  });
+
+  it("rejects unknown file types and unexpected network origins", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
+    temporaryDirectories.push(root);
+    await mkdir(path.join(root, "assets"));
+    await writeFile(
+      path.join(root, "assets", "home-123.js"),
+      'fetch("https://tracking.example/collect")',
+    );
+    await writeFile(path.join(root, "debug.log"), "build output");
+
+    await expect(inspectPublicBuild(root)).resolves.toEqual([
+      "assets/home-123.js: contains unexpected network origin https://tracking.example",
+      "debug.log: unapproved distribution file type",
+    ]);
+  });
 });

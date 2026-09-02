@@ -15,13 +15,136 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  runtime-image-security:
+    name: Release runtime image security (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: api
+            dockerfile: api
+            image_name: samra-api
+          - id: customer-web
+            dockerfile: customer-web
+            image_name: samra-customer-web
+          - id: operations-web
+            dockerfile: operations-web
+            image_name: samra-operations-web
+          - id: design-system
+            dockerfile: design-system
+            image_name: samra-design-system-preview
+          - id: migrations
+            dockerfile: migrate
+            image_name: samra-migrations
+    env:
+      SAMRA_SECURITY_IMAGE_TAG: ${{ inputs.candidate_sha }}
+
+    steps:
+      - name: Check out the exact candidate for the runtime image
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Reject a floating or non-main runtime image candidate
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          test "${#CANDIDATE_SHA}" -eq 40
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git show-ref --verify refs/remotes/origin/main
+          git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
+
+      - name: Prepare runtime image evidence
+        run: mkdir -p artifacts/release-candidate/security/runtime-images
+
+      - name: Build exact-SHA runtime image from pinned inputs
+        run: >-
+          docker build
+          --file "deploy/gcp/Dockerfile.${{ matrix.dockerfile }}"
+          --tag "${{ matrix.image_name }}:${SAMRA_SECURITY_IMAGE_TAG}"
+          .
+
+      - name: Record content-addressed runtime image identity
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          DOCKERFILE: deploy/gcp/Dockerfile.${{ matrix.dockerfile }}
+          EVIDENCE_PATH: artifacts/release-candidate/security/runtime-images/${{ matrix.id }}-identity.json
+          IMAGE_REF: ${{ matrix.image_name }}:${{ inputs.candidate_sha }}
+        run: >-
+          docker image inspect "${IMAGE_REF}" |
+          jq --arg candidateSha "${CANDIDATE_SHA}"
+          --arg dockerfile "${DOCKERFILE}"
+          --arg imageReference "${IMAGE_REF}"
+          '.[0] | {
+            schemaVersion: 1,
+            candidateSha: $candidateSha,
+            dockerfile: $dockerfile,
+            imageReference: $imageReference,
+            imageId: .Id,
+            repositoryDigests: (.RepoDigests // []),
+            platform: {os: .Os, architecture: .Architecture}
+          }' > "${EVIDENCE_PATH}"
+
+      - name: Gate fixed critical runtime vulnerabilities
+        id: image_vulnerabilities
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image_name }}:${{ inputs.candidate_sha }}
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: artifacts/release-candidate/security/runtime-images/${{ matrix.id }}-vulnerabilities.json
+          exit-code: "1"
+
+      - name: Gate high and critical runtime secrets
+        id: image_secrets
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image_name }}:${{ inputs.candidate_sha }}
+          scanners: secret
+          severity: HIGH,CRITICAL
+          format: json
+          output: artifacts/release-candidate/security/runtime-images/${{ matrix.id }}-secrets.json
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Preserve exact-SHA runtime image evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-runtime-security-${{ matrix.id }}-${{ inputs.candidate_sha }}
+          path: artifacts/release-candidate/security/runtime-images
+          if-no-files-found: error
+          retention-days: 365
+
+      - name: Enforce runtime image security result
+        if: always()
+        env:
+          SECRETS_OUTCOME: ${{ steps.image_secrets.outcome }}
+          VULNERABILITIES_OUTCOME: ${{ steps.image_vulnerabilities.outcome }}
+        run: |
+          test "${VULNERABILITIES_OUTCOME}" = success
+          test "${SECRETS_OUTCOME}" = success
+
   release-assurance:
     name: Immutable release-candidate evidence
+    needs:
+      - runtime-image-security
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     services:
       postgres-persistence:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_release_persistence
           POSTGRES_PASSWORD: samra_release_persistence
@@ -34,7 +157,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       postgres-http:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_release_http
           POSTGRES_PASSWORD: samra_release_http
@@ -47,7 +170,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       postgres-resilience:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_release_resilience
           POSTGRES_PASSWORD: samra_release_resilience
@@ -60,7 +183,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       postgres-performance:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_release_performance
           POSTGRES_PASSWORD: samra_release_performance
@@ -81,13 +204,12 @@ jobs:
       LEDGER_PERF_LARGE_POSTINGS: "1000000"
       LEDGER_PERF_SAMPLES: "40"
       LEDGER_PERF_RESULTS_PATH: test-results/ledger-performance-characterization.json
-      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: SAMP
       QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
       - name: Check out the exact candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.candidate_sha }}
           fetch-depth: 0
@@ -103,13 +225,13 @@ jobs:
           git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -118,7 +240,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Prepare release evidence directories
-        run: mkdir -p artifacts/api-server/test-results artifacts/release-candidate
+        run: mkdir -p artifacts/api-server/test-results artifacts/release-candidate/security
+
+      - name: Download exact-SHA runtime image security evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: release-runtime-security-*-${{ inputs.candidate_sha }}
+          path: artifacts/release-candidate/security/runtime-images
+          merge-multiple: true
 
       - name: Record immutable candidate identity
         id: identity
@@ -126,6 +255,95 @@ jobs:
           pnpm --filter @workspace/scripts run release-evidence -- identity
           --candidate-sha "${{ inputs.candidate_sha }}"
           --output artifacts/release-candidate/release-candidate-identity.json
+
+      - name: Run exact-SHA repository source security policy
+        id: source_security
+        continue-on-error: true
+        run: |
+          pnpm run test:action-pins
+          pnpm run test:repository-controls
+          pnpm run test:migration-policy
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --volume "${GITHUB_WORKSPACE}:/src" \
+            --workdir /src \
+            semgrep/semgrep@sha256:65dcd4408adda7c183a6b4550cb1e9b19f7f627a6fbb7e0559bd466bedc44d7b \
+            semgrep scan --config .semgrep.yml --error --metrics=off --json \
+            --output artifacts/release-candidate/security/semgrep.json
+
+      - name: Scan exact-SHA dependencies for fixed critical vulnerabilities
+        id: security_vulnerabilities
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: artifacts/release-candidate/security/trivy-vulnerabilities.json
+          exit-code: "1"
+
+      - name: Scan exact-SHA source for secrets and high-risk configuration
+        id: security_secrets
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret,misconfig
+          severity: HIGH,CRITICAL
+          format: json
+          output: artifacts/release-candidate/security/trivy-secrets-misconfiguration.json
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Generate exact-SHA CycloneDX software bill of materials
+        id: security_sbom
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: cyclonedx
+          output: artifacts/release-candidate/security/sbom.cdx.json
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Gate exact-SHA forbidden and restricted dependency licenses
+        id: security_licenses
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: license
+          severity: HIGH,CRITICAL
+          format: json
+          output: artifacts/release-candidate/security/trivy-license-policy.json
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Aggregate exact-SHA security gate
+        id: security
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          LICENSE_RESULT: ${{ steps.security_licenses.outcome }}
+          SBOM_RESULT: ${{ steps.security_sbom.outcome }}
+          SECRET_RESULT: ${{ steps.security_secrets.outcome }}
+          SOURCE_RESULT: ${{ steps.source_security.outcome }}
+          RUNTIME_IMAGES_RESULT: ${{ needs.runtime-image-security.result }}
+          VULNERABILITY_RESULT: ${{ steps.security_vulnerabilities.outcome }}
+        run: |
+          test "${SOURCE_RESULT}" = success
+          test "${VULNERABILITY_RESULT}" = success
+          test "${SECRET_RESULT}" = success
+          test "${SBOM_RESULT}" = success
+          test "${LICENSE_RESULT}" = success
+          test "${RUNTIME_IMAGES_RESULT}" = success
 
       - name: Run full Linux workspace quality
         id: quality
@@ -237,7 +455,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           RELEASE_GATE_RESULTS: >-
-            {"identity":"success","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}"}
+            {"identity":"${{ steps.identity.outcome }}","security":"${{ steps.security.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}"}
         run: >-
           pnpm --filter @workspace/scripts run release-evidence -- gate-junit
           --identity artifacts/release-candidate/release-candidate-identity.json
@@ -247,8 +465,9 @@ jobs:
         id: qase_create
         if: steps.qase_payload.outcome == 'success' && !cancelled()
         continue-on-error: true
-        uses: qase-tms/gh-actions/run-create@v1
+        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
           title: Samra Pay ${{ steps.identity.outputs.release_id }} — ${{ steps.identity.outputs.candidate_sha }}
@@ -258,8 +477,9 @@ jobs:
         id: qase_upload
         if: steps.qase_create.outputs.id != '' && !cancelled()
         continue-on-error: true
-        uses: qase-tms/gh-actions/report@v1
+        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase_create.outputs.id }}
           format: junit
@@ -269,8 +489,9 @@ jobs:
         id: qase_complete
         if: steps.qase_create.outputs.id != '' && !cancelled()
         continue-on-error: true
-        uses: qase-tms/gh-actions/run-complete@v1
+        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase_create.outputs.id }}
 
@@ -285,7 +506,7 @@ jobs:
         if: always()
         env:
           RELEASE_GATE_RESULTS: >-
-            {"identity":"${{ steps.identity.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}","qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
+            {"identity":"${{ steps.identity.outcome }}","security":"${{ steps.security.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}","qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
         run: >-
           pnpm --filter @workspace/scripts run release-evidence -- manifest
           --identity artifacts/release-candidate/release-candidate-identity.json
@@ -293,7 +514,7 @@ jobs:
 
       - name: Preserve immutable release evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: samra-${{ steps.identity.outputs.release_id }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
@@ -303,6 +524,26 @@ jobs:
             artifacts/release-candidate/release-evidence-manifest.json
             artifacts/release-candidate/release-evidence-manifest.sha256
             artifacts/release-candidate/experience-budget-report.json
+            artifacts/release-candidate/security/semgrep.json
+            artifacts/release-candidate/security/trivy-vulnerabilities.json
+            artifacts/release-candidate/security/trivy-secrets-misconfiguration.json
+            artifacts/release-candidate/security/trivy-license-policy.json
+            artifacts/release-candidate/security/sbom.cdx.json
+            artifacts/release-candidate/security/runtime-images/api-identity.json
+            artifacts/release-candidate/security/runtime-images/api-vulnerabilities.json
+            artifacts/release-candidate/security/runtime-images/api-secrets.json
+            artifacts/release-candidate/security/runtime-images/customer-web-identity.json
+            artifacts/release-candidate/security/runtime-images/customer-web-vulnerabilities.json
+            artifacts/release-candidate/security/runtime-images/customer-web-secrets.json
+            artifacts/release-candidate/security/runtime-images/operations-web-identity.json
+            artifacts/release-candidate/security/runtime-images/operations-web-vulnerabilities.json
+            artifacts/release-candidate/security/runtime-images/operations-web-secrets.json
+            artifacts/release-candidate/security/runtime-images/design-system-identity.json
+            artifacts/release-candidate/security/runtime-images/design-system-vulnerabilities.json
+            artifacts/release-candidate/security/runtime-images/design-system-secrets.json
+            artifacts/release-candidate/security/runtime-images/migrations-identity.json
+            artifacts/release-candidate/security/runtime-images/migrations-vulnerabilities.json
+            artifacts/release-candidate/security/runtime-images/migrations-secrets.json
             artifacts/api-server/test-results/postgres-persistence.xml
             artifacts/api-server/test-results/staging-database-access.xml
             artifacts/api-server/test-results/postgres-http.xml
@@ -326,7 +567,7 @@ jobs:
             artifacts/api-server/test-results/weekly-migration-compatibility.xml
             artifacts/api-server/test-results/ledger-performance-characterization.xml
             artifacts/api-server/test-results/ledger-performance-characterization.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 365
 
       - name: Enforce release stop conditions

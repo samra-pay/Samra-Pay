@@ -26,6 +26,12 @@ on:
       - ".github/workflows/backend-resilience.yml"
       - "artifacts/api-server/package.json"
       - "artifacts/api-server/test/weekly-*.ts"
+      - "lib/db/package.json"
+      - "lib/db/drizzle.config.ts"
+      - "lib/db/drizzle/**"
+      - "lib/db/src/schema/**"
+      - "lib/db/src/test-migrate.ts"
+      - "lib/db/src/test-seed.ts"
   schedule:
     - cron: "43 7 * * 6"
 
@@ -43,7 +49,7 @@ jobs:
     timeout-minutes: 45
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_resilience
           POSTGRES_PASSWORD: samra_resilience
@@ -64,16 +70,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -110,7 +118,7 @@ jobs:
 
       - name: Preserve weekly resilience evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: weekly-backend-resilience-junit
           path: |
@@ -131,13 +139,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: SAMP
       QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
       - name: Download weekly resilience evidence
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: weekly-backend-resilience-junit
           path: test-results
@@ -158,8 +165,9 @@ jobs:
       - name: Create Qase weekly resilience run
         id: qase-run-create
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-create@v1
+        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
           title: Samra Pay weekly backend resilience — ${{ github.ref_name }} @ ${{ github.sha }}
@@ -169,8 +177,9 @@ jobs:
         id: qase-upload-resilience
         if: steps.qase-run-create.outputs.id != ''
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
+        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run-create.outputs.id }}
           format: junit
@@ -182,7 +191,8 @@ jobs:
           steps.qase-run-create.outputs.id != '' &&
           steps.qase-upload-resilience.outcome == 'success'
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-complete@v1
+        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run-create.outputs.id }}

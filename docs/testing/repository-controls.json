@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "protectedBranch": "main",
+  "requiredChecks": [
+    {
+      "workflow": ".github/workflows/ci.yml",
+      "job": "required-ci",
+      "name": "Required CI",
+      "aggregateStep": "Require every merge-blocking CI gate to pass",
+      "dependencies": ["linux-quality", "postgres-persistence", "postgres-http"]
+    },
+    {
+      "workflow": ".github/workflows/security.yml",
+      "job": "required-security",
+      "name": "Required security",
+      "aggregateStep": "Require every security control to pass",
+      "dependencies": [
+        "repository-policy",
+        "sast",
+        "repository-scan",
+        "runtime-images"
+      ]
+    }
+  ],
+  "requiredRepositorySettings": {
+    "requirePullRequest": true,
+    "requireUpToDateBranch": true,
+    "requireMergeQueue": true,
+    "blockForcePushes": true,
+    "blockDeletions": true
+  },
+  "boundary": "This contract validates repository code. GitHub must independently enforce the matching ruleset."
+}

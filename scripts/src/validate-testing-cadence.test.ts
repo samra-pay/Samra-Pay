@@ -12,6 +12,7 @@ const workflow = [
   "      run_commercial:",
   '        default: "true"',
   "  pull_request:",
+  "  merge_group:",
   "  push:",
   "    branches:",
   "      - main",
@@ -21,6 +22,13 @@ const workflow = [
   "  linux-quality:",
   "  postgres-persistence:",
   "  postgres-http:",
+  "  required-ci:",
+  "    name: Required CI",
+  "    if: always()",
+  "    needs:",
+  "      - linux-quality",
+  "      - postgres-persistence",
+  "      - postgres-http",
   "  commercial-daily:",
   "    if: github.event_name == 'schedule' || inputs.run_commercial == 'true'",
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
@@ -49,6 +57,12 @@ const resilienceWorkflow = [
   "  pull_request:",
   "    paths:",
   '      - ".github/workflows/backend-resilience.yml"',
+  '      - "lib/db/package.json"',
+  '      - "lib/db/drizzle.config.ts"',
+  '      - "lib/db/drizzle/**"',
+  '      - "lib/db/src/schema/**"',
+  '      - "lib/db/src/test-migrate.ts"',
+  '      - "lib/db/src/test-seed.ts"',
   "  schedule:",
   '    - cron: "43 7 * * 6"',
   "jobs:",
@@ -56,7 +70,7 @@ const resilienceWorkflow = [
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
   "id: qase-upload-resilience",
-  "uses: qase-tms/gh-actions/report@v1",
+  "uses: qase-tms/gh-actions/report@0123456789abcdef0123456789abcdef01234567 # v1",
   "path: test-results",
   "qase-upload-resilience.outcome == 'success'",
 ].join("\n");
@@ -104,7 +118,7 @@ const policy: TestingCadencePolicy = {
       workflow: ".github/workflows/ci.yml",
       trigger: "pull_request",
       maximumMinutes: 20,
-      requiredJobs: ["linux-quality"],
+      requiredJobs: ["required-ci"],
       qaseEnvironment: "github-ci-postgres",
     },
     {
@@ -112,7 +126,7 @@ const policy: TestingCadencePolicy = {
       workflow: ".github/workflows/ci.yml",
       trigger: "push:main",
       maximumMinutes: 20,
-      requiredJobs: ["linux-quality"],
+      requiredJobs: ["required-ci"],
       qaseEnvironment: "github-ci-postgres",
     },
     {
@@ -333,11 +347,27 @@ describe("validateTestingCadence", () => {
         policy,
         {
           ...workflows,
-          ".github/workflows/backend-resilience.yml": `${resilienceWorkflow}\nuses: qase-tms/gh-actions/report@v1`,
+          ".github/workflows/backend-resilience.yml": `${resilienceWorkflow}\nuses: qase-tms/gh-actions/report@89abcdef0123456789abcdef0123456789abcdef # v1`,
         },
         documentation,
       ),
     ).toThrow(/Weekly resilience must upload its Qase evidence in one batch/);
+  });
+
+  it("rejects weekly resilience triggers that omit migration inputs", () => {
+    expect(() =>
+      validateTestingCadence(
+        policy,
+        {
+          ...workflows,
+          ".github/workflows/backend-resilience.yml":
+            resilienceWorkflow.replace('      - "lib/db/drizzle/**"', ""),
+        },
+        documentation,
+      ),
+    ).toThrow(
+      /Weekly resilience PR trigger is missing migration dependency lib\/db\/drizzle\/\*\*/,
+    );
   });
 
   it("rejects broad weekly resilience triggers already covered by CI", () => {

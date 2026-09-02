@@ -59,6 +59,22 @@ test("builds every Google Cloud target from the exact GitHub SHA", async () => {
   assert.doesNotMatch(workflow, /docker push|gcloud\s|replit|worf\.replit/i);
 });
 
+test("keeps the migration runtime free of the workspace development store", async () => {
+  const source = await readFile("deploy/gcp/Dockerfile.migrate", "utf8");
+  assert.match(
+    source,
+    /pnpm install --frozen-lockfile --prod --filter @workspace\/db\.\.\./,
+  );
+  assert.match(source, /rm -rf \/pnpm\/store \/root\/\.cache\/pnpm/);
+  assert.match(source, /^WORKDIR \/workspace\/lib\/db$/m);
+  assert.match(
+    source,
+    /CMD \["node", "\.\/node_modules\/drizzle-kit\/bin\.cjs", "migrate", "--config", "\.\/drizzle\.config\.ts"\]/,
+  );
+  assert.doesNotMatch(source, /pnpm install --frozen-lockfile\s*(?:\\\s*)?$/m);
+  assert.doesNotMatch(source, /CMD \["pnpm", "db:migrate"\]/);
+});
+
 test("includes every customer asset import in the Docker build context", async () => {
   const allowlistedAssets = new Set(
     dockerignore
@@ -144,7 +160,6 @@ test("keeps the portability job isolated, recurring, and evidence-producing", ()
     "permissions:",
     "contents: read",
     "if: always()",
-    "uses: actions/upload-artifact@v7",
     "retention-days: 30",
     '"attached_assets/**"',
     "Initialize container runtime evidence",
@@ -155,6 +170,10 @@ test("keeps the portability job isolated, recurring, and evidence-producing", ()
       `Missing workflow control: ${required}`,
     );
   }
+  assert.match(
+    workflow,
+    /uses:\s+actions\/upload-artifact@[0-9a-f]{40}(?:\s+#.*)?/,
+  );
   assert.ok(smoke.includes("container-portability.json"));
   assert.ok(smoke.includes("container-portability.xml"));
 });

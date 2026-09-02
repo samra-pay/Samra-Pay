@@ -25,6 +25,12 @@ required, so the control works for this private repository.
 
 - exact candidate commit, tree, parents, workflow run, attempt, actor, and main
   ancestry decision;
+- exact-SHA repository policy, source security, fixed critical dependency,
+  committed-secret, high-risk configuration, SBOM, and dependency-license
+  evidence;
+- content-addressed identities plus fixed-critical vulnerability and
+  high/critical secret reports for all five runtime images, built from pinned
+  Dockerfile frontend and base-image digests;
 - full Linux workspace test, typecheck, contract, portability, and build gates;
 - isolated commercial typecheck and build;
 - current migrations and repeatable synthetic seed;
@@ -42,10 +48,11 @@ rerun creates a separate evidence object rather than overwriting the first.
 
 ## Stop conditions
 
-The candidate fails if any required gate fails, is cancelled, is skipped, or is
-missing; if any evidence file is empty or absent; if Qase creation, upload, or
-completion fails; if the tested SHA differs from the requested SHA; or if the
-commit is not contained in GitHub `main`.
+The candidate fails if any required gate, including any of the five parallel
+runtime-image scans or the exact-SHA security aggregate, fails, is cancelled,
+is skipped, or is missing; if any evidence file is empty or absent; if Qase
+creation, upload, or completion fails; if the tested SHA differs from the
+requested SHA; or if the commit is not contained in GitHub `main`.
 
 Evidence is uploaded before the final stop-condition check. A failed candidate
 therefore remains inspectable, but it cannot be treated as passed.

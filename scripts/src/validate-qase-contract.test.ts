@@ -47,7 +47,7 @@ const workflow = [
   "test-results/process.xml",
   "- name: Upload automated acceptance results to Qase",
   "  id: qase-upload-acceptance",
-  "  uses: qase-tms/gh-actions/report@v1",
+  "  uses: qase-tms/gh-actions/report@0123456789abcdef0123456789abcdef01234567 # v1",
   "  with:",
   "    format: junit",
   "    path: test-results",
@@ -90,7 +90,7 @@ describe("validateQaseContract", () => {
     expect(() =>
       validateQaseContract(
         governance,
-        `${workflow}\nuses: qase-tms/gh-actions/report@v1`,
+        `${workflow}\nuses: qase-tms/gh-actions/report@89abcdef0123456789abcdef0123456789abcdef # v1`,
         "process.xml github-ci-postgres",
         (path) => (path === "catalog.csv" ? csv : "source"),
       ),

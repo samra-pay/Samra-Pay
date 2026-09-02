@@ -15,6 +15,12 @@ The machine-readable contract is
 [`testing-cadence.json`](testing-cadence.json). The Linux quality gate validates
 that the workflows still implement that contract.
 
+[`repository-controls.json`](repository-controls.json) fixes the stable
+`Required CI` and `Required security` check names and their fail-closed job
+dependencies. The workflows support pull requests, merge queue groups, and
+merged `main` commits. GitHub-side ruleset enforcement remains a separate,
+independently verified control.
+
 ## Risk tiers
 
 | Tier | Scope                                                                                              | Required treatment                                                           |
@@ -113,7 +119,13 @@ required gates, files, retention, Qase attribution, and controlled boundaries.
 The manual workflow checks out the exact 40-character candidate SHA with no
 persisted Git credentials, verifies it is contained in GitHub `main`, and runs
 quality, commercial, migration, PostgreSQL, HTTP/restart, resilience, and
-million-posting performance gates. Persistence, HTTP/restart, resilience, and
+million-posting performance gates. The candidate also reruns repository policy,
+repository-owned Semgrep rules, fixed-critical dependency checks, committed-
+secret and high-risk configuration checks, SBOM generation, and the dependency-
+license policy against that same SHA. It also builds all five runtime images
+from digest-pinned Dockerfile frontends and base images, records each local
+content identity, and retains separate fixed-critical vulnerability and
+high/critical secret reports. Persistence, HTTP/restart, resilience, and
 performance each use a separately migrated and seeded disposable PostgreSQL 16
 database so one suite cannot change another suite's financial baseline.
 

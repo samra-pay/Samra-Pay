@@ -12,6 +12,11 @@
       "includeInQase": true
     },
     {
+      "id": "security",
+      "title": "Exact-SHA source, dependency, secret, configuration, SBOM, and license controls",
+      "includeInQase": true
+    },
+    {
       "id": "quality",
       "title": "Linux workspace quality",
       "includeInQase": true
@@ -67,6 +72,26 @@
     "artifacts/release-candidate/release-gates.xml",
     "artifacts/release-candidate/qase-run.json",
     "artifacts/release-candidate/experience-budget-report.json",
+    "artifacts/release-candidate/security/semgrep.json",
+    "artifacts/release-candidate/security/trivy-vulnerabilities.json",
+    "artifacts/release-candidate/security/trivy-secrets-misconfiguration.json",
+    "artifacts/release-candidate/security/trivy-license-policy.json",
+    "artifacts/release-candidate/security/sbom.cdx.json",
+    "artifacts/release-candidate/security/runtime-images/api-identity.json",
+    "artifacts/release-candidate/security/runtime-images/api-vulnerabilities.json",
+    "artifacts/release-candidate/security/runtime-images/api-secrets.json",
+    "artifacts/release-candidate/security/runtime-images/customer-web-identity.json",
+    "artifacts/release-candidate/security/runtime-images/customer-web-vulnerabilities.json",
+    "artifacts/release-candidate/security/runtime-images/customer-web-secrets.json",
+    "artifacts/release-candidate/security/runtime-images/operations-web-identity.json",
+    "artifacts/release-candidate/security/runtime-images/operations-web-vulnerabilities.json",
+    "artifacts/release-candidate/security/runtime-images/operations-web-secrets.json",
+    "artifacts/release-candidate/security/runtime-images/design-system-identity.json",
+    "artifacts/release-candidate/security/runtime-images/design-system-vulnerabilities.json",
+    "artifacts/release-candidate/security/runtime-images/design-system-secrets.json",
+    "artifacts/release-candidate/security/runtime-images/migrations-identity.json",
+    "artifacts/release-candidate/security/runtime-images/migrations-vulnerabilities.json",
+    "artifacts/release-candidate/security/runtime-images/migrations-secrets.json",
     "artifacts/api-server/test-results/postgres-persistence.xml",
     "artifacts/api-server/test-results/staging-database-access.xml",
     "artifacts/api-server/test-results/postgres-http.xml",

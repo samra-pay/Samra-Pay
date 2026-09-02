@@ -32,11 +32,7 @@
       "workflow": ".github/workflows/ci.yml",
       "trigger": "pull_request",
       "maximumMinutes": 20,
-      "requiredJobs": [
-        "linux-quality",
-        "postgres-persistence",
-        "postgres-http"
-      ],
+      "requiredJobs": ["required-ci"],
       "qaseEnvironment": "github-ci-postgres"
     },
     {
@@ -44,11 +40,7 @@
       "workflow": ".github/workflows/ci.yml",
       "trigger": "push:main",
       "maximumMinutes": 20,
-      "requiredJobs": [
-        "linux-quality",
-        "postgres-persistence",
-        "postgres-http"
-      ],
+      "requiredJobs": ["required-ci"],
       "qaseEnvironment": "github-ci-postgres"
     },
     {
@@ -57,12 +49,7 @@
       "trigger": "schedule",
       "cron": "17 6 * * *",
       "maximumMinutes": 30,
-      "requiredJobs": [
-        "linux-quality",
-        "postgres-persistence",
-        "postgres-http",
-        "commercial-daily"
-      ],
+      "requiredJobs": ["required-ci", "commercial-daily"],
       "qaseEnvironment": "github-ci-postgres"
     },
     {

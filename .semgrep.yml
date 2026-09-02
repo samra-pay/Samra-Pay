@@ -1,0 +1,46 @@
+rules:
+  - id: samra-no-dynamic-eval
+    message: Dynamic evaluation is forbidden in Samra Pay runtime code.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/test/**"
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: samra-no-disabled-tls-verification
+    message: Runtime code must not disable TLS certificate verification.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/test/**"
+    pattern-either:
+      - pattern: "{ ..., rejectUnauthorized: false, ... }"
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
+  - id: samra-no-shell-enabled-child-process
+    message: Shell-enabled child processes require a narrower implementation and review.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/test/**"
+    patterns:
+      - pattern-either:
+          - pattern: "$EXEC(..., { ..., shell: true, ... })"
+          - pattern: "$EXEC(..., { ..., shell: $SHELL, ... })"
+      - metavariable-regex:
+          metavariable: $EXEC
+          regex: ^(exec|execSync|spawn|spawnSync)$

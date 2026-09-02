@@ -5,6 +5,7 @@ import {
   copyFile,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   writeFile,
@@ -32,6 +33,13 @@ if (!new Set(["127.0.0.1", "localhost"]).has(sourceUrl.hostname)) {
 const execFileAsync = promisify(execFile);
 const workspaceRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const migrationFolder = join(workspaceRoot, "lib/db/drizzle");
+const baselineMigrationCount = 8;
+
+type MigrationJournal = {
+  version: string;
+  dialect: string;
+  entries: { idx: number; tag: string }[];
+};
 
 function databaseUrl(database: string): string {
   const url = new URL(connectionString!);
@@ -51,18 +59,44 @@ async function seed(url: string): Promise<void> {
   );
 }
 
-async function createBaselineMigrationFolder(): Promise<string> {
-  const folder = await mkdtemp(join(tmpdir(), "samra-migrations-0007-"));
-  await mkdir(join(folder, "meta"), { recursive: true });
+async function readAndValidateMigrationJournal(): Promise<MigrationJournal> {
   const journal = JSON.parse(
     await readFile(join(migrationFolder, "meta/_journal.json"), "utf8"),
-  ) as {
-    version: string;
-    dialect: string;
-    entries: { idx: number; tag: string }[];
-  };
-  const baselineEntries = journal.entries.filter(({ idx }) => idx <= 7);
-  assert.equal(baselineEntries.length, 8);
+  ) as MigrationJournal;
+  assert.equal(journal.dialect, "postgresql");
+  assert.ok(
+    journal.entries.length > baselineMigrationCount,
+    "Migration journal must extend beyond the fixed 0007 compatibility baseline.",
+  );
+  assert.deepEqual(
+    journal.entries.map(({ idx }) => idx),
+    journal.entries.map((_, idx) => idx),
+    "Migration journal indexes must be contiguous from zero.",
+  );
+  const journalFiles = journal.entries.map(({ tag }) => `${tag}.sql`).sort();
+  assert.equal(
+    new Set(journalFiles).size,
+    journalFiles.length,
+    "Migration journal tags must be unique.",
+  );
+  const migrationFiles = (await readdir(migrationFolder))
+    .filter((file) => file.endsWith(".sql"))
+    .sort();
+  assert.deepEqual(
+    migrationFiles,
+    journalFiles,
+    "Migration SQL files must match the migration journal exactly.",
+  );
+  return journal;
+}
+
+async function createBaselineMigrationFolder(
+  journal: MigrationJournal,
+): Promise<string> {
+  const folder = await mkdtemp(join(tmpdir(), "samra-migrations-0007-"));
+  await mkdir(join(folder, "meta"), { recursive: true });
+  const baselineEntries = journal.entries.slice(0, baselineMigrationCount);
+  assert.equal(baselineEntries.length, baselineMigrationCount);
   for (const entry of baselineEntries) {
     await copyFile(
       join(migrationFolder, `${entry.tag}.sql`),
@@ -78,6 +112,8 @@ async function createBaselineMigrationFolder(): Promise<string> {
 }
 
 test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current replay is idempotent", async () => {
+  const journal = await readAndValidateMigrationJournal();
+  const currentMigrationCount = String(journal.entries.length);
   const databaseName = `samra_upgrade_${randomUUID().replaceAll("-", "")}`;
   const adminUrl = new URL(connectionString);
   adminUrl.pathname = "/postgres";
@@ -88,7 +124,7 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
   try {
     await admin.pool.query(`CREATE DATABASE "${databaseName}"`);
     target = createDatabase({ connectionString: targetUrl });
-    baselineFolder = await createBaselineMigrationFolder();
+    baselineFolder = await createBaselineMigrationFolder(journal);
     await migrate(drizzle(target.pool), {
       migrationsFolder: baselineFolder,
       migrationsSchema: "samra_migrations",
@@ -226,7 +262,7 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
             AND is_nullable = 'YES') AS pending_profile_columns`,
     );
     assert.deepEqual(upgraded.rows[0], {
-      migrations: "16",
+      migrations: currentMigrationCount,
       customers: "2",
       opening_journals: "1",
       natural_balance_minor: "425000",

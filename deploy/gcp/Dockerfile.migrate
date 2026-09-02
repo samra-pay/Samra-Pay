@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.7
-FROM node:24-bookworm-slim
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -7,8 +7,10 @@ WORKDIR /workspace
 
 RUN corepack enable
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --prod --filter @workspace/db... \
+  && rm -rf /pnpm/store /root/.cache/pnpm
 
 ENV NODE_ENV=production
+WORKDIR /workspace/lib/db
 USER node
-CMD ["pnpm", "db:migrate"]
+CMD ["node", "./node_modules/drizzle-kit/bin.cjs", "migrate", "--config", "./drizzle.config.ts"]

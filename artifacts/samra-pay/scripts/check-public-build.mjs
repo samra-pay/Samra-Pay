@@ -6,6 +6,35 @@ const forbiddenFileNames = [
   /(?:^|\/)(?:App|auth0-client|onboarding)-[^/]+\.(?:css|js)$/iu,
 ];
 
+const forbiddenDistributionPaths = [
+  /(?:^|\/)\.env(?:\..+)?$/iu,
+  /(?:^|\/)(?:firebase|package)(?:-lock)?\.json$/iu,
+  /(?:^|\/)\.firebaserc$/iu,
+  /(?:^|\/)(?:credentials|secrets|service-account)(?:[^/]*)\.json$/iu,
+  /(?:^|\/)firebase-adminsdk[^/]*\.json$/iu,
+  /(?:^|\/)(?:id_rsa|id_ed25519)$/iu,
+  /\.(?:key|map|p12|pem|pfx)$/iu,
+];
+
+const allowedDistributionExtensions = new Set([
+  ".avif",
+  ".css",
+  ".html",
+  ".ico",
+  ".jpeg",
+  ".jpg",
+  ".js",
+  ".json",
+  ".png",
+  ".svg",
+  ".txt",
+  ".webmanifest",
+  ".webp",
+  ".woff",
+  ".woff2",
+  ".xml",
+]);
+
 const forbiddenBundleContent = [
   /auth0-spa-js/iu,
   /Continue with Auth0/iu,
@@ -16,6 +45,43 @@ const forbiddenBundleContent = [
   /Email address · preview only/iu,
   /Preview Alpha signup/iu,
 ];
+
+const forbiddenCredentialContent = [
+  {
+    label: "private key material",
+    pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/iu,
+  },
+  {
+    label: "Google service-account credential",
+    pattern: /["']type["']\s*:\s*["']service_account["']/iu,
+  },
+  {
+    label: "GitHub access token",
+    pattern: /\bgh[oprsu]_[A-Za-z0-9_]{20,}\b/u,
+  },
+  {
+    label: "AWS access key",
+    pattern: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/u,
+  },
+  {
+    label: "secret configuration",
+    pattern:
+      /\b(?:AUTH0_CLIENT_SECRET|CLIENT_SECRET|DATABASE_URL|FIREBASE_TOKEN|STRIPE_SECRET_KEY)\b\s*[:=]/iu,
+  },
+];
+
+const allowedNetworkOrigins = new Set([
+  "http://sodipodi.sourceforge.net",
+  "http://www.inkscape.org",
+  "http://www.w3.org",
+  "https://fonts.googleapis.com",
+  "https://fonts.gstatic.com",
+  "https://react.dev",
+  "https://samrapay.com",
+  "https://www.samrapay.com",
+]);
+
+const networkUrlPattern = /\bhttps?:\/\/[^\s"'<>`\\)]+/giu;
 
 const inspectableExtensions = new Set([
   ".css",
@@ -51,12 +117,44 @@ export async function inspectPublicBuild(directory) {
       violations.push(`${relativePath}: legacy or authentication chunk name`);
     }
 
-    if (!inspectableExtensions.has(path.extname(file).toLowerCase())) continue;
+    if (forbiddenDistributionPaths.some((pattern) => pattern.test(relativePath))) {
+      violations.push(`${relativePath}: forbidden distribution path`);
+    }
+
+    const extension = path.extname(file).toLowerCase();
+    if (!allowedDistributionExtensions.has(extension)) {
+      violations.push(`${relativePath}: unapproved distribution file type`);
+    }
+
+    if (!inspectableExtensions.has(extension)) continue;
     const contents = await readFile(file, "utf8");
     for (const pattern of forbiddenBundleContent) {
       if (pattern.test(contents)) {
         violations.push(`${relativePath}: contains ${pattern.source}`);
       }
+    }
+
+    for (const { label, pattern } of forbiddenCredentialContent) {
+      if (pattern.test(contents)) {
+        violations.push(`${relativePath}: contains ${label}`);
+      }
+    }
+
+    if (/sourceMappingURL\s*=/iu.test(contents)) {
+      violations.push(`${relativePath}: contains a source-map reference`);
+    }
+
+    const unexpectedOrigins = new Set();
+    for (const match of contents.matchAll(networkUrlPattern)) {
+      try {
+        const origin = new URL(match[0]).origin;
+        if (!allowedNetworkOrigins.has(origin)) unexpectedOrigins.add(origin);
+      } catch {
+        violations.push(`${relativePath}: contains an invalid absolute URL`);
+      }
+    }
+    for (const origin of [...unexpectedOrigins].sort()) {
+      violations.push(`${relativePath}: contains unexpected network origin ${origin}`);
     }
   }
 
