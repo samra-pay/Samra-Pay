@@ -1,0 +1,75 @@
+name: Public site preview build
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "artifacts/samra-pay/**"
+      - "artifacts/samra-pay-ds/**"
+      - "lib/**"
+      - "package.json"
+      - "pnpm-*.yaml"
+      - "scripts/**"
+      - "docs/testing/experience-budgets.json"
+      - "deploy/preview/**"
+      - ".github/workflows/public-site-preview-*.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-site-preview-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build static review artifact without cloud credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: 11.19.0
+          run_install: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test preview controls
+        run: node --test deploy/preview/*.test.mjs
+      - name: Build and test the public site only
+        run: pnpm --filter @workspace/samra-pay run build
+        env:
+          SAMRA_WEB_SURFACE: public
+          BASE_PATH: "/"
+          PORT: "4173"
+      - name: Package static files and check public experience budgets
+        run: node deploy/preview/bundle.mjs pack
+        env:
+          PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_PR: ${{ github.event.pull_request.number }}
+      - name: Upload immutable review artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: public-site-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tmp/public-site-preview/bundle.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Explain preview publication status
+        env:
+          PREVIEWS_ENABLED: ${{ vars.SAMRA_PUBLIC_PREVIEWS_ENABLED }}
+        run: |
+          if [[ "${PREVIEWS_ENABLED}" == "true" ]]; then
+            echo 'Static artifact built. The separate trusted publisher will post a link for an eligible PR after verification.' >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo 'Static artifact built. Preview links are not activated yet; complete deploy/preview/README.md once before site edits. Production is unchanged.' >> "${GITHUB_STEP_SUMMARY}"
+          fi

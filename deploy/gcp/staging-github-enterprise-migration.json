@@ -87,9 +87,10 @@
     "readOnlyReleaseWorkflowMustPassBeforePublication": true
   },
   "operationalReferences": {
-    "scanRoots": [".github/workflows", "deploy/gcp"],
+    "scanRoots": [".github/workflows", "deploy/gcp", "deploy/preview"],
     "currentAuthorityFiles": [
       ".github/workflows/production-foundation-preflight.yml",
+      ".github/workflows/public-site-preview-publish.yml",
       ".github/workflows/staging-image-publication.yml",
       ".github/workflows/staging-image-verification.yml",
       ".github/workflows/staging-traffic-control.yml",
@@ -150,7 +151,10 @@
       "deploy/gcp/validate-staging-verification.mjs",
       "deploy/gcp/validate-staging-zero-traffic-deployment.mjs",
       "deploy/gcp/verify-github-upstream-artifact.mjs",
-      "deploy/gcp/verify-release-candidate-evidence.mjs"
+      "deploy/gcp/verify-release-candidate-evidence.mjs",
+      "deploy/preview/README.md",
+      "deploy/preview/bundle.mjs",
+      "deploy/preview/publish.mjs"
     ],
     "migrationControlFiles": [
       "deploy/gcp/review-staging-github-enterprise-migration.mjs",

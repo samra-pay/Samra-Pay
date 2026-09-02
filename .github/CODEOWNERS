@@ -20,3 +20,4 @@
 /deploy/gcp/record-staging-automatic-rollback* @haileleuld87
 /docs/testing/ @haileleuld87
 /scripts/ @haileleuld87
+/deploy/preview/ @haileleuld87
