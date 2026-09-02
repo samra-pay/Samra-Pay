@@ -153,7 +153,7 @@ importers:
     dependencies:
       '@replit/connectors-sdk':
         specifier: ^0.4.1
-        version: 0.4.1
+        version: 0.4.3
     devDependencies:
       prettier:
         specifier: ^3.9.6
@@ -3026,8 +3026,8 @@ packages:
       react-native:
         optional: true
 
-  '@replit/connectors-sdk@0.4.1':
-    resolution: {integrity: sha512-iw0uy95+Qul8MPc/bBo8hBfYk1wm6RpBZ9sHyCpcA9A9T4zcUT9deSQxdyMyI0w3sv3+5uGmdfq1TpFTMrjD1g==}
+  '@replit/connectors-sdk@0.4.3':
+    resolution: {integrity: sha512-7XoaRty/O6JF161UkVBI8UewZ96XCNNN1kRvT9Q41IRH3xr+6ImylvXtirIghydDd2FCQvIkY4HQscOOr45otA==}
 
   '@replit/vite-plugin-cartographer@0.5.21':
     resolution: {integrity: sha512-E5rco8Mov05QDfUOjoim3MVJdDX0/pBYql5Jay3w9cqmU/QOL6cEOUAjsBZPB/V8FEChsk++sZUrcWt1bHaAoQ==}
@@ -9374,7 +9374,7 @@ snapshots:
       - '@types/react'
       - immer
 
-  '@replit/connectors-sdk@0.4.1': {}
+  '@replit/connectors-sdk@0.4.3': {}
 
   '@replit/vite-plugin-cartographer@0.5.21(supports-color@8.1.1)':
     dependencies:
