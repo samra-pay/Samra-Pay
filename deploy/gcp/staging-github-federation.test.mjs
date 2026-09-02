@@ -39,7 +39,7 @@ test("locks federation to the stable private-repository identity and staging bou
     providerId: "samra-pay-main",
     publisherServiceAccount:
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
-    permissionCount: 17,
+    permissionCount: 19,
   });
   assert.equal(contract.github.repositoryOwnerId, "237485986");
   assert.equal(contract.github.allowedEvent, "workflow_dispatch");
@@ -79,6 +79,11 @@ test("rejects credential, IAM, action-version, and automatic-trigger drift", () 
         "roles/iam.serviceAccountTokenCreator"),
     (value) =>
       (value.workflow.authenticationAction = "google-github-actions/auth@v2"),
+    (value) =>
+      (value.workflow.downloadArtifactAction = "actions/download-artifact@v4"),
+    (value) =>
+      (value.workflow.securityScannerAction = "aquasecurity/setup-trivy@main"),
+    (value) => (value.workflow.securityScannerVersion = "latest"),
     (value) => (value.workflow.automaticTriggers = true),
     (value) => (value.workflow.serviceDeployment = true),
   ]) {
@@ -240,7 +245,16 @@ test("workflow is manual, main-only, keyless, protected, and reuses the reviewed
   assert.match(workflow, /name: Staging image publication/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /^\s+(?:push|pull_request|schedule):/m);
-  assert.match(workflow, /permissions:\n  contents: read\n  id-token: write/);
+  assert.match(
+    workflow,
+    /permissions:\n  contents: read\n  actions: read\n  id-token: write/,
+  );
+  assert.equal(
+    workflow.match(
+      /actions\/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3/g,
+    )?.length,
+    1,
+  );
   assert.equal(
     workflow.match(
       /google-github-actions\/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093/g,
@@ -265,6 +279,13 @@ test("workflow is manual, main-only, keyless, protected, and reuses the reviewed
     )?.length,
     1,
   );
+  assert.equal(
+    workflow.match(
+      /aquasecurity\/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514/g,
+    )?.length,
+    1,
+  );
+  assert.match(workflow, /version: v0\.70\.0/);
   assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /github\.repository == 'haileleuld87\/Samra-Pay'/);

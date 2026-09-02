@@ -46,6 +46,8 @@
   "iam": {
     "publisherCustomRolePermissions": [
       "artifactregistry.dockerimages.get",
+      "artifactregistry.files.download",
+      "artifactregistry.repositories.downloadArtifacts",
       "artifactregistry.repositories.get",
       "artifactregistry.repositories.getIamPolicy",
       "cloudbuild.builds.create",
@@ -69,10 +71,14 @@
   },
   "workflow": {
     "checkoutAction": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "downloadArtifactAction": "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3",
+    "securityScannerAction": "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+    "securityScannerVersion": "0.70.0",
     "authenticationAction": "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093",
     "cloudSdkAction": "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db",
     "permissions": {
       "contents": "read",
+      "actions": "read",
       "id-token": "write"
     },
     "publicationAuthorization": "AUTHORIZED_STAGING_IMAGE_PUBLICATION",

@@ -1,6 +1,8 @@
 import { pathToFileURL } from "node:url";
 
 const FULL_GIT_SHA = /^[0-9a-f]{40}$/;
+const SHA256 = /^[0-9a-f]{64}$/;
+const POSITIVE_INTEGER = /^[1-9][0-9]*$/;
 const PROJECT_ID = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const REGION = /^[a-z]+-[a-z]+[0-9]$/;
 
@@ -23,6 +25,18 @@ export function validateBuildInputs(input) {
   const region = required(input, "SAMRA_BUILD_REGION");
   const repository = required(input, "SAMRA_BUILD_REPOSITORY");
   const sourceSha = required(input, "SAMRA_BUILD_SOURCE_SHA");
+  const releaseCandidateRunId = required(
+    input,
+    "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID",
+  );
+  const releaseCandidateRunAttempt = required(
+    input,
+    "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ATTEMPT",
+  );
+  const releaseEvidenceManifestSha256 = required(
+    input,
+    "SAMRA_BUILD_RELEASE_EVIDENCE_MANIFEST_SHA256",
+  );
 
   if (environment !== "staging") {
     throw new Error("Only the staging Cloud Build contract is permitted");
@@ -47,6 +61,31 @@ export function validateBuildInputs(input) {
   if (imageTag !== sourceSha) {
     throw new Error("The image tag must exactly match the source Git SHA");
   }
+  if (
+    !POSITIVE_INTEGER.test(releaseCandidateRunId) ||
+    !Number.isSafeInteger(Number.parseInt(releaseCandidateRunId, 10))
+  ) {
+    throw new Error(
+      "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID must be a positive integer",
+    );
+  }
+  const parsedReleaseCandidateRunAttempt = Number.parseInt(
+    releaseCandidateRunAttempt,
+    10,
+  );
+  if (
+    !POSITIVE_INTEGER.test(releaseCandidateRunAttempt) ||
+    !Number.isSafeInteger(parsedReleaseCandidateRunAttempt)
+  ) {
+    throw new Error(
+      "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ATTEMPT must be a positive integer",
+    );
+  }
+  if (!SHA256.test(releaseEvidenceManifestSha256)) {
+    throw new Error(
+      "SAMRA_BUILD_RELEASE_EVIDENCE_MANIFEST_SHA256 must be a lowercase SHA-256",
+    );
+  }
 
   const requiredServiceAccount = `samra-cloud-build-staging@${projectId}.iam.gserviceaccount.com`;
   if (expectedServiceAccount !== requiredServiceAccount) {
@@ -56,7 +95,7 @@ export function validateBuildInputs(input) {
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: "validated",
     environment,
     projectId,
@@ -65,6 +104,9 @@ export function validateBuildInputs(input) {
     sourceSha,
     imageTag,
     serviceAccount: expectedServiceAccount,
+    releaseCandidateRunId,
+    releaseCandidateRunAttempt: parsedReleaseCandidateRunAttempt,
+    releaseEvidenceManifestSha256,
   };
 }
 

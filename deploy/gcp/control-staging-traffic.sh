@@ -54,6 +54,16 @@ PROMOTION_OUTPUT="${OUTPUT_DIR}/staging-traffic-promotion.json"
 PROMOTION_HASH_OUTPUT="${OUTPUT_DIR}/staging-traffic-promotion.sha256"
 ROLLBACK_OUTPUT="${OUTPUT_DIR}/staging-traffic-rollback.json"
 ROLLBACK_HASH_OUTPUT="${OUTPUT_DIR}/staging-traffic-rollback.sha256"
+ROLLBACK_OBSERVATION="${OUTPUT_DIR}/staging-rollback-observed-infrastructure.json"
+ROLLBACK_VERIFICATION_OUTPUT="${OUTPUT_DIR}/staging-rollback-verification.json"
+ROLLBACK_VERIFICATION_HASH_OUTPUT="${OUTPUT_DIR}/staging-rollback-verification.sha256"
+AUTOMATIC_ROLLBACK_OUTPUT="${OUTPUT_DIR}/staging-traffic-automatic-rollback.json"
+AUTOMATIC_ROLLBACK_HASH_OUTPUT="${OUTPUT_DIR}/staging-traffic-automatic-rollback.sha256"
+AUTOMATIC_ROLLBACK_VERIFICATION_OUTPUT="${OUTPUT_DIR}/staging-automatic-rollback-verification.json"
+AUTOMATIC_ROLLBACK_VERIFICATION_HASH_OUTPUT="${OUTPUT_DIR}/staging-automatic-rollback-verification.sha256"
+ROLLBACK_SERVICE_STATE="${OUTPUT_DIR}/staging-rollback-service-state.json"
+ROLLBACK_REVISION_STATE="${OUTPUT_DIR}/staging-rollback-revision-state.json"
+ROLLBACK_IAM_STATE="${OUTPUT_DIR}/staging-rollback-iam-state.json"
 
 VALIDATED="$(node "${ROOT_DIR}/deploy/gcp/validate-staging-traffic-control.mjs" 2>&1)" || {
   echo "${VALIDATED}" >&2
@@ -70,8 +80,8 @@ revision to exactly 100 percent, or roll exactly 100 percent back to the prior
 immutable revision recorded in a hashed promotion manifest. Promotion requires
 one existing healthy 100-percent revision, a hashed zero-traffic deployment,
 seven passing staging checks, and a Qase staging run. A controller failure after
-traffic mutation triggers an automatic best-effort rollback to the recorded
-prior revision.
+traffic mutation triggers a fail-closed automatic rollback to the recorded
+prior revision with retained infrastructure post-verification evidence.
 
 First activation, partial traffic, latest aliases, traffic tags, rebuilding for
 rollback, public IAM, runtime-template or service-IAM changes, vendor
@@ -135,7 +145,7 @@ gcloud run services get-iam-policy "${TARGET_SERVICE}" --project="${PROJECT_ID}"
 
 write_traffic_snapshot() {
   local output="$1"
-  mkdir -p "$(dirname "${output}")"
+  mkdir -p "$(dirname "${output}")" || return 1
   gcloud run services describe "${TARGET_SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --format=json | node -e '
     const service = JSON.parse(require("fs").readFileSync(0, "utf8"));
     const traffic = (service.status?.traffic || []).map((entry) => ({
@@ -168,6 +178,61 @@ assert_revision_ready() {
     const ready = (revision.status?.conditions || []).some((condition) => condition.type === "Ready" && condition.status === "True");
     if (!ready) throw new Error("target revision is not Ready");
   '
+}
+
+write_rollback_observation() {
+  local restored_revision="$1"
+  local output="$2"
+  if ! gcloud run services describe "${TARGET_SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --format=json >"${ROLLBACK_SERVICE_STATE}"; then
+    rm -f "${ROLLBACK_SERVICE_STATE}" "${ROLLBACK_REVISION_STATE}" "${ROLLBACK_IAM_STATE}"
+    return 1
+  fi
+  if ! gcloud run revisions describe "${restored_revision}" --project="${PROJECT_ID}" --region="${REGION}" --format=json >"${ROLLBACK_REVISION_STATE}"; then
+    rm -f "${ROLLBACK_SERVICE_STATE}" "${ROLLBACK_REVISION_STATE}" "${ROLLBACK_IAM_STATE}"
+    return 1
+  fi
+  if ! gcloud run services get-iam-policy "${TARGET_SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --format=json >"${ROLLBACK_IAM_STATE}"; then
+    rm -f "${ROLLBACK_SERVICE_STATE}" "${ROLLBACK_REVISION_STATE}" "${ROLLBACK_IAM_STATE}"
+    return 1
+  fi
+  if ! node -e '
+    const fs = require("fs");
+    const [servicePath, revisionPath, iamPath, outputPath, projectId, region, serviceName, restoredRevision] = process.argv.slice(1);
+    const service = JSON.parse(fs.readFileSync(servicePath, "utf8"));
+    const revision = JSON.parse(fs.readFileSync(revisionPath, "utf8"));
+    const iam = JSON.parse(fs.readFileSync(iamPath, "utf8"));
+    if (service.metadata?.name !== serviceName || revision.metadata?.name !== restoredRevision) throw new Error("post-rollback service or revision identity drifted");
+    const annotations = service.metadata?.annotations || {};
+    const defaultServiceUrlDisabled = service.spec?.defaultUriDisabled === true || annotations["run.googleapis.com/default-url-disabled"] === "true";
+    const traffic = (service.status?.traffic || []).map((entry) => ({
+      revision: entry.revisionName,
+      percent: entry.percent ?? 0,
+      tag: entry.tag ?? null,
+      latestRevision: entry.latestRevision === true,
+    })).filter((entry) => entry.revision);
+    if (traffic.some((entry) => entry.latestRevision)) throw new Error("post-rollback traffic uses a floating latest revision");
+    const publicMembers = new Set(["allUsers", "allAuthenticatedUsers"]);
+    const publicIamAbsent = !(iam.bindings || []).some((binding) => (binding.members || []).some((member) => publicMembers.has(member)));
+    const revisionReady = (revision.status?.conditions || []).some((condition) => condition.type === "Ready" && condition.status === "True");
+    const observed = {
+      projectId,
+      region,
+      service: serviceName,
+      restoredRevision,
+      traffic: traffic.map(({ revision: name, percent, tag }) => ({ revision: name, percent, tag })),
+      revisionReady,
+      imageDigest: revision.spec?.containers?.[0]?.image ?? "",
+      ingress: annotations["run.googleapis.com/ingress"] ?? "",
+      defaultServiceUrlDisabled,
+      publicIamAbsent,
+    };
+    fs.writeFileSync(outputPath, `${JSON.stringify(observed, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  ' "${ROLLBACK_SERVICE_STATE}" "${ROLLBACK_REVISION_STATE}" "${ROLLBACK_IAM_STATE}" "${output}" "${PROJECT_ID}" "${REGION}" "${TARGET_SERVICE}" "${restored_revision}"
+  then
+    rm -f "${ROLLBACK_SERVICE_STATE}" "${ROLLBACK_REVISION_STATE}" "${ROLLBACK_IAM_STATE}"
+    return 1
+  fi
+  rm -f "${ROLLBACK_SERVICE_STATE}" "${ROLLBACK_REVISION_STATE}" "${ROLLBACK_IAM_STATE}"
 }
 
 CANDIDATE_REVISION="${TARGET_SERVICE}-${CANDIDATE_SHA:0:12}"
@@ -237,12 +302,54 @@ fi
 
 MUTATION_STARTED=false
 PROMOTION_RECORDED=false
+PROMOTION_FAILURE_STAGE="traffic-mutation"
 automatic_rollback() {
   local exit_code=$?
+  trap - ERR
   if [[ "${OPERATION}" == "promote" && "${MUTATION_STARTED}" == true && "${PROMOTION_RECORDED}" == false && -n "${PRIOR_REVISION}" ]]; then
     echo "Promotion control failed after traffic mutation; starting automatic rollback to ${PRIOR_REVISION}." >&2
-    gcloud run services update-traffic "${TARGET_SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --to-revisions="${PRIOR_REVISION}=100" --clear-tags --quiet || true
-    write_traffic_snapshot "${TRAFFIC_AFTER}" || true
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+      printf 'automatic_rollback_attempted=true\n' >>"${GITHUB_OUTPUT}"
+    fi
+    gcloud run services update-traffic "${TARGET_SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --to-revisions="${PRIOR_REVISION}=100" --clear-tags --quiet || {
+      echo "AUTOMATIC ROLLBACK FAILED: unable to restore the recorded prior revision." >&2
+      exit 1
+    }
+    write_traffic_snapshot "${TRAFFIC_AFTER}" || {
+      echo "AUTOMATIC ROLLBACK FAILED: unable to observe restored traffic." >&2
+      exit 1
+    }
+    assert_single_revision_traffic "${TRAFFIC_AFTER}" "${PRIOR_REVISION}" "Traffic after automatic rollback" || {
+      echo "AUTOMATIC ROLLBACK FAILED: restored traffic did not match the recorded prior revision." >&2
+      exit 1
+    }
+    write_rollback_observation "${PRIOR_REVISION}" "${ROLLBACK_OBSERVATION}" || {
+      echo "AUTOMATIC ROLLBACK FAILED: infrastructure post-verification could not be recorded." >&2
+      exit 1
+    }
+    node "${ROOT_DIR}/deploy/gcp/record-staging-automatic-rollback.mjs" \
+      --zero-traffic-manifest "${ZERO_TRAFFIC_MANIFEST}" \
+      --zero-traffic-hash "${ZERO_TRAFFIC_HASH}" \
+      --verification-manifest "${VERIFICATION_MANIFEST}" \
+      --verification-hash "${VERIFICATION_HASH}" \
+      --restored-revision "${PRIOR_REVISION}" \
+      --failure-stage "${PROMOTION_FAILURE_STAGE}" \
+      --traffic-before "${TRAFFIC_BEFORE}" \
+      --traffic-after "${TRAFFIC_AFTER}" \
+      --observed-infrastructure "${ROLLBACK_OBSERVATION}" \
+      --controller-sha "${CONTROLLER_SHA}" \
+      --operator-identity "${OPERATOR}" \
+      --github-run-id "${GITHUB_RUN_ID:?GitHub run ID is required}" \
+      --github-run-attempt "${GITHUB_RUN_ATTEMPT:?GitHub run attempt is required}" \
+      --github-actor "${GITHUB_ACTOR:?GitHub actor is required}" \
+      --rollback-output "${AUTOMATIC_ROLLBACK_OUTPUT}" \
+      --rollback-hash-output "${AUTOMATIC_ROLLBACK_HASH_OUTPUT}" \
+      --verification-output "${AUTOMATIC_ROLLBACK_VERIFICATION_OUTPUT}" \
+      --verification-hash-output "${AUTOMATIC_ROLLBACK_VERIFICATION_HASH_OUTPUT}" || {
+        echo "AUTOMATIC ROLLBACK FAILED: tamper-evident post-verification evidence was not completed." >&2
+        exit 1
+      }
+    echo "AUTOMATIC ROLLBACK INFRASTRUCTURE-VERIFIED; APPLICATION, LEDGER, AND RECONCILIATION VERIFICATION REMAIN PENDING" >&2
   fi
   exit "${exit_code}"
 }
@@ -250,9 +357,13 @@ trap automatic_rollback ERR
 
 MUTATION_STARTED=true
 if [[ "${OPERATION}" == "promote" ]]; then
+  PROMOTION_FAILURE_STAGE="traffic-mutation"
   gcloud run services update-traffic "${TARGET_SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --to-revisions="${CANDIDATE_REVISION}=100" --clear-tags --quiet
-  write_traffic_snapshot "${TRAFFIC_AFTER}"
-  assert_single_revision_traffic "${TRAFFIC_AFTER}" "${CANDIDATE_REVISION}" "Traffic after promotion"
+  PROMOTION_FAILURE_STAGE="post-promotion-snapshot"
+  write_traffic_snapshot "${TRAFFIC_AFTER}" || automatic_rollback
+  PROMOTION_FAILURE_STAGE="post-promotion-assertion"
+  assert_single_revision_traffic "${TRAFFIC_AFTER}" "${CANDIDATE_REVISION}" "Traffic after promotion" || automatic_rollback
+  PROMOTION_FAILURE_STAGE="promotion-evidence-recording"
   node "${ROOT_DIR}/deploy/gcp/record-staging-traffic-control.mjs" promote \
     --zero-traffic-manifest "${ZERO_TRAFFIC_MANIFEST}" \
     --zero-traffic-hash "${ZERO_TRAFFIC_HASH}" \
@@ -288,8 +399,34 @@ else
     --github-actor "${GITHUB_ACTOR:?GitHub actor is required}" \
     --output "${ROLLBACK_OUTPUT}" \
     --hash-output "${ROLLBACK_HASH_OUTPUT}"
-  echo "STAGING TRAFFIC ROLLBACK APPLIED AND RECORDED"
-  echo "Post-rollback verification: required and pending"
+
+  write_rollback_observation "${PRIOR_REVISION}" "${ROLLBACK_OBSERVATION}"
+
+  ROLLBACK_MANIFEST_SHA256="$(node -e 'const fs=require("fs"),crypto=require("crypto");process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "${ROLLBACK_OUTPUT}")"
+  node "${ROOT_DIR}/deploy/gcp/record-staging-rollback-verification.mjs" \
+    --rollback-manifest "${ROLLBACK_OUTPUT}" \
+    --rollback-hash "${ROLLBACK_HASH_OUTPUT}" \
+    --rollback-manifest-sha256 "${ROLLBACK_MANIFEST_SHA256}" \
+    --observed-infrastructure "${ROLLBACK_OBSERVATION}" \
+    --controller-sha "${CONTROLLER_SHA}" \
+    --controller-identity "${OPERATOR}" \
+    --github-run-id "${GITHUB_RUN_ID:?GitHub run ID is required}" \
+    --github-run-attempt "${GITHUB_RUN_ATTEMPT:?GitHub run attempt is required}" \
+    --github-actor "${GITHUB_ACTOR:?GitHub actor is required}" \
+    --output "${ROLLBACK_VERIFICATION_OUTPUT}" \
+    --hash-output "${ROLLBACK_VERIFICATION_HASH_OUTPUT}"
+  node --input-type=module -e '
+    import { verifyRollbackVerificationManifest } from "./deploy/gcp/record-staging-rollback-verification.mjs";
+    await verifyRollbackVerificationManifest(process.argv[1], process.argv[2], process.argv[3], process.argv[4], {
+      manifestSha256: process.argv[5],
+      githubRunId: process.argv[6],
+      githubRunAttempt: process.argv[7],
+      controllerSha: process.argv[8],
+      githubActor: process.argv[9],
+    });
+  ' "${ROLLBACK_VERIFICATION_OUTPUT}" "${ROLLBACK_VERIFICATION_HASH_OUTPUT}" "${ROLLBACK_OUTPUT}" "${ROLLBACK_HASH_OUTPUT}" "${ROLLBACK_MANIFEST_SHA256}" "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" "${CONTROLLER_SHA}" "${GITHUB_ACTOR}"
+  echo "STAGING TRAFFIC ROLLBACK APPLIED, RECORDED, AND INFRASTRUCTURE-VERIFIED"
+  echo "Post-rollback application, ledger, and reconciliation verification: pending"
 fi
 
 trap - ERR

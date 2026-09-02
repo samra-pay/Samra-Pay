@@ -10,5 +10,13 @@
 /pnpm-lock.yaml @haileleuld87
 /pnpm-workspace.yaml @haileleuld87
 /deploy/gcp/Dockerfile.* @haileleuld87
+/deploy/gcp/*staging-image-publication* @haileleuld87
+/deploy/gcp/release-candidate-evidence.test.mjs @haileleuld87
+/deploy/gcp/staging-release-test-fixtures.mjs @haileleuld87
+/deploy/gcp/verify-release-candidate-evidence.mjs @haileleuld87
+/deploy/gcp/verify-github-upstream-artifact.mjs @haileleuld87
+/deploy/gcp/github-upstream-artifact.test.mjs @haileleuld87
+/deploy/gcp/record-staging-rollback-verification* @haileleuld87
+/deploy/gcp/record-staging-automatic-rollback* @haileleuld87
 /docs/testing/ @haileleuld87
 /scripts/ @haileleuld87

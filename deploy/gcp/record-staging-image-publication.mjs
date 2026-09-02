@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+  RELEASE_EVIDENCE_MANIFEST,
+  RELEASE_RECOVERY_EVIDENCE,
+  verifyReleaseCandidateEvidence,
+} from "./verify-release-candidate-evidence.mjs";
 
 export const STAGING_IMAGE_NAMES = Object.freeze([
   "samra-api",
@@ -26,6 +32,24 @@ const ALLOWED_PUBLISHERS = new Set([
   "me@davidhaile.com",
   "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
 ]);
+const SECURITY_SCANNER = Object.freeze({
+  name: "Trivy",
+  version: "0.70.0",
+  setupAction:
+    "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+});
+const SECURITY_POLICIES = Object.freeze({
+  vulnerabilities: Object.freeze({
+    scanner: "vuln",
+    severities: Object.freeze(["CRITICAL"]),
+    ignoreUnfixed: true,
+  }),
+  secrets: Object.freeze({
+    scanner: "secret",
+    severities: Object.freeze(["HIGH", "CRITICAL"]),
+    ignoreUnfixed: false,
+  }),
+});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -40,6 +64,222 @@ function normalizeSha(value, label) {
 function normalizeOptional(value) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function isPositiveSafeIntegerString(value) {
+  return (
+    /^[1-9][0-9]*$/.test(value) &&
+    Number.isSafeInteger(Number.parseInt(value, 10))
+  );
+}
+
+function securityReportPath(imageName, kind) {
+  return `artifacts/staging-release/security/${imageName}-${kind}.json`;
+}
+
+function validateTrivyReport(report, expectedDigest, kind) {
+  assert(
+    report &&
+      report.SchemaVersion === 2 &&
+      report.ArtifactName === expectedDigest &&
+      report.ArtifactType === "container_image" &&
+      Array.isArray(report.Results),
+    `${kind} report is not bound to the exact published digest`,
+  );
+  const findings = report.Results.flatMap((result) => {
+    const entries =
+      kind === "vulnerabilities" ? result.Vulnerabilities : result.Secrets;
+    return entries == null ? [] : entries;
+  });
+  assert(
+    findings.length === 0,
+    `${kind} report contains policy-matching findings`,
+  );
+  return report;
+}
+
+function validateSecurityReportEvidence(
+  evidence,
+  imageName,
+  imageDigest,
+  kind,
+) {
+  const expectedKeys = ["status", "artifactName", "reportPath", "reportSha256"];
+  assert(
+    evidence &&
+      JSON.stringify(Object.keys(evidence)) === JSON.stringify(expectedKeys) &&
+      evidence.status === "passed" &&
+      evidence.artifactName === imageDigest &&
+      evidence.reportPath === securityReportPath(imageName, kind) &&
+      DIGEST_PATTERN.test(evidence.reportSha256 ?? ""),
+    `${imageName} ${kind} security evidence drifted`,
+  );
+}
+
+export function validateStagingImageSecurityGate(securityGate, imageDigests) {
+  const expectedKeys = ["status", "scope", "scanner", "policies", "images"];
+  assert(
+    securityGate &&
+      JSON.stringify(Object.keys(securityGate)) ===
+        JSON.stringify(expectedKeys) &&
+      securityGate.status === "passed" &&
+      securityGate.scope === "exact-published-digests" &&
+      JSON.stringify(securityGate.scanner) ===
+        JSON.stringify(SECURITY_SCANNER) &&
+      JSON.stringify(securityGate.policies) ===
+        JSON.stringify(SECURITY_POLICIES) &&
+      JSON.stringify(Object.keys(securityGate.images ?? {})) ===
+        JSON.stringify(STAGING_IMAGE_NAMES),
+    "Published-image security gate drifted",
+  );
+  for (const name of STAGING_IMAGE_NAMES) {
+    const evidence = securityGate.images[name];
+    assert(
+      evidence &&
+        JSON.stringify(Object.keys(evidence)) ===
+          JSON.stringify(["imageDigest", "vulnerabilities", "secrets"]) &&
+        evidence.imageDigest === imageDigests[name],
+      `${name} security identity does not match its published digest`,
+    );
+    validateSecurityReportEvidence(
+      evidence.vulnerabilities,
+      name,
+      imageDigests[name],
+      "vulnerabilities",
+    );
+    validateSecurityReportEvidence(
+      evidence.secrets,
+      name,
+      imageDigests[name],
+      "secrets",
+    );
+  }
+  return securityGate;
+}
+
+export async function buildStagingImageSecurityGate(
+  imageDigests,
+  evidenceRoot,
+) {
+  assert(
+    typeof evidenceRoot === "string" && evidenceRoot.length > 0,
+    "Security evidence root is required",
+  );
+  const images = {};
+  for (const name of STAGING_IMAGE_NAMES) {
+    const imageDigest = imageDigests[name];
+    const reports = {};
+    for (const kind of ["vulnerabilities", "secrets"]) {
+      const reportPath = securityReportPath(name, kind);
+      const diskPath = `${evidenceRoot}/${name}-${kind}.json`;
+      const serialized = await readFile(diskPath, "utf8");
+      const report = JSON.parse(serialized);
+      validateTrivyReport(report, imageDigest, kind);
+      reports[kind] = {
+        status: "passed",
+        artifactName: imageDigest,
+        reportPath,
+        reportSha256: createHash("sha256").update(serialized).digest("hex"),
+      };
+    }
+    images[name] = {
+      imageDigest,
+      vulnerabilities: reports.vulnerabilities,
+      secrets: reports.secrets,
+    };
+  }
+  const securityGate = {
+    status: "passed",
+    scope: "exact-published-digests",
+    scanner: { ...SECURITY_SCANNER },
+    policies: {
+      vulnerabilities: {
+        ...SECURITY_POLICIES.vulnerabilities,
+        severities: [...SECURITY_POLICIES.vulnerabilities.severities],
+      },
+      secrets: {
+        ...SECURITY_POLICIES.secrets,
+        severities: [...SECURITY_POLICIES.secrets.severities],
+      },
+    },
+    images,
+  };
+  validateStagingImageSecurityGate(securityGate, imageDigests);
+  return Object.freeze(securityGate);
+}
+
+export function validateReleaseCandidateLineage(
+  lineage,
+  candidateSha,
+  gitTreeSha,
+) {
+  const requiredKeys = [
+    "releaseId",
+    "candidateSha",
+    "gitTreeSha",
+    "repository",
+    "workflow",
+    "workflowName",
+    "workflowRunId",
+    "workflowRunAttempt",
+    "workflowRunUrl",
+    "artifactName",
+    "evidenceManifestPath",
+    "evidenceManifestSha256",
+    "overallStatus",
+    "requiredGatesPassed",
+    "recoveryEvidence",
+  ];
+  assert(
+    lineage &&
+      Object.keys(lineage).length === requiredKeys.length &&
+      requiredKeys.every((key) => Object.hasOwn(lineage, key)),
+    "Release-candidate lineage shape drifted",
+  );
+  const runId =
+    typeof lineage?.workflowRunId === "string"
+      ? lineage.workflowRunId.trim()
+      : "";
+  const runAttempt = lineage?.workflowRunAttempt;
+  const runUrl = `https://github.com/${SOURCE_REPOSITORY}/actions/runs/${runId}`;
+  assert(
+    lineage?.releaseId === `rc-${candidateSha.slice(0, 12)}` &&
+      lineage.candidateSha === candidateSha &&
+      lineage.gitTreeSha === gitTreeSha &&
+      lineage.repository === SOURCE_REPOSITORY &&
+      lineage.workflow === ".github/workflows/release-candidate.yml" &&
+      lineage.workflowName === "Immutable release candidate" &&
+      isPositiveSafeIntegerString(runId) &&
+      Number.isSafeInteger(runAttempt) &&
+      runAttempt >= 1 &&
+      lineage.workflowRunUrl === runUrl &&
+      lineage.artifactName ===
+        `samra-rc-${candidateSha.slice(0, 12)}-run-${runId}-attempt-${runAttempt}` &&
+      lineage.evidenceManifestPath === RELEASE_EVIDENCE_MANIFEST &&
+      DIGEST_PATTERN.test(lineage.evidenceManifestSha256 ?? "") &&
+      lineage.overallStatus === "passed" &&
+      lineage.requiredGatesPassed === true,
+    "Release-candidate lineage drifted",
+  );
+  assert(
+    Array.isArray(lineage.recoveryEvidence) &&
+      JSON.stringify(lineage.recoveryEvidence.map(({ path }) => path)) ===
+        JSON.stringify(RELEASE_RECOVERY_EVIDENCE) &&
+      lineage.recoveryEvidence.every(
+        (entry) =>
+          Object.keys(entry).length === 2 &&
+          Object.hasOwn(entry, "path") &&
+          Object.hasOwn(entry, "sha256") &&
+          DIGEST_PATTERN.test(entry.sha256 ?? ""),
+      ),
+    "Release-candidate recovery lineage drifted",
+  );
+  return Object.freeze({
+    ...lineage,
+    recoveryEvidence: Object.freeze(
+      lineage.recoveryEvidence.map((entry) => Object.freeze({ ...entry })),
+    ),
+  });
 }
 
 export function parseImageArguments(values) {
@@ -66,6 +306,11 @@ export function parseImageArguments(values) {
 export function buildStagingImagePublicationManifest(input) {
   const candidateSha = normalizeSha(input.candidateSha, "Candidate SHA");
   const gitTreeSha = normalizeSha(input.gitTreeSha, "Git tree SHA");
+  const releaseCandidate = validateReleaseCandidateLineage(
+    input.releaseCandidate,
+    candidateSha,
+    gitTreeSha,
+  );
   assert(input.projectId === PROJECT_ID, "Project ID drifted");
   assert(input.projectNumber === PROJECT_NUMBER, "Project number drifted");
   assert(input.region === REGION, "Region drifted");
@@ -104,6 +349,10 @@ export function buildStagingImagePublicationManifest(input) {
       JSON.stringify(STAGING_IMAGE_NAMES),
     "Image digest set or order drifted",
   );
+  const securityGate = validateStagingImageSecurityGate(
+    input.securityGate,
+    imageDigests,
+  );
 
   const githubRunId = normalizeOptional(input.githubRunId);
   const githubRunAttempt = githubRunId
@@ -121,7 +370,7 @@ export function buildStagingImagePublicationManifest(input) {
 
   const generatedAt = new Date(input.generatedAt).toISOString();
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 3,
     status: "published",
     environment: "staging",
     dataClassification: "synthetic-only",
@@ -138,6 +387,7 @@ export function buildStagingImagePublicationManifest(input) {
     cloudBuildUrl: `https://console.cloud.google.com/cloud-build/builds;region=${REGION}/${input.cloudBuildId}?project=${PROJECT_NUMBER}`,
     publisherIdentity: input.publisherIdentity,
     buildServiceAccount: BUILD_SERVICE_ACCOUNT,
+    releaseCandidate,
     github: githubRunId
       ? {
           repository: SOURCE_REPOSITORY,
@@ -153,6 +403,7 @@ export function buildStagingImagePublicationManifest(input) {
         }
       : null,
     imageDigests,
+    securityGate,
     deploymentAuthorized: false,
     trafficAuthorized: false,
     vendorActivationAuthorized: false,
@@ -164,7 +415,7 @@ export function buildStagingImagePublicationManifest(input) {
 
 export function validateStagingImagePublicationManifest(manifest) {
   assert(
-    manifest.schemaVersion === 1 &&
+    manifest.schemaVersion === 3 &&
       manifest.status === "published" &&
       manifest.environment === "staging" &&
       manifest.dataClassification === "synthetic-only",
@@ -176,6 +427,11 @@ export function validateStagingImagePublicationManifest(manifest) {
   );
   normalizeSha(manifest.candidateSha, "Candidate SHA");
   normalizeSha(manifest.gitTreeSha, "Git tree SHA");
+  validateReleaseCandidateLineage(
+    manifest.releaseCandidate,
+    manifest.candidateSha,
+    manifest.gitTreeSha,
+  );
   assert(
     manifest.projectId === PROJECT_ID &&
       manifest.projectNumber === PROJECT_NUMBER &&
@@ -209,6 +465,10 @@ export function validateStagingImagePublicationManifest(manifest) {
       `${name} digest drifted`,
     );
   }
+  validateStagingImageSecurityGate(
+    manifest.securityGate,
+    manifest.imageDigests,
+  );
   if (manifest.github !== null) {
     assert(
       manifest.github.repository === SOURCE_REPOSITORY &&
@@ -303,7 +563,20 @@ function parseCliArguments(values) {
 
 async function runCli() {
   const options = parseCliArguments(process.argv.slice(2));
+  const releaseCandidate = await verifyReleaseCandidateEvidence({
+    evidenceRoot: options.release_evidence_root,
+    contractPath:
+      options.release_contract ?? "docs/testing/release-evidence-contract.json",
+    candidateSha: options.candidate_sha,
+    releaseRunId: options.release_candidate_run_id,
+    releaseRunAttempt: options.release_candidate_run_attempt,
+    runMetadataPath: options.release_run_metadata,
+  });
   const imageDigests = parseImageArguments(options.images);
+  const securityGate = await buildStagingImageSecurityGate(
+    imageDigests,
+    options.security_evidence_root,
+  );
   const manifest = buildStagingImagePublicationManifest({
     candidateSha: options.candidate_sha,
     gitTreeSha: options.git_tree_sha,
@@ -320,6 +593,8 @@ async function runCli() {
     githubActor: options.github_actor,
     generatedAt: options.generated_at ?? new Date().toISOString(),
     imageDigests,
+    securityGate,
+    releaseCandidate,
   });
   const output = options.output;
   const hashOutput = options.hash_output;
@@ -330,7 +605,10 @@ async function runCli() {
   );
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1])) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   runCli().catch((error) => {
     process.stderr.write(
       `Unable to record staging image publication: ${error instanceof Error ? error.message : String(error)}\n`,

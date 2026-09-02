@@ -15,9 +15,19 @@ on:
         description: For publish only, enter AUTHORIZED_STAGING_IMAGE_PUBLICATION
         required: false
         type: string
+      release_candidate_run_id:
+        description: Successful Immutable release candidate workflow run ID for this exact main commit
+        required: true
+        type: string
+      release_candidate_run_attempt:
+        description: Exact successful release-candidate run attempt containing the immutable evidence
+        required: true
+        default: "1"
+        type: string
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 concurrency:
@@ -35,6 +45,8 @@ env:
   SAMRA_GCP_PUBLISHER_SERVICE_ACCOUNT: samra-github-staging@samra-pay-staging.iam.gserviceaccount.com
   SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
   SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
+  SAMRA_RELEASE_CANDIDATE_RUN_ID: ${{ inputs.release_candidate_run_id }}
+  SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT: ${{ inputs.release_candidate_run_attempt }}
 
 jobs:
   publication:
@@ -64,12 +76,53 @@ jobs:
           [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
           [[ "${GITHUB_REF}" == "refs/heads/main" ]]
           [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
+          [[ "${SAMRA_RELEASE_CANDIDATE_RUN_ID}" =~ ^[1-9][0-9]*$ ]]
+          [[ "${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
           if [[ "${SAMRA_WORKFLOW_MODE}" == "publish" ]]; then
             [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_IMAGE_PUBLICATION" ]] || {
               echo "Publish mode requires the exact publication authorization." >&2
               exit 1
             }
           fi
+
+      - name: Initialize exact release evidence paths
+        id: release_artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_id="rc-${GITHUB_SHA:0:12}"
+          artifact_name="samra-${release_id}-run-${SAMRA_RELEASE_CANDIDATE_RUN_ID}-attempt-${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}"
+          {
+            printf 'artifact_name=%s\n' "${artifact_name}"
+            printf 'release_id=%s\n' "${release_id}"
+          } >> "${GITHUB_OUTPUT}"
+          {
+            printf 'SAMRA_RELEASE_EVIDENCE_ROOT=%s\n' "${RUNNER_TEMP}/samra-release-candidate"
+            printf 'SAMRA_RELEASE_RUN_METADATA=%s\n' "${RUNNER_TEMP}/samra-release-candidate-run.json"
+            printf 'SAMRA_RELEASE_VERIFICATION_SUMMARY=%s\n' "${RUNNER_TEMP}/samra-release-candidate-verification.json"
+          } >> "${GITHUB_ENV}"
+
+      - name: Download the exact release-candidate artifact
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ steps.release_artifact.outputs.artifact_name }}
+          path: ${{ runner.temp }}/samra-release-candidate/artifacts
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.release_candidate_run_id }}
+
+      - name: Verify release-candidate lineage before Google authentication
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node deploy/gcp/verify-release-candidate-evidence.mjs \
+            --evidence-root "${SAMRA_RELEASE_EVIDENCE_ROOT}" \
+            --candidate-sha "${GITHUB_SHA}" \
+            --release-run-id "${SAMRA_RELEASE_CANDIDATE_RUN_ID}" \
+            --release-run-attempt "${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}" \
+            --run-metadata-output "${SAMRA_RELEASE_RUN_METADATA}" \
+            --output "${SAMRA_RELEASE_VERIFICATION_SUMMARY}"
 
       - name: Obtain short-lived Google credentials
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
@@ -85,6 +138,13 @@ jobs:
         with:
           version: ">= 540.0.0"
           project_id: ${{ env.SAMRA_GCP_PROJECT_ID }}
+
+      - name: Install the pinned exact-digest security scanner
+        if: inputs.mode == 'publish'
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+        with:
+          version: v0.70.0
+          cache: true
 
       - name: Verify federated caller
         shell: bash

@@ -20,6 +20,10 @@ import {
   validateStagingZeroTrafficDeployment,
   validateZeroTrafficEnvironment,
 } from "./validate-staging-zero-traffic-deployment.mjs";
+import {
+  imageSecurityGate,
+  releaseCandidateLineage,
+} from "./staging-release-test-fixtures.mjs";
 
 const contract = readStagingZeroTrafficDeployment();
 const workflow = await readFile(
@@ -49,9 +53,10 @@ const imageDigests = Object.freeze(
 );
 
 function publication() {
+  const gitTreeSha = "b".repeat(40);
   return buildStagingImagePublicationManifest({
     candidateSha: sha,
-    gitTreeSha: "b".repeat(40),
+    gitTreeSha,
     projectId: "samra-pay-staging",
     projectNumber: "934122615631",
     region: "us-east4",
@@ -67,6 +72,8 @@ function publication() {
     githubActor: "haileleuld87",
     generatedAt: "2026-08-23T00:00:00.000Z",
     imageDigests,
+    securityGate: imageSecurityGate(imageDigests),
+    releaseCandidate: releaseCandidateLineage(sha, gitTreeSha),
   });
 }
 
@@ -124,6 +131,16 @@ test("validates the separate keyless zero-traffic deployment boundary", () => {
 test("rejects repository, workflow, identity, IAM, traffic, and service drift", () => {
   for (const mutate of [
     (value) => (value.github.repositoryId = "1"),
+    (value) => (value.artifactInput.publicationManifestSchemaVersion = 2),
+    (value) => (value.artifactInput.releaseCandidateLineageRequired = false),
+    (value) => (value.artifactInput.publishedDigestSecurityRequired = false),
+    (value) =>
+      (value.artifactInput.exactRunAttemptApiVerificationRequired = false),
+    (value) =>
+      (value.artifactInput.exactArtifactApiVerificationRequired = false),
+    (value) =>
+      (value.artifactInput.verificationBeforeCloudAuthentication = false),
+    (value) => (value.artifactInput.operatorSelectedProducerAllowed = true),
     (value) => (value.github.allowedRef = "refs/heads/feature"),
     (value) => (value.googleCloud.workloadIdentityPoolId = "shared-pool"),
     (value) => (value.provider.attributeCondition = "true"),
@@ -133,6 +150,7 @@ test("rejects repository, workflow, identity, IAM, traffic, and service drift", 
     (value) => (value.deployment.publicUnauthenticatedAllowed = true),
     (value) => (value.deployment.defaultServiceUrlAllowed = true),
     (value) => (value.services["samra-api"].prerequisiteEvidence = []),
+    (value) => (value.services["samra-api"].executionStatus = "implemented"),
     (value) => (value.workflow.automaticTriggers = true),
     (value) => (value.workflow.trafficMutation = true),
   ]) {
@@ -180,9 +198,46 @@ test("builds deployment evidence that binds publication, configuration, revision
   assert.equal(manifest.trafficAuthorized, false);
   assert.equal(manifest.migrationAuthorized, false);
   assert.equal(manifest.vendorActivationAuthorized, false);
+  assert.equal(manifest.publication.releaseCandidateRunId, "32600000001");
+  assert.equal(manifest.publication.releaseCandidateRunAttempt, 1);
+  assert.equal(
+    manifest.publication.releaseEvidenceManifestSha256,
+    "8".repeat(64),
+  );
+  assert.equal(manifest.publication.publishedDigestSecurity.status, "passed");
+  assert.equal(
+    manifest.publication.publishedDigestSecurity.imageDigest,
+    imageDigests["samra-design-system-preview"],
+  );
   assert.equal(
     validateStagingZeroTrafficDeploymentManifest(manifest),
     manifest,
+  );
+});
+
+test("rejects a legacy publication manifest before building downstream evidence", () => {
+  const legacy = structuredClone(publication());
+  legacy.schemaVersion = 2;
+  delete legacy.releaseCandidate;
+  assert.throws(
+    () =>
+      buildStagingZeroTrafficDeploymentManifest({
+        publication: legacy,
+        publicationManifestSha256: "d".repeat(64),
+        targetService: "samra-design-system-preview",
+        revisionName: `samra-design-system-preview-${sha.slice(0, 12)}`,
+        imageDigest: imageDigests["samra-design-system-preview"],
+        deployerIdentity:
+          "samra-github-deployer-staging@samra-pay-staging.iam.gserviceaccount.com",
+        configurationSha256: "e".repeat(64),
+        trafficBefore: [],
+        trafficAfter: [],
+        githubRunId: "32609632627",
+        githubRunAttempt: "2",
+        githubActor: "haileleuld87",
+        generatedAt: "2026-08-23T01:00:00.000Z",
+      }),
+    /Publication manifest identity drifted/,
   );
 });
 
@@ -220,6 +275,26 @@ test("rejects digest, revision, traffic, tag, identity, and evidence authority d
   const changed = structuredClone(deploymentManifest());
   changed.trafficAuthorized = true;
   assert.throws(() => validateStagingZeroTrafficDeploymentManifest(changed));
+});
+
+test("rejects downstream evidence when exact published-digest security drifts", () => {
+  for (const mutate of [
+    (value) => (value.publication.publishedDigestSecurity.status = "pending"),
+    (value) =>
+      (value.publication.publishedDigestSecurity.imageDigest = digest(
+        "samra-design-system-preview",
+        "f",
+      )),
+    (value) =>
+      (value.publication.publishedDigestSecurity.secretsReportSha256 = "bad"),
+  ]) {
+    const changed = structuredClone(deploymentManifest());
+    mutate(changed);
+    assert.throws(
+      () => validateStagingZeroTrafficDeploymentManifest(changed),
+      /Published-digest security provenance drifted/,
+    );
+  }
 });
 
 test("writes and independently verifies tamper-evident deployment evidence", async () => {

@@ -33,6 +33,10 @@ import {
   readStagingVerificationContract,
   validateStagingVerificationContract,
 } from "./validate-staging-verification.mjs";
+import {
+  imageSecurityGate,
+  releaseCandidateLineage,
+} from "./staging-release-test-fixtures.mjs";
 
 const candidateSha = "a".repeat(40);
 const controllerSha = "b".repeat(40);
@@ -43,9 +47,13 @@ const digest = (name, value = "c") =>
   `us-east4-docker.pkg.dev/samra-pay-staging/samra-staging/${name}@sha256:${value.repeat(64)}`;
 
 function publication() {
+  const gitTreeSha = "d".repeat(40);
+  const imageDigests = Object.fromEntries(
+    STAGING_IMAGE_NAMES.map((name) => [name, digest(name)]),
+  );
   return buildStagingImagePublicationManifest({
     candidateSha,
-    gitTreeSha: "d".repeat(40),
+    gitTreeSha,
     projectId: "samra-pay-staging",
     projectNumber: "934122615631",
     region: "us-east4",
@@ -60,9 +68,9 @@ function publication() {
     githubRunAttempt: "1",
     githubActor: "haileleuld87",
     generatedAt: "2026-08-23T00:00:00.000Z",
-    imageDigests: Object.fromEntries(
-      STAGING_IMAGE_NAMES.map((name) => [name, digest(name)]),
-    ),
+    imageDigests,
+    securityGate: imageSecurityGate(imageDigests),
+    releaseCandidate: releaseCandidateLineage(candidateSha, gitTreeSha),
   });
 }
 

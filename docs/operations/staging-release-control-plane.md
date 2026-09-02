@@ -18,6 +18,11 @@ passing Qase run. Federated identities, protected environments, and every Cloud
 Run mutation remain separately activated and authorized; no service is live.
 The promotion path deliberately cannot perform first-ever activation because a
 release without a prior healthy revision has no proven rollback target.
+Image publication now fails closed unless one exact successful release-candidate
+run for the same commit proves every contracted gate, including the synthetic
+PostgreSQL backup/restore rehearsal. This lineage is checked before Google
+authentication; the workflows remain unexecuted and do not prove a live staging
+environment.
 
 ## Controlled delivery path
 
@@ -25,10 +30,13 @@ release without a prior healthy revision has no proven rollback target.
 flowchart LR
   A[Exact main commit] --> B[GitHub release gates]
   B --> C[Qase release identity]
-  B --> D[Protected image publication]
+  B --> R[Synthetic backup and restore evidence]
+  C --> D[Protected image publication]
+  R --> D
   D --> E[Google Cloud Build]
   E --> F[Five immutable image digests]
-  F --> G[Hashed publication manifest]
+  F --> S[Exact-digest vulnerability and secret gates]
+  S --> G[Hashed publication manifest]
   G -. separate approval .-> H[Private zero-traffic revisions]
   H -. separate approval .-> V[Temporary exact-image verifier job]
   V --> P[Hashed non-promotable image evidence]
@@ -47,14 +55,14 @@ traffic workflow is authorized.
 
 ## Stage authority
 
-| Stage                   | Authority                      | Mutation                                                                             | Required evidence                                                                                                   | Current state                                                                  |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, Qase release identity                                                              | Implemented                                                                    |
-| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                         | Git SHA, Git tree, GitHub run, Cloud Build ID, five digests, manifest hash                                          | Implemented                                                                    |
-| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                                     | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof   | Implemented; not activated or authorized                                       |
-| Staging verification    | Protected GitHub environment   | Two temporary private jobs: exact-image database suite and exact-revision HTTP probe | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, one Qase run | Both workflows implemented; federation activation and execution not authorized |
-| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100%       | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                  | Implemented; not activated or authorized                                       |
-| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                      | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                     | Implemented; not activated or authorized                                       |
+| Stage                   | Authority                      | Mutation                                                                             | Required evidence                                                                                                        | Current state                                                                                                                                     |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, Qase identity, synthetic backup/restore evidence                                        | Implemented; current run evidence still required                                                                                                  |
+| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                         | Exact release lineage, Cloud Build ID, five digests, passing exact-digest vulnerability/secret reports, publication hash | Implemented; not executed from this change                                                                                                        |
+| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                                     | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof        | Design lane implemented; API blocked pending a governed migration producer and customer web transitively blocked; no lane activated or authorized |
+| Staging verification    | Protected GitHub environment   | Two temporary private jobs: exact-image database suite and exact-revision HTTP probe | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, one Qase run      | Both workflows implemented; federation activation and execution not authorized                                                                    |
+| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100%       | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                       | Implemented; not activated or authorized                                                                                                          |
+| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                      | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                          | Implemented; not activated or authorized                                                                                                          |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
@@ -65,6 +73,14 @@ vendor activation. Each transition requires its own bounded authorization.
 `record-staging-image-publication.mjs`. The recorder will fail unless all of the
 following describe one release:
 
+- one exact GitHub release-candidate run ID and attempt whose API record is
+  completed, successful, main-only, and bound to the same candidate SHA;
+- the exact named artifact from that run, never a wildcard match;
+- a valid release-evidence manifest and sidecar whose complete contracted file
+  set still matches its recorded byte lengths and SHA-256 values;
+- every release gate is `success`, including the distinct `resilience` and
+  `recovery` gates, with both the synthetic backup/restore JUnit and structured
+  result present and passing;
 - full candidate Git SHA and Git tree SHA;
 - private repository and `refs/heads/main` identity;
 - GitHub workflow run ID, attempt, actor, and protected environment when GitHub
@@ -72,17 +88,53 @@ following describe one release:
 - regional Cloud Build UUID and dedicated keyless build identity;
 - exact staging project, region, and immutable Artifact Registry repository;
 - one immutable digest for each of the API, customer web, Operations Portal,
-  design preview, and migrations images.
+  design preview, and migrations images; and
+- passing vulnerability and secret reports whose `ArtifactName` is each exact
+  published digest, with every report retained by content hash.
 
 It writes:
 
 - `artifacts/staging-release/staging-image-publication.json`; and
 - `artifacts/staging-release/staging-image-publication.sha256`.
 
-The protected publication workflow uploads both files as a GitHub artifact named
-with the full commit, workflow run, and attempt. Retention is 365 days. The
-manifest explicitly records that deployment, traffic, and vendor activation are
-not authorized.
+The publication manifest is schema version 3. Its `releaseCandidate` object
+records the release workflow path, run ID, attempt, artifact name, candidate and
+tree SHAs, release-manifest SHA-256, and both recovery-evidence hashes. Those
+same lineage values are sent to Cloud Build as validated substitutions and are
+carried into downstream zero-traffic deployment evidence. Its `securityGate`
+object binds a pinned Trivy version, explicit vulnerability and secret policy,
+all five registry digests, and ten hashed JSON reports. Legacy records without
+this exact-digest gate are rejected.
+
+The release-candidate image scans remain useful source-build checks, but they do
+not attest the separately built Cloud Build outputs. Publication therefore
+scans the registry objects after their immutable digests resolve and before the
+recorder can emit downstream-consumable evidence. If any scan fails or names a
+different digest, the immutable images may remain in Artifact Registry, but no
+publication manifest is produced and zero-traffic deployment remains blocked.
+The scan implementation is replaceable; the durable contract is the exact
+digest, explicit policy, pass status, report bytes, and report SHA-256.
+
+The protected publication workflow uploads both publication files as a GitHub
+artifact named with the full commit, workflow run, and attempt. It requests
+365-day retention; repository retention settings must independently permit that
+duration before relying on it. The manifest explicitly records that deployment,
+traffic, and vendor activation are not authorized.
+
+All GitHub evidence download and validation occurs before
+`google-github-actions/auth`. `actions: read` is limited to fetching the exact
+same-repository run and exact artifact name. The verifier uses Node.js and reads
+no Google Cloud, vendor, database, secret, customer, or production state.
+
+Every later privileged workflow also calls
+`verify-github-upstream-artifact.mjs` before Google authentication. The verifier
+queries GitHub's exact run-attempt record and exact-name artifact listing, then
+requires the fixed private repository and numeric owner/repository identities,
+governed workflow name and path, `refs/heads/main`, `workflow_dispatch`, the
+candidate SHA, completed/success result, run ID and attempt, and one non-expired
+artifact whose API identity, SHA-256 digest, source run, repository, branch, and
+SHA all match. Artifact kinds and names are derived from a closed checked-in
+allowlist; workflow dispatch inputs cannot select a different producer.
 
 ## Zero-traffic deployment controller
 
@@ -102,8 +154,11 @@ manual run and must:
   authentication is incomplete.
 
 The API additionally requires a hashed, same-candidate migration manifest.
-Customer web additionally requires the API's hashed, same-candidate zero-traffic
-deployment manifest. The design-system preview is the only service without a
+There is no governed migration-producing workflow in this repository yet, so
+the API lane now fails before GitHub artifact download or Google authentication;
+it is blocked, not implemented or ready. Customer web additionally requires the
+API's hashed, same-candidate zero-traffic deployment manifest and exact GitHub
+producer identity. The design-system preview is the only service without a
 runtime-service prerequisite. These gates prevent a later-stage deployment from
 silently skipping database or API sequencing.
 
@@ -208,16 +263,24 @@ exact candidate revision and then independently verifies the resulting 100%
 allocation. It records the candidate and controller Git SHAs, immutable image
 digest, input manifest hashes, Qase identity, operator, GitHub run, complete
 before/after allocation, and exact rollback target in a hashed manifest. If the
-control path fails after mutation but before that record is complete, it makes a
-best-effort automatic traffic rollback to the pre-recorded revision and leaves
-the workflow failed for investigation.
+control path fails after mutation but before that record is complete, it
+attempts a fail-closed automatic rollback to the pre-recorded revision. It then
+uses the same infrastructure observation and validation rules as explicit
+rollback and emits two distinct hashed records: the automatic rollback event
+and its infrastructure verification. The failed promotion step marks that
+recovery was attempted so an `always()` artifact step retains the evidence.
+Any restore, observation, validation, or evidence failure remains a failed,
+unproved recovery. A successful automatic rollback still leaves the original
+promotion workflow failed for investigation.
 
 Rollback must reassign traffic to that recorded revision. It must not rebuild an
 old commit, resolve a floating tag, use a `latest` alias, or guess which revision
 was previously healthy. A successful rollback record remains
-`rolled-back-pending-post-verification` until the required synthetic checks are
-rerun. First-ever traffic activation is outside both operations and needs a
-separate approved bootstrap design.
+`rolled-back-pending-post-verification`; a separate record can prove
+`infrastructure-verified-application-pending`. Neither explicit nor automatic
+rollback runs the post-rollback application, ledger, or reconciliation checks.
+First-ever traffic activation is outside both operations and needs a separate
+approved bootstrap design.
 
 ## Separation of identities
 
@@ -246,8 +309,10 @@ source, impersonate a runtime, access secrets, execute migrations, mutate the
 runtime template or IAM, or activate a vendor. The independent audit enumerates
 the relevant Artifact Registry repositories, Cloud Build source bucket,
 secrets, service-account policies, and Cloud Run jobs to detect prohibited
-resource-level grants. Separating the identities prevents a promotion
-credential from silently becoming rollback authority.
+resource-level grants. A later operator-requested rollback uses the separate
+rollback identity. Bounded automatic compensation for failure inside the same
+authorized promotion uses the promoter identity and the already-recorded prior
+revision; it does not gain additional permissions or authorize a later rollback.
 
 Exact-image verification uses a fourth isolated pool,
 `samra-image-verify-staging`, with one provider bound only to the manual
@@ -282,13 +347,24 @@ For any revision that receives traffic, an operator must be able to answer these
 questions from retained evidence without reading chat history:
 
 1. Which exact Git commit and tree produced it?
-2. Which GitHub run approved and published it?
-3. Which Cloud Build produced each image digest?
-4. Which migration execution and configuration hash preceded deployment?
-5. Which Cloud Run revision received traffic, when, and by whose approval?
-6. Which Qase run proved readiness and financial invariants?
-7. Which prior revision is the tested rollback target?
-8. Was rollback executed, and did post-rollback verification pass?
+2. Which exact release-candidate run and attempt passed, and which manifest hash
+   included the backup/restore evidence?
+3. Which GitHub run published it?
+4. Which Cloud Build produced each image digest?
+5. Which migration execution and configuration hash preceded deployment?
+6. Which Cloud Run revision received traffic, when, and by whose approval?
+7. Which Qase run proved readiness and financial invariants?
+8. Which prior immutable revision is the recorded rollback target?
+9. Was rollback executed, and did the bounded post-rollback infrastructure
+   verification pass?
+
+The post-rollback verifier proves exact traffic restoration, revision
+readiness, immutable image identity, private ingress, disabled default URL, and
+absence of public IAM. Its status is
+`infrastructure-verified-application-pending`: it does not claim that an
+application probe, ledger invariant check, or reconciliation check ran after
+rollback. Those remain explicit follow-on controls before a full recovery
+claim.
 
 If any answer is missing, the release is not promotable.
 
@@ -297,6 +373,7 @@ If any answer is missing, the release is not promotable.
 - `deploy/gcp/staging-release-control-plane.json`
 - `deploy/gcp/validate-staging-release-control-plane.mjs`
 - `deploy/gcp/record-staging-image-publication.mjs`
+- `deploy/gcp/verify-release-candidate-evidence.mjs`
 - `deploy/gcp/publish-staging-images.sh`
 - `.github/workflows/staging-image-publication.yml`
 - `deploy/gcp/staging-zero-traffic-deployment.json`
@@ -325,6 +402,8 @@ If any answer is missing, the release is not promotable.
 - `.github/workflows/staging-verification-probe.yml`
 - `deploy/gcp/validate-staging-traffic-control.mjs`
 - `deploy/gcp/record-staging-traffic-control.mjs`
+- `deploy/gcp/record-staging-rollback-verification.mjs`
+- `deploy/gcp/record-staging-automatic-rollback.mjs`
 - `deploy/gcp/control-staging-traffic.sh`
 - `deploy/gcp/activate-staging-traffic-federation.sh`
 - `deploy/gcp/audit-staging-traffic-federation.sh`

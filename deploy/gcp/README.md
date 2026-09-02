@@ -354,11 +354,21 @@ controller passes `--no-traffic`, uses no revision tag, compares the complete
 traffic allocation before and after, and writes a hashed deployment manifest.
 
 API deployment requires same-release migration evidence plus approved Auth0
-public identifiers and a pinned database-secret version. Customer-web
-deployment requires same-release API zero-traffic evidence and approved service
-audience/Auth0 public identifiers. Persona and Crossmint remain dormant; no
-vendor secret is accepted by this workflow. The design-system preview is the
-only target without a runtime-service prerequisite.
+public identifiers and a pinned database-secret version. No governed
+migration-producing workflow exists yet, so the API lane is deliberately
+blocked before cloud authentication; it is not implemented or ready.
+Customer-web deployment requires same-release API zero-traffic evidence and
+approved service audience/Auth0 public identifiers. Persona and Crossmint
+remain dormant; no vendor secret is accepted by this workflow. The
+design-system preview is the only target without a runtime-service prerequisite.
+
+Before any downstream staging workflow requests Google credentials,
+`verify-github-upstream-artifact.mjs` uses GitHub's REST API to validate both
+the exact workflow-run attempt and one exact named artifact. It binds the fixed
+repository and numeric IDs, workflow name/path/ref, manual event, successful
+conclusion, candidate SHA, run ID/attempt, and the artifact's non-expired
+GitHub identity and SHA-256 digest. The producer kinds and canonical artifact
+names are a closed code allowlist rather than dispatch-controlled values.
 
 The one-time trust activation remains a separate human-admin action:
 
@@ -439,13 +449,20 @@ traffic. This deliberately rejects first activation, partial rollout, tags,
 floating aliases, and an unrecorded rollback target. An authorized promotion
 uses only `--to-revisions=<exact revision>=100`, independently verifies the
 result, and writes a hashed promotion manifest. A controller failure after the
-traffic operation triggers a best-effort automatic rollback to the prior
-revision and leaves the run failed.
+traffic operation triggers a fail-closed automatic rollback to the prior
+revision. The same private-infrastructure observation used by explicit
+rollback must prove exact 100% traffic, Ready revision, immutable image,
+private ingress, disabled default URL, and no public IAM. Distinct hashed
+automatic-rollback and verification records are retained with `always()` after
+a failed promotion step. Failure to restore, observe, validate, or retain the
+evidence leaves recovery unproved; even verified automatic rollback leaves the
+original promotion run failed.
 
 Rollback consumes that exact promotion manifest, verifies current traffic still
 matches the promoted state, restores the recorded prior revision without a
-rebuild, and writes a second hashed record. The record remains pending until
-post-rollback synthetic verification passes. Beyond the reviewed traffic
+rebuild, and writes a second hashed record. A separate post-rollback record
+proves infrastructure only. Application, ledger, and reconciliation checks
+remain `not-executed`; neither rollback path claims full recovery. Beyond the reviewed traffic
 allocation, no operation changes the runtime template, service IAM, vendors,
 secrets, databases, production, or Replit.
 
@@ -462,8 +479,18 @@ Review example from an authenticated, fixed-source Cloud Shell checkout:
 ```sh
 SAMRA_GCP_OPERATOR_ACCOUNT="me@davidhaile.com" \
 SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
+SAMRA_RELEASE_EVIDENCE_ROOT="/path/to/exact-release-artifact" \
+SAMRA_RELEASE_RUN_METADATA="/path/to/exact-release-run.json" \
+SAMRA_RELEASE_CANDIDATE_RUN_ID="REQUIRED_NUMERIC_RUN_ID" \
+SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT="REQUIRED_NUMERIC_ATTEMPT" \
   bash deploy/gcp/publish-staging-images.sh --review
 ```
+
+The two release paths must come from the exact completed release-candidate run;
+the controller independently rechecks them before reading Google Cloud state.
+The protected GitHub workflow is the canonical path because it downloads the
+exact named artifact and run metadata with `actions: read` before obtaining a
+Google credential.
 
 The apply mode must not be run until the build cost and exact source SHA are
 approved. The build service account is limited to reading the exact source
@@ -516,17 +543,32 @@ the provider condition, exact permissions and bindings, non-public source
 bucket, and absence of publisher keys without changing cloud state.
 
 `.github/workflows/staging-image-publication.yml` uses commit-pinned releases
-of `google-github-actions/auth` v3, `setup-gcloud` v3, and `actions/checkout`
-v7. The generated short-lived credential file is excluded from Git and
+of `google-github-actions/auth` v3, `setup-gcloud` v3, `actions/checkout` v7,
+`actions/download-artifact` v8, and `setup-trivy` v0.2.6 with Trivy v0.70.0.
+The generated short-lived credential file is excluded from Git and
 all container contexts. One protected job performs the read-only review and,
 only when explicitly requested, continues to publication without repeating
 checkout, authentication, SDK setup, or environment approval. Publication
 requires all of the following:
 
 1. a manual run from the current `main` ref in the exact private repository;
-2. a successful read-only review for the same Git SHA and federated session;
-3. selection of `publish` plus the exact image-publication authorization; and
-4. approval through the `staging-image-publication` GitHub environment.
+2. an exact successful release-candidate run ID and attempt for that SHA;
+3. byte-for-byte validation of its exact artifact, every gate, Qase identity,
+   and synthetic backup/restore evidence before Google authentication;
+4. a successful read-only cloud review for the same Git SHA and federated session;
+5. selection of `publish` plus the exact image-publication authorization; and
+6. approval through the `staging-image-publication` GitHub environment; and
+7. passing critical-vulnerability and high/critical-secret scans of all five
+   exact registry digests before publication evidence is recorded.
+
+The publication record is schema version 3 and preserves the release run,
+attempt, artifact name, release-manifest SHA-256, and recovery-evidence hashes.
+Cloud Build receives the same run, attempt, and manifest hash as validated
+substitutions. The record also hashes ten scanner reports and binds each report
+to the exact digest it scanned. Downstream deployment controllers reject legacy
+publication records or any record missing this gate. A failed post-build scan
+can leave immutable registry objects behind, but it cannot produce deployable
+publication evidence.
 
 Before enabling publication, that environment must restrict deployment to
 `main`. In a multi-operator organization it must also use a qualified required

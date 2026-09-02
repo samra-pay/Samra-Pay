@@ -26,6 +26,10 @@ on:
       - ".github/workflows/backend-resilience.yml"
       - "artifacts/api-server/package.json"
       - "artifacts/api-server/test/weekly-*.ts"
+      - "docs/operations/**"
+      - "package.json"
+      - "scripts/package.json"
+      - "scripts/src/validate-operational-readiness.*"
       - "lib/db/package.json"
       - "lib/db/drizzle.config.ts"
       - "lib/db/drizzle/**"
@@ -45,7 +49,7 @@ concurrency:
 jobs:
   resilience:
     name: PostgreSQL weekly backend resilience gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
       postgres:
@@ -116,6 +120,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: pnpm --filter @workspace/api-server run test:weekly-migrations:junit
 
+      - name: Run synthetic backup and restore rehearsal
+        if: ${{ !cancelled() }}
+        env:
+          SAMRA_DISPOSABLE_BACKUP_RESTORE_CONFIRMATION: I_UNDERSTAND_THIS_DROPS_DISPOSABLE_LOCAL_DATABASES
+          SAMRA_POSTGRES_CLIENT_IMAGE: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+          SAMRA_RECOVERY_CANDIDATE_SHA: ${{ github.sha }}
+          WEEKLY_BACKUP_RESTORE_RESULTS_PATH: test-results/weekly-backup-restore.json
+        run: pnpm --filter @workspace/api-server run test:weekly-backup-restore:junit
+
       - name: Preserve weekly resilience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -126,6 +139,16 @@ jobs:
             artifacts/api-server/test-results/weekly-randomized-ledger.xml
             artifacts/api-server/test-results/weekly-fault-injection.xml
             artifacts/api-server/test-results/weekly-migration-compatibility.xml
+            artifacts/api-server/test-results/weekly-backup-restore.xml
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Preserve synthetic recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: weekly-backend-recovery-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: artifacts/api-server/test-results/weekly-backup-restore.json
           if-no-files-found: error
           retention-days: 90
 
@@ -155,7 +178,8 @@ jobs:
             test-results/weekly-concurrency-soak.xml \
             test-results/weekly-randomized-ledger.xml \
             test-results/weekly-fault-injection.xml \
-            test-results/weekly-migration-compatibility.xml
+            test-results/weekly-migration-compatibility.xml \
+            test-results/weekly-backup-restore.xml
           do
             test -s "$report"
             grep -q '<testsuite ' "$report"
@@ -171,7 +195,7 @@ jobs:
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
           title: Samra Pay weekly backend resilience — ${{ github.ref_name }} @ ${{ github.sha }}
-          description: Bounded concurrency soak, seeded ledger model, controlled fault injection, and migration compatibility against disposable PostgreSQL 16.
+          description: Bounded concurrency soak, seeded ledger model, controlled fault injection, migration compatibility, and synthetic logical backup/restore against disposable PostgreSQL 16.
 
       - name: Upload weekly resilience results to Qase
         id: qase-upload-resilience

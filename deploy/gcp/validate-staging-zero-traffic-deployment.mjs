@@ -185,9 +185,23 @@ export function validateStagingZeroTrafficDeployment(
         "artifacts/staging-release/staging-image-publication.json" &&
       artifactInput.publicationManifestHash ===
         "artifacts/staging-release/staging-image-publication.sha256" &&
+      artifactInput.publicationManifestSchemaVersion === 3 &&
+      artifactInput.releaseCandidateLineageRequired === true &&
+      artifactInput.releaseCandidateRunIdRequired === true &&
+      artifactInput.releaseCandidateRunAttemptRequired === true &&
+      artifactInput.releaseEvidenceManifestHashRequired === true &&
+      artifactInput.publishedDigestSecurityRequired === true &&
+      artifactInput.publishedDigestSecurityScope ===
+        "exact-published-digests" &&
       artifactInput.sameCommitRequired === true &&
       artifactInput.exactDigestRequired === true &&
-      artifactInput.crossRunDownloadRequiresActionsRead === true,
+      artifactInput.crossRunDownloadRequiresActionsRead === true &&
+      artifactInput.githubMetadataVerifier ===
+        "deploy/gcp/verify-github-upstream-artifact.mjs" &&
+      artifactInput.exactRunAttemptApiVerificationRequired === true &&
+      artifactInput.exactArtifactApiVerificationRequired === true &&
+      artifactInput.verificationBeforeCloudAuthentication === true &&
+      artifactInput.operatorSelectedProducerAllowed === false,
     "Publication evidence input drifted",
   );
 
@@ -241,6 +255,12 @@ export function validateStagingZeroTrafficDeployment(
   }
   assert(
     contract.services["samra-api"].directVpcEgressRequired === true &&
+      contract.services["samra-api"].executionStatus ===
+        "blocked-no-governed-migration-producer" &&
+      contract.services["samra-customer-web"].executionStatus ===
+        "blocked-on-governed-api-zero-traffic-evidence" &&
+      contract.services["samra-design-system-preview"].executionStatus ===
+        "implemented-not-authorized" &&
       contract.services["samra-customer-web"].directVpcEgressRequired ===
         false &&
       contract.services["samra-design-system-preview"]

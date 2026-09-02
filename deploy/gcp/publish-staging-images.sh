@@ -16,6 +16,10 @@ fi
 : "${SAMRA_GCP_OPERATOR_ACCOUNT:=}"
 : "${SAMRA_GCP_EXPECTED_SHA:=$(git -C "${ROOT_DIR}" rev-parse HEAD)}"
 : "${SAMRA_GCP_IMAGE_BUILD_APPLY:=}"
+: "${SAMRA_RELEASE_EVIDENCE_ROOT:=}"
+: "${SAMRA_RELEASE_RUN_METADATA:=}"
+: "${SAMRA_RELEASE_CANDIDATE_RUN_ID:=}"
+: "${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT:=}"
 
 PROJECT_ID="${SAMRA_GCP_PROJECT_ID}"
 ORGANIZATION_ID="${SAMRA_GCP_ORGANIZATION_ID}"
@@ -28,7 +32,7 @@ PUBLISHER_SERVICE_ACCOUNT="samra-github-staging@${PROJECT_ID}.iam.gserviceaccoun
 BUILD_SERVICE_ACCOUNT="samra-cloud-build-staging@${PROJECT_ID}.iam.gserviceaccount.com"
 BUILD_SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SERVICE_ACCOUNT}"
 PUBLISHER_CUSTOM_ROLE_ID="samraStagingImagePublisher"
-PUBLISHER_CUSTOM_ROLE_PERMISSIONS="artifactregistry.dockerimages.get,artifactregistry.repositories.get,artifactregistry.repositories.getIamPolicy,cloudbuild.builds.create,cloudbuild.builds.get,iam.roles.get,iam.serviceAccountKeys.list,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.workloadIdentityPoolProviders.get,iam.workloadIdentityPools.get,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,serviceusage.services.list,serviceusage.services.use,storage.buckets.get,storage.buckets.getIamPolicy"
+PUBLISHER_CUSTOM_ROLE_PERMISSIONS="artifactregistry.dockerimages.get,artifactregistry.files.download,artifactregistry.repositories.downloadArtifacts,artifactregistry.repositories.get,artifactregistry.repositories.getIamPolicy,cloudbuild.builds.create,cloudbuild.builds.get,iam.roles.get,iam.serviceAccountKeys.list,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.workloadIdentityPoolProviders.get,iam.workloadIdentityPools.get,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,serviceusage.services.list,serviceusage.services.use,storage.buckets.get,storage.buckets.getIamPolicy"
 WORKLOAD_IDENTITY_POOL_ID="samra-github-staging"
 WORKLOAD_IDENTITY_PROVIDER_ID="samra-pay-main"
 WORKLOAD_IDENTITY_LOCATION="global"
@@ -49,20 +53,13 @@ IMAGE_NAMES=(
 PUBLICATION_EVIDENCE_DIR="${ROOT_DIR}/artifacts/staging-release"
 PUBLICATION_MANIFEST="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.json"
 PUBLICATION_MANIFEST_HASH="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.sha256"
+IMAGE_SECURITY_EVIDENCE_DIR="${PUBLICATION_EVIDENCE_DIR}/security"
+TRIVY_VERSION="0.70.0"
 
 [[ "${PROJECT_ID}" == "samra-pay-staging" ]] || { echo "STOP: project must be samra-pay-staging" >&2; exit 1; }
 [[ "${ORGANIZATION_ID}" == "614833350075" ]] || { echo "STOP: organization must be 614833350075" >&2; exit 1; }
 [[ "${REGION}" == "us-east4" ]] || { echo "STOP: region must be us-east4" >&2; exit 1; }
 [[ "${REPOSITORY}" == "samra-staging" ]] || { echo "STOP: repository must be samra-staging" >&2; exit 1; }
-
-SAMRA_BUILD_ENVIRONMENT="staging" \
-SAMRA_BUILD_EXPECTED_SERVICE_ACCOUNT="${BUILD_SERVICE_ACCOUNT}" \
-SAMRA_BUILD_IMAGE_TAG="${EXPECTED_SHA}" \
-SAMRA_BUILD_PROJECT_ID="${PROJECT_ID}" \
-SAMRA_BUILD_REGION="${REGION}" \
-SAMRA_BUILD_REPOSITORY="${REPOSITORY}" \
-SAMRA_BUILD_SOURCE_SHA="${EXPECTED_SHA}" \
-  node "${ROOT_DIR}/deploy/gcp/validate-build-inputs.mjs" >/dev/null
 
 if [[ "${MODE}" == "--plan" ]]; then
   cat <<PLAN
@@ -70,12 +67,15 @@ Plan only. No Google Cloud state was read or changed.
 
 The staging image publication review will:
   1. bind the source to one clean full Git SHA;
-  2. verify the exact staging project, organization, region, billing, and labels;
-  3. verify the immutable Artifact Registry repository and dedicated keyless build identity;
-  4. prove the build identity has only its reviewed project, repository, source-bucket, and impersonation grants;
-  5. require Container Analysis and exact Cloud Build service-agent IAM for provenance verification;
-  6. require all five full-SHA tags to be absent before publication; and
-  7. submit the already-reviewed Cloud Build definition only after an explicit apply authorization.
+  2. verify one exact successful release-candidate run, evidence manifest, every
+     contracted gate, and synthetic backup/restore evidence before cloud access;
+  3. verify the exact staging project, organization, region, billing, and labels;
+  4. verify the immutable Artifact Registry repository and dedicated keyless build identity;
+  5. prove the build identity has only its reviewed project, repository, source-bucket, and impersonation grants;
+  6. require Container Analysis and exact Cloud Build service-agent IAM for provenance verification;
+  7. require all five full-SHA tags to be absent before publication; and
+  8. submit the already-reviewed Cloud Build definition only after an explicit apply authorization; and
+  9. vulnerability- and secret-scan every published registry digest before recording promotable evidence.
 
 Apply uploads only the .gcloudignore-filtered source, creates a Cloud Build record,
 stores logs and provenance, may create or reuse Google-managed source-staging
@@ -85,10 +85,43 @@ expose an endpoint, enable a provider, modify Replit, or touch production.
 
 Expected source: ${EXPECTED_SHA}
 Expected registry: ${IMAGE_BASE}
+Required release-candidate run ID and attempt: explicit positive integers
 Required apply authorization: ${AUTHORIZATION}
 PLAN
   exit 0
 fi
+
+[[ "$(git -C "${ROOT_DIR}" rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "STOP: source commit does not match the reviewed SHA" >&2; exit 1; }
+[[ -z "$(git -C "${ROOT_DIR}" status --porcelain)" ]] || { echo "STOP: source working tree is not clean" >&2; exit 1; }
+[[ -d "${SAMRA_RELEASE_EVIDENCE_ROOT}" && -f "${SAMRA_RELEASE_RUN_METADATA}" ]] || {
+  echo "STOP: exact release-candidate evidence and GitHub run metadata are required" >&2
+  exit 1
+}
+
+RELEASE_CANDIDATE_SUMMARY="$(node "${ROOT_DIR}/deploy/gcp/verify-release-candidate-evidence.mjs" \
+  --evidence-root "${SAMRA_RELEASE_EVIDENCE_ROOT}" \
+  --candidate-sha "${EXPECTED_SHA}" \
+  --release-run-id "${SAMRA_RELEASE_CANDIDATE_RUN_ID}" \
+  --release-run-attempt "${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}" \
+  --run-metadata "${SAMRA_RELEASE_RUN_METADATA}")"
+RELEASE_GIT_TREE_SHA="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).gitTreeSha)' "${RELEASE_CANDIDATE_SUMMARY}")"
+RELEASE_EVIDENCE_MANIFEST_SHA256="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).evidenceManifestSha256)' "${RELEASE_CANDIDATE_SUMMARY}")"
+[[ "$(git -C "${ROOT_DIR}" rev-parse "${EXPECTED_SHA}^{tree}")" == "${RELEASE_GIT_TREE_SHA}" ]] || {
+  echo "STOP: release evidence Git tree does not match the publication source" >&2
+  exit 1
+}
+
+SAMRA_BUILD_ENVIRONMENT="staging" \
+SAMRA_BUILD_EXPECTED_SERVICE_ACCOUNT="${BUILD_SERVICE_ACCOUNT}" \
+SAMRA_BUILD_IMAGE_TAG="${EXPECTED_SHA}" \
+SAMRA_BUILD_PROJECT_ID="${PROJECT_ID}" \
+SAMRA_BUILD_REGION="${REGION}" \
+SAMRA_BUILD_REPOSITORY="${REPOSITORY}" \
+SAMRA_BUILD_SOURCE_SHA="${EXPECTED_SHA}" \
+SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID="${SAMRA_RELEASE_CANDIDATE_RUN_ID}" \
+SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ATTEMPT="${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}" \
+SAMRA_BUILD_RELEASE_EVIDENCE_MANIFEST_SHA256="${RELEASE_EVIDENCE_MANIFEST_SHA256}" \
+  node "${ROOT_DIR}/deploy/gcp/validate-build-inputs.mjs" >/dev/null
 
 command -v gcloud >/dev/null 2>&1 || {
   echo "gcloud is required; run review or apply from authenticated Google Cloud Shell." >&2
@@ -114,9 +147,6 @@ PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(proje
 CLOUD_BUILD_SERVICE_AGENT="service-${PROJECT_NUMBER}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
 PUBLISHER_CUSTOM_ROLE="projects/${PROJECT_ID}/roles/${PUBLISHER_CUSTOM_ROLE_ID}"
 PUBLISHER_FEDERATED_MEMBER="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/${WORKLOAD_IDENTITY_LOCATION}/workloadIdentityPools/${WORKLOAD_IDENTITY_POOL_ID}/attribute.repository_id/1335175962"
-[[ "$(git -C "${ROOT_DIR}" rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "STOP: source commit does not match the reviewed SHA" >&2; exit 1; }
-[[ -z "$(git -C "${ROOT_DIR}" status --porcelain)" ]] || { echo "STOP: source working tree is not clean" >&2; exit 1; }
-
 for label in environment=staging data_classification=synthetic application=samra-pay firebase=enabled; do
   key="${label%%=*}"
   expected="${label#*=}"
@@ -370,13 +400,23 @@ fi
   exit 1
 }
 
+command -v trivy >/dev/null 2>&1 || {
+  echo "STOP: Trivy ${TRIVY_VERSION} is required before creating immutable staging images" >&2
+  exit 1
+}
+ACTUAL_TRIVY_VERSION="$(trivy --version | awk '/^Version:/ { print $2; exit }')"
+[[ "${ACTUAL_TRIVY_VERSION}" == "${TRIVY_VERSION}" ]] || {
+  echo "STOP: Trivy version must be exactly ${TRIVY_VERSION}" >&2
+  exit 1
+}
+
 BUILD_ID="$(gcloud builds submit \
   --project="${PROJECT_ID}" \
   --region="${REGION}" \
   --service-account="${BUILD_SERVICE_ACCOUNT_RESOURCE}" \
   --ignore-file="${ROOT_DIR}/.gcloudignore" \
   --config="${ROOT_DIR}/deploy/gcp/cloudbuild.yaml" \
-  --substitutions="COMMIT_SHA=${EXPECTED_SHA},_ENVIRONMENT=staging,_REGION=${REGION},_REPOSITORY=${REPOSITORY},_IMAGE_TAG=${EXPECTED_SHA},_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}" \
+  --substitutions="COMMIT_SHA=${EXPECTED_SHA},_ENVIRONMENT=staging,_REGION=${REGION},_REPOSITORY=${REPOSITORY},_IMAGE_TAG=${EXPECTED_SHA},_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT},_RELEASE_CANDIDATE_RUN_ID=${SAMRA_RELEASE_CANDIDATE_RUN_ID},_RELEASE_CANDIDATE_RUN_ATTEMPT=${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT},_RELEASE_EVIDENCE_MANIFEST_SHA256=${RELEASE_EVIDENCE_MANIFEST_SHA256}" \
   --format='value(id)' \
   "${ROOT_DIR}")"
 
@@ -411,10 +451,26 @@ resolve_digest() {
 echo "STAGING IMAGE PUBLICATION PASS"
 echo "Build ID: ${BUILD_ID}"
 PUBLICATION_IMAGE_ARGUMENTS=()
+mkdir -p "${IMAGE_SECURITY_EVIDENCE_DIR}"
 for name in "${IMAGE_NAMES[@]}"; do
   digest="$(resolve_digest "${name}")"
   PUBLICATION_IMAGE_ARGUMENTS+=(--image "${name}=${digest}")
   printf '%s: %s\n' "${name}" "${digest}"
+  trivy image \
+    --scanners vuln \
+    --severity CRITICAL \
+    --ignore-unfixed \
+    --format json \
+    --output "${IMAGE_SECURITY_EVIDENCE_DIR}/${name}-vulnerabilities.json" \
+    --exit-code 1 \
+    "${digest}"
+  trivy image \
+    --scanners secret \
+    --severity HIGH,CRITICAL \
+    --format json \
+    --output "${IMAGE_SECURITY_EVIDENCE_DIR}/${name}-secrets.json" \
+    --exit-code 1 \
+    "${digest}"
 done
 
 node "${ROOT_DIR}/deploy/gcp/record-staging-image-publication.mjs" \
@@ -431,11 +487,17 @@ node "${ROOT_DIR}/deploy/gcp/record-staging-image-publication.mjs" \
   --github-run-id "${GITHUB_RUN_ID:-}" \
   --github-run-attempt "${GITHUB_RUN_ATTEMPT:-}" \
   --github-actor "${GITHUB_ACTOR:-}" \
+  --release-evidence-root "${SAMRA_RELEASE_EVIDENCE_ROOT}" \
+  --release-run-metadata "${SAMRA_RELEASE_RUN_METADATA}" \
+  --release-candidate-run-id "${SAMRA_RELEASE_CANDIDATE_RUN_ID}" \
+  --release-candidate-run-attempt "${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}" \
+  --security-evidence-root "${IMAGE_SECURITY_EVIDENCE_DIR}" \
   --output "${PUBLICATION_MANIFEST}" \
   --hash-output "${PUBLICATION_MANIFEST_HASH}" \
   "${PUBLICATION_IMAGE_ARGUMENTS[@]}"
 
 echo "Publication manifest: ${PUBLICATION_MANIFEST}"
 echo "Publication manifest hash: ${PUBLICATION_MANIFEST_HASH}"
+echo "Exact-digest security gate: passed for all five published images"
 echo "Build source was filtered by .gcloudignore; Cloud Build staging storage, records, logs, and provenance may remain."
 echo "No service was deployed, no traffic was changed, and no vendor was activated."

@@ -118,10 +118,36 @@ jobs:
             }
           fi
 
+      - name: Verify both upstream runs and artifacts before Google authentication
+        id: verify_upstream
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          zero_traffic_artifact="staging-zero-traffic-samra-api-${GITHUB_SHA}-run-${SAMRA_ZERO_TRAFFIC_RUN_ID}-attempt-${SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT}"
+          image_verification_artifact="staging-image-verification-${GITHUB_SHA}-run-${SAMRA_IMAGE_VERIFICATION_RUN_ID}-attempt-${SAMRA_IMAGE_VERIFICATION_RUN_ATTEMPT}"
+          node deploy/gcp/verify-github-upstream-artifact.mjs \
+            --kind staging-zero-traffic-deployment \
+            --service samra-api \
+            --candidate-sha "${GITHUB_SHA}" \
+            --run-id "${SAMRA_ZERO_TRAFFIC_RUN_ID}" \
+            --run-attempt "${SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT}" \
+            --artifact-name "${zero_traffic_artifact}" \
+            --output-prefix zero_traffic
+          node deploy/gcp/verify-github-upstream-artifact.mjs \
+            --kind staging-image-verification \
+            --candidate-sha "${GITHUB_SHA}" \
+            --run-id "${SAMRA_IMAGE_VERIFICATION_RUN_ID}" \
+            --run-attempt "${SAMRA_IMAGE_VERIFICATION_RUN_ATTEMPT}" \
+            --artifact-name "${image_verification_artifact}" \
+            --output-prefix image_verification
+
       - name: Download immutable API zero-traffic evidence
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          name: staging-zero-traffic-samra-api-${{ github.sha }}-run-${{ inputs.zero_traffic_run_id }}-attempt-${{ inputs.zero_traffic_run_attempt }}
+          artifact-ids: ${{ steps.verify_upstream.outputs.zero_traffic_artifact_id }}
+          digest-mismatch: error
           path: ${{ runner.temp }}/samra-zero-traffic
           github-token: ${{ github.token }}
           run-id: ${{ inputs.zero_traffic_run_id }}
@@ -129,7 +155,8 @@ jobs:
       - name: Download immutable exact-image verification evidence
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          name: staging-image-verification-${{ github.sha }}-run-${{ inputs.image_verification_run_id }}-attempt-${{ inputs.image_verification_run_attempt }}
+          artifact-ids: ${{ steps.verify_upstream.outputs.image_verification_artifact_id }}
+          digest-mismatch: error
           path: ${{ runner.temp }}/samra-image-verification
           github-token: ${{ github.token }}
           run-id: ${{ inputs.image_verification_run_id }}

@@ -37,6 +37,8 @@ const EXPECTED_MAPPING = Object.freeze({
 
 const EXPECTED_PERMISSIONS = Object.freeze([
   "artifactregistry.dockerimages.get",
+  "artifactregistry.files.download",
+  "artifactregistry.repositories.downloadArtifacts",
   "artifactregistry.repositories.get",
   "artifactregistry.repositories.getIamPolicy",
   "cloudbuild.builds.create",
@@ -138,12 +140,21 @@ export function validateStagingGithubFederation(
   if (
     workflow.checkoutAction !==
       "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" ||
+    workflow.downloadArtifactAction !==
+      "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3" ||
+    workflow.securityScannerAction !==
+      "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514" ||
+    workflow.securityScannerVersion !== "0.70.0" ||
     workflow.authenticationAction !==
       "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093" ||
     workflow.cloudSdkAction !==
       "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db" ||
     JSON.stringify(workflow.permissions) !==
-      JSON.stringify({ contents: "read", "id-token": "write" }) ||
+      JSON.stringify({
+        contents: "read",
+        actions: "read",
+        "id-token": "write",
+      }) ||
     workflow.publicationAuthorization !==
       "AUTHORIZED_STAGING_IMAGE_PUBLICATION" ||
     workflow.automaticTriggers !== false ||
