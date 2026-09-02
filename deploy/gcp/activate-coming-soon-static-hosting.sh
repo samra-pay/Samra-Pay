@@ -69,6 +69,7 @@ OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 SITE_ID="samra-pay-production"
 PUBLIC_URL="https://${SITE_ID}.web.app"
+CANONICAL_URL="https://www.samrapay.com"
 AUTHORIZATION="AUTHORIZED_COMING_SOON_STATIC_HOSTING"
 
 ACTIVATION_INPUT="$(
@@ -197,14 +198,111 @@ APP_COUNT="$(
 firebase deploy --only hosting --project "${PROJECT_ID}" --non-interactive \
   -m "Samra Pay static informational release ${EXPECTED_SHA}"
 
-curl --fail --silent --show-error --location --max-time 30 "${PUBLIC_URL}/" >/dev/null
-HEADERS="$(curl --fail --silent --show-error --head --max-time 30 "${PUBLIC_URL}/")"
-for required_header in content-security-policy referrer-policy x-content-type-options permissions-policy; do
-  printf '%s' "${HEADERS}" | tr '[:upper:]' '[:lower:]' | grep -q "^${required_header}:" || {
-    echo "STOP: deployed site is missing ${required_header}" >&2
+ROUTED_HTML_CACHE_CONTROL="no-cache,no-store,must-revalidate"
+IMMUTABLE_CACHE_CONTROL="public,max-age=31536000,immutable"
+
+header_value_for() {
+  local url="$1"
+  local header_name="$2"
+  curl --fail --silent --show-error --head --max-time 30 "${url}" |
+    tr -d '\r' |
+    awk -F': ' -v name="${header_name}" 'tolower($1) == tolower(name) { print $2; exit }'
+}
+
+require_cache_control() {
+  local url="$1"
+  local expected="$2"
+  local actual
+  actual="$(header_value_for "${url}" "Cache-Control")"
+  [[ "${actual}" == "${expected}" ]] || {
+    echo "STOP: ${url} returned Cache-Control '${actual}', expected '${expected}'" >&2
     exit 1
   }
-done
+}
+
+sha256_file() {
+  node --input-type=module -e '
+    import { createHash } from "node:crypto";
+    import { readFileSync } from "node:fs";
+    process.stdout.write(createHash("sha256").update(readFileSync(process.argv[1])).digest("hex"));
+  ' "$1"
+}
+
+sha256_url() {
+  curl --fail --silent --show-error --location --max-time 30 "$1" |
+    node --input-type=module -e '
+      import { createHash } from "node:crypto";
+      const hash = createHash("sha256");
+      process.stdin.on("data", (chunk) => hash.update(chunk));
+      process.stdin.on("end", () => process.stdout.write(hash.digest("hex")));
+    '
+}
+
+IMMUTABLE_ASSET_NAME="$(
+  node --input-type=module -e '
+    import { readdirSync } from "node:fs";
+    const file = readdirSync(process.argv[1])
+      .sort()
+      .find((name) => /\.(?:avif|webp)$/u.test(name));
+    if (!file) process.exit(1);
+    process.stdout.write(file);
+  ' "${ROOT_DIR}/artifacts/samra-pay/dist/public/assets"
+)"
+IMMUTABLE_ASSET_PATH="/assets/${IMMUTABLE_ASSET_NAME}"
+IMMUTABLE_ASSET_FILE="${ROOT_DIR}/artifacts/samra-pay/dist/public${IMMUTABLE_ASSET_PATH}"
+IMMUTABLE_ASSET_SHA256="$(sha256_file "${IMMUTABLE_ASSET_FILE}")"
+case "${IMMUTABLE_ASSET_NAME}" in
+  *.avif) IMMUTABLE_ASSET_CONTENT_TYPE="image/avif" ;;
+  *.webp) IMMUTABLE_ASSET_CONTENT_TYPE="image/webp" ;;
+  *)
+    echo "STOP: immutable verification asset is not a reviewed image type" >&2
+    exit 1
+    ;;
+esac
+
+verify_public_host() {
+  local base_url="$1"
+  local headers
+  local asset_url
+  local content_type
+  local remote_sha256
+
+  curl --fail --silent --show-error --location --max-time 30 \
+    "${base_url}/?release=${EXPECTED_SHA}" >/dev/null
+  headers="$(curl --fail --silent --show-error --head --max-time 30 \
+    "${base_url}/?release=${EXPECTED_SHA}")"
+  for required_header in content-security-policy referrer-policy x-content-type-options permissions-policy; do
+    printf '%s' "${headers}" | tr '[:upper:]' '[:lower:]' | grep -q "^${required_header}:" || {
+      echo "STOP: ${base_url} is missing ${required_header}" >&2
+      exit 1
+    }
+  done
+
+  for route in / /features /cards /cards/charge /cards/co-brand /values /faq /blog /privacy /terms; do
+    require_cache_control \
+      "${base_url}${route}?release=${EXPECTED_SHA}" \
+      "${ROUTED_HTML_CACHE_CONTROL}"
+  done
+  require_cache_control \
+    "${base_url}/index.html?release=${EXPECTED_SHA}" \
+    "${ROUTED_HTML_CACHE_CONTROL}"
+
+  asset_url="${base_url}${IMMUTABLE_ASSET_PATH}?release=${EXPECTED_SHA}"
+  require_cache_control "${asset_url}" "${IMMUTABLE_CACHE_CONTROL}"
+  content_type="$(header_value_for "${asset_url}" "Content-Type")"
+  [[ "${content_type}" == "${IMMUTABLE_ASSET_CONTENT_TYPE}" ]] || {
+    echo "STOP: ${asset_url} returned Content-Type '${content_type}', expected '${IMMUTABLE_ASSET_CONTENT_TYPE}'" >&2
+    exit 1
+  }
+  remote_sha256="$(sha256_url "${asset_url}")"
+  [[ "${remote_sha256}" == "${IMMUTABLE_ASSET_SHA256}" ]] || {
+    echo "STOP: ${asset_url} does not match the exact deployed asset bytes" >&2
+    exit 1
+  }
+}
+
+verify_public_host "${PUBLIC_URL}"
+verify_public_host "${CANONICAL_URL}"
 
 CLOUD_RUN_SERVICES_AFTER="$(gcloud run services list --project "${PROJECT_ID}" --platform=managed --format='value(name)' | count_values)"
 CLOUD_RUN_JOBS_AFTER="$(gcloud run jobs list --project "${PROJECT_ID}" --format='value(name)' | count_values)"
@@ -223,8 +321,9 @@ BUCKETS_AFTER="$(gcloud storage buckets list --project "${PROJECT_ID}" --format=
 
 echo "COMING-SOON STATIC INFORMATIONAL HOSTING APPLIED AND VERIFIED"
 echo "Source: ${EXPECTED_SHA}"
-echo "URL: ${PUBLIC_URL}"
+echo "URLs: ${PUBLIC_URL}, ${CANONICAL_URL}"
 echo "Firebase apps created: 0"
+echo "Route HTML cache: no-store; exact hashed asset bytes: immutable"
 echo "Forms, email collection, API routes, database access, and vendor activations: 0"
 echo "Cloud Run, Cloud SQL, secret, and customer-bucket resource counts: unchanged"
 echo "Squarespace DNS changes: 0"

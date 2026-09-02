@@ -94,6 +94,7 @@ financial data.
 
 ## Domain documents
 
+- [Public and product surface boundary](./public-product-surface-boundary.md)
 - [Alpha platform and vendor boundary](./alpha-platform.md)
 - [Ledger](./ledger.md)
 - [Remittance](./remittance.md)

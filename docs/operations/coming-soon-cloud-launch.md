@@ -65,26 +65,27 @@ record. Change only the exact web records returned by Firebase for
 `www.samrapay.com` and the apex redirect. Verify managed TLS and all public
 routes after DNS validation.
 
-## Deferred interactive topology
+## Permanent public edge and deferred product topology
 
 ```mermaid
 flowchart LR
-  V[Public visitor] --> DNS[Squarespace DNS]
-  DNS --> LB[Google HTTPS load balancer\nmanaged TLS + Cloud Armor + CDN]
-  LB --> WEB[Public customer-web Cloud Run\ncoming-soon bundle]
-  WEB -->|only POST /api/v1/waitlist/subscriptions\nCloud Run service identity| API[Private API Cloud Run]
-  API --> DB[(Separate private\nproduction PostgreSQL)]
-  S[Sites design workspace] -->|reviewed snapshot| G[Git full SHA]
-  G -->|immutable image digest| WEB
-  G -->|immutable image digest| API
+  V[Public visitor] --> WWW[www.samrapay.com\nstatic Firebase public edge]
+  C[Future customer] -. separate activation .-> APP[app.samrapay.com\nauthenticated customer web]
+  APP -. controlled server boundary .-> API[api.samrapay.com\nAPI edge]
+  API -. private service identity .-> DB[(Separate private\nproduction PostgreSQL)]
+  WWW -. no application connection .-> API
 ```
 
-This topology is the later email-collection/application path. It is not part of
-the static release. The browser never receives a database credential or calls the private API
-directly. The public web service strips client-supplied service authorization,
-uses its short-lived Google identity to invoke the private API, and refuses to
-proxy every API route except the waitlist submission. Auth, KYC, wallet, and
-financial routes stay dormant.
+`www` remains the independently deployable public, legal, and marketing surface
+after the financial product launches. `app` and `api` are planned names, not
+deployed services or authorized DNS changes. The API name does not authorize
+unrestricted Cloud Run ingress; the customer-web service identity and private
+API boundary remain governing. The browser never receives a database or server
+credential. Auth, KYC, wallet, and financial routes stay dormant until their
+separate gates pass.
+
+The complete host, security, reuse, and activation rules are in
+[Public and product surface boundary](../architecture/public-product-surface-boundary.md).
 
 ## Source and copy workflow
 
@@ -113,7 +114,11 @@ production project, private PostgreSQL target, pinned Secret Manager version,
 retention policy, deletion procedure, and access owner must be approved before
 the first public submission.
 
-## Release and rollback
+## Deferred waitlist release and rollback
+
+This sequence belongs only to the unapproved interactive waitlist contract. It
+does not replace Firebase at `www`, create `app` or `api` DNS, deploy either
+future surface, or authorize customer data or vendor activation.
 
 1. Re-verify the existing `samra-pay-production` project (`382465561715`) in
    `us-east4`, its budget, billing, domain, and data boundaries. The staging

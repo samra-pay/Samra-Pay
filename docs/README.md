@@ -111,6 +111,7 @@ audit trail, reconciliation result, or provider-migration mapping.
 ### Cloud and delivery
 
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)
+- [Public and product surface boundary](architecture/public-product-surface-boundary.md)
 - [Coming-soon Google Cloud launch](operations/coming-soon-cloud-launch.md)
 - [Staging CI/CD, traceability, promotion, and rollback](operations/staging-release-control-plane.md)
 - [Testing strategy](testing/testing-strategy.md)

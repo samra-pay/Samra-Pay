@@ -43,7 +43,8 @@ test("rejects data collection, product activation, cost, and DNS drift", () => {
   for (const mutate of [
     (value) => (value.status = "applied"),
     (value) => (value.productionBoundary.projectId = "samra-pay-staging"),
-    (value) => (value.productionBoundary.monthlyInfrastructureHardStopUsd = 101),
+    (value) =>
+      (value.productionBoundary.monthlyInfrastructureHardStopUsd = 101),
     (value) => (value.hosting.provider = "cloud-run"),
     (value) => (value.hosting.projectAliasFileAllowed = true),
     (value) => (value.publicBoundary.formsAllowed = true),
@@ -90,8 +91,7 @@ test("enforces the exact production identity, SHA, and apply sentinel", () => {
     validateStaticHostingEnvironment(
       {
         ...validEnvironment,
-        SAMRA_GCP_STATIC_HOSTING_APPLY:
-          "AUTHORIZED_COMING_SOON_STATIC_HOSTING",
+        SAMRA_GCP_STATIC_HOSTING_APPLY: "AUTHORIZED_COMING_SOON_STATIC_HOSTING",
       },
       { requireApplyAuthorization: true },
     ),
@@ -113,6 +113,123 @@ test("serves one SPA with security headers and no project alias", () => {
   assert.match(headers.get("Content-Security-Policy"), /form-action 'none'/u);
   assert.equal(headers.get("X-Frame-Options"), "DENY");
   assert.equal(headers.get("Strict-Transport-Security"), "max-age=31536000");
+
+  const cacheRules = new Map(
+    firebase.hosting.headers.map((rule) => [
+      rule.source ?? rule.regex,
+      new Map(rule.headers.map((header) => [header.key, header.value])),
+    ]),
+  );
+  assert.equal(
+    cacheRules.get("^/[^.]*$")?.get("Cache-Control"),
+    "no-cache,no-store,must-revalidate",
+  );
+  const routedHtml = new RegExp("^/[^.]*$", "u");
+  for (const route of [
+    "/",
+    "/features",
+    "/cards",
+    "/cards/charge",
+    "/cards/co-brand",
+    "/values",
+    "/faq",
+    "/blog",
+    "/privacy",
+    "/terms",
+    "/future-extensionless-route",
+  ]) {
+    assert.match(route, routedHtml);
+  }
+  for (const asset of [
+    "/index.html",
+    "/assets/app.js",
+    "/assets/site.css",
+    "/assets/hero.avif",
+    "/icons/favicon.png",
+    "/robots.txt",
+  ]) {
+    assert.doesNotMatch(asset, routedHtml);
+  }
+  assert.equal(
+    cacheRules.get("/index.html")?.get("Cache-Control"),
+    "no-cache,no-store,must-revalidate",
+  );
+  for (const source of ["/assets/**", "/icons/**", "/og-preview-*.png"]) {
+    assert.equal(
+      cacheRules.get(source)?.get("Cache-Control"),
+      "public,max-age=31536000,immutable",
+    );
+  }
+});
+
+test("fails closed when routed HTML or immutable asset caching drifts", () => {
+  const mutations = [
+    (firebase) => {
+      firebase.hosting.headers = firebase.hosting.headers.filter(
+        (rule) => rule.regex !== "^/[^.]*$",
+      );
+    },
+    (firebase) => {
+      const rule = firebase.hosting.headers.find(
+        (candidate) => candidate.regex === "^/[^.]*$",
+      );
+      rule.headers[0].value = "max-age=3600";
+    },
+    (firebase) => {
+      const rule = firebase.hosting.headers.find(
+        (candidate) => candidate.source === "/assets/**",
+      );
+      rule.headers[0].value = "max-age=3600";
+    },
+    (firebase) => {
+      firebase.hosting.headers.push({
+        regex: "^/.*$",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache,no-store,must-revalidate",
+          },
+        ],
+      });
+    },
+    (firebase) => {
+      const rule = firebase.hosting.headers.find(
+        (candidate) => candidate.regex === "^/[^.]*$",
+      );
+      rule.headers.push({
+        key: "Cache-Control",
+        value: "max-age=3600",
+      });
+    },
+    (firebase) => {
+      const rule = firebase.hosting.headers.find(
+        (candidate) => candidate.source === "/assets/**",
+      );
+      rule.headers.push({
+        key: "Cache-Control",
+        value: "max-age=3600",
+      });
+    },
+    (firebase) => {
+      firebase.hosting.headers.push({
+        source: "**",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "default-src *",
+          },
+        ],
+      });
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const firebase = structuredClone(readFirebaseHostingConfig());
+    mutate(firebase);
+    assert.throws(() =>
+      validateComingSoonStaticHosting(undefined, undefined, firebase),
+    );
+  }
 });
 
 test("keeps the public source informational and free of signup controls", async () => {
@@ -188,6 +305,15 @@ test("keeps planning local and rejects unrecognized modes", async () => {
   const source = await readFile(script, "utf8");
   assert.match(source, /firebase deploy --only hosting/u);
   assert.match(source, /public build changed tracked release source/u);
+  assert.match(source, /ROUTED_HTML_CACHE_CONTROL/u);
+  assert.match(source, /IMMUTABLE_CACHE_CONTROL/u);
+  assert.match(source, /\/cards\/co-brand/u);
+  assert.match(source, /require_cache_control/u);
+  assert.match(source, /CANONICAL_URL="https:\/\/www\.samrapay\.com"/u);
+  assert.match(source, /sha256_url/u);
+  assert.match(source, /IMMUTABLE_ASSET_CONTENT_TYPE/u);
+  assert.match(source, /verify_public_host "\$\{PUBLIC_URL\}"/u);
+  assert.match(source, /verify_public_host "\$\{CANONICAL_URL\}"/u);
   assert.doesNotMatch(
     source,
     /run deploy|sql users create|sql databases create|secrets versions add|firestore databases create|database:instances:create|auth:import/iu,
