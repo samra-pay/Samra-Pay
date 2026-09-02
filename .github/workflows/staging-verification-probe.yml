@@ -70,8 +70,6 @@ jobs:
       name: staging-verification
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
     steps:
       - name: Check out the exact main commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -97,6 +95,7 @@ jobs:
         env:
           SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
           SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
+          QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
         run: |
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
@@ -182,8 +181,9 @@ jobs:
       - name: Create one Qase Google Cloud staging run
         id: qase_create
         if: inputs.mode == 'verify' && success()
-        uses: qase-tms/gh-actions/run-create@v1
+        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
           title: Samra Pay staging verification — ${{ github.sha }}
@@ -192,8 +192,9 @@ jobs:
       - name: Upload both evidence planes to the same Qase run
         id: qase_upload
         if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && success()
-        uses: qase-tms/gh-actions/report@v1
+        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase_create.outputs.id }}
           format: junit
@@ -202,8 +203,9 @@ jobs:
       - name: Complete the combined Qase run
         id: qase_complete
         if: inputs.mode == 'verify' && steps.qase_upload.outcome == 'success' && success()
-        uses: qase-tms/gh-actions/run-complete@v1
+        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase_create.outputs.id }}
 

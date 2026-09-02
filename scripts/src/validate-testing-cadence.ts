@@ -291,7 +291,9 @@ export function validateTestingCadence(
   const resilienceWorkflow =
     workflows[".github/workflows/backend-resilience.yml"]!;
   const resilienceReportActionCount = (
-    resilienceWorkflow.match(/uses:\s+qase-tms\/gh-actions\/report@v1/g) ?? []
+    resilienceWorkflow.match(
+      /uses:\s+qase-tms\/gh-actions\/report@[0-9a-f]{40}(?:\s+#.*)?/g,
+    ) ?? []
   ).length;
   if (resilienceReportActionCount !== 1) {
     throw new Error(
@@ -306,6 +308,20 @@ export function validateTestingCadence(
     if (!resilienceWorkflow.includes(requiredControl)) {
       throw new Error(
         `Weekly resilience workflow is missing batch control ${requiredControl}.`,
+      );
+    }
+  }
+  for (const requiredPath of [
+    "lib/db/package.json",
+    "lib/db/drizzle.config.ts",
+    "lib/db/drizzle/**",
+    "lib/db/src/schema/**",
+    "lib/db/src/test-migrate.ts",
+    "lib/db/src/test-seed.ts",
+  ]) {
+    if (!resilienceWorkflow.includes(`      - "${requiredPath}"`)) {
+      throw new Error(
+        `Weekly resilience PR trigger is missing migration dependency ${requiredPath}.`,
       );
     }
   }

@@ -184,7 +184,9 @@ export function validateQaseContract(
     );
   }
   const reportActionCount = (
-    workflow.match(/uses:\s+qase-tms\/gh-actions\/report@v1/g) ?? []
+    workflow.match(
+      /uses:\s+qase-tms\/gh-actions\/report@[0-9a-f]{40}(?:\s+#.*)?/g,
+    ) ?? []
   ).length;
   if (reportActionCount !== 1) {
     throw new Error(
@@ -192,7 +194,7 @@ export function validateQaseContract(
     );
   }
   const uploadStepPattern = new RegExp(
-    `id:\\s+${escapeRegularExpression(upload.stepId)}[\\s\\S]{0,600}?uses:\\s+qase-tms/gh-actions/report@v1[\\s\\S]{0,600}?format:\\s+${escapeRegularExpression(upload.format)}[\\s\\S]{0,300}?path:\\s+${escapeRegularExpression(upload.path)}(?:\\s|$)`,
+    `id:\\s+${escapeRegularExpression(upload.stepId)}[\\s\\S]{0,600}?uses:\\s+qase-tms/gh-actions/report@[0-9a-f]{40}(?:\\s+#.*)?[\\s\\S]{0,600}?format:\\s+${escapeRegularExpression(upload.format)}[\\s\\S]{0,300}?path:\\s+${escapeRegularExpression(upload.path)}(?:\\s|$)`,
   );
   if (!uploadStepPattern.test(workflow)) {
     throw new Error(

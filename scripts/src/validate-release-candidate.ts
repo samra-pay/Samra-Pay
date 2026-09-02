@@ -77,7 +77,7 @@ export function validateReleaseCandidateContract(
     "candidate_sha:",
     "required: true",
     "cancel-in-progress: false",
-    "timeout-minutes: 90",
+    "timeout-minutes: 120",
     "image: postgres:16",
     "persist-credentials: false",
     "fetch-depth: 0",
@@ -85,12 +85,32 @@ export function validateReleaseCandidateContract(
     "git show-ref --verify refs/remotes/origin/main",
     "release-evidence -- identity",
     "release-evidence -- gate-junit",
+    "id: security",
+    "pnpm run test:action-pins",
+    "pnpm run test:repository-controls",
+    "pnpm run test:migration-policy",
+    "semgrep/semgrep@sha256:65dcd4408adda7c183a6b4550cb1e9b19f7f627a6fbb7e0559bd466bedc44d7b",
+    "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25",
+    "artifacts/release-candidate/security/semgrep.json",
+    "artifacts/release-candidate/security/trivy-vulnerabilities.json",
+    "artifacts/release-candidate/security/trivy-secrets-misconfiguration.json",
+    "artifacts/release-candidate/security/trivy-license-policy.json",
+    "artifacts/release-candidate/security/sbom.cdx.json",
+    "name: Release runtime image security (${{ matrix.id }})",
+    "fail-fast: false",
+    "Build exact-SHA runtime image from pinned inputs",
+    "docker image inspect",
+    "Gate fixed critical runtime vulnerabilities",
+    "Gate high and critical runtime secrets",
+    "severity: HIGH,CRITICAL",
+    "name: Download exact-SHA runtime image security evidence",
+    "pattern: release-runtime-security-*-${{ inputs.candidate_sha }}",
+    "needs.runtime-image-security.result",
     "pnpm run test:experience-budgets",
     "id: qase_payload",
     "if: steps.qase_payload.outcome == 'success' && !cancelled()",
     "release-evidence -- manifest",
     "release-evidence -- verify --require-passing",
-    "uses: actions/upload-artifact@v7",
     `retention-days: ${contract.retentionDays}`,
     "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
     "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
@@ -100,6 +120,20 @@ export function validateReleaseCandidateContract(
         `Release workflow is missing ${requiredWorkflowControl}.`,
       );
     }
+  }
+  if (
+    !/uses:\s+actions\/upload-artifact@[0-9a-f]{40}(?:\s+#.*)?/.test(workflow)
+  ) {
+    throw new Error(
+      "Release workflow must pin actions/upload-artifact to an immutable commit SHA.",
+    );
+  }
+  if (
+    !/uses:\s+actions\/download-artifact@[0-9a-f]{40}(?:\s+#.*)?/.test(workflow)
+  ) {
+    throw new Error(
+      "Release workflow must pin actions/download-artifact to an immutable commit SHA.",
+    );
   }
   for (const forbiddenTrigger of [
     /^  pull_request:/m,
@@ -112,13 +146,72 @@ export function validateReleaseCandidateContract(
       );
     }
   }
+  const uploadIndex = workflow.indexOf(
+    "name: Preserve immutable release evidence",
+  );
+  const enforcementIndex = workflow.indexOf(
+    "name: Enforce release stop conditions",
+  );
+  if (uploadIndex < 0 || enforcementIndex <= uploadIndex) {
+    throw new Error(
+      "Release evidence must be preserved before stop conditions fail the run.",
+    );
+  }
+  const qasePayloadStep = readWorkflowStep(
+    workflow,
+    "Build stable Qase release gate payload",
+  );
+  const manifestStep = readWorkflowStep(
+    workflow,
+    "Build content-addressed release evidence manifest",
+  );
+  const uploadStep = readWorkflowStep(
+    workflow,
+    "Preserve immutable release evidence",
+  );
+  const runtimeSecurityAggregate = readWorkflowStep(
+    workflow,
+    "Aggregate exact-SHA security gate",
+  );
+  if (
+    !runtimeSecurityAggregate.includes(
+      "RUNTIME_IMAGES_RESULT: ${{ needs.runtime-image-security.result }}",
+    ) ||
+    !runtimeSecurityAggregate.includes(
+      'test "${RUNTIME_IMAGES_RESULT}" = success',
+    )
+  ) {
+    throw new Error(
+      "Release security aggregate must fail unless every runtime image scan passes.",
+    );
+  }
+  if (!uploadStep.includes("if-no-files-found: error")) {
+    throw new Error(
+      "Release evidence upload must reject a wholly empty evidence selection.",
+    );
+  }
   for (const gate of contract.requiredGates) {
     if (!workflow.includes(`id: ${gate.id}`)) {
       throw new Error(`Release workflow is missing gate step ${gate.id}.`);
     }
+    const gateResult = `"${gate.id}":"\${{ steps.${gate.id}.outcome }}"`;
+    if (!manifestStep.includes(gateResult)) {
+      throw new Error(
+        `Release workflow does not bind gate ${gate.id} into the immutable manifest.`,
+      );
+    }
+    if (gate.includeInQase && !qasePayloadStep.includes(gateResult)) {
+      throw new Error(
+        `Release workflow does not bind gate ${gate.id} into the Qase payload.`,
+      );
+    }
   }
-  for (const evidencePath of contract.requiredEvidenceFiles) {
-    if (!workflow.includes(evidencePath)) {
+  for (const evidencePath of [
+    contract.manifest,
+    contract.manifestHash,
+    ...contract.requiredEvidenceFiles,
+  ]) {
+    if (!uploadStep.includes(evidencePath)) {
       throw new Error(`Release workflow does not preserve ${evidencePath}.`);
     }
   }
@@ -142,17 +235,6 @@ export function validateReleaseCandidateContract(
   ) {
     throw new Error(
       "Release workflow must close every created Qase run even when upload fails.",
-    );
-  }
-  const uploadIndex = workflow.indexOf(
-    "name: Preserve immutable release evidence",
-  );
-  const enforcementIndex = workflow.indexOf(
-    "name: Enforce release stop conditions",
-  );
-  if (uploadIndex < 0 || enforcementIndex <= uploadIndex) {
-    throw new Error(
-      "Release evidence must be preserved before stop conditions fail the run.",
     );
   }
 }

@@ -1,0 +1,14 @@
+# Ownership assignment does not prove independent review. GitHub ruleset
+# enforcement and a qualified non-author reviewer remain separate controls.
+/.github/workflows/ @haileleuld87
+/.github/CODEOWNERS @haileleuld87
+/.github/dependabot.yml @haileleuld87
+/.dockerignore @haileleuld87
+/.semgrep.yml @haileleuld87
+/SECURITY.md @haileleuld87
+/package.json @haileleuld87
+/pnpm-lock.yaml @haileleuld87
+/pnpm-workspace.yaml @haileleuld87
+/deploy/gcp/Dockerfile.* @haileleuld87
+/docs/testing/ @haileleuld87
+/scripts/ @haileleuld87

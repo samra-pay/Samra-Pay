@@ -1,0 +1,331 @@
+name: Security
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "29 7 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  repository-policy:
+    name: Repository security policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Enforce immutable workflow dependencies
+        run: pnpm run test:action-pins
+
+      - name: Enforce repository merge-control contract
+        run: pnpm run test:repository-controls
+
+      - name: Enforce forward-only migration policy
+        run: pnpm run test:migration-policy
+
+  sast:
+    name: Semgrep source security policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: semgrep/semgrep@sha256:65dcd4408adda7c183a6b4550cb1e9b19f7f627a6fbb7e0559bd466bedc44d7b # 1.172.0
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Prepare security evidence
+        run: mkdir -p artifacts/security
+
+      - name: Scan source with repository-owned rules
+        id: semgrep
+        continue-on-error: true
+        run: >-
+          semgrep scan
+          --config .semgrep.yml
+          --error
+          --metrics=off
+          --json
+          --output artifacts/security/semgrep.json
+
+      - name: Preserve Semgrep evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: semgrep-${{ github.sha }}
+          path: artifacts/security/semgrep.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce Semgrep result
+        if: always()
+        env:
+          SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
+        run: test "${SCAN_OUTCOME}" = success
+
+  repository-scan:
+    name: Trivy repository scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Prepare security evidence
+        run: mkdir -p artifacts/security
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: 11.19.0
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies for pnpm license analysis
+        run: pnpm install --frozen-lockfile
+
+      - name: Gate fixed critical dependency vulnerabilities
+        id: vulnerability-scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: artifacts/security/trivy-vulnerabilities.json
+          exit-code: "1"
+
+      - name: Gate committed secrets and high-risk configuration
+        id: secret-config-scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret,misconfig
+          severity: HIGH,CRITICAL
+          format: json
+          output: artifacts/security/trivy-secrets-misconfiguration.json
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Generate CycloneDX software bill of materials
+        id: sbom
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: cyclonedx
+          output: artifacts/security/sbom.cdx.json
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Inventory dependency licenses
+        id: license-inventory
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: license
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          format: json
+          output: artifacts/security/trivy-licenses.json
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Gate forbidden and restricted dependency licenses
+        id: license-policy
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: license
+          severity: HIGH,CRITICAL
+          format: json
+          output: artifacts/security/trivy-license-policy.json
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Preserve repository security evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: repository-security-${{ github.sha }}
+          path: artifacts/security
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce repository scan results
+        if: always()
+        env:
+          LICENSE_INVENTORY_OUTCOME: ${{ steps.license-inventory.outcome }}
+          LICENSE_POLICY_OUTCOME: ${{ steps.license-policy.outcome }}
+          SBOM_OUTCOME: ${{ steps.sbom.outcome }}
+          SECRET_CONFIG_OUTCOME: ${{ steps.secret-config-scan.outcome }}
+          VULNERABILITY_OUTCOME: ${{ steps.vulnerability-scan.outcome }}
+        run: |
+          test "${VULNERABILITY_OUTCOME}" = success
+          test "${SECRET_CONFIG_OUTCOME}" = success
+          test "${SBOM_OUTCOME}" = success
+          test "${LICENSE_INVENTORY_OUTCOME}" = success
+          test "${LICENSE_POLICY_OUTCOME}" = success
+
+  runtime-images:
+    name: Trivy runtime image scan (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: api
+            dockerfile: api
+            image_name: samra-api
+          - id: customer-web
+            dockerfile: customer-web
+            image_name: samra-customer-web
+          - id: operations-web
+            dockerfile: operations-web
+            image_name: samra-operations-web
+          - id: design-system
+            dockerfile: design-system
+            image_name: samra-design-system-preview
+          - id: migrations
+            dockerfile: migrate
+            image_name: samra-migrations
+    env:
+      SAMRA_SECURITY_IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Prepare runtime image evidence
+        run: mkdir -p artifacts/security/runtime-images
+
+      - name: Build exact source runtime image
+        run: >-
+          docker build
+          --file "deploy/gcp/Dockerfile.${{ matrix.dockerfile }}"
+          --tag "${{ matrix.image_name }}:${SAMRA_SECURITY_IMAGE_TAG}"
+          .
+
+      - name: Gate fixed critical runtime vulnerabilities
+        id: image-vulnerabilities
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image_name }}:${{ github.sha }}
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: artifacts/security/runtime-images/${{ matrix.id }}-vulnerabilities.json
+          exit-code: "1"
+
+      - name: Gate high and critical runtime secrets
+        id: image-secrets
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image_name }}:${{ github.sha }}
+          scanners: secret
+          severity: HIGH,CRITICAL
+          format: json
+          output: artifacts/security/runtime-images/${{ matrix.id }}-secrets.json
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Preserve runtime image security evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: runtime-image-security-${{ matrix.id }}-${{ github.sha }}
+          path: artifacts/security/runtime-images
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce runtime image scan results
+        if: always()
+        env:
+          SECRETS_OUTCOME: ${{ steps.image-secrets.outcome }}
+          VULNERABILITIES_OUTCOME: ${{ steps.image-vulnerabilities.outcome }}
+        run: |
+          test "${VULNERABILITIES_OUTCOME}" = success
+          test "${SECRETS_OUTCOME}" = success
+
+  required-security:
+    name: Required security
+    if: always()
+    needs:
+      - repository-policy
+      - sast
+      - repository-scan
+      - runtime-images
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every security control to pass
+        env:
+          POLICY_RESULT: ${{ needs.repository-policy.result }}
+          SAST_RESULT: ${{ needs.sast.result }}
+          SCAN_RESULT: ${{ needs.repository-scan.result }}
+          RUNTIME_IMAGES_RESULT: ${{ needs.runtime-images.result }}
+        run: |
+          test "${POLICY_RESULT}" = success
+          test "${SAST_RESULT}" = success
+          test "${SCAN_RESULT}" = success
+          test "${RUNTIME_IMAGES_RESULT}" = success

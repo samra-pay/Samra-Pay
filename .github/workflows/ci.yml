@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       qase_api_base_url:
-        description: Qase API URL
+        description: Compatibility input from Qase; accepted but never used as an executable URL
         required: false
         default: https://api.qase.io
       qase_report:
@@ -33,6 +33,7 @@ on:
   pull_request:
     branches:
       - main
+  merge_group:
   push:
     branches:
       - main
@@ -44,7 +45,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   linux-quality:
@@ -54,16 +55,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -79,6 +82,9 @@ jobs:
 
       - name: Validate testing cadence contract
         run: pnpm run test:testing-cadence
+
+      - name: Validate repository merge controls
+        run: pnpm run test:repository-controls
 
       - name: Validate immutable release-candidate contract
         run: pnpm run test:release-contract
@@ -113,7 +119,7 @@ jobs:
 
       - name: Preserve customer experience budget evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: customer-experience-budgets-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: tmp/experience-budget-report.json
@@ -128,16 +134,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -160,7 +168,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_test
           POSTGRES_PASSWORD: samra_test
@@ -177,16 +185,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -249,7 +259,7 @@ jobs:
 
       - name: Preserve PostgreSQL acceptance results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: postgres-persistence-junit
           path: |
@@ -276,7 +286,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
         env:
           POSTGRES_USER: samra_http_test
           POSTGRES_PASSWORD: samra_http_test
@@ -293,16 +303,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.19.0
           run_install: false
 
       - name: Use Node.js 24
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -333,7 +345,7 @@ jobs:
 
       - name: Preserve HTTP-to-PostgreSQL results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: postgres-http-junit
           path: |
@@ -355,8 +367,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      QASE_API_BASE_URL: ${{ inputs.qase_api_base_url || 'https://api.qase.io' }}
-      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ inputs.qase_project_code || 'SAMP' }}
       QASE_TESTOPS_ENVIRONMENT: ${{ inputs.qase_environment || 'github-ci-postgres' }}
       QASE_TESTOPS_RUN_ID: ${{ inputs.qase_run_id }}
@@ -366,10 +376,30 @@ jobs:
     steps:
       - name: Link a Qase-triggered workflow run
         if: inputs.qase_run_id != ''
-        uses: cskmnrpt/qase-link-run@v2
+        shell: bash
+        env:
+          QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "${QASE_TESTOPS_PROJECT}" =~ ^[A-Za-z0-9_-]+$ ]]
+          [[ "${QASE_TESTOPS_RUN_ID}" =~ ^[0-9]+$ ]]
+          [[ "${GITHUB_RUN_ID}" =~ ^[0-9]+$ ]]
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 60 \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "Token: ${QASE_TESTOPS_API_TOKEN}" \
+            --data "{\"run_id\":\"${QASE_TESTOPS_RUN_ID}\",\"external_run_id\":\"${GITHUB_RUN_ID}\"}" \
+            "https://api.qase.io/apps/external_link/${QASE_TESTOPS_PROJECT}/github-app/"
 
       - name: Download acceptance results
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: "*-junit"
           path: test-results
@@ -405,8 +435,9 @@ jobs:
         id: qase-run-create
         if: inputs.qase_run_id == ''
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-create@v1
+        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
           title: ${{ github.event_name == 'schedule' && 'Samra Pay daily backend acceptance' || 'Samra Pay automated backend acceptance' }} — ${{ env.QASE_RUN_SOURCE }} @ ${{ github.sha }}
@@ -431,8 +462,9 @@ jobs:
         id: qase-upload-acceptance
         if: steps.qase-run.outputs.available == 'true'
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@v1
+        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run.outputs.id }}
           format: junit
@@ -445,7 +477,29 @@ jobs:
           steps.qase-upload-acceptance.outcome == 'success' &&
           (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
         continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-complete@v1
+        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
+          token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run.outputs.id }}
+
+  required-ci:
+    name: Required CI
+    if: always()
+    needs:
+      - linux-quality
+      - postgres-persistence
+      - postgres-http
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every merge-blocking CI gate to pass
+        env:
+          LINUX_QUALITY_RESULT: ${{ needs.linux-quality.result }}
+          POSTGRES_PERSISTENCE_RESULT: ${{ needs.postgres-persistence.result }}
+          POSTGRES_HTTP_RESULT: ${{ needs.postgres-http.result }}
+        run: |
+          test "${LINUX_QUALITY_RESULT}" = success
+          test "${POSTGRES_PERSISTENCE_RESULT}" = success
+          test "${POSTGRES_HTTP_RESULT}" = success

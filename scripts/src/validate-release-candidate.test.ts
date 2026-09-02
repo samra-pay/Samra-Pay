@@ -5,6 +5,18 @@ import type { ReleaseEvidenceContract } from "./release-evidence";
 const reports = Array.from({ length: 16 }, (_, index) => ({
   report: `governed-${index}.xml`,
 }));
+const runtimeImageEvidence = [
+  "api",
+  "customer-web",
+  "operations-web",
+  "design-system",
+  "migrations",
+].flatMap((id) =>
+  ["identity", "vulnerabilities", "secrets"].map(
+    (kind) =>
+      `artifacts/release-candidate/security/runtime-images/${id}-${kind}.json`,
+  ),
+);
 const requiredEvidenceFiles = [
   ...reports.map(({ report }) => `artifacts/api-server/test-results/${report}`),
   ...[
@@ -18,9 +30,16 @@ const requiredEvidenceFiles = [
   "artifacts/release-candidate/release-candidate-identity.json",
   "artifacts/release-candidate/release-gates.xml",
   "artifacts/release-candidate/qase-run.json",
+  "artifacts/release-candidate/security/semgrep.json",
+  "artifacts/release-candidate/security/trivy-vulnerabilities.json",
+  "artifacts/release-candidate/security/trivy-secrets-misconfiguration.json",
+  "artifacts/release-candidate/security/trivy-license-policy.json",
+  "artifacts/release-candidate/security/sbom.cdx.json",
+  ...runtimeImageEvidence,
 ];
 const requiredGates = [
   "identity",
+  "security",
   "quality",
   "commercial",
   "migrations",
@@ -43,6 +62,13 @@ const contract: ReleaseEvidenceContract = {
   requiredEvidenceFiles,
   boundaries: ["synthetic only"],
 };
+const qaseGatePayload = requiredGates
+  .filter(({ includeInQase }) => includeInQase)
+  .map(({ id }) => `"${id}":"\${{ steps.${id}.outcome }}"`)
+  .join(",");
+const manifestGatePayload = requiredGates
+  .map(({ id }) => `"${id}":"\${{ steps.${id}.outcome }}"`)
+  .join(",");
 const workflow = [
   "on:",
   "  workflow_dispatch:",
@@ -50,7 +76,15 @@ const workflow = [
   "      candidate_sha:",
   "        required: true",
   "cancel-in-progress: false",
-  "timeout-minutes: 90",
+  "  runtime-image-security:",
+  "    name: Release runtime image security (${{ matrix.id }})",
+  "      fail-fast: false",
+  "Build exact-SHA runtime image from pinned inputs",
+  "docker image inspect",
+  "Gate fixed critical runtime vulnerabilities",
+  "Gate high and critical runtime secrets",
+  "severity: HIGH,CRITICAL",
+  "timeout-minutes: 120",
   "      postgres-persistence:",
   "      postgres-http:",
   "      postgres-resilience:",
@@ -61,18 +95,24 @@ const workflow = [
   "ref: ${{ inputs.candidate_sha }}",
   "git show-ref --verify refs/remotes/origin/main",
   "release-evidence -- identity",
-  "release-evidence -- gate-junit",
+  "pnpm run test:action-pins",
+  "pnpm run test:repository-controls",
+  "pnpm run test:migration-policy",
+  "semgrep/semgrep@sha256:65dcd4408adda7c183a6b4550cb1e9b19f7f627a6fbb7e0559bd466bedc44d7b",
+  "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25",
   "pnpm run test:experience-budgets",
-  "id: qase_payload",
-  "if: steps.qase_payload.outcome == 'success' && !cancelled()",
-  "release-evidence -- manifest",
-  "release-evidence -- verify --require-passing",
-  "uses: actions/upload-artifact@v7",
-  "retention-days: 365",
+  "      - name: Download exact-SHA runtime image security evidence",
+  "        uses: actions/download-artifact@0123456789abcdef0123456789abcdef01234567 # v8",
+  "        with:",
+  "          pattern: release-runtime-security-*-${{ inputs.candidate_sha }}",
   "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
   "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
   ...requiredGates.map(({ id }) => `id: ${id}`),
-  ...requiredEvidenceFiles,
+  "      - name: Aggregate exact-SHA security gate",
+  "        env:",
+  "          RUNTIME_IMAGES_RESULT: ${{ needs.runtime-image-security.result }}",
+  "        run: |",
+  '          test "${RUNTIME_IMAGES_RESULT}" = success',
   "      - name: Apply migrations and prove repeatable seed",
   "        env:",
   "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/p",
@@ -105,12 +145,53 @@ const workflow = [
   "          pnpm --filter @workspace/db run test:migrate",
   "          pnpm --filter @workspace/db run test:seed",
   "          pnpm --filter @workspace/api-server run test:ledger-performance:junit",
-  "name: Complete Qase release-candidate run",
-  "if: steps.qase_create.outputs.id != '' && !cancelled()",
-  "name: Record Qase release identity",
-  "name: Preserve immutable release evidence",
-  "name: Enforce release stop conditions",
+  "      - name: Build stable Qase release gate payload",
+  "        id: qase_payload",
+  "        env:",
+  `          RELEASE_GATE_RESULTS: {${qaseGatePayload}}`,
+  "        run: release-evidence -- gate-junit",
+  "      - name: Create Qase release-candidate run",
+  "        id: qase_create",
+  "        if: steps.qase_payload.outcome == 'success' && !cancelled()",
+  "      - name: Upload release gates to Qase",
+  "        id: qase_upload",
+  "      - name: Complete Qase release-candidate run",
+  "        id: qase_complete",
+  "        if: steps.qase_create.outputs.id != '' && !cancelled()",
+  "      - name: Record Qase release identity",
+  "      - name: Build content-addressed release evidence manifest",
+  "        env:",
+  `          RELEASE_GATE_RESULTS: {${manifestGatePayload}}`,
+  "        run: release-evidence -- manifest",
+  "      - name: Preserve immutable release evidence",
+  "        uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7",
+  "        with:",
+  "          path: |",
+  `            ${contract.manifest}`,
+  `            ${contract.manifestHash}`,
+  ...requiredEvidenceFiles.map((file) => `            ${file}`),
+  "          if-no-files-found: error",
+  "          retention-days: 365",
+  "      - name: Enforce release stop conditions",
+  "        run: release-evidence -- verify --require-passing",
 ].join("\n");
+
+function replaceInStep(
+  source: string,
+  stepName: string,
+  search: string,
+  replacement: string,
+): string {
+  const start = source.indexOf(`      - name: ${stepName}`);
+  if (start < 0) throw new Error(`Missing fixture step ${stepName}`);
+  const next = source.indexOf("\n      - name:", start + 1);
+  const end = next < 0 ? source.length : next;
+  const step = source.slice(start, end);
+  const changed = step.replace(search, replacement);
+  if (changed === step)
+    throw new Error(`Fixture step ${stepName} was unchanged`);
+  return `${source.slice(0, start)}${changed}${source.slice(end)}`;
+}
 
 describe("validateReleaseCandidateContract", () => {
   it("accepts an exact-SHA, fail-closed, retained evidence workflow", () => {
@@ -136,8 +217,8 @@ describe("validateReleaseCandidateContract", () => {
       validateReleaseCandidateContract(
         contract,
         workflow.replace(
-          "name: Preserve immutable release evidence\nname: Enforce release stop conditions",
-          "name: Enforce release stop conditions\nname: Preserve immutable release evidence",
+          "name: Preserve immutable release evidence",
+          "name: Enforce release stop conditions early",
         ),
         { automatedReports: reports },
       ),
@@ -149,8 +230,8 @@ describe("validateReleaseCandidateContract", () => {
       validateReleaseCandidateContract(
         contract,
         workflow.replace(
-          "if: steps.qase_create.outputs.id != '' && !cancelled()\nname: Record Qase release identity",
-          "if: steps.qase_upload.outcome == 'success' && !cancelled()\nname: Record Qase release identity",
+          "if: steps.qase_create.outputs.id != '' && !cancelled()\n      - name: Record Qase release identity",
+          "if: steps.qase_upload.outcome == 'success' && !cancelled()\n      - name: Record Qase release identity",
         ),
         { automatedReports: reports },
       ),
@@ -191,5 +272,95 @@ describe("validateReleaseCandidateContract", () => {
         { automatedReports: reports },
       ),
     ).toThrow(/test:experience-budgets/);
+  });
+
+  it("rejects a security result omitted from the immutable manifest", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Build content-addressed release evidence manifest",
+          '"security":"${{ steps.security.outcome }}"',
+          "",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/bind gate security into the immutable manifest/);
+  });
+
+  it("rejects security omitted only from the Qase gate payload", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Build stable Qase release gate payload",
+          '"security":"${{ steps.security.outcome }}"',
+          "",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/bind gate security into the Qase payload/);
+  });
+
+  it("rejects evidence declared elsewhere but omitted from upload", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Preserve immutable release evidence",
+          "artifacts/release-candidate/security/runtime-images/api-identity.json",
+          "",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/does not preserve.*api-identity/u);
+  });
+
+  it("rejects runtime image failures omitted from the security aggregate", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Aggregate exact-SHA security gate",
+          'test "${RUNTIME_IMAGES_RESULT}" = success',
+          "",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/every runtime image scan passes/u);
+  });
+
+  it("rejects an immutable manifest omitted from the final artifact", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Preserve immutable release evidence",
+          `            ${contract.manifest}\n            ${contract.manifestHash}`,
+          "",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/does not preserve.*release-evidence-manifest/u);
+  });
+
+  it("rejects a release upload that tolerates an empty evidence selection", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Preserve immutable release evidence",
+          "if-no-files-found: error",
+          "if-no-files-found: warn",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/reject a wholly empty evidence selection/u);
   });
 });

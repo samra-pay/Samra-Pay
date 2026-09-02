@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "baselineThrough": "0016_marketing_waitlist",
+  "prohibitedOperations": [
+    "drop-table",
+    "drop-column",
+    "drop-type",
+    "truncate-table",
+    "rename-table-or-column",
+    "alter-column-type",
+    "unbounded-delete"
+  ],
+  "waivers": []
+}

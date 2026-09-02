@@ -145,9 +145,18 @@ test("binds both evidence planes to one completed protected Qase run", async () 
   assert.match(workflow, /AUTHORIZED_STAGING_REVISION_PROBE/);
   assert.match(workflow, /staging-zero-traffic-samra-api-/);
   assert.match(workflow, /staging-image-verification-/);
-  assert.match(workflow, /qase-tms\/gh-actions\/run-create@v1/);
-  assert.match(workflow, /qase-tms\/gh-actions\/report@v1/);
-  assert.match(workflow, /qase-tms\/gh-actions\/run-complete@v1/);
+  assert.match(
+    workflow,
+    /qase-tms\/gh-actions\/run-create@[0-9a-f]{40}(?:\s+#.*)?/,
+  );
+  assert.match(
+    workflow,
+    /qase-tms\/gh-actions\/report@[0-9a-f]{40}(?:\s+#.*)?/,
+  );
+  assert.match(
+    workflow,
+    /qase-tms\/gh-actions\/run-complete@[0-9a-f]{40}(?:\s+#.*)?/,
+  );
   assert.match(workflow, /exact-image-private-database\.xml/);
   assert.match(workflow, /exact-deployed-revision-private-http\.xml/);
   assert.match(workflow, /record-staging-verification\.mjs build/);
