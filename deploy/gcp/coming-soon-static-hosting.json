@@ -109,7 +109,7 @@
   "postLaunchVerification": [
     "default Firebase Hosting HTTPS URL",
     "custom-domain HTTPS after DNS validation",
-    "home, features, values, FAQ, blog, privacy, and terms routes",
+    "home, features, cards, values, FAQ, blog, privacy, and terms routes",
     "English and Amharic controls",
     "no form or email input",
     "no waitlist or API endpoint in the public bundle",

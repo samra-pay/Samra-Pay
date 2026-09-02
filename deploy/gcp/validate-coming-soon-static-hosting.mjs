@@ -15,6 +15,27 @@ function required(environment, name) {
   return value;
 }
 
+const HTML_CACHE_CONTROL = "no-cache,no-store,must-revalidate";
+const IMMUTABLE_CACHE_CONTROL = "public,max-age=31536000,immutable";
+const ROUTED_HTML_REGEX = "^/[^.]*$";
+
+function singleRule(rules, predicate) {
+  const matches = rules.filter(predicate);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function hasExactHeaders(rule, expected) {
+  if (!rule || rule.headers?.length !== Object.keys(expected).length) {
+    return false;
+  }
+  return Object.entries(expected).every(
+    ([key, value]) =>
+      rule.headers.filter(
+        (header) => header.key === key && header.value === value,
+      ).length === 1,
+  );
+}
+
 export function readComingSoonStaticHosting() {
   return JSON.parse(
     readFileSync(
@@ -71,8 +92,7 @@ export function validateComingSoonStaticHosting(
       source.snapshotVersion === 13 &&
       /^[0-9a-f]{40}$/u.test(source.snapshotCommit) &&
       source.releaseSource === "FULL_GIT_SHA" &&
-      source.buildCommand ===
-        "pnpm --filter @workspace/samra-pay run build" &&
+      source.buildCommand === "pnpm --filter @workspace/samra-pay run build" &&
       source.buildDirectory === "artifacts/samra-pay/dist/public" &&
       source.hostingConfig === "firebase.json",
     "The exact-source static build boundary drifted",
@@ -177,27 +197,52 @@ export function validateComingSoonStaticHosting(
   );
 
   const hostingConfig = firebase.hosting;
-  const headerMap = new Map(
-    hostingConfig.headers
-      .flatMap((rule) => rule.headers)
-      .map((header) => [header.key, header.value]),
+  const headerRules = hostingConfig.headers;
+  const globalSecurityRule = singleRule(
+    headerRules,
+    (rule) => rule.source === "**",
   );
+  const routedHtmlRule = singleRule(
+    headerRules,
+    (rule) => rule.regex === ROUTED_HTML_REGEX,
+  );
+  const indexRule = singleRule(
+    headerRules,
+    (rule) => rule.source === "/index.html",
+  );
+  const cacheRules = headerRules.filter((rule) =>
+    rule.headers?.some((header) => header.key === "Cache-Control"),
+  );
+  const immutableSources = ["/assets/**", "/icons/**", "/og-preview-*.png"];
+  const exactCacheRule = (source, value) =>
+    hasExactHeaders(
+      singleRule(headerRules, (rule) => rule.source === source),
+      { "Cache-Control": value },
+    );
   assert(
     hostingConfig.public === source.buildDirectory &&
       hostingConfig.trailingSlash === false &&
       hostingConfig.rewrites.length === 1 &&
       hostingConfig.rewrites[0].source === "**" &&
       hostingConfig.rewrites[0].destination === "/index.html" &&
-      headerMap.get("Content-Security-Policy") ===
-        contract.security.contentSecurityPolicy &&
-      headerMap.get("Referrer-Policy") === contract.security.referrerPolicy &&
-      headerMap.get("X-Content-Type-Options") ===
-        contract.security.xContentTypeOptions &&
-      headerMap.get("X-Frame-Options") === contract.security.xFrameOptions &&
-      headerMap.get("Permissions-Policy") ===
-        contract.security.permissionsPolicy &&
-      headerMap.get("Strict-Transport-Security") === contract.security.hsts &&
-      !headerMap.get("Strict-Transport-Security").includes("includeSubDomains"),
+      headerRules.length === 6 &&
+      cacheRules.length === 5 &&
+      hasExactHeaders(routedHtmlRule, {
+        "Cache-Control": HTML_CACHE_CONTROL,
+      }) &&
+      hasExactHeaders(indexRule, { "Cache-Control": HTML_CACHE_CONTROL }) &&
+      immutableSources.every((cacheSource) =>
+        exactCacheRule(cacheSource, IMMUTABLE_CACHE_CONTROL),
+      ) &&
+      hasExactHeaders(globalSecurityRule, {
+        "Content-Security-Policy": contract.security.contentSecurityPolicy,
+        "Referrer-Policy": contract.security.referrerPolicy,
+        "X-Content-Type-Options": contract.security.xContentTypeOptions,
+        "X-Frame-Options": contract.security.xFrameOptions,
+        "Permissions-Policy": contract.security.permissionsPolicy,
+        "Strict-Transport-Security": contract.security.hsts,
+      }) &&
+      !contract.security.hsts.includes("includeSubDomains"),
     "firebase.json does not enforce the reviewed static hosting boundary",
   );
 
@@ -225,8 +270,7 @@ export function validateComingSoonStaticHosting(
     expectedIncrementalMonthlyCostUsd: 0,
     existingInfrastructureGuardedEstimateUsd:
       boundary.existingInfrastructureGuardedEstimateUsd,
-    monthlyInfrastructureHardStopUsd:
-      boundary.monthlyInfrastructureHardStopUsd,
+    monthlyInfrastructureHardStopUsd: boundary.monthlyInfrastructureHardStopUsd,
     applyAuthorized: false,
     standingDnsAuthorization: false,
   });
@@ -263,7 +307,10 @@ export function validateStaticHostingEnvironment(
   return Object.freeze(result);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   try {
     process.stdout.write(
       `${JSON.stringify(validateComingSoonStaticHosting())}\n`,

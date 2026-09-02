@@ -88,9 +88,18 @@ closing the performance work:
 curl -sSI https://www.samrapay.com/assets/hero-woman-coffee-640-DUx7i8hG.avif
 curl -sSI -H 'Accept-Encoding: br' https://www.samrapay.com/assets/index-C9q8tkoP.js
 curl -sSI -H 'Accept-Encoding: br' https://www.samrapay.com/assets/coming-soon-D2LklIXY.css
+curl -sSI 'https://www.samrapay.com/?release=<FULL_GIT_SHA>'
+curl -sSI 'https://www.samrapay.com/features?release=<FULL_GIT_SHA>'
+curl -sSI 'https://www.samrapay.com/cards?release=<FULL_GIT_SHA>'
+curl -sSI 'https://www.samrapay.com/index.html?release=<FULL_GIT_SHA>'
 ```
 
 The image must return
 `Cache-Control: public,max-age=31536000,immutable`. JavaScript and CSS must
-return `Content-Encoding: br`. `index.html` must continue to return the existing
-no-cache policy.
+return `Content-Encoding: br`. Direct `index.html` and every clean SPA route
+must return `Cache-Control: no-cache,no-store,must-revalidate`. The unique
+release query verifies the new Firebase configuration without being masked by
+a response cached before the corrective deployment. The release controller
+runs the route checks against both the default Firebase host and
+`www.samrapay.com`; it also requires the deployed image content type and SHA-256
+to match the exact local hashed asset so a rewritten missing asset cannot pass.
