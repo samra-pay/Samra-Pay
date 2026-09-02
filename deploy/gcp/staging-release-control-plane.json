@@ -11,12 +11,58 @@
     "exactCommitRequired": true,
     "releaseCandidateEvidenceRequired": true
   },
+  "upstreamArtifactVerification": {
+    "verifier": "deploy/gcp/verify-github-upstream-artifact.mjs",
+    "beforeCloudAuthentication": true,
+    "exactRepositoryAndNumericIdentityRequired": true,
+    "exactWorkflowPathAndRefRequired": true,
+    "workflowDispatchAndSuccessfulConclusionRequired": true,
+    "exactCandidateShaRunAndAttemptRequired": true,
+    "exactNonExpiredArtifactAndDigestRequired": true,
+    "operatorSelectedProducerAllowed": false,
+    "protectedConsumers": [
+      ".github/workflows/staging-zero-traffic-deployment.yml",
+      ".github/workflows/staging-image-verification.yml",
+      ".github/workflows/staging-verification-probe.yml",
+      ".github/workflows/staging-traffic-control.yml"
+    ],
+    "apiMigrationProducerStatus": "missing-blocking-api-and-dependent-customer-web-deployment"
+  },
   "artifactPublication": {
     "workflow": ".github/workflows/staging-image-publication.yml",
     "protectedEnvironment": "staging-image-publication",
     "keylessFederationRequired": true,
+    "manifestSchemaVersion": 3,
+    "releaseCandidateWorkflow": ".github/workflows/release-candidate.yml",
+    "releaseCandidateRunIdRequired": true,
+    "releaseCandidateRunAttemptRequired": true,
+    "releaseCandidateEvidenceManifest": "artifacts/release-candidate/release-evidence-manifest.json",
+    "releaseCandidateRecoveryEvidence": [
+      "artifacts/api-server/test-results/weekly-backup-restore.xml",
+      "artifacts/api-server/test-results/weekly-backup-restore.json"
+    ],
+    "releaseEvidenceVerifiedBeforeCloudAuthentication": true,
+    "exactArtifactNameRequired": true,
+    "wildcardArtifactDownloadAllowed": false,
+    "cloudBuildLineageSubstitutionsRequired": true,
     "fullShaTagRequired": true,
     "immutableDigestRequired": true,
+    "publishedDigestSecurityRequired": true,
+    "securityGateScope": "exact-published-digests",
+    "securityScannerAction": "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+    "securityScannerVersion": "0.70.0",
+    "securityPolicies": {
+      "vulnerabilities": {
+        "scanner": "vuln",
+        "severities": ["CRITICAL"],
+        "ignoreUnfixed": true
+      },
+      "secrets": {
+        "scanner": "secret",
+        "severities": ["HIGH", "CRITICAL"],
+        "ignoreUnfixed": false
+      }
+    },
     "imageNames": [
       "samra-api",
       "samra-customer-web",
@@ -35,6 +81,7 @@
       "requiredEvidence": [
         "exact main SHA",
         "passing release gates",
+        "passing synthetic backup and restore rehearsal",
         "Qase release identity"
       ]
     },
@@ -44,6 +91,7 @@
       "requiredEvidence": [
         "Cloud Build ID",
         "five image digests",
+        "passing vulnerability and secret reports for every exact published digest",
         "publication manifest hash"
       ]
     },
@@ -89,7 +137,8 @@
         "incident or test reason",
         "previous revision",
         "restored traffic",
-        "post-rollback verification"
+        "bounded post-rollback infrastructure verification",
+        "application, ledger, and reconciliation verification remain pending"
       ]
     }
   ],
@@ -99,12 +148,14 @@
     "floatingImageAllowed": false,
     "defaultServiceUrlAllowed": false,
     "publicUnauthenticatedAllowed": false,
-    "deployableServices": [
-      "samra-api",
-      "samra-customer-web",
-      "samra-design-system-preview"
-    ],
+    "deployableServices": ["samra-design-system-preview"],
     "blockedServices": {
+      "samra-api": [
+        "governed staging-migration producer with exact GitHub run and artifact identity"
+      ],
+      "samra-customer-web": [
+        "governed same-candidate samra-api zero-traffic deployment evidence"
+      ],
       "samra-operations-web": [
         "workforce authentication and authorization",
         "staff access review and revocation process",
@@ -116,7 +167,7 @@
     "controller": "deploy/gcp/deploy-staging-zero-traffic.sh",
     "evidenceManifest": "artifacts/staging-release/staging-zero-traffic-deployment.json",
     "evidenceManifestHash": "artifacts/staging-release/staging-zero-traffic-deployment.sha256",
-    "status": "implemented-not-authorized",
+    "status": "partial-design-lane-implemented-runtime-lanes-blocked-not-authorized",
     "sameCandidatePrerequisitesRequired": true,
     "dedicatedFederatedIdentityRequired": true
   },
@@ -184,7 +235,20 @@
     "rollbackTargetRequired": true,
     "latestAliasAllowed": false,
     "firstActivationAllowed": false,
-    "dedicatedFederatedIdentityRequired": true
+    "dedicatedFederatedIdentityRequired": true,
+    "failedPromotionAutomaticRollback": true,
+    "automaticRollbackStatus": "implemented-not-executed",
+    "automaticRollbackFailClosed": true,
+    "automaticRollbackRecorder": "deploy/gcp/record-staging-automatic-rollback.mjs",
+    "automaticRollbackEvidenceManifest": "artifacts/staging-release/staging-traffic-automatic-rollback.json",
+    "automaticRollbackEvidenceManifestHash": "artifacts/staging-release/staging-traffic-automatic-rollback.sha256",
+    "automaticRollbackVerificationManifest": "artifacts/staging-release/staging-automatic-rollback-verification.json",
+    "automaticRollbackVerificationManifestHash": "artifacts/staging-release/staging-automatic-rollback-verification.sha256",
+    "automaticRollbackEvidenceUploadOnFailure": true,
+    "automaticRollbackApplicationVerification": "not-executed",
+    "automaticRollbackLedgerVerification": "not-executed",
+    "automaticRollbackReconciliationVerification": "not-executed",
+    "automaticRollbackFullRecoveryClaimed": false
   },
   "rollback": {
     "automatic": false,
@@ -199,6 +263,12 @@
     "floatingAliasAllowed": false,
     "priorRevisionEvidenceRequired": true,
     "postRollbackVerificationRequired": true,
+    "postRollbackVerificationStatus": "infrastructure-implemented-application-pending",
+    "postRollbackVerificationScope": "post-rollback-infrastructure-only",
+    "postRollbackVerificationRecorder": "deploy/gcp/record-staging-rollback-verification.mjs",
+    "postRollbackVerificationManifest": "artifacts/staging-release/staging-rollback-verification.json",
+    "postRollbackVerificationManifestHash": "artifacts/staging-release/staging-rollback-verification.sha256",
+    "postRollbackFullRecoveryClaimed": false,
     "dedicatedFederatedIdentityRequired": true
   },
   "traceability": {
@@ -208,9 +278,13 @@
       "gitTreeSha",
       "githubWorkflowRunId",
       "githubWorkflowRunAttempt",
+      "releaseCandidateWorkflowRunId",
+      "releaseCandidateWorkflowRunAttempt",
+      "releaseCandidateEvidenceManifestSha256",
       "cloudBuildId",
       "publisherIdentity",
       "imageDigests",
+      "publishedDigestSecurity",
       "cloudRunRevisionNames",
       "migrationExecutionId",
       "configurationHashes",
@@ -220,11 +294,15 @@
       "probeManifestSha256",
       "verificationManifestSha256",
       "promotionManifestSha256",
+      "automaticRollbackManifestSha256",
+      "automaticRollbackVerificationManifestSha256",
+      "automaticRollbackFailureStage",
       "trafficBefore",
       "trafficAfter",
       "restoredRevision",
       "rollbackReason",
       "postRollbackVerificationStatus",
+      "postRollbackVerificationManifestSha256",
       "operator",
       "approver",
       "createdAt"

@@ -47,6 +47,11 @@
       "includeInQase": true
     },
     {
+      "id": "recovery",
+      "title": "Synthetic logical PostgreSQL dump and restore rehearsal",
+      "includeInQase": true
+    },
+    {
       "id": "performance",
       "title": "Million-posting materialized balance performance",
       "includeInQase": true
@@ -113,6 +118,8 @@
     "artifacts/api-server/test-results/weekly-randomized-ledger.xml",
     "artifacts/api-server/test-results/weekly-fault-injection.xml",
     "artifacts/api-server/test-results/weekly-migration-compatibility.xml",
+    "artifacts/api-server/test-results/weekly-backup-restore.xml",
+    "artifacts/api-server/test-results/weekly-backup-restore.json",
     "artifacts/api-server/test-results/ledger-performance-characterization.xml",
     "artifacts/api-server/test-results/ledger-performance-characterization.json"
   ],

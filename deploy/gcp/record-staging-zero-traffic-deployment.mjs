@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
-import { verifyPublicationManifest } from "./record-staging-image-publication.mjs";
+import {
+  validateStagingImagePublicationManifest,
+  verifyPublicationManifest,
+} from "./record-staging-image-publication.mjs";
 
 export const ZERO_TRAFFIC_SERVICE_NAMES = Object.freeze([
   "samra-api",
@@ -64,7 +67,7 @@ function normalizeTraffic(entries, label) {
 
 export function buildStagingZeroTrafficDeploymentManifest(input) {
   const publication = input.publication;
-  assert(publication?.status === "published", "Publication is not validated");
+  validateStagingImagePublicationManifest(publication);
   assert(
     ZERO_TRAFFIC_SERVICE_NAMES.includes(input.targetService),
     "Target service is not deployable",
@@ -130,6 +133,23 @@ export function buildStagingZeroTrafficDeploymentManifest(input) {
         "Publication manifest hash",
       ),
       imageDigest: expectedImage,
+      releaseCandidateRunId: publication.releaseCandidate.workflowRunId,
+      releaseCandidateRunAttempt:
+        publication.releaseCandidate.workflowRunAttempt,
+      releaseEvidenceManifestSha256:
+        publication.releaseCandidate.evidenceManifestSha256,
+      publishedDigestSecurity: {
+        status: publication.securityGate.status,
+        scope: publication.securityGate.scope,
+        scanner: { ...publication.securityGate.scanner },
+        imageDigest: expectedImage,
+        vulnerabilitiesReportSha256:
+          publication.securityGate.images[input.targetService].vulnerabilities
+            .reportSha256,
+        secretsReportSha256:
+          publication.securityGate.images[input.targetService].secrets
+            .reportSha256,
+      },
     },
     deployment: {
       service: input.targetService,
@@ -208,8 +228,38 @@ export function validateStagingZeroTrafficDeploymentManifest(manifest) {
     /^[0-9a-f-]{36}$/.test(manifest.publication.cloudBuildId) &&
       new RegExp(
         `/samra-staging/${manifest.deployment.service}@sha256:[0-9a-f]{64}$`,
-      ).test(manifest.publication.imageDigest),
+      ).test(manifest.publication.imageDigest) &&
+      /^\d+$/.test(manifest.publication.releaseCandidateRunId) &&
+      Number.isSafeInteger(manifest.publication.releaseCandidateRunAttempt) &&
+      manifest.publication.releaseCandidateRunAttempt >= 1 &&
+      HASH_PATTERN.test(manifest.publication.releaseEvidenceManifestSha256),
     "Publication provenance drifted",
+  );
+  const publishedSecurity = manifest.publication.publishedDigestSecurity;
+  assert(
+    publishedSecurity &&
+      JSON.stringify(Object.keys(publishedSecurity)) ===
+        JSON.stringify([
+          "status",
+          "scope",
+          "scanner",
+          "imageDigest",
+          "vulnerabilitiesReportSha256",
+          "secretsReportSha256",
+        ]) &&
+      publishedSecurity.status === "passed" &&
+      publishedSecurity.scope === "exact-published-digests" &&
+      JSON.stringify(publishedSecurity.scanner) ===
+        JSON.stringify({
+          name: "Trivy",
+          version: "0.70.0",
+          setupAction:
+            "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+        }) &&
+      publishedSecurity.imageDigest === manifest.publication.imageDigest &&
+      HASH_PATTERN.test(publishedSecurity.vulnerabilitiesReportSha256) &&
+      HASH_PATTERN.test(publishedSecurity.secretsReportSha256),
+    "Published-digest security provenance drifted",
   );
   const before = normalizeTraffic(
     manifest.deployment.trafficBefore,

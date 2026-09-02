@@ -164,7 +164,41 @@ export function validateStagingTrafficControl(
       traffic.qaseStagingRunRequired === true &&
       traffic.priorHealthyRevisionRequired === true &&
       traffic.automaticRollbackOnPromotionControlFailure === true &&
+      traffic.automaticRollbackFailClosed === true &&
+      traffic.automaticRollbackRecorder ===
+        "deploy/gcp/record-staging-automatic-rollback.mjs" &&
+      traffic.automaticRollbackEvidenceManifest ===
+        "artifacts/staging-release/staging-traffic-automatic-rollback.json" &&
+      traffic.automaticRollbackEvidenceHash ===
+        "artifacts/staging-release/staging-traffic-automatic-rollback.sha256" &&
+      traffic.automaticRollbackVerificationManifest ===
+        "artifacts/staging-release/staging-automatic-rollback-verification.json" &&
+      traffic.automaticRollbackVerificationHash ===
+        "artifacts/staging-release/staging-automatic-rollback-verification.sha256" &&
+      traffic.automaticRollbackVerificationStatus ===
+        "infrastructure-implemented-application-pending" &&
+      traffic.automaticRollbackVerificationScope ===
+        "automatic-post-rollback-infrastructure-only" &&
+      traffic.automaticRollbackEvidenceUploadOnFailure === true &&
+      traffic.automaticRollbackApplicationProbe === "not-executed" &&
+      traffic.automaticRollbackLedgerInvariantCheck === "not-executed" &&
+      traffic.automaticRollbackReconciliationCheck === "not-executed" &&
+      traffic.automaticRollbackFullRecoveryClaimed === false &&
       traffic.postRollbackVerificationRequired === true &&
+      traffic.postRollbackVerificationStatus ===
+        "infrastructure-implemented-application-pending" &&
+      traffic.postRollbackVerificationScope ===
+        "post-rollback-infrastructure-only" &&
+      traffic.postRollbackVerificationRecorder ===
+        "deploy/gcp/record-staging-rollback-verification.mjs" &&
+      traffic.postRollbackVerificationManifest ===
+        "artifacts/staging-release/staging-rollback-verification.json" &&
+      traffic.postRollbackVerificationManifestHash ===
+        "artifacts/staging-release/staging-rollback-verification.sha256" &&
+      traffic.postRollbackApplicationProbe === "not-executed" &&
+      traffic.postRollbackLedgerInvariantCheck === "not-executed" &&
+      traffic.postRollbackReconciliationCheck === "not-executed" &&
+      traffic.postRollbackFullRecoveryClaimed === false &&
       traffic.retentionDays === 365,
     "Traffic promotion or rollback boundary drifted",
   );

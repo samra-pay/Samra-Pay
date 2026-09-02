@@ -102,6 +102,9 @@ audit trail, reconciliation result, or provider-migration mapping.
 ### Operations
 
 - [Operations control plane](architecture/operations-control-plane.md)
+- [Operational readiness boundary](operations/operational-readiness.md)
+- [Incident response framework](operations/incident-response.md)
+- [Synthetic PostgreSQL recovery rehearsal](operations/postgres-recovery-rehearsal.md)
 - [Workforce access](operations/workforce-access.md)
 - [Case management](operations/case-management.md)
 - [Persona sandbox activation](operations/persona-sandbox-activation.md)

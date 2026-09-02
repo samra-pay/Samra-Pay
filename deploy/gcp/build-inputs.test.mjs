@@ -14,11 +14,14 @@ const valid = {
   SAMRA_BUILD_REGION: "us-east1",
   SAMRA_BUILD_REPOSITORY: "samra-staging",
   SAMRA_BUILD_SOURCE_SHA: sha,
+  SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID: "32608456303",
+  SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ATTEMPT: "2",
+  SAMRA_BUILD_RELEASE_EVIDENCE_MANIFEST_SHA256: "b".repeat(64),
 };
 
 test("accepts one explicit staging build identity", () => {
   assert.deepEqual(validateBuildInputs(valid), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: "validated",
     environment: "staging",
     projectId: "samra-pay-staging-123",
@@ -28,6 +31,9 @@ test("accepts one explicit staging build identity", () => {
     imageTag: sha,
     serviceAccount:
       "samra-cloud-build-staging@samra-pay-staging-123.iam.gserviceaccount.com",
+    releaseCandidateRunId: "32608456303",
+    releaseCandidateRunAttempt: 2,
+    releaseEvidenceManifestSha256: "b".repeat(64),
   });
 });
 
@@ -44,6 +50,18 @@ test("rejects defaults, floating tags, source drift, and non-staging targets", (
     ["SAMRA_BUILD_PROJECT_ID", "samra-pay-prod-123", /staging project/],
     ["SAMRA_BUILD_REPOSITORY", "samra-production", /samra-staging/],
     ["SAMRA_BUILD_REGION", "global", /regional location/],
+    ["SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID", "0", /positive integer/],
+    [
+      "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID",
+      "9007199254740992",
+      /positive integer/,
+    ],
+    ["SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ATTEMPT", "latest", /positive integer/],
+    [
+      "SAMRA_BUILD_RELEASE_EVIDENCE_MANIFEST_SHA256",
+      "abc",
+      /lowercase SHA-256/,
+    ],
   ]) {
     assert.throws(
       () => validateBuildInputs({ ...valid, [field]: value }),
@@ -100,6 +118,9 @@ test("places provenance and identity controls before any image build", async () 
     "_REGION: unset",
     "_REPOSITORY: unset",
     "SAMRA_BUILD_SOURCE_SHA=$COMMIT_SHA",
+    "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ID=${_RELEASE_CANDIDATE_RUN_ID}",
+    "SAMRA_BUILD_RELEASE_CANDIDATE_RUN_ATTEMPT=${_RELEASE_CANDIDATE_RUN_ATTEMPT}",
+    "SAMRA_BUILD_RELEASE_EVIDENCE_MANIFEST_SHA256=${_RELEASE_EVIDENCE_MANIFEST_SHA256}",
     "requestedVerifyOption: VERIFIED",
     "serviceAccount: projects/$PROJECT_ID/serviceAccounts/${_BUILD_SERVICE_ACCOUNT}",
   ]) {

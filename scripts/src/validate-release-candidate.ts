@@ -60,6 +60,8 @@ export function validateReleaseCandidateContract(
     "weekly-randomized-ledger.xml",
     "weekly-fault-injection.xml",
     "weekly-migration-compatibility.xml",
+    "weekly-backup-restore.xml",
+    "weekly-backup-restore.json",
     "ledger-performance-characterization.xml",
     "ledger-performance-characterization.json",
   ]) {
@@ -245,6 +247,7 @@ function validateIsolatedPostgresSuites(workflow: string): void {
     "postgres-http:",
     "postgres-resilience:",
     "postgres-performance:",
+    "postgres-recovery:",
   ]) {
     if (!workflow.includes(service)) {
       throw new Error(`Release workflow is missing isolated ${service}`);
@@ -271,6 +274,10 @@ function validateIsolatedPostgresSuites(workflow: string): void {
     workflow,
     "Run million-posting materialized balance gate",
   );
+  const recoveryStep = readWorkflowStep(
+    workflow,
+    "Run synthetic logical backup and restore release rehearsal",
+  );
 
   const persistenceUrl = readDatabaseUrl(migrationStep);
   if (readDatabaseUrl(persistenceStep) !== persistenceUrl) {
@@ -283,6 +290,7 @@ function validateIsolatedPostgresSuites(workflow: string): void {
     readDatabaseUrl(httpStep),
     readDatabaseUrl(resilienceStep),
     readDatabaseUrl(performanceStep),
+    readDatabaseUrl(recoveryStep),
   ];
   if (new Set(suiteUrls).size !== suiteUrls.length) {
     throw new Error(
@@ -324,6 +332,28 @@ function validateIsolatedPostgresSuites(workflow: string): void {
     performanceStep,
     "test:ledger-performance:junit",
   );
+  assertDatabasePreparedBeforeTests(
+    recoveryStep,
+    "test:weekly-backup-restore:junit",
+  );
+  if (
+    !/^          SAMRA_DISPOSABLE_BACKUP_RESTORE_CONFIRMATION: I_UNDERSTAND_THIS_DROPS_DISPOSABLE_LOCAL_DATABASES$/mu.test(
+      recoveryStep,
+    ) ||
+    !/^          SAMRA_RECOVERY_CANDIDATE_SHA: \$\{\{ inputs\.candidate_sha \}\}$/mu.test(
+      recoveryStep,
+    ) ||
+    !/^          SAMRA_POSTGRES_CLIENT_IMAGE: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94$/mu.test(
+      recoveryStep,
+    ) ||
+    !/^          WEEKLY_BACKUP_RESTORE_RESULTS_PATH: test-results\/weekly-backup-restore\.json$/mu.test(
+      recoveryStep,
+    )
+  ) {
+    throw new Error(
+      "Recovery rehearsal must bind the candidate, pinned PostgreSQL client, explicit disposable-database confirmation, and JSON evidence.",
+    );
+  }
 }
 
 function readWorkflowStep(workflow: string, name: string): string {

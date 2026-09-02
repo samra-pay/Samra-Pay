@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "status": "prepared-not-approved",
+  "productionApproval": "blocked",
+  "scope": "Repository controls and synthetic non-production rehearsal only. This contract does not activate a telemetry backend, paging, cloud recovery, provider traffic, customer data, deployment, DNS, public traffic, or spend.",
+  "pillars": [
+    {
+      "id": "telemetry",
+      "state": "specified-not-connected",
+      "evidencePaths": ["docs/operations/operational-readiness.md"],
+      "blockingConditions": [
+        "No collector endpoint, telemetry backend, dashboard, retention policy, alert, or notification route is configured."
+      ]
+    },
+    {
+      "id": "incident-response",
+      "state": "documented-not-staffed",
+      "evidencePaths": [
+        "docs/operations/incident-response.md",
+        "docs/operations/templates/incident-record.md",
+        "docs/operations/templates/postmortem.md"
+      ],
+      "blockingConditions": [
+        "No named incident roster, staffed on-call rotation, paging route, or completed drill exists."
+      ]
+    },
+    {
+      "id": "service-levels",
+      "state": "defined-not-monitored",
+      "evidencePaths": ["docs/operations/operational-readiness.md"],
+      "blockingConditions": [
+        "Indicators are defined, but no production target, measurement source, error budget, or alert threshold is approved."
+      ]
+    },
+    {
+      "id": "data-recovery",
+      "state": "synthetic-gate-only",
+      "evidencePaths": [
+        "artifacts/api-server/test/weekly-backup-restore.test.ts",
+        ".github/workflows/backend-resilience.yml",
+        "docs/operations/postgres-recovery-rehearsal.md",
+        "docs/operations/runbooks/database-recovery.md"
+      ],
+      "blockingConditions": [
+        "The repository gate uses disposable local PostgreSQL only; no cloud backup freshness or isolated production restore drill has been proved."
+      ]
+    },
+    {
+      "id": "provider-resilience",
+      "state": "runbook-only",
+      "evidencePaths": ["docs/operations/runbooks/provider-unknown.md"],
+      "blockingConditions": [
+        "No provider-health signal, alert route, automatic retry policy, sandbox exercise, or production activation is authorized."
+      ]
+    }
+  ],
+  "telemetry": {
+    "runtimeOutput": "structured-json-stdout",
+    "protocol": "otlp",
+    "transport": "http/protobuf",
+    "backend": null,
+    "exportState": "disabled-not-authorized",
+    "collectorEndpointConfigured": false,
+    "browserRuntimeDependencies": [],
+    "requiredEventFields": [
+      "service",
+      "environment",
+      "revision",
+      "requestId",
+      "traceId",
+      "event",
+      "severity",
+      "outcome",
+      "durationMs"
+    ],
+    "allowedMetricDimensions": [
+      "service",
+      "environment",
+      "revision",
+      "event",
+      "severity",
+      "outcome"
+    ],
+    "forbiddenData": [
+      "authorization",
+      "cookie",
+      "password",
+      "secret",
+      "token",
+      "email",
+      "phone",
+      "bankAccountNumber",
+      "walletAddress",
+      "customerId",
+      "providerPayload",
+      "requestBody",
+      "responseBody"
+    ],
+    "rawBodiesAllowed": false,
+    "customerDataAllowed": false,
+    "unboundedIdentifiersAllowedAsDimensions": false
+  },
+  "incidentResponse": {
+    "coverage": "absent",
+    "rosterApproved": false,
+    "pagingConfigured": false,
+    "communicationsChannelConfigured": false,
+    "targetsApproved": false,
+    "acknowledgementMinutes": null,
+    "mitigationMinutes": null,
+    "roles": [
+      { "id": "incident-commander", "owner": null },
+      { "id": "technical-lead", "owner": null },
+      { "id": "operations-lead", "owner": null },
+      { "id": "security-lead", "owner": null },
+      { "id": "communications-lead", "owner": null },
+      { "id": "scribe", "owner": null }
+    ],
+    "severities": [
+      {
+        "id": "SEV0",
+        "meaning": "Suspected financial-integrity loss, data loss, credential compromise, or active security emergency.",
+        "pageRequiredWhenStaffed": true
+      },
+      {
+        "id": "SEV1",
+        "meaning": "A critical customer journey, authentication boundary, reconciliation process, or provider boundary is unavailable without confirmed integrity loss.",
+        "pageRequiredWhenStaffed": true
+      },
+      {
+        "id": "SEV2",
+        "meaning": "Material degradation has a safe workaround and no known financial-integrity impact.",
+        "pageRequiredWhenStaffed": false
+      },
+      {
+        "id": "SEV3",
+        "meaning": "A minor operational defect or documentation gap has no material customer or financial impact.",
+        "pageRequiredWhenStaffed": false
+      }
+    ],
+    "runbooks": [
+      { "id": "api-outage", "path": "docs/operations/runbooks/api-outage.md" },
+      {
+        "id": "credential-compromise",
+        "path": "docs/operations/runbooks/credential-compromise.md"
+      },
+      {
+        "id": "database-recovery",
+        "path": "docs/operations/runbooks/database-recovery.md"
+      },
+      {
+        "id": "ledger-integrity-breach",
+        "path": "docs/operations/runbooks/ledger-integrity-breach.md"
+      },
+      {
+        "id": "provider-unknown",
+        "path": "docs/operations/runbooks/provider-unknown.md"
+      },
+      {
+        "id": "reconciliation-stall",
+        "path": "docs/operations/runbooks/reconciliation-stall.md"
+      }
+    ]
+  },
+  "serviceLevels": {
+    "status": "definitions-only",
+    "telemetrySourceConfigured": false,
+    "errorBudgetsApproved": false,
+    "objectives": [
+      {
+        "id": "api-availability",
+        "indicator": "successful eligible API requests divided by eligible API requests",
+        "target": null,
+        "window": null,
+        "alertConfigured": false
+      },
+      {
+        "id": "ledger-integrity",
+        "indicator": "unbalanced posted journals or materialized balance drift",
+        "target": null,
+        "window": null,
+        "alertConfigured": false
+      },
+      {
+        "id": "reconciliation-freshness",
+        "indicator": "age of the oldest unresolved reconciliation exception",
+        "target": null,
+        "window": null,
+        "alertConfigured": false
+      },
+      {
+        "id": "provider-state-known",
+        "indicator": "economic commands attempted while provider state is unknown",
+        "target": null,
+        "window": null,
+        "alertConfigured": false
+      }
+    ]
+  },
+  "dataRecovery": {
+    "syntheticLogicalRestore": "configured-ci-only",
+    "syntheticEvidencePaths": [
+      "artifacts/api-server/test-results/weekly-backup-restore.xml",
+      "artifacts/api-server/test-results/weekly-backup-restore.json"
+    ],
+    "cloudRestore": "not-tested",
+    "backupFreshnessMonitoringConfigured": false,
+    "productionRpoMinutes": null,
+    "productionRtoMinutes": null,
+    "dumpRetentionAllowed": false,
+    "evidenceMayContainCustomerData": false
+  },
+  "providerResilience": {
+    "healthSignalConfigured": false,
+    "states": [
+      { "id": "healthy", "allowNewEconomicCommands": true },
+      { "id": "degraded", "allowNewEconomicCommands": false },
+      { "id": "unavailable", "allowNewEconomicCommands": false },
+      { "id": "misconfigured", "allowNewEconomicCommands": false },
+      { "id": "unknown", "allowNewEconomicCommands": false }
+    ],
+    "retryPolicy": {
+      "state": "not-authorized",
+      "requiresDurableIdempotency": true,
+      "respectsRetryAfter": true,
+      "requiresBoundedBackoffAndJitter": true
+    }
+  },
+  "hardStops": [
+    {
+      "id": "production-evidence",
+      "state": "blocked",
+      "condition": "No production-readiness claim until every blocking condition has objective current evidence."
+    },
+    {
+      "id": "customer-data",
+      "state": "blocked",
+      "condition": "No customer data before retention, deletion, access, privacy, and incident controls are approved."
+    },
+    {
+      "id": "live-provider",
+      "state": "blocked",
+      "condition": "No live provider, bank, wallet, or payout traffic before separately reviewed activation and recovery evidence."
+    },
+    {
+      "id": "cloud-recovery",
+      "state": "blocked",
+      "condition": "No Cloud SQL recovery claim before backup freshness and an authorized restore-to-isolated-clone drill pass."
+    },
+    {
+      "id": "service-level-claims",
+      "state": "blocked",
+      "condition": "No production RPO, RTO, availability, or response-time claim before targets and measurement are approved."
+    },
+    {
+      "id": "incident-coverage",
+      "state": "blocked",
+      "condition": "No incident coverage claim before a named roster, staffed rotation, paging route, and drill exist."
+    },
+    {
+      "id": "telemetry-activation",
+      "state": "blocked",
+      "condition": "No telemetry backend, collector endpoint, dashboard, alert route, or retention change without separate authorization."
+    },
+    {
+      "id": "sensitive-evidence",
+      "state": "blocked",
+      "condition": "No credential, PII, financial payload, provider payload, or raw body in logs, traces, metrics, or evidence."
+    },
+    {
+      "id": "automatic-economic-retry",
+      "state": "blocked",
+      "condition": "No automatic economic retry without the same durable idempotency key, bounded classification, and independent evidence."
+    },
+    {
+      "id": "database-dump",
+      "state": "blocked",
+      "condition": "No database dump in retained CI, Qase, support, screenshot, release, or incident evidence."
+    }
+  ]
+}

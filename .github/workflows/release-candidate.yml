@@ -195,6 +195,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      postgres-recovery:
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94 # 16
+        env:
+          POSTGRES_USER: samra_release_recovery
+          POSTGRES_PASSWORD: samra_release_recovery
+          POSTGRES_DB: samra_release_recovery
+        ports:
+          - 5436:5432
+        options: >-
+          --health-cmd "pg_isready -U samra_release_recovery -d samra_release_recovery"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       WEEKLY_CONCURRENCY_ROUNDS: "24"
       WEEKLY_RANDOM_STEPS: "96"
@@ -439,6 +452,21 @@ jobs:
           pnpm --filter @workspace/api-server run test:weekly-faults:junit
           pnpm --filter @workspace/api-server run test:weekly-migrations:junit
 
+      - name: Run synthetic logical backup and restore release rehearsal
+        id: recovery
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          TEST_DATABASE_URL: postgresql://samra_release_recovery:samra_release_recovery@127.0.0.1:5436/samra_release_recovery
+          SAMRA_DISPOSABLE_BACKUP_RESTORE_CONFIRMATION: I_UNDERSTAND_THIS_DROPS_DISPOSABLE_LOCAL_DATABASES
+          SAMRA_RECOVERY_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          SAMRA_POSTGRES_CLIENT_IMAGE: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+          WEEKLY_BACKUP_RESTORE_RESULTS_PATH: test-results/weekly-backup-restore.json
+        run: |
+          pnpm --filter @workspace/db run test:migrate
+          pnpm --filter @workspace/db run test:seed
+          pnpm --filter @workspace/api-server run test:weekly-backup-restore:junit
+
       - name: Run million-posting materialized balance gate
         id: performance
         if: ${{ !cancelled() }}
@@ -455,7 +483,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           RELEASE_GATE_RESULTS: >-
-            {"identity":"${{ steps.identity.outcome }}","security":"${{ steps.security.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}"}
+            {"identity":"${{ steps.identity.outcome }}","security":"${{ steps.security.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","recovery":"${{ steps.recovery.outcome }}","performance":"${{ steps.performance.outcome }}"}
         run: >-
           pnpm --filter @workspace/scripts run release-evidence -- gate-junit
           --identity artifacts/release-candidate/release-candidate-identity.json
@@ -506,7 +534,7 @@ jobs:
         if: always()
         env:
           RELEASE_GATE_RESULTS: >-
-            {"identity":"${{ steps.identity.outcome }}","security":"${{ steps.security.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","performance":"${{ steps.performance.outcome }}","qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
+            {"identity":"${{ steps.identity.outcome }}","security":"${{ steps.security.outcome }}","quality":"${{ steps.quality.outcome }}","commercial":"${{ steps.commercial.outcome }}","migrations":"${{ steps.migrations.outcome }}","postgres_persistence":"${{ steps.postgres_persistence.outcome }}","postgres_http":"${{ steps.postgres_http.outcome }}","resilience":"${{ steps.resilience.outcome }}","recovery":"${{ steps.recovery.outcome }}","performance":"${{ steps.performance.outcome }}","qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
         run: >-
           pnpm --filter @workspace/scripts run release-evidence -- manifest
           --identity artifacts/release-candidate/release-candidate-identity.json
@@ -565,6 +593,8 @@ jobs:
             artifacts/api-server/test-results/weekly-randomized-ledger.xml
             artifacts/api-server/test-results/weekly-fault-injection.xml
             artifacts/api-server/test-results/weekly-migration-compatibility.xml
+            artifacts/api-server/test-results/weekly-backup-restore.xml
+            artifacts/api-server/test-results/weekly-backup-restore.json
             artifacts/api-server/test-results/ledger-performance-characterization.xml
             artifacts/api-server/test-results/ledger-performance-characterization.json
           if-no-files-found: error

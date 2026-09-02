@@ -44,6 +44,7 @@
     "test:weekly-randomized:junit": "node test/run-with-junit.mjs test-results/weekly-randomized-ledger.xml 'Seeded randomized ledger sequences' test/weekly-randomized-ledger.test.ts 'Weekly Backend Resilience'",
     "test:weekly-faults:junit": "node test/run-with-junit.mjs test-results/weekly-fault-injection.xml 'Controlled fault injection' test/weekly-fault-injection.test.ts 'Weekly Backend Resilience'",
     "test:weekly-migrations:junit": "node test/run-with-junit.mjs test-results/weekly-migration-compatibility.xml 'Migration compatibility' test/weekly-migration-compatibility.test.ts 'Weekly Backend Resilience'",
+    "test:weekly-backup-restore:junit": "node test/run-with-junit.mjs test-results/weekly-backup-restore.xml 'Synthetic PostgreSQL backup and restore' test/weekly-backup-restore.test.ts 'Weekly Backend Resilience'",
     "test:process-restart": "node --test test/process-startup-recovery.test.mjs",
     "test:process-restart:junit": "node test/run-with-junit.mjs test-results/postgres-process-restart.xml 'Compiled PostgreSQL process restart' test/process-startup-recovery.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"

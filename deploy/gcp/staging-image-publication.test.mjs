@@ -84,17 +84,33 @@ test("submits only the reviewed build contract and records durable provenance", 
     "_REPOSITORY=${REPOSITORY}",
     "_IMAGE_TAG=${EXPECTED_SHA}",
     "_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}",
+    "_RELEASE_CANDIDATE_RUN_ID=${SAMRA_RELEASE_CANDIDATE_RUN_ID}",
+    "_RELEASE_CANDIDATE_RUN_ATTEMPT=${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}",
+    "_RELEASE_EVIDENCE_MANIFEST_SHA256=${RELEASE_EVIDENCE_MANIFEST_SHA256}",
     "gcloud builds describe",
     "record-staging-image-publication.mjs",
+    "command -v trivy",
+    'TRIVY_VERSION="0.70.0"',
+    "--scanners vuln",
+    "--severity CRITICAL",
+    "--ignore-unfixed",
+    "--scanners secret",
+    "--severity HIGH,CRITICAL",
+    '--security-evidence-root "${IMAGE_SECURITY_EVIDENCE_DIR}"',
     '--git-tree-sha "$(git -C "${ROOT_DIR}" rev-parse "${EXPECTED_SHA}^{tree}")"',
     '--github-run-id "${GITHUB_RUN_ID:-}"',
     '--github-run-attempt "${GITHUB_RUN_ATTEMPT:-}"',
     '--github-actor "${GITHUB_ACTOR:-}"',
+    '--release-evidence-root "${SAMRA_RELEASE_EVIDENCE_ROOT}"',
+    '--release-run-metadata "${SAMRA_RELEASE_RUN_METADATA}"',
+    '--release-candidate-run-id "${SAMRA_RELEASE_CANDIDATE_RUN_ID}"',
+    '--release-candidate-run-attempt "${SAMRA_RELEASE_CANDIDATE_RUN_ATTEMPT}"',
     'PUBLICATION_MANIFEST="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.json"',
     'PUBLICATION_MANIFEST_HASH="${PUBLICATION_EVIDENCE_DIR}/staging-image-publication.sha256"',
     "STAGING IMAGE PUBLICATION PASS",
     "Cloud Build staging storage, records, logs, and provenance may remain.",
     "No service was deployed, no traffic was changed, and no vendor was activated.",
+    "Exact-digest security gate: passed for all five published images",
   ]) {
     assert.ok(controller.includes(evidence), evidence);
   }
@@ -107,6 +123,68 @@ test("submits only the reviewed build contract and records durable provenance", 
   ]) {
     assert.ok(controller.includes(image), image);
   }
+});
+
+test("gates every resolved registry digest before recording publication evidence", () => {
+  const resolve = controller.indexOf('digest="$(resolve_digest "${name}")"');
+  const vulnerabilityScan = controller.indexOf("trivy image", resolve);
+  const secretScan = controller.indexOf("trivy image", vulnerabilityScan + 1);
+  const recorder = controller.indexOf(
+    'node "${ROOT_DIR}/deploy/gcp/record-staging-image-publication.mjs"',
+  );
+  assert.ok(resolve >= 0);
+  assert.ok(vulnerabilityScan > resolve);
+  assert.ok(secretScan > vulnerabilityScan);
+  assert.ok(recorder > secretScan);
+  assert.match(controller, /for name in "\$\{IMAGE_NAMES\[@\]\}"; do/);
+  assert.match(
+    workflow,
+    /aquasecurity\/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0\.2\.6[\s\S]*?version: v0\.70\.0/,
+  );
+});
+
+test("verifies one exact successful release artifact before Google authentication", () => {
+  assert.match(
+    workflow,
+    /release_candidate_run_id:[\s\S]*?required: true[\s\S]*?release_candidate_run_attempt:[\s\S]*?required: true/,
+  );
+  assert.match(
+    workflow,
+    /permissions:\n  contents: read\n  actions: read\n  id-token: write/,
+  );
+  assert.match(
+    workflow,
+    /name: \$\{\{ steps\.release_artifact\.outputs\.artifact_name \}\}[\s\S]*?run-id: \$\{\{ inputs\.release_candidate_run_id \}\}/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /pattern:\s*samra-|release-runtime-security-\*/,
+  );
+  const download = workflow.indexOf(
+    "- name: Download the exact release-candidate artifact",
+  );
+  const verify = workflow.indexOf(
+    "- name: Verify release-candidate lineage before Google authentication",
+  );
+  const authenticate = workflow.indexOf(
+    "- name: Obtain short-lived Google credentials",
+  );
+  assert.ok(download >= 0 && verify > download && authenticate > verify);
+  assert.match(workflow, /verify-release-candidate-evidence\.mjs/);
+  assert.match(
+    workflow,
+    /--run-metadata-output "\$\{SAMRA_RELEASE_RUN_METADATA\}"/,
+  );
+
+  const sourceCheck = controller.indexOf(
+    '[[ "$(git -C "${ROOT_DIR}" rev-parse HEAD)" == "${EXPECTED_SHA}" ]]',
+  );
+  const evidenceCheck = controller.indexOf(
+    "verify-release-candidate-evidence.mjs",
+  );
+  const cloudBoundary = controller.indexOf("command -v gcloud");
+  assert.ok(sourceCheck >= 0 && evidenceCheck > sourceCheck);
+  assert.ok(cloudBoundary > evidenceCheck);
 });
 
 test("retains the hashed publication manifest as a commit- and run-specific artifact", () => {

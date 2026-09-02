@@ -54,14 +54,71 @@ export function validateStagingReleaseControlPlane(
     "Source authority drifted",
   );
 
+  assert(
+    JSON.stringify(contract.upstreamArtifactVerification) ===
+      JSON.stringify({
+        verifier: "deploy/gcp/verify-github-upstream-artifact.mjs",
+        beforeCloudAuthentication: true,
+        exactRepositoryAndNumericIdentityRequired: true,
+        exactWorkflowPathAndRefRequired: true,
+        workflowDispatchAndSuccessfulConclusionRequired: true,
+        exactCandidateShaRunAndAttemptRequired: true,
+        exactNonExpiredArtifactAndDigestRequired: true,
+        operatorSelectedProducerAllowed: false,
+        protectedConsumers: [
+          ".github/workflows/staging-zero-traffic-deployment.yml",
+          ".github/workflows/staging-image-verification.yml",
+          ".github/workflows/staging-verification-probe.yml",
+          ".github/workflows/staging-traffic-control.yml",
+        ],
+        apiMigrationProducerStatus:
+          "missing-blocking-api-and-dependent-customer-web-deployment",
+      }),
+    "Upstream GitHub run and artifact verification boundary drifted",
+  );
+
   const publication = contract.artifactPublication;
   assert(
     publication.workflow ===
       ".github/workflows/staging-image-publication.yml" &&
       publication.protectedEnvironment === "staging-image-publication" &&
       publication.keylessFederationRequired === true &&
+      publication.manifestSchemaVersion === 3 &&
+      publication.releaseCandidateWorkflow ===
+        ".github/workflows/release-candidate.yml" &&
+      publication.releaseCandidateRunIdRequired === true &&
+      publication.releaseCandidateRunAttemptRequired === true &&
+      publication.releaseCandidateEvidenceManifest ===
+        "artifacts/release-candidate/release-evidence-manifest.json" &&
+      JSON.stringify(publication.releaseCandidateRecoveryEvidence) ===
+        JSON.stringify([
+          "artifacts/api-server/test-results/weekly-backup-restore.xml",
+          "artifacts/api-server/test-results/weekly-backup-restore.json",
+        ]) &&
+      publication.releaseEvidenceVerifiedBeforeCloudAuthentication === true &&
+      publication.exactArtifactNameRequired === true &&
+      publication.wildcardArtifactDownloadAllowed === false &&
+      publication.cloudBuildLineageSubstitutionsRequired === true &&
       publication.fullShaTagRequired === true &&
       publication.immutableDigestRequired === true &&
+      publication.publishedDigestSecurityRequired === true &&
+      publication.securityGateScope === "exact-published-digests" &&
+      publication.securityScannerAction ===
+        "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514" &&
+      publication.securityScannerVersion === "0.70.0" &&
+      JSON.stringify(publication.securityPolicies) ===
+        JSON.stringify({
+          vulnerabilities: {
+            scanner: "vuln",
+            severities: ["CRITICAL"],
+            ignoreUnfixed: true,
+          },
+          secrets: {
+            scanner: "secret",
+            severities: ["HIGH", "CRITICAL"],
+            ignoreUnfixed: false,
+          },
+        }) &&
       JSON.stringify(publication.imageNames) === JSON.stringify(IMAGE_NAMES) &&
       publication.evidenceManifest ===
         "artifacts/staging-release/staging-image-publication.json" &&
@@ -92,12 +149,10 @@ export function validateStagingReleaseControlPlane(
       contract.deployment.defaultServiceUrlAllowed === false &&
       contract.deployment.publicUnauthenticatedAllowed === false &&
       JSON.stringify(contract.deployment.deployableServices) ===
-        JSON.stringify([
-          "samra-api",
-          "samra-customer-web",
-          "samra-design-system-preview",
-        ]) &&
-      Object.keys(contract.deployment.blockedServices).length === 1 &&
+        JSON.stringify(["samra-design-system-preview"]) &&
+      Object.keys(contract.deployment.blockedServices).length === 3 &&
+      contract.deployment.blockedServices["samra-api"].length === 1 &&
+      contract.deployment.blockedServices["samra-customer-web"].length === 1 &&
       contract.deployment.blockedServices["samra-operations-web"].length ===
         3 &&
       contract.deployment.workflow ===
@@ -110,7 +165,8 @@ export function validateStagingReleaseControlPlane(
         "artifacts/staging-release/staging-zero-traffic-deployment.json" &&
       contract.deployment.evidenceManifestHash ===
         "artifacts/staging-release/staging-zero-traffic-deployment.sha256" &&
-      contract.deployment.status === "implemented-not-authorized" &&
+      contract.deployment.status ===
+        "partial-design-lane-implemented-runtime-lanes-blocked-not-authorized" &&
       contract.deployment.sameCandidatePrerequisitesRequired === true &&
       contract.deployment.dedicatedFederatedIdentityRequired === true,
     "Zero-traffic deployment boundary drifted",
@@ -211,7 +267,29 @@ export function validateStagingReleaseControlPlane(
       contract.promotion.rollbackTargetRequired === true &&
       contract.promotion.latestAliasAllowed === false &&
       contract.promotion.firstActivationAllowed === false &&
-      contract.promotion.dedicatedFederatedIdentityRequired === true,
+      contract.promotion.dedicatedFederatedIdentityRequired === true &&
+      contract.promotion.failedPromotionAutomaticRollback === true &&
+      contract.promotion.automaticRollbackStatus ===
+        "implemented-not-executed" &&
+      contract.promotion.automaticRollbackFailClosed === true &&
+      contract.promotion.automaticRollbackRecorder ===
+        "deploy/gcp/record-staging-automatic-rollback.mjs" &&
+      contract.promotion.automaticRollbackEvidenceManifest ===
+        "artifacts/staging-release/staging-traffic-automatic-rollback.json" &&
+      contract.promotion.automaticRollbackEvidenceManifestHash ===
+        "artifacts/staging-release/staging-traffic-automatic-rollback.sha256" &&
+      contract.promotion.automaticRollbackVerificationManifest ===
+        "artifacts/staging-release/staging-automatic-rollback-verification.json" &&
+      contract.promotion.automaticRollbackVerificationManifestHash ===
+        "artifacts/staging-release/staging-automatic-rollback-verification.sha256" &&
+      contract.promotion.automaticRollbackEvidenceUploadOnFailure === true &&
+      contract.promotion.automaticRollbackApplicationVerification ===
+        "not-executed" &&
+      contract.promotion.automaticRollbackLedgerVerification ===
+        "not-executed" &&
+      contract.promotion.automaticRollbackReconciliationVerification ===
+        "not-executed" &&
+      contract.promotion.automaticRollbackFullRecoveryClaimed === false,
     "Traffic promotion must remain manual and exact-revision bound",
   );
   assert(
@@ -232,6 +310,17 @@ export function validateStagingReleaseControlPlane(
       contract.rollback.floatingAliasAllowed === false &&
       contract.rollback.priorRevisionEvidenceRequired === true &&
       contract.rollback.postRollbackVerificationRequired === true &&
+      contract.rollback.postRollbackVerificationStatus ===
+        "infrastructure-implemented-application-pending" &&
+      contract.rollback.postRollbackVerificationScope ===
+        "post-rollback-infrastructure-only" &&
+      contract.rollback.postRollbackVerificationRecorder ===
+        "deploy/gcp/record-staging-rollback-verification.mjs" &&
+      contract.rollback.postRollbackVerificationManifest ===
+        "artifacts/staging-release/staging-rollback-verification.json" &&
+      contract.rollback.postRollbackVerificationManifestHash ===
+        "artifacts/staging-release/staging-rollback-verification.sha256" &&
+      contract.rollback.postRollbackFullRecoveryClaimed === false &&
       contract.rollback.dedicatedFederatedIdentityRequired === true,
     "Rollback must reuse a recorded immutable revision",
   );
@@ -240,8 +329,12 @@ export function validateStagingReleaseControlPlane(
     "candidateSha",
     "controllerSha",
     "githubWorkflowRunId",
+    "releaseCandidateWorkflowRunId",
+    "releaseCandidateWorkflowRunAttempt",
+    "releaseCandidateEvidenceManifestSha256",
     "cloudBuildId",
     "imageDigests",
+    "publishedDigestSecurity",
     "cloudRunRevisionNames",
     "migrationExecutionId",
     "configurationHashes",
@@ -251,11 +344,15 @@ export function validateStagingReleaseControlPlane(
     "probeManifestSha256",
     "verificationManifestSha256",
     "promotionManifestSha256",
+    "automaticRollbackManifestSha256",
+    "automaticRollbackVerificationManifestSha256",
+    "automaticRollbackFailureStage",
     "trafficBefore",
     "trafficAfter",
     "restoredRevision",
     "rollbackReason",
     "postRollbackVerificationStatus",
+    "postRollbackVerificationManifestSha256",
     "operator",
     "approver",
   ]) {

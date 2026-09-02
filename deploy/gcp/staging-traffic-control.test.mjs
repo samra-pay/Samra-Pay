@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -28,6 +29,11 @@ import {
   readStagingTrafficControl,
   validateStagingTrafficControl,
 } from "./validate-staging-traffic-control.mjs";
+import {
+  imageSecurityGate,
+  releaseCandidateLineage,
+} from "./staging-release-test-fixtures.mjs";
+import { validatePromotionUpstreamBinding } from "./verify-github-upstream-artifact.mjs";
 
 const contract = readStagingTrafficControl();
 const candidateSha = "a".repeat(40);
@@ -40,9 +46,13 @@ const digest = (name, value = "d") =>
   `us-east4-docker.pkg.dev/samra-pay-staging/samra-staging/${name}@sha256:${value.repeat(64)}`;
 
 function buildPublication() {
+  const gitTreeSha = "e".repeat(40);
+  const imageDigests = Object.fromEntries(
+    STAGING_IMAGE_NAMES.map((name) => [name, digest(name)]),
+  );
   return buildStagingImagePublicationManifest({
     candidateSha,
-    gitTreeSha: "e".repeat(40),
+    gitTreeSha,
     projectId: "samra-pay-staging",
     projectNumber: "934122615631",
     region: "us-east4",
@@ -57,9 +67,9 @@ function buildPublication() {
     githubRunAttempt: "1",
     githubActor: "haileleuld87",
     generatedAt: "2026-08-23T00:00:00.000Z",
-    imageDigests: Object.fromEntries(
-      STAGING_IMAGE_NAMES.map((name) => [name, digest(name)]),
-    ),
+    imageDigests,
+    securityGate: imageSecurityGate(imageDigests),
+    releaseCandidate: releaseCandidateLineage(candidateSha, gitTreeSha),
   });
 }
 
@@ -236,6 +246,17 @@ test("rejects first activation, mutable aliases, split traffic, and shared ident
     (value) => (value.trafficControl.partialTrafficAllowed = true),
     (value) => (value.trafficControl.trafficTagsAllowed = true),
     (value) => (value.trafficControl.rebuildForRollbackAllowed = true),
+    (value) => (value.trafficControl.automaticRollbackFailClosed = false),
+    (value) =>
+      (value.trafficControl.automaticRollbackEvidenceUploadOnFailure = false),
+    (value) =>
+      (value.trafficControl.automaticRollbackApplicationProbe = "passed"),
+    (value) =>
+      (value.trafficControl.automaticRollbackFullRecoveryClaimed = true),
+    (value) =>
+      (value.trafficControl.postRollbackVerificationStatus = "fully-recovered"),
+    (value) => (value.trafficControl.postRollbackApplicationProbe = "passed"),
+    (value) => (value.trafficControl.postRollbackFullRecoveryClaimed = true),
     (value) =>
       (value.googleCloud.rollbackServiceAccountId =
         value.googleCloud.promoterServiceAccountId),
@@ -277,6 +298,45 @@ test("records promotion from one healthy revision to one verified candidate", ()
   assert.equal(promotion.initialActivation, false);
   assert.equal(promotion.vendorActivationAuthorized, false);
   assert.equal(validateStagingPromotionManifest(promotion), promotion);
+});
+
+test("binds an older candidate promotion to its independently verified newer controller run", () => {
+  const promotion = buildPromotion();
+  const upstream = {
+    kind: "staging-traffic-promotion",
+    candidateSha,
+    controllerSha,
+    service,
+    repository: promotion.github.repository,
+    ref: promotion.github.ref,
+    event: promotion.github.eventName,
+    workflowName: promotion.github.workflow,
+    workflowPath: promotion.github.workflowPath,
+    runId: promotion.github.runId,
+    runAttempt: promotion.github.runAttempt,
+    runUrl: promotion.github.runUrl,
+  };
+  assert.equal(
+    validatePromotionUpstreamBinding(promotion, upstream),
+    promotion,
+  );
+  for (const mutation of [
+    { candidateSha: "f".repeat(40) },
+    { controllerSha: candidateSha },
+    { service: "samra-customer-web" },
+    { runId: "1" },
+    { runAttempt: 2 },
+    { workflowPath: ".github/workflows/decoy.yml" },
+  ]) {
+    assert.throws(
+      () =>
+        validatePromotionUpstreamBinding(promotion, {
+          ...upstream,
+          ...mutation,
+        }),
+      /verified GitHub upstream provenance/,
+    );
+  }
 });
 
 test("rejects first activation, latest aliases, tags, partial splits, and mismatched evidence", () => {
@@ -397,7 +457,38 @@ test("workflow and controllers are manual, exact, keyless, and never use latest"
   );
   assert.match(controller, /--to-revisions=/);
   assert.match(controller, /automatic rollback/i);
+  const automaticRollbackHandler = controller.slice(
+    controller.indexOf("automatic_rollback()"),
+    controller.indexOf("trap automatic_rollback ERR"),
+  );
+  assert.doesNotMatch(automaticRollbackHandler, /\|\| true/);
+  assert.match(
+    automaticRollbackHandler,
+    /record-staging-automatic-rollback\.mjs/,
+  );
+  assert.match(
+    automaticRollbackHandler,
+    /write_rollback_observation "\$\{PRIOR_REVISION\}"/,
+  );
   assert.match(controller, /first activation/i);
+  assert.match(controller, /record-staging-rollback-verification\.mjs/);
+  assert.match(controller, /verifyRollbackVerificationManifest/);
+  assert.match(
+    controller,
+    /Post-rollback application, ledger, and reconciliation verification: pending/,
+  );
+  assert.match(
+    workflow,
+    /name: Preserve immutable rollback history[\s\S]*?operation == 'rollback' && always\(\)/,
+  );
+  assert.match(
+    workflow,
+    /name: Preserve post-rollback infrastructure verification[\s\S]*?staging-rollback-verification\.json[\s\S]*?staging-rollback-verification\.sha256/,
+  );
+  assert.match(
+    workflow,
+    /name: Preserve failed-promotion automatic rollback evidence[\s\S]*?always\(\)[\s\S]*?automatic_rollback_attempted == 'true'[\s\S]*?staging-traffic-automatic-rollback\.json[\s\S]*?staging-automatic-rollback-verification\.json/,
+  );
   const audit = readFileSync(
     "deploy/gcp/audit-staging-traffic-federation.sh",
     "utf8",
@@ -410,5 +501,66 @@ test("workflow and controllers are manual, exact, keyless, and never use latest"
     "run jobs get-iam-policy",
   ]) {
     assert.match(audit, new RegExp(requiredAudit));
+  }
+});
+
+test("post-mutation snapshot and assertion failures invoke automatic rollback", async () => {
+  const controller = readFileSync(
+    "deploy/gcp/control-staging-traffic.sh",
+    "utf8",
+  );
+  const snapshotAndAssertionFunctions = controller.slice(
+    controller.indexOf("write_traffic_snapshot() {"),
+    controller.indexOf("assert_revision_ready() {"),
+  );
+  const promotionPhase = controller.slice(
+    controller.indexOf("MUTATION_STARTED=true\n"),
+    controller.indexOf("\nelse\n  gcloud run services update-traffic"),
+  );
+  assert.ok(snapshotAndAssertionFunctions && promotionPhase);
+  const directory = await mkdtemp(
+    join(tmpdir(), "samra-traffic-failure-test-"),
+  );
+  for (const failureStage of [
+    "post-promotion-snapshot",
+    "post-promotion-assertion",
+  ]) {
+    const result = spawnSync(
+      "bash",
+      [
+        "-c",
+        `
+      set -euo pipefail
+      OPERATION=promote
+      TARGET_SERVICE=samra-api
+      PROJECT_ID=samra-pay-staging
+      REGION=us-east4
+      CANDIDATE_REVISION=samra-api-aaaaaaaaaaaa
+      automatic_rollback() {
+        printf 'ROLLBACK:%s\\n' "$PROMOTION_FAILURE_STAGE"
+        exit 71
+      }
+      gcloud() {
+        if [[ "$*" == *update-traffic* ]]; then return 0; fi
+        if [[ "$SAMRA_TEST_FAILURE_STAGE" == post-promotion-snapshot ]]; then return 23; fi
+        printf '%s\\n' '{"status":{"traffic":[{"revisionName":"samra-api-bbbbbbbbbbbb","percent":100}]}}'
+      }
+      ${snapshotAndAssertionFunctions}
+      trap automatic_rollback ERR
+      ${promotionPhase}
+      fi
+    `,
+      ],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAMRA_TEST_FAILURE_STAGE: failureStage,
+          TRAFFIC_AFTER: join(directory, `${failureStage}.json`),
+        },
+      },
+    );
+    assert.equal(result.status, 71, result.stderr);
+    assert.equal(result.stdout.trim(), `ROLLBACK:${failureStage}`);
   }
 });

@@ -24,6 +24,8 @@ const requiredEvidenceFiles = [
     "weekly-randomized-ledger.xml",
     "weekly-fault-injection.xml",
     "weekly-migration-compatibility.xml",
+    "weekly-backup-restore.xml",
+    "weekly-backup-restore.json",
     "ledger-performance-characterization.xml",
     "ledger-performance-characterization.json",
   ].map((report) => `artifacts/api-server/test-results/${report}`),
@@ -46,6 +48,7 @@ const requiredGates = [
   "postgres_persistence",
   "postgres_http",
   "resilience",
+  "recovery",
   "performance",
   "qase_create",
   "qase_upload",
@@ -89,6 +92,7 @@ const workflow = [
   "      postgres-http:",
   "      postgres-resilience:",
   "      postgres-performance:",
+  "      postgres-recovery:",
   "image: postgres:16",
   "persist-credentials: false",
   "fetch-depth: 0",
@@ -145,6 +149,17 @@ const workflow = [
   "          pnpm --filter @workspace/db run test:migrate",
   "          pnpm --filter @workspace/db run test:seed",
   "          pnpm --filter @workspace/api-server run test:ledger-performance:junit",
+  "      - name: Run synthetic logical backup and restore release rehearsal",
+  "        env:",
+  "          TEST_DATABASE_URL: postgresql://b:b@127.0.0.1:5436/b",
+  "          SAMRA_DISPOSABLE_BACKUP_RESTORE_CONFIRMATION: I_UNDERSTAND_THIS_DROPS_DISPOSABLE_LOCAL_DATABASES",
+  "          SAMRA_RECOVERY_CANDIDATE_SHA: ${{ inputs.candidate_sha }}",
+  "          SAMRA_POSTGRES_CLIENT_IMAGE: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94",
+  "          WEEKLY_BACKUP_RESTORE_RESULTS_PATH: test-results/weekly-backup-restore.json",
+  "        run: |",
+  "          pnpm --filter @workspace/db run test:migrate",
+  "          pnpm --filter @workspace/db run test:seed",
+  "          pnpm --filter @workspace/api-server run test:weekly-backup-restore:junit",
   "      - name: Build stable Qase release gate payload",
   "        id: qase_payload",
   "        env:",
@@ -262,6 +277,60 @@ describe("validateReleaseCandidateContract", () => {
         { automatedReports: reports },
       ),
     ).toThrow(/migrated and seeded before its suite/);
+  });
+
+  it("rejects a recovery rehearsal sharing another suite's database", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        workflow.replace(
+          "postgresql://b:b@127.0.0.1:5436/b",
+          "postgresql://r:r@127.0.0.1:5434/r",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/must use isolated database URLs/u);
+  });
+
+  it("rejects a recovery rehearsal without explicit destructive-test consent", () => {
+    expect(() =>
+      validateReleaseCandidateContract(
+        contract,
+        replaceInStep(
+          workflow,
+          "Run synthetic logical backup and restore release rehearsal",
+          "SAMRA_DISPOSABLE_BACKUP_RESTORE_CONFIRMATION: I_UNDERSTAND_THIS_DROPS_DISPOSABLE_LOCAL_DATABASES",
+          "SAMRA_DISPOSABLE_BACKUP_RESTORE_CONFIRMATION: missing",
+        ),
+        { automatedReports: reports },
+      ),
+    ).toThrow(/explicit disposable-database confirmation/u);
+  });
+
+  it("rejects recovery evidence without exact candidate and client-tool identity", () => {
+    for (const [before, after] of [
+      [
+        "SAMRA_RECOVERY_CANDIDATE_SHA: ${{ inputs.candidate_sha }}",
+        "SAMRA_RECOVERY_CANDIDATE_SHA: ${{ github.sha }}",
+      ],
+      [
+        "SAMRA_POSTGRES_CLIENT_IMAGE: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94",
+        "SAMRA_POSTGRES_CLIENT_IMAGE: postgres:16",
+      ],
+    ]) {
+      expect(() =>
+        validateReleaseCandidateContract(
+          contract,
+          replaceInStep(
+            workflow,
+            "Run synthetic logical backup and restore release rehearsal",
+            before,
+            after,
+          ),
+          { automatedReports: reports },
+        ),
+      ).toThrow(/bind the candidate, pinned PostgreSQL client/u);
+    }
   });
 
   it("rejects a release workflow that omits experience budgets", () => {

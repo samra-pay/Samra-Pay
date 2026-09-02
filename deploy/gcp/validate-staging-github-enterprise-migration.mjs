@@ -230,7 +230,7 @@ export function validateStagingGithubEnterpriseMigration(
 
   const currentFiles = contract.operationalReferences.currentAuthorityFiles;
   assert(
-    currentFiles.length === 53 &&
+    currentFiles.length === 62 &&
       new Set(currentFiles).size === currentFiles.length &&
       JSON.stringify([...currentFiles].sort()) === JSON.stringify(currentFiles),
     "Current-authority inventory must be sorted, unique, and complete",

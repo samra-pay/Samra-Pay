@@ -86,9 +86,21 @@
     "publicationWorkflow": ".github/workflows/staging-image-publication.yml",
     "publicationManifest": "artifacts/staging-release/staging-image-publication.json",
     "publicationManifestHash": "artifacts/staging-release/staging-image-publication.sha256",
+    "publicationManifestSchemaVersion": 3,
+    "releaseCandidateLineageRequired": true,
+    "releaseCandidateRunIdRequired": true,
+    "releaseCandidateRunAttemptRequired": true,
+    "releaseEvidenceManifestHashRequired": true,
+    "publishedDigestSecurityRequired": true,
+    "publishedDigestSecurityScope": "exact-published-digests",
     "sameCommitRequired": true,
     "exactDigestRequired": true,
-    "crossRunDownloadRequiresActionsRead": true
+    "crossRunDownloadRequiresActionsRead": true,
+    "githubMetadataVerifier": "deploy/gcp/verify-github-upstream-artifact.mjs",
+    "exactRunAttemptApiVerificationRequired": true,
+    "exactArtifactApiVerificationRequired": true,
+    "verificationBeforeCloudAuthentication": true,
+    "operatorSelectedProducerAllowed": false
   },
   "deployment": {
     "oneServicePerRun": true,
@@ -107,6 +119,7 @@
   },
   "services": {
     "samra-api": {
+      "executionStatus": "blocked-no-governed-migration-producer",
       "imageName": "samra-api",
       "serviceAccountId": "samra-api-staging",
       "ingress": "internal-and-cloud-load-balancing",
@@ -132,6 +145,7 @@
       ]
     },
     "samra-customer-web": {
+      "executionStatus": "blocked-on-governed-api-zero-traffic-evidence",
       "imageName": "samra-customer-web",
       "serviceAccountId": "samra-customer-web-staging",
       "ingress": "internal-and-cloud-load-balancing",
@@ -153,6 +167,7 @@
       ]
     },
     "samra-design-system-preview": {
+      "executionStatus": "implemented-not-authorized",
       "imageName": "samra-design-system-preview",
       "serviceAccountId": "samra-design-system-staging",
       "ingress": "internal-and-cloud-load-balancing",

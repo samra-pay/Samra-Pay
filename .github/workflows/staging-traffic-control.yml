@@ -36,6 +36,10 @@ on:
         description: Promotion only - workflow run containing exact zero-traffic evidence
         required: false
         type: string
+      zero_traffic_run_attempt:
+        description: Promotion only - exact zero-traffic workflow attempt
+        required: false
+        type: string
       zero_traffic_artifact_name:
         description: Promotion only - exact zero-traffic artifact name
         required: false
@@ -44,12 +48,20 @@ on:
         description: Promotion only - workflow run containing exact staging verification evidence
         required: false
         type: string
+      verification_run_attempt:
+        description: Promotion only - exact staging-verification workflow attempt
+        required: false
+        type: string
       verification_artifact_name:
         description: Promotion only - exact staging verification artifact name
         required: false
         type: string
       promotion_run_id:
         description: Rollback only - workflow run containing the promotion record
+        required: false
+        type: string
+      promotion_run_attempt:
+        description: Rollback only - exact traffic-control workflow attempt
         required: false
         type: string
       promotion_artifact_name:
@@ -127,10 +139,13 @@ jobs:
           SAMRA_WORKFLOW_OPERATION: ${{ inputs.operation }}
           SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
           SAMRA_ZERO_TRAFFIC_RUN_ID: ${{ inputs.zero_traffic_run_id }}
+          SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT: ${{ inputs.zero_traffic_run_attempt }}
           SAMRA_ZERO_TRAFFIC_ARTIFACT: ${{ inputs.zero_traffic_artifact_name }}
           SAMRA_VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
+          SAMRA_VERIFICATION_RUN_ATTEMPT: ${{ inputs.verification_run_attempt }}
           SAMRA_VERIFICATION_ARTIFACT: ${{ inputs.verification_artifact_name }}
           SAMRA_PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+          SAMRA_PROMOTION_RUN_ATTEMPT: ${{ inputs.promotion_run_attempt }}
           SAMRA_PROMOTION_ARTIFACT: ${{ inputs.promotion_artifact_name }}
         run: |
           set -euo pipefail
@@ -146,8 +161,10 @@ jobs:
           }
           if [[ "${SAMRA_WORKFLOW_OPERATION}" == "promote" ]]; then
             [[ "${SAMRA_ZERO_TRAFFIC_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ "${SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
             [[ -n "${SAMRA_ZERO_TRAFFIC_ARTIFACT}" ]]
             [[ "${SAMRA_VERIFICATION_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ "${SAMRA_VERIFICATION_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
             [[ -n "${SAMRA_VERIFICATION_ARTIFACT}" ]]
             if [[ "${SAMRA_WORKFLOW_MODE}" == "apply" ]]; then
               [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_TRAFFIC_PROMOTION" ]] || {
@@ -157,6 +174,7 @@ jobs:
             fi
           else
             [[ "${SAMRA_PROMOTION_RUN_ID}" =~ ^[0-9]+$ ]]
+            [[ "${SAMRA_PROMOTION_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
             [[ -n "${SAMRA_PROMOTION_ARTIFACT}" ]]
             [[ "${#SAMRA_STAGING_ROLLBACK_REASON}" -ge 12 ]]
             [[ "${#SAMRA_STAGING_ROLLBACK_REASON}" -le 500 ]]
@@ -168,11 +186,55 @@ jobs:
             fi
           fi
 
+      - name: Verify governed upstream runs and artifacts before Google authentication
+        id: verify_upstream
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SAMRA_ZERO_TRAFFIC_RUN_ID: ${{ inputs.zero_traffic_run_id }}
+          SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT: ${{ inputs.zero_traffic_run_attempt }}
+          SAMRA_ZERO_TRAFFIC_ARTIFACT: ${{ inputs.zero_traffic_artifact_name }}
+          SAMRA_VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
+          SAMRA_VERIFICATION_RUN_ATTEMPT: ${{ inputs.verification_run_attempt }}
+          SAMRA_VERIFICATION_ARTIFACT: ${{ inputs.verification_artifact_name }}
+          SAMRA_PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+          SAMRA_PROMOTION_RUN_ATTEMPT: ${{ inputs.promotion_run_attempt }}
+          SAMRA_PROMOTION_ARTIFACT: ${{ inputs.promotion_artifact_name }}
+        run: |
+          set -euo pipefail
+          if [[ "${SAMRA_STAGING_TRAFFIC_OPERATION}" == "promote" ]]; then
+            node deploy/gcp/verify-github-upstream-artifact.mjs \
+              --kind staging-zero-traffic-deployment \
+              --service "${SAMRA_STAGING_TARGET_SERVICE}" \
+              --candidate-sha "${SAMRA_STAGING_CANDIDATE_SHA}" \
+              --run-id "${SAMRA_ZERO_TRAFFIC_RUN_ID}" \
+              --run-attempt "${SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT}" \
+              --artifact-name "${SAMRA_ZERO_TRAFFIC_ARTIFACT}" \
+              --output-prefix zero_traffic
+            node deploy/gcp/verify-github-upstream-artifact.mjs \
+              --kind staging-verification \
+              --candidate-sha "${SAMRA_STAGING_CANDIDATE_SHA}" \
+              --run-id "${SAMRA_VERIFICATION_RUN_ID}" \
+              --run-attempt "${SAMRA_VERIFICATION_RUN_ATTEMPT}" \
+              --artifact-name "${SAMRA_VERIFICATION_ARTIFACT}" \
+              --output-prefix verification
+          else
+            node deploy/gcp/verify-github-upstream-artifact.mjs \
+              --kind staging-traffic-promotion \
+              --service "${SAMRA_STAGING_TARGET_SERVICE}" \
+              --candidate-sha "${SAMRA_STAGING_CANDIDATE_SHA}" \
+              --run-id "${SAMRA_PROMOTION_RUN_ID}" \
+              --run-attempt "${SAMRA_PROMOTION_RUN_ATTEMPT}" \
+              --artifact-name "${SAMRA_PROMOTION_ARTIFACT}" \
+              --output-prefix promotion
+          fi
+
       - name: Download immutable zero-traffic evidence
         if: inputs.operation == 'promote'
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          name: ${{ inputs.zero_traffic_artifact_name }}
+          artifact-ids: ${{ steps.verify_upstream.outputs.zero_traffic_artifact_id }}
+          digest-mismatch: error
           path: ${{ runner.temp }}/samra-zero-traffic-source
           github-token: ${{ github.token }}
           run-id: ${{ inputs.zero_traffic_run_id }}
@@ -181,7 +243,8 @@ jobs:
         if: inputs.operation == 'promote'
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          name: ${{ inputs.verification_artifact_name }}
+          artifact-ids: ${{ steps.verify_upstream.outputs.verification_artifact_id }}
+          digest-mismatch: error
           path: ${{ runner.temp }}/samra-verification-source
           github-token: ${{ github.token }}
           run-id: ${{ inputs.verification_run_id }}
@@ -190,7 +253,8 @@ jobs:
         if: inputs.operation == 'rollback'
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          name: ${{ inputs.promotion_artifact_name }}
+          artifact-ids: ${{ steps.verify_upstream.outputs.promotion_artifact_id }}
+          digest-mismatch: error
           path: ${{ runner.temp }}/samra-promotion-source
           github-token: ${{ github.token }}
           run-id: ${{ inputs.promotion_run_id }}
@@ -221,6 +285,33 @@ jobs:
             normalize_pair "${RUNNER_TEMP}/samra-promotion-source" "staging-traffic-promotion.json" "staging-traffic-promotion.sha256" "${RUNNER_TEMP}/samra-promotion"
           fi
 
+      - name: Bind downloaded promotion to its verified controller and run
+        if: inputs.operation == 'rollback'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SAMRA_PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+          SAMRA_PROMOTION_RUN_ATTEMPT: ${{ inputs.promotion_run_attempt }}
+          SAMRA_PROMOTION_ARTIFACT: ${{ inputs.promotion_artifact_name }}
+          SAMRA_VERIFIED_PROMOTION_ARTIFACT_ID: ${{ steps.verify_upstream.outputs.promotion_artifact_id }}
+          SAMRA_VERIFIED_PROMOTION_CONTROLLER_SHA: ${{ steps.verify_upstream.outputs.promotion_controller_sha }}
+        run: |
+          set -euo pipefail
+          [[ "${SAMRA_VERIFIED_PROMOTION_CONTROLLER_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "${SAMRA_STAGING_CANDIDATE_SHA}" "${SAMRA_VERIFIED_PROMOTION_CONTROLLER_SHA}"
+          git merge-base --is-ancestor "${SAMRA_VERIFIED_PROMOTION_CONTROLLER_SHA}" "${GITHUB_SHA}"
+          node deploy/gcp/verify-github-upstream-artifact.mjs \
+            --kind staging-traffic-promotion \
+            --service "${SAMRA_STAGING_TARGET_SERVICE}" \
+            --candidate-sha "${SAMRA_STAGING_CANDIDATE_SHA}" \
+            --run-id "${SAMRA_PROMOTION_RUN_ID}" \
+            --run-attempt "${SAMRA_PROMOTION_RUN_ATTEMPT}" \
+            --artifact-name "${SAMRA_PROMOTION_ARTIFACT}" \
+            --expected-artifact-id "${SAMRA_VERIFIED_PROMOTION_ARTIFACT_ID}" \
+            --expected-controller-sha "${SAMRA_VERIFIED_PROMOTION_CONTROLLER_SHA}" \
+            --promotion-manifest "${SAMRA_STAGING_PROMOTION_MANIFEST}" \
+            --promotion-hash "${SAMRA_STAGING_PROMOTION_HASH}"
+
       - name: Obtain operation-specific short-lived Google credentials
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
@@ -249,9 +340,29 @@ jobs:
         run: bash deploy/gcp/control-staging-traffic.sh --review
 
       - name: Apply one reviewed traffic operation
+        id: apply_traffic_operation
         if: inputs.mode == 'apply'
         shell: bash
         run: bash deploy/gcp/control-staging-traffic.sh --apply
+
+      - name: Preserve failed-promotion automatic rollback evidence
+        if: >-
+          always() &&
+          inputs.mode == 'apply' &&
+          inputs.operation == 'promote' &&
+          steps.apply_traffic_operation.outputs.automatic_rollback_attempted == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-automatic-rollback-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/staging-release/staging-traffic-automatic-rollback.json
+            artifacts/staging-release/staging-traffic-automatic-rollback.sha256
+            artifacts/staging-release/staging-automatic-rollback-verification.json
+            artifacts/staging-release/staging-automatic-rollback-verification.sha256
+            artifacts/staging-release/staging-traffic-before-${{ inputs.service }}.json
+            artifacts/staging-release/staging-traffic-after-${{ inputs.service }}.json
+          if-no-files-found: error
+          retention-days: 365
 
       - name: Preserve immutable promotion history
         if: inputs.mode == 'apply' && inputs.operation == 'promote' && success()
@@ -267,7 +378,7 @@ jobs:
           retention-days: 365
 
       - name: Preserve immutable rollback history
-        if: inputs.mode == 'apply' && inputs.operation == 'rollback' && success()
+        if: inputs.mode == 'apply' && inputs.operation == 'rollback' && always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: staging-traffic-rollback-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
@@ -276,5 +387,16 @@ jobs:
             artifacts/staging-release/staging-traffic-rollback.sha256
             artifacts/staging-release/staging-traffic-before-${{ inputs.service }}.json
             artifacts/staging-release/staging-traffic-after-${{ inputs.service }}.json
+          if-no-files-found: error
+          retention-days: 365
+
+      - name: Preserve post-rollback infrastructure verification
+        if: inputs.mode == 'apply' && inputs.operation == 'rollback' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-rollback-verification-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/staging-release/staging-rollback-verification.json
+            artifacts/staging-release/staging-rollback-verification.sha256
           if-no-files-found: error
           retention-days: 365
