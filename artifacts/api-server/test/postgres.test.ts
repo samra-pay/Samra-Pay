@@ -15,6 +15,7 @@ import {
   RandomIdGenerator,
   createDatabase,
 } from "@workspace/db";
+import type { ProviderEvent } from "@workspace/remittance";
 import { DemoRuntime } from "../src/domain/demo-runtime";
 import { PostgresReconciliationStore } from "../src/domain/postgres-reconciliation";
 
@@ -1481,6 +1482,288 @@ test("PostgreSQL is the durable source of truth across atomicity, concurrency, r
   assert.ok(Number(accounting.rows[0]!.audit_count) > 0);
 });
 
+test("provider event retry is not suppressed after its transaction rolls back", async () => {
+  const fixture = createRuntime();
+  const transfer = await createSubmittedTransfer(
+    fixture.runtime,
+    "provider-event-rollback",
+  );
+  const accepted = providerEvent({
+    provider: "CALIZA",
+    providerEventId: `rollback-accepted:${randomUUID()}`,
+    transferId: transfer.id,
+    kind: "CALIZA_ACCEPTED",
+    occurredAt: new Date().toISOString(),
+  });
+  const repository = fixture.runtime.repository as {
+    saveTransfer: typeof fixture.runtime.repository.saveTransfer;
+  };
+  const saveTransfer = repository.saveTransfer.bind(fixture.runtime.repository);
+  repository.saveTransfer = async (candidate, auditActor) => {
+    await saveTransfer(candidate, auditActor);
+    if (candidate.id === transfer.id && candidate.state === "IN_TRANSIT") {
+      throw new Error("INJECTED_AFTER_PROVIDER_EVENT_PERSISTENCE");
+    }
+  };
+
+  try {
+    await assert.rejects(
+      fixture.runtime.service.ingestProviderEvent(accepted),
+      /INJECTED_AFTER_PROVIDER_EVENT_PERSISTENCE/,
+    );
+  } finally {
+    repository.saveTransfer = saveTransfer;
+  }
+
+  const rolledBack = await fixture.connection.pool.query<{
+    provider_events: string;
+    capture_journals: string;
+    transfer_state: string;
+    hold_state: string;
+    state_change_outbox: string;
+  }>(
+    `SELECT
+       (SELECT count(*) FROM samra_core.provider_events
+        WHERE provider = 'caliza' AND provider_event_id = $1)::text
+          AS provider_events,
+       (SELECT count(*) FROM samra_core.ledger_journals
+        WHERE business_event_type = 'remittance_capture'
+          AND business_event_id = $2)::text AS capture_journals,
+       (SELECT state::text FROM samra_core.remittance_transfers
+        WHERE external_ref = $2) AS transfer_state,
+       (SELECT state::text FROM samra_core.ledger_holds
+        WHERE business_event_type = 'remittance_transfer'
+          AND business_event_id = $2) AS hold_state,
+       (SELECT count(*) FROM samra_core.outbox_events outbox
+        JOIN samra_core.remittance_transfers transfer
+          ON transfer.id = outbox.aggregate_id
+        WHERE transfer.external_ref = $2
+          AND outbox.event_type = 'TRANSFER_STATE_CHANGED')::text
+          AS state_change_outbox`,
+    [accepted.providerEventId, transfer.id],
+  );
+  assert.deepEqual(rolledBack.rows[0], {
+    provider_events: "0",
+    capture_journals: "0",
+    transfer_state: "submitted",
+    hold_state: "active",
+    state_change_outbox: "0",
+  });
+
+  const replay = await fixture.runtime.service.ingestProviderEvent(accepted);
+  assert.equal(replay.disposition, "PROCESSED");
+  assert.equal(replay.transfer.state, "IN_TRANSIT");
+  const duplicate = await fixture.runtime.service.ingestProviderEvent(accepted);
+  assert.equal(duplicate.disposition, "DUPLICATE");
+  assert.equal(duplicate.transfer.version, replay.transfer.version);
+
+  const recovered = await fixture.connection.pool.query<{
+    provider_events: string;
+    provider_event_state: string;
+    provider_event_attempts: number;
+    capture_journals: string;
+    captured_hold_events: string;
+    state_change_outbox: string;
+  }>(
+    `SELECT
+       (SELECT count(*) FROM samra_core.provider_events
+        WHERE provider = 'caliza' AND provider_event_id = $1)::text
+          AS provider_events,
+       (SELECT state::text FROM samra_core.provider_events
+        WHERE provider = 'caliza' AND provider_event_id = $1)
+          AS provider_event_state,
+       (SELECT attempt_count FROM samra_core.provider_events
+        WHERE provider = 'caliza' AND provider_event_id = $1)
+          AS provider_event_attempts,
+       (SELECT count(*) FROM samra_core.ledger_journals
+        WHERE business_event_type = 'remittance_capture'
+          AND business_event_id = $2)::text AS capture_journals,
+       (SELECT count(*) FROM samra_core.ledger_hold_events event
+        JOIN samra_core.ledger_holds hold ON hold.id = event.hold_id
+        WHERE hold.business_event_type = 'remittance_transfer'
+          AND hold.business_event_id = $2
+          AND event.event_type = 'captured')::text AS captured_hold_events,
+       (SELECT count(*) FROM samra_core.outbox_events outbox
+        JOIN samra_core.remittance_transfers transfer
+          ON transfer.id = outbox.aggregate_id
+        WHERE transfer.external_ref = $2
+          AND outbox.event_type = 'TRANSFER_STATE_CHANGED')::text
+          AS state_change_outbox`,
+    [accepted.providerEventId, transfer.id],
+  );
+  assert.deepEqual(recovered.rows[0], {
+    provider_events: "1",
+    provider_event_state: "processed",
+    provider_event_attempts: 2,
+    capture_journals: "1",
+    captured_hold_events: "1",
+    state_change_outbox: "1",
+  });
+
+  const deliveredAt = new Date(
+    Date.parse(accepted.occurredAt) + 1_000,
+  ).toISOString();
+  await fixture.runtime.service.ingestProviderEvent(
+    providerEvent({
+      provider: "CALIZA",
+      providerEventId: `rollback-delivered:${randomUUID()}`,
+      transferId: transfer.id,
+      kind: "CALIZA_DELIVERED",
+      occurredAt: deliveredAt,
+    }),
+  );
+  const completed = await fixture.runtime.service.ingestProviderEvent(
+    providerEvent({
+      provider: "CHAPA",
+      providerEventId: `rollback-paid:${randomUUID()}`,
+      transferId: transfer.id,
+      kind: "CHAPA_PAID",
+      occurredAt: new Date(Date.parse(deliveredAt) + 1_000).toISOString(),
+    }),
+  );
+  assert.equal(completed.transfer.state, "COMPLETED");
+});
+
+test("deferred provider events drain once after restart and remain deduplicated", async () => {
+  const first = createRuntime();
+  const transfer = await createSubmittedTransfer(
+    first.runtime,
+    "provider-event-restart",
+  );
+  const baseTime = Date.now();
+  const paid = providerEvent({
+    provider: "CHAPA",
+    providerEventId: `restart-paid:${randomUUID()}`,
+    transferId: transfer.id,
+    kind: "CHAPA_PAID",
+    occurredAt: new Date(baseTime + 3_000).toISOString(),
+  });
+  const accepted = providerEvent({
+    provider: "CALIZA",
+    providerEventId: `restart-accepted:${randomUUID()}`,
+    transferId: transfer.id,
+    kind: "CALIZA_ACCEPTED",
+    occurredAt: new Date(baseTime + 1_000).toISOString(),
+  });
+  const delivered = providerEvent({
+    provider: "CALIZA",
+    providerEventId: `restart-delivered:${randomUUID()}`,
+    transferId: transfer.id,
+    kind: "CALIZA_DELIVERED",
+    occurredAt: new Date(baseTime + 2_000).toISOString(),
+  });
+
+  const deferred = await first.runtime.service.ingestProviderEvent(paid);
+  assert.equal(deferred.disposition, "DEFERRED");
+  assert.equal(deferred.transfer.state, "SUBMITTED");
+  const deferredEvidence = await first.connection.pool.query<{
+    state: string;
+    attempt_count: number;
+  }>(
+    `SELECT state::text, attempt_count
+     FROM samra_core.provider_events
+     WHERE provider = 'chapa' AND provider_event_id = $1`,
+    [paid.providerEventId],
+  );
+  assert.deepEqual(deferredEvidence.rows[0], {
+    state: "deferred",
+    attempt_count: 1,
+  });
+
+  const restarted = createRuntime();
+  const acceptedResult =
+    await restarted.runtime.service.ingestProviderEvent(accepted);
+  assert.equal(acceptedResult.transfer.state, "IN_TRANSIT");
+  const deliveredResult =
+    await restarted.runtime.service.ingestProviderEvent(delivered);
+  assert.equal(deliveredResult.transfer.state, "COMPLETED");
+  assert.deepEqual(
+    deliveredResult.processedEvents.map((event) => event.kind),
+    ["CALIZA_DELIVERED", "CHAPA_PAID"],
+  );
+
+  const replayed = createRuntime();
+  const duplicate = await replayed.runtime.service.ingestProviderEvent(paid);
+  assert.equal(duplicate.disposition, "DUPLICATE");
+  assert.equal(duplicate.transfer.state, "COMPLETED");
+  assert.equal(
+    (
+      await replayed.runtime.service.getTransfer(
+        "demo_customer_001",
+        transfer.id,
+      )
+    ).state,
+    "COMPLETED",
+  );
+
+  const evidence = await first.connection.pool.query<{
+    provider_event_id: string;
+    state: string;
+    attempt_count: number;
+  }>(
+    `SELECT provider_event_id, state::text, attempt_count
+     FROM samra_core.provider_events
+     WHERE (provider = 'chapa' AND provider_event_id = $1)
+        OR (provider = 'caliza' AND provider_event_id = ANY($2::text[]))
+     ORDER BY provider_event_id`,
+    [
+      paid.providerEventId,
+      [accepted.providerEventId, delivered.providerEventId],
+    ],
+  );
+  assert.deepEqual(evidence.rows, [
+    {
+      provider_event_id: accepted.providerEventId,
+      state: "processed",
+      attempt_count: 1,
+    },
+    {
+      provider_event_id: delivered.providerEventId,
+      state: "processed",
+      attempt_count: 1,
+    },
+    {
+      provider_event_id: paid.providerEventId,
+      state: "processed",
+      attempt_count: 3,
+    },
+  ]);
+  const financialEffects = await first.connection.pool.query<{
+    business_event_type: string;
+    effect_count: string;
+  }>(
+    `SELECT business_event_type, count(*)::text AS effect_count
+     FROM samra_core.ledger_journals
+     WHERE business_event_id = $1
+       AND business_event_type IN (
+         'remittance_capture',
+         'remittance_settlement',
+         'remittance_fee_recognition'
+       )
+     GROUP BY business_event_type
+     ORDER BY business_event_type`,
+    [transfer.id],
+  );
+  assert.deepEqual(financialEffects.rows, [
+    { business_event_type: "remittance_capture", effect_count: "1" },
+    {
+      business_event_type: "remittance_fee_recognition",
+      effect_count: "1",
+    },
+    { business_event_type: "remittance_settlement", effect_count: "1" },
+  ]);
+  const outbox = await first.connection.pool.query<{ count: string }>(
+    `SELECT count(*)::text AS count
+     FROM samra_core.outbox_events outbox
+     JOIN samra_core.remittance_transfers transfer
+       ON transfer.id = outbox.aggregate_id
+     WHERE transfer.external_ref = $1
+       AND outbox.event_type = 'TRANSFER_STATE_CHANGED'`,
+    [transfer.id],
+  );
+  assert.equal(outbox.rows[0]!.count, "2");
+});
+
 test("durable workers claim once across processes and resume timeout retries after restart", async () => {
   const first = createRuntime();
   const second = createRuntime();
@@ -1655,6 +1938,29 @@ test("expired leases recover, retry exhaustion becomes operator-visible, and aud
     /append-only/,
   );
 });
+
+async function createSubmittedTransfer(runtime: DemoRuntime, label: string) {
+  const quote = await runtime.service.createQuote({
+    actorId: "demo_customer_001",
+    sourceAccountId: "demo_usd_account_001",
+    beneficiaryId: "beneficiary_bank_001",
+    sourceAmountMinor: 1_000n,
+    fundingMethod: "samra_balance",
+    deliveryMethod: "bank",
+  });
+  return runtime.service.createTransfer({
+    actorId: "demo_customer_001",
+    quoteId: quote.id,
+    idempotencyKey: `${label}:${randomUUID()}`,
+  });
+}
+
+function providerEvent(input: Omit<ProviderEvent, "payload">): ProviderEvent {
+  return Object.freeze({
+    ...input,
+    payload: Object.freeze({ assurance: "financial-replay" }),
+  });
+}
 
 async function advanceUntil(
   runtime: DemoRuntime,

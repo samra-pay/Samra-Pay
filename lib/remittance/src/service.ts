@@ -79,7 +79,6 @@ export class RemittanceService {
   readonly #quotePolicy: QuotePolicy;
   readonly #scenarioController?: FakeScenarioController;
   readonly #unitOfWork: RemittanceUnitOfWork;
-  readonly #inboxes = new Map<string, DomainEventInbox>();
   readonly #holdIds = new Map<string, string>();
   #commandTail: Promise<void> = Promise.resolve();
 
@@ -389,13 +388,11 @@ export class RemittanceService {
       transferId: event.transferId,
     });
 
-    let inbox = this.#inboxes.get(transfer.id);
-    if (!inbox) {
-      inbox = new DomainEventInbox(
-        await this.#repository.listInbox(transfer.id),
-      );
-      this.#inboxes.set(transfer.id, inbox);
-    }
+    // Rehydrate inside the unit of work so a rollback cannot leave process
+    // memory ahead of the durable provider-event record.
+    const inbox = new DomainEventInbox(
+      await this.#repository.listInbox(transfer.id),
+    );
     const recordsBefore = inbox.records().length;
     const result = inbox.ingest(
       transfer,
