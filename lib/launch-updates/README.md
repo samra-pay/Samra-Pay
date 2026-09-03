@@ -38,7 +38,7 @@ synthetic. Running `node lib/launch-updates/src/connection-test.mjs` without
 configuration prints `disabled` and makes no provider request.
 
 The dedicated review workflow runs these tests and builds an ephemeral local
-Docker image, then verifies its disabled default with networking disabled. It
+Docker image, then verifies its non-root user and disabled default with networking disabled. It
 has no Google credentials, OIDC permission, registry login, publication step,
 secret reference or sending configuration. A successful disabled-container
 check is not authentication, delivery or production-image provenance evidence.
@@ -50,6 +50,8 @@ The CLI needs all of the following before it can call the provider:
 - Explicit `--send-approved-test` argument and `SAMRA_LAUNCH_UPDATES_MODE=test`.
 - Project `samra-pay-production`, job `samra-production-resend-test`, numeric
   secret version `1`, one task, index `0`, and task attempt `0`.
+- A verified non-root effective process UID; root or an unavailable UID blocks key access
+  and all provider requests.
 - One explicitly approved recipient, an opaque approval ID, and an original
   UTC expiry no more than one hour after configuration.
 - The API key supplied to the server by the approved secret mount, never by a
@@ -67,11 +69,24 @@ receipt and reply routing remains a separate manual verification.
 
 ## Cloud template and approval gates
 
-`deploy/cloud-run-job.template.json` is deliberately incomplete: its image is an
+`deploy/cloud-run-job.template.json` uses the native Cloud Run v2 REST Job schema,
+not a Kubernetes manifest or v1 `gcloud run jobs replace` input. It is deliberately incomplete: its image is an
 invalid placeholder, mode is disabled, arguments are empty, and recipient,
 approval ID and expiry are blank. Version `1` is pinned in both the actual
 secret reference and runtime guard. Proposed identity:
 `samra-resend-test@samra-pay-production.iam.gserviceaccount.com`.
+
+The first PR scan applied Kubernetes rule KSV-0118 to the previous Cloud Run v1
+shape. Google documents Kubernetes `securityContext` as unsupported in Cloud
+Run. The template now uses the native v2 schema; no scanner rule or gate is
+disabled. Non-root execution is enforced in the Dockerfile, verified inside the
+CI container, and checked by the runner before it accesses the key. The job
+template has no automatic-execution token and remains disabled.
+
+Trivy may not semantically validate native Cloud Run v2 JSON. A green repository
+scan is not a Cloud Run configuration audit: exact-shape template tests and the
+required pre-execution inspection of the deployed job still govern. The CI UID
+check uses the image's own user metadata without a `--user` override.
 
 Cloud Run resolves secret-backed environment variables before container startup.
 Therefore, **even a disabled cloud execution can retrieve the key and incur
@@ -117,3 +132,5 @@ approved by this one-message test.
 - [Resend send API and idempotency](https://resend.com/docs/api-reference/emails/send-email)
 - [Cloud Run job secrets and startup behavior](https://docs.cloud.google.com/run/docs/configuring/jobs/secrets)
 - [Cloud Run job runtime fields](https://docs.cloud.google.com/run/docs/container-contract)
+- [Cloud Run v2 Job schema](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs)
+- [Cloud Run v1 unsupported security context](https://docs.cloud.google.com/run/docs/reference/rest/v1/Container)

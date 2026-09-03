@@ -33,6 +33,13 @@ jobs:
         run: node --test lib/launch-updates/src/*.test.mjs
       - name: Build a local-only review image from the allowlisted context
         run: docker build --pull --network=none --tag samra-resend-test:review lib/launch-updates
+      - name: Verify the image runs as a non-root user
+        run: >-
+          timeout 20s docker run --rm --network=none --read-only
+          --cap-drop=ALL --security-opt=no-new-privileges
+          --pids-limit=64 --memory=128m --cpus=1
+          --entrypoint node samra-resend-test:review
+          -e 'const ids = [process.getuid(), process.geteuid()]; if (ids.some(id => !Number.isInteger(id) || id <= 0)) process.exit(1); console.log("Non-root runtime verified.");'
       - name: Verify the container defaults to disabled without network access
         shell: bash
         run: |
