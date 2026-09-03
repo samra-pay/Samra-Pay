@@ -81,6 +81,11 @@ and [disable-collection control](https://developers.google.com/tag-platform/secu
 
 ## Security, performance and release
 
+Local verification for this implementation: 179 website tests, 256 GCP safety
+tests, 20 preview tests, the website typecheck, public-bundle isolation, and all
+12 existing public experience budgets passed. These checks do not verify Google
+console settings, rendered appearance, or actual GA4 ingestion.
+
 The original August 31 decision remains historical. Its September 2 amendment
 locks the account, stream, configuration, consent model and retention owner;
 the exact-SHA, clean-tree, review, explicit apply, independent post-audit and
@@ -93,6 +98,13 @@ frames, API, forms, authentication, databases, financial vendors, DNS changes or
 new paid product are included. Google's [CSP guidance](https://developers.google.com/tag-platform/security/guides/csp)
 lists broader optional destinations; additions here require another review.
 If a Google endpoint changes, collection fails closed until reviewed.
+
+The preview publisher strips these exact GA4 exceptions and pins the original
+no-analytics CSP (`script-src 'self'`, `connect-src 'none'`). Other production
+headers remain unchanged. Thus preview isolation has both a runtime hostname
+guard and a browser-enforced network guard. A publisher on older trusted `main`
+will reject this PR's new Google-tag origin; do not loosen trust checks to
+force a preview. Local review can precede the reviewed control-code merge.
 
 Existing first-party bundle budgets are unchanged. The external Google script
 loads asynchronously only after acceptance and is not counted in those local
