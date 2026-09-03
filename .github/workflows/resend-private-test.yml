@@ -1,0 +1,52 @@
+name: Resend private test preparation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/launch-updates/**"
+      - ".github/workflows/resend-private-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resend-private-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-test:
+    name: Offline email tests and disabled container
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the review source without stored credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Run synthetic tests without dependencies or provider credentials
+        run: node --test lib/launch-updates/src/*.test.mjs
+      - name: Build a local-only review image from the allowlisted context
+        run: docker build --pull --network=none --tag samra-resend-test:review lib/launch-updates
+      - name: Verify the container defaults to disabled without network access
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 20s docker run --rm --network=none --read-only \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit=64 --memory=128m --cpus=1 \
+            samra-resend-test:review |
+            node --input-type=module -e '
+              import assert from "node:assert/strict";
+              let report = "";
+              for await (const chunk of process.stdin) report += chunk;
+              assert.deepEqual(JSON.parse(report), {
+                event: "samra_resend_connection_test", status: "disabled"
+              });
+              console.log("Disabled container verified; no provider request.");
+            '

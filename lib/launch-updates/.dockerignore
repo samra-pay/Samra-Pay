@@ -1,0 +1,6 @@
+**
+!Dockerfile
+!src/
+!src/server.mjs
+!src/resend.mjs
+!src/connection-test.mjs
