@@ -44,10 +44,13 @@ customer application must not require rebuilding or replacing `www`.
 
 ## Controls that stay specific to `www`
 
-The public release keeps `connect-src 'none'`, `form-action 'none'`, no customer
-authentication, no runtime API configuration, no customer data, and no vendor
-SDKs. These controls are not copied unchanged to the future application. They
-remain strict on `www` while `app` receives its own reviewed allowlist.
+The public release keeps `form-action 'none'`, no customer authentication, no
+runtime API configuration, no customer financial data, and no financial vendor
+SDKs. The September 2 amendment replaces `connect-src 'none'` with exact GA4
+origins for consent-gated public analytics only. Advertising endpoints remain
+blocked. See [the analytics boundary](../operations/public-website-analytics.md).
+These controls are not copied unchanged to the future application; `app`
+requires its own reviewed allowlist and release approval.
 
 Adding a public form, analytics provider, runtime endpoint, or third-party
 script is a separate public-edge change. It requires a documented purpose,

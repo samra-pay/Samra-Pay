@@ -10,6 +10,23 @@
     "standingApplyAuthorization": false
   },
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
+  "analyticsAmendment": {
+    "approvedOn": "2026-09-02",
+    "approvedBy": "David Haile",
+    "status": "approved-for-implementation-not-deployment",
+    "scope": "consent-gated public website GA4; no advertising",
+    "configuration": "artifacts/samra-pay/src/content/public-analytics.json",
+    "accountId": "406796105",
+    "propertyId": "552617317",
+    "streamId": "15667615640",
+    "basicConsentMode": true,
+    "productionCanonicalOriginOnly": true,
+    "advertisingFeatures": false,
+    "enhancedMeasurement": false,
+    "eventRetentionMonths": 2,
+    "retentionOwner": "David Haile",
+    "releaseApprovalRequired": true
+  },
   "source": {
     "repository": "haileleuld87/Samra-Pay",
     "canonicalDesign": "Sites project appgprj_6a938306c6c08191a5d582603a18a2fe",
@@ -48,17 +65,17 @@
     "apiRoutes": [],
     "databaseAccess": false,
     "secrets": [],
-    "analytics": false,
+    "analytics": true,
     "advertisingPixels": false,
     "customerAuthentication": false,
     "kyc": false,
     "wallet": false,
     "moneyMovement": false,
     "vendorActivation": false,
-    "ordinaryHostingRequestLogsOnly": true
+    "ordinaryHostingRequestLogsOnly": false
   },
   "security": {
-    "contentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
+    "contentSecurityPolicy": "default-src 'self'; script-src 'self' https://www.googletagmanager.com/gtag/js; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; connect-src https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
     "referrerPolicy": "strict-origin-when-cross-origin",
     "xContentTypeOptions": "nosniff",
     "xFrameOptions": "DENY",
@@ -114,6 +131,9 @@
     "no form or email input",
     "no waitlist or API endpoint in the public bundle",
     "security headers",
+    "no Google requests before consent or after rejection",
+    "single sanitized page_view after consent on canonical www only",
+    "Analytics preferences withdrawal and cookie cleanup",
     "email and verification DNS records preserved"
   ],
   "excluded": [

@@ -176,6 +176,7 @@ export function ComingSoonFooter() {
           <h3>{text(localized("Legal", "ሕጋዊ መረጃ"))}</h3>
           <a href="/privacy">{text(localized("Privacy Policy", "የግላዊነት ፖሊሲ"))}</a>
           <a href="/terms">{text(localized("Terms of Service", "የአገልግሎት ውሎች"))}</a>
+          <button className="analytics-preferences" type="button" onClick={() => window.dispatchEvent(new Event("samra-analytics-preferences"))}>{text(localized("Analytics preferences", "የትንታኔ ምርጫዎች"))}</button>
         </div>
         <div>
           <h3>{text(localized("Status", "ሁኔታ"))}</h3>

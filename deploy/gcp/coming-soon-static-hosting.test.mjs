@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   readComingSoonStaticHosting,
   readFirebaseHostingConfig,
+  readPublicAnalyticsConfig,
   validateComingSoonStaticHosting,
   validateStaticHostingEnvironment,
 } from "./validate-coming-soon-static-hosting.mjs";
@@ -31,6 +32,7 @@ test("locks the approved static informational launch boundary", () => {
     emailCollectionAllowed: false,
     publicApiRouteCount: 0,
     databaseAccess: false,
+    analytics: "consent-gated-ga4",
     expectedIncrementalMonthlyCostUsd: 0,
     existingInfrastructureGuardedEstimateUsd: 81.92,
     monthlyInfrastructureHardStopUsd: 100,
@@ -51,7 +53,14 @@ test("rejects data collection, product activation, cost, and DNS drift", () => {
     (value) => (value.publicBoundary.emailCollectionAllowed = true),
     (value) => value.publicBoundary.apiRoutes.push("POST /waitlist"),
     (value) => (value.publicBoundary.databaseAccess = true),
-    (value) => (value.publicBoundary.analytics = true),
+    (value) => (value.publicBoundary.analytics = false),
+    (value) => delete value.analyticsAmendment,
+    (value) => (value.analyticsAmendment.advertisingFeatures = true),
+    (value) => (value.analyticsAmendment.basicConsentMode = false),
+    (value) => (value.analyticsAmendment.productionCanonicalOriginOnly = false),
+    (value) => (value.analyticsAmendment.releaseApprovalRequired = false),
+    (value) => (value.analyticsAmendment.eventRetentionMonths = 14),
+    (value) => (value.analyticsAmendment.enhancedMeasurement = true),
     (value) => (value.publicBoundary.customerAuthentication = true),
     (value) => (value.publicBoundary.kyc = true),
     (value) => (value.publicBoundary.vendorActivation = true),
@@ -109,7 +118,14 @@ test("serves one SPA with security headers and no project alias", () => {
       .flatMap((rule) => rule.headers)
       .map((header) => [header.key, header.value]),
   );
-  assert.match(headers.get("Content-Security-Policy"), /connect-src 'none'/u);
+  assert.match(
+    headers.get("Content-Security-Policy"),
+    /connect-src https:\/\/www.google-analytics.com https:\/\/region1.google-analytics.com https:\/\/www.googletagmanager.com;/u,
+  );
+  assert.doesNotMatch(
+    headers.get("Content-Security-Policy"),
+    /\*|unsafe-inline|unsafe-eval|doubleclick|googleadservices/u,
+  );
   assert.match(headers.get("Content-Security-Policy"), /form-action 'none'/u);
   assert.equal(headers.get("X-Frame-Options"), "DENY");
   assert.equal(headers.get("Strict-Transport-Security"), "max-age=31536000");
@@ -160,6 +176,37 @@ test("serves one SPA with security headers and no project alias", () => {
       "public,max-age=31536000,immutable",
     );
   }
+});
+
+test("fails closed on measurement identity, host, retention, and coordinated CSP drift", () => {
+  for (const mutate of [
+    (value) => (value.measurementId = "G-UNAPPROVED"),
+    (value) => (value.origin = "https://app.samrapay.com"),
+    (value) => (value.consentDays = 365),
+    (value) => (value.cookieDays = 730),
+    (value) => (value.cookiePrefix = "_ga"),
+    (value) => (value.advertising = true),
+  ]) {
+    const analytics = readPublicAnalyticsConfig();
+    mutate(analytics);
+    assert.throws(() =>
+      validateComingSoonStaticHosting(
+        undefined,
+        undefined,
+        undefined,
+        analytics,
+      ),
+    );
+  }
+  const contract = readComingSoonStaticHosting();
+  const firebase = readFirebaseHostingConfig();
+  contract.security.contentSecurityPolicy = "default-src *";
+  firebase.hosting.headers.find(
+    (rule) => rule.source === "**",
+  ).headers[0].value = contract.security.contentSecurityPolicy;
+  assert.throws(() =>
+    validateComingSoonStaticHosting(contract, undefined, firebase),
+  );
 });
 
 test("fails closed when routed HTML or immutable asset caching drifts", () => {
