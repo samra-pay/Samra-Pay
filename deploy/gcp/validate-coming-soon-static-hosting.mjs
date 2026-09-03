@@ -18,6 +18,20 @@ function required(environment, name) {
 const HTML_CACHE_CONTROL = "no-cache,no-store,must-revalidate";
 const IMMUTABLE_CACHE_CONTROL = "public,max-age=31536000,immutable";
 const ROUTED_HTML_REGEX = "^/[^.]*$";
+const PUBLIC_ANALYTICS_CSP =
+  "default-src 'self'; script-src 'self' https://www.googletagmanager.com/gtag/js; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; connect-src https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests";
+
+export function readPublicAnalyticsConfig() {
+  return JSON.parse(
+    readFileSync(
+      new URL(
+        "../../artifacts/samra-pay/src/content/public-analytics.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+}
 
 function singleRule(rules, predicate) {
   const matches = rules.filter(predicate);
@@ -55,6 +69,7 @@ export function validateComingSoonStaticHosting(
   contract = readComingSoonStaticHosting(),
   launch = readComingSoonLaunch(),
   firebase = readFirebaseHostingConfig(),
+  analytics = readPublicAnalyticsConfig(),
 ) {
   const validatedLaunch = validateComingSoonLaunch(launch);
   const override = launch.staticInformationalOverride;
@@ -133,14 +148,43 @@ export function validateComingSoonStaticHosting(
       publicBoundary.apiRoutes.length === 0 &&
       publicBoundary.databaseAccess === false &&
       publicBoundary.secrets.length === 0 &&
-      publicBoundary.analytics === false &&
+      publicBoundary.analytics === true &&
+      publicBoundary.ordinaryHostingRequestLogsOnly === false &&
       publicBoundary.advertisingPixels === false &&
       publicBoundary.customerAuthentication === false &&
       publicBoundary.kyc === false &&
       publicBoundary.wallet === false &&
       publicBoundary.moneyMovement === false &&
       publicBoundary.vendorActivation === false,
-    "The static public surface gained data collection or an application dependency",
+    "The static public surface gained unapproved data collection or an application dependency",
+  );
+
+  const amendment = contract.analyticsAmendment;
+  assert(
+    amendment?.approvedOn === "2026-09-02" &&
+      amendment.approvedBy === "David Haile" &&
+      amendment.status === "approved-for-implementation-not-deployment" &&
+      amendment.scope === "consent-gated public website GA4; no advertising" &&
+      amendment.configuration ===
+        "artifacts/samra-pay/src/content/public-analytics.json" &&
+      amendment.accountId === "406796105" &&
+      amendment.propertyId === "552617317" &&
+      amendment.streamId === "15667615640" &&
+      amendment.basicConsentMode === true &&
+      amendment.productionCanonicalOriginOnly === true &&
+      amendment.advertisingFeatures === false &&
+      amendment.enhancedMeasurement === false &&
+      amendment.eventRetentionMonths === 2 &&
+      amendment.retentionOwner === "David Haile" &&
+      amendment.releaseApprovalRequired === true &&
+      Object.keys(analytics).length === 5 &&
+      analytics.measurementId === "G-T4THKMM4Y5" &&
+      analytics.origin === "https://www.samrapay.com" &&
+      analytics.consentDays === 180 &&
+      analytics.cookieDays === 60 &&
+      analytics.cookiePrefix === "samra_public" &&
+      contract.security.contentSecurityPolicy === PUBLIC_ANALYTICS_CSP,
+    "The consent-gated public analytics amendment or CSP drifted",
   );
 
   const effects = contract.providerManagedEffects;
@@ -267,6 +311,7 @@ export function validateComingSoonStaticHosting(
     emailCollectionAllowed: false,
     publicApiRouteCount: 0,
     databaseAccess: false,
+    analytics: "consent-gated-ga4",
     expectedIncrementalMonthlyCostUsd: 0,
     existingInfrastructureGuardedEstimateUsd:
       boundary.existingInfrastructureGuardedEstimateUsd,

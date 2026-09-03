@@ -79,6 +79,8 @@ const allowedNetworkOrigins = new Set([
   "https://react.dev",
   "https://samrapay.com",
   "https://www.samrapay.com",
+  "https://www.googletagmanager.com",
+  "https://policies.google.com",
 ]);
 
 const networkUrlPattern = /\bhttps?:\/\/[^\s"'<>`\\)]+/giu;

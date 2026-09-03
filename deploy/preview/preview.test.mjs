@@ -240,9 +240,15 @@ test("rejects artifact storage redirects to untrusted hosts before forwarding an
   );
 });
 
-test("production configuration and every security header are preserved; only previews get noindex", async () => {
+test("preserves production headers while previews additionally deny analytics and indexing", async () => {
   const firebase = JSON.parse(await readFile("firebase.json", "utf8"));
+  const original = structuredClone(firebase);
   const result = hostingConfig(firebase);
+  assert.deepEqual(
+    firebase,
+    original,
+    "Do not mutate production configuration",
+  );
   assert.equal(result.trailingSlashBehavior, "REMOVE");
   assert.deepEqual(result.rewrites, [{ glob: "**", path: "/index.html" }]);
   for (const rule of firebase.hosting.headers) {
@@ -253,7 +259,12 @@ test("production configuration and every security header are preserved; only pre
           JSON.stringify(candidate.headers) ===
             JSON.stringify(
               Object.fromEntries(
-                rule.headers.map(({ key, value }) => [key, value]),
+                rule.headers.map(({ key, value }) => [
+                  key,
+                  key === "Content-Security-Policy"
+                    ? "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+                    : value,
+                ]),
               ),
             ),
       ),
@@ -268,6 +279,22 @@ test("production configuration and every security header are preserved; only pre
     run: { serviceId: "api" },
   });
   assert.throws(() => hostingConfig(firebase));
+});
+
+test("rejects unreviewed production CSP changes instead of weakening preview isolation", async () => {
+  for (const value of [
+    "default-src *; connect-src 'none'",
+    "default-src 'self'; connect-src https://unexpected.example",
+    "default-src 'self'; script-src 'unsafe-inline'; connect-src 'none'",
+  ]) {
+    const firebase = JSON.parse(await readFile("firebase.json", "utf8"));
+    firebase.hosting.headers
+      .find((rule) => rule.source === "**")
+      .headers.find(
+        (header) => header.key === "Content-Security-Policy",
+      ).value = value;
+    assert.throws(() => hostingConfig(firebase), /Review any other CSP change/);
+  }
 });
 
 test("preview URL rejects live, production, wrong PR and off-domain destinations", () => {

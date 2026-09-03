@@ -26,8 +26,10 @@ Cloud, DNS, API, database, customer-data, and vendor state changed: no
 
 The approved release serves only the reviewed static public bundle through
 Firebase Hosting. It deploys no Cloud Run workload, API, database credential,
-migration, form, email collection, analytics, customer authentication, KYC,
-wallet, money movement, or vendor integration.
+migration, form, email collection, customer authentication, KYC,
+wallet, money movement, or financial vendor integration. The September 2
+amendment permits only consent-gated public website GA4 without advertising;
+it does not grant standing deployment authorization.
 
 Expected incremental hosting cost is USD 0 within the documented no-cost
 storage and transfer allowances. Usage above those allowances is billable. The

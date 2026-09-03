@@ -11,6 +11,29 @@ export const SITE = PROJECT;
 const API = "https://firebasehosting.googleapis.com/v1beta1/";
 const MAX_AGE = "public,max-age=31536000,immutable";
 const NO_CACHE = "no-cache,no-store,must-revalidate";
+const PREVIEW_CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests";
+const ANALYTICS_CONNECTIONS =
+  "https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com";
+
+function withoutPublicAnalytics(csp) {
+  const restricted = csp
+    .replace(
+      "script-src 'self' https://www.googletagmanager.com/gtag/js;",
+      "script-src 'self';",
+    )
+    .replace(
+      `img-src 'self' data: ${ANALYTICS_CONNECTIONS};`,
+      "img-src 'self' data:;",
+    )
+    .replace(`connect-src ${ANALYTICS_CONNECTIONS};`, "connect-src 'none';");
+  assert.equal(
+    restricted,
+    PREVIEW_CSP,
+    "Review any other CSP change before publishing previews",
+  );
+  return restricted;
+}
 const ROUTES = [
   "/",
   "/features",
@@ -66,7 +89,12 @@ export function hostingConfig(firebase) {
     return {
       ...(rule.source ? { glob: rule.source } : { regex: rule.regex }),
       headers: Object.fromEntries(
-        rule.headers.map(({ key, value }) => [key, value]),
+        rule.headers.map(({ key, value }) => [
+          key,
+          key === "Content-Security-Policy"
+            ? withoutPublicAnalytics(value)
+            : value,
+        ]),
       ),
     };
   });
@@ -78,7 +106,8 @@ export function hostingConfig(firebase) {
     ),
     "Preview must remain static with no backend connections",
   );
-  // Preserve every production security/cache header. Index suppression is preview-only.
+  // Preserve security/cache headers; previews additionally block all analytics
+  // and suppress indexing, regardless of a visitor's saved consent.
   headers.push({
     glob: "**",
     headers: { "X-Robots-Tag": "noindex, nofollow, nosnippet" },

@@ -15,6 +15,14 @@ afterEach(async () => {
 });
 
 describe("public build boundary", () => {
+  it("allows only the reviewed Google tag and privacy disclosure origins", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
+    temporaryDirectories.push(root);
+    await writeFile(path.join(root, "index.html"), '<script src="https://www.googletagmanager.com/gtag/js?id=G-T4THKMM4Y5"></script><a href="https://policies.google.com/technologies/partner-sites">Privacy</a>');
+    await expect(inspectPublicBuild(root)).resolves.toEqual([]);
+    await writeFile(path.join(root, "ads.js"), 'fetch("https://googleads.g.doubleclick.net/collect")');
+    await expect(inspectPublicBuild(root)).resolves.toEqual(["ads.js: contains unexpected network origin https://googleads.g.doubleclick.net"]);
+  });
   it("accepts a public-only distribution", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
     temporaryDirectories.push(root);

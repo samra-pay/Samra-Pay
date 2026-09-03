@@ -34,12 +34,14 @@ flowchart LR
   FH -. no connection .-> DB[(Production database unused)]
 ```
 
-The public bundle contains no form, email field, waitlist endpoint, analytics,
-advertising pixel, secret, database access, customer authentication, KYC,
-wallet, or vendor integration. Its Content Security Policy sets
-`connect-src 'none'` and `form-action 'none'`. Google-hosted delivery systems
-may retain ordinary request logs, but the Samra Pay application collects no
-visitor-submitted data in this release.
+The public bundle contains no form, email field, waitlist endpoint, advertising
+pixel, secret, database access, customer authentication, KYC, wallet, or financial
+vendor integration. The September 2 analytics amendment permits consent-gated
+GA4 only on canonical `www`, with an explicit Google endpoint allowlist and
+`form-action 'none'`. It is implementation approval, not deployment approval.
+Google-hosted delivery systems may retain ordinary request logs separately.
+See [Public website analytics](public-website-analytics.md) for collection,
+privacy settings, acceptance tests, and the exact-SHA release gate.
 
 Run the no-cost local plan from the repository root:
 

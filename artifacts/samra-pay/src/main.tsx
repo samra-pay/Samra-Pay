@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { PublicAnalyticsConsent } from "./components/public-analytics-consent";
 import { PublicLanguageProvider } from "./lib/public-i18n";
 import { loadPublicPage } from "./lib/public-page-loader";
 import { resolvePublicRoute } from "./lib/public-routes";
@@ -35,6 +36,7 @@ async function bootstrapPublicSite() {
   createRoot(rootElement!).render(
     <PublicLanguageProvider>
       <PublicPage />
+      <PublicAnalyticsConsent showPrompt={!!route} />
     </PublicLanguageProvider>,
   );
 

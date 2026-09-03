@@ -60,6 +60,20 @@ const legalContent: Record<
         ),
       },
       {
+        title: localized("Optional Google Analytics", "አማራጭ Google Analytics"),
+        body: localized(
+          "Only if you accept analytics, this public website loads Google Analytics and uses cookies to measure page visits, sessions, engagement, referral sources, approximate location, and device/browser information. Google processes this data for us. Cookie identifiers are pseudonymous, not anonymous. We do not enable advertising features, Google signals, form tracking, or financial-product tracking. Page addresses omit query strings and fragments; referring addresses are limited to their website origin.",
+          "ትንታኔን ከፈቀዱ ብቻ፣ ይህ ድረ ገጽ Google Analytics ይጭናል። ኩኪዎችን በመጠቀም የገጽ ጉብኝቶችን፣ ክፍለ ጊዜዎችን፣ አጠቃቀምን፣ የመጡበትን ድረ ገጽ፣ ግምታዊ አካባቢን እና የመሣሪያና የአሳሽ መረጃን ይለካል። Google ይህን መረጃ ለእኛ ያስኬዳል። የኩኪ መለያዎች በቅጽል መለያ የሚሠሩ እንጂ ሙሉ በሙሉ ማንነት የሌላቸው አይደሉም። የማስታወቂያ ባህሪዎችን፣ Google signals፣ የቅጽ ወይም የፋይናንስ ምርት ክትትልን አናበራም። የገጽ አድራሻዎች የጥያቄና የቁርጥራጭ ዝርዝሮችን አያካትቱም፤ የመጡበት አድራሻ የድረ ገጹን መነሻ አድራሻ ብቻ ያካትታል።",
+        ),
+      },
+      {
+        title: localized("Your analytics choice", "የእርስዎ የትንታኔ ምርጫ"),
+        body: localized(
+          "Analytics is off until you accept. Rejecting does not limit the website. Your browser stores your choice for up to 180 days; analytics cookies expire after 60 days without renewal. Use Analytics preferences in the footer to withdraw consent and clear this site's analytics cookies. A Global Privacy Control or Do Not Track signal keeps analytics off. Withdrawal does not erase data already received by Google. Event-level retention is set to two months; aggregate reports may be kept longer. No analytics runs on development, preview, or private application sites.",
+          "እስኪፈቅዱ ድረስ ትንታኔ ጠፍቷል። አለመፍቀድ የድረ ገጹን አጠቃቀም አይገድብም። አሳሽዎ ምርጫዎን እስከ 180 ቀናት ያስቀምጣል፤ የትንታኔ ኩኪዎች ያለ እድሳት ከ60 ቀናት በኋላ ያበቃሉ። ፈቃድዎን ለማንሳትና የዚህን ድረ ገጽ የትንታኔ ኩኪዎች ለማጥፋት ከገጹ ግርጌ የትንታኔ ምርጫዎችን ይጠቀሙ። Global Privacy Control ወይም Do Not Track ምልክት ትንታኔን ያግዳል። ፈቃድ ማንሳት Google ቀድሞ የተቀበለውን መረጃ አያጠፋም። ዝርዝር የክስተት መረጃ ለሁለት ወራት ይቆያል፤ የተጠቃለሉ ሪፖርቶች ከዚያ በላይ ሊቆዩ ይችላሉ። በልማት፣ በቅድመ እይታ ወይም በግል መተግበሪያ ድረ ገጾች ላይ ትንታኔ አይሠራም።",
+        ),
+      },
+      {
         title: localized(
           "Do not submit sensitive information",
           "ሚስጥራዊ መረጃ አያስገቡ",
@@ -169,8 +183,8 @@ export default function PublicLegalPage() {
                 <ShieldCheck aria-hidden="true" />
                 {text(
                   localized(
-                    "Interim website notice · August 31, 2026",
-                    "ጊዜያዊ የድረ ገጽ ማስታወቂያ · August 31, 2026",
+                    `Interim website notice · ${kind === "privacy" ? "September 2" : "August 31"}, 2026`,
+                    `ጊዜያዊ የድረ ገጽ ማስታወቂያ · ${kind === "privacy" ? "September 2" : "August 31"}, 2026`,
                   ),
                 )}
               </p>
@@ -205,6 +219,7 @@ export default function PublicLegalPage() {
                   <p>{text(section.body)}</p>
                 </section>
               ))}
+              {kind === "privacy" && <p><a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">{text(localized("How Google uses data from sites that use its services", "Google አገልግሎቶቹን ከሚጠቀሙ ድረ ገጾች መረጃን እንዴት እንደሚጠቀም"))}</a></p>}
             </div>
           </div>
         </section>
