@@ -36,6 +36,8 @@ const allowedDistributionExtensions = new Set([
 ]);
 
 const forbiddenBundleContent = [
+  /\bRESEND_API_KEY\b/u,
+  /\bSAMRA_LAUNCH_UPDATES_TEST_APPROVAL_ID\b/u,
   /auth0-spa-js/iu,
   /Continue with Auth0/iu,
   /Loading secure onboarding/iu,
@@ -47,6 +49,10 @@ const forbiddenBundleContent = [
 ];
 
 const forbiddenCredentialContent = [
+  {
+    label: "Resend API credential",
+    pattern: /\bre_[A-Za-z0-9_-]{20,}\b/u,
+  },
   {
     label: "private key material",
     pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/iu,

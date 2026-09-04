@@ -62,6 +62,7 @@ const publicBundleBoundaryPlugin = {
   ) {
     if (webSurface === "legacy") return;
     const forbiddenModules = [
+      /\/lib\/launch-updates\//u,
       /\/src\/App\.tsx$/u,
       /\/src\/main-legacy\.tsx$/u,
       /\/src\/pages\/onboarding\.tsx$/u,

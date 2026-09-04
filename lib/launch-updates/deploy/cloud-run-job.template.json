@@ -1,0 +1,60 @@
+{
+  "name": "projects/samra-pay-production/locations/us-east4/jobs/samra-production-resend-test",
+  "template": {
+    "parallelism": 1,
+    "taskCount": 1,
+    "template": {
+      "serviceAccount": "samra-resend-test@samra-pay-production.iam.gserviceaccount.com",
+      "maxRetries": 0,
+      "timeout": "60s",
+      "containers": [
+        {
+          "image": "REVIEWED_IMAGE_DIGEST_REQUIRED",
+          "command": ["node", "./src/connection-test.mjs"],
+          "args": [],
+          "resources": {
+            "limits": {
+              "cpu": "1",
+              "memory": "512Mi"
+            }
+          },
+          "env": [
+            {
+              "name": "SAMRA_LAUNCH_UPDATES_MODE",
+              "value": "disabled"
+            },
+            {
+              "name": "SAMRA_CLOUD_PROJECT_ID",
+              "value": "samra-pay-production"
+            },
+            {
+              "name": "SAMRA_RESEND_SECRET_VERSION",
+              "value": "1"
+            },
+            {
+              "name": "SAMRA_LAUNCH_UPDATES_TEST_RECIPIENT",
+              "value": ""
+            },
+            {
+              "name": "SAMRA_LAUNCH_UPDATES_TEST_APPROVAL_ID",
+              "value": ""
+            },
+            {
+              "name": "SAMRA_LAUNCH_UPDATES_TEST_EXPIRES_AT",
+              "value": ""
+            },
+            {
+              "name": "RESEND_API_KEY",
+              "valueSource": {
+                "secretKeyRef": {
+                  "secret": "samra-production-resend-api-key",
+                  "version": "1"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

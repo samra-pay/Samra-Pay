@@ -15,6 +15,24 @@ afterEach(async () => {
 });
 
 describe("public build boundary", () => {
+  it("rejects Resend configuration, credential material and direct provider requests", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
+    temporaryDirectories.push(root);
+    await writeFile(
+      path.join(root, "mail.js"),
+      [
+        'const RESEND_API_KEY = "re_synthetic_public_leak_test_fixture";',
+        'const flag = "SAMRA_LAUNCH_UPDATES_TEST_APPROVAL_ID";',
+        'fetch("https://api.resend.com/emails");',
+      ].join("\n"),
+    );
+    await expect(inspectPublicBuild(root)).resolves.toEqual([
+      "mail.js: contains \\bRESEND_API_KEY\\b",
+      "mail.js: contains \\bSAMRA_LAUNCH_UPDATES_TEST_APPROVAL_ID\\b",
+      "mail.js: contains Resend API credential",
+      "mail.js: contains unexpected network origin https://api.resend.com",
+    ]);
+  });
   it("allows only the reviewed Google tag and privacy disclosure origins", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
     temporaryDirectories.push(root);

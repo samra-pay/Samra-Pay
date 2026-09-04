@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/launch-updates",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/server.mjs"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.mjs"
+  }
+}
