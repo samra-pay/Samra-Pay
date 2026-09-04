@@ -1,6 +1,11 @@
 **
 !Dockerfile
+!Dockerfile.waitlist
+!cloudbuild.waitlist.yaml
 !src/
 !src/server.mjs
 !src/resend.mjs
 !src/connection-test.mjs
+!src/public-server.mjs
+!src/public-waitlist-service.mjs
+!src/waitlist-resend.mjs

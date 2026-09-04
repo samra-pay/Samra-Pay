@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   ArrowRight,
   Gift,
@@ -18,11 +19,14 @@ import {
 } from "@/components/coming-soon-shell";
 import { OptimizedPicture } from "@/components/optimized-picture";
 import { PublicFaqAccordion } from "@/components/public-faq";
-import { LaunchUpdatesForm } from "@/components/launch-updates-form";
 import { homeFaqItems } from "@/content/public-faq";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 import { usePublicPageMeta } from "@/lib/public-page-meta";
 import "./coming-soon.css";
+
+const LaunchUpdatesForm = lazy(
+  () => import("@/components/launch-updates-form"),
+);
 
 const homeMeta = {
   title: localized(
@@ -175,7 +179,17 @@ export default function Home() {
                 ),
               )}
             </p>
-            <LaunchUpdatesForm />
+            <Suspense
+              fallback={
+                <div
+                  className="launch-updates launch-updates-loading"
+                  id="launch-updates"
+                  aria-hidden="true"
+                />
+              }
+            >
+              <LaunchUpdatesForm />
+            </Suspense>
             <a className="coming-hero-explore" href="/features">
               {text(localized("Explore the card portfolio", "የካርድ ስብስቡን ያስሱ"))}
               <ArrowRight aria-hidden="true" />

@@ -81,7 +81,7 @@ describe("public build boundary", () => {
     ]);
   });
 
-  it("rejects email collection from the static informational release", async () => {
+  it("allows the reviewed same-origin waitlist route while rejecting retired signup copy", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "samra-public-build-"));
     temporaryDirectories.push(root);
     await mkdir(path.join(root, "assets"));
@@ -91,7 +91,6 @@ describe("public build boundary", () => {
     );
 
     await expect(inspectPublicBuild(root)).resolves.toEqual([
-      "assets/home-123.js: contains \\/api\\/v1\\/waitlist\\/subscriptions",
       "assets/home-123.js: contains Preview Alpha signup",
     ]);
   });

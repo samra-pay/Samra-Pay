@@ -188,15 +188,17 @@
     "changesAuthorized": false
   },
   "staticInformationalOverride": {
-    "decisionStatus": "approved-for-exact-sha-release",
-    "approvedOn": "2026-08-31",
+    "decisionStatus": "superseded-by-controlled-waitlist-pr",
+    "approvedOn": "2026-09-04",
     "linkedContract": "deploy/gcp/coming-soon-static-hosting.json",
     "hostingProvider": "firebase-hosting",
     "publicInformationOnly": true,
-    "emailCollection": false,
-    "apiDeployment": false,
+    "emailCollection": true,
+    "apiDeployment": true,
     "databaseUse": false,
-    "vendorActivation": false,
+    "vendorActivation": "resend-contacts-only",
+    "automaticEmailSending": false,
+    "deploymentAuthorized": false,
     "supersedesInteractiveLaunch": false
   },
   "blockedOn": [

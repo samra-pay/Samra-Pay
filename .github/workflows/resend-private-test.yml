@@ -1,10 +1,15 @@
-name: Resend private test preparation
+name: Resend launch updates review
 
 on:
   pull_request:
     branches: [main]
     paths:
       - "lib/launch-updates/**"
+      - "artifacts/samra-pay/**"
+      - "deploy/gcp/activate-public-waitlist-release.sh"
+      - "deploy/gcp/coming-soon-static-hosting*"
+      - "deploy/gcp/validate-coming-soon-static-hosting.mjs"
+      - "firebase.json"
       - ".github/workflows/resend-private-test.yml"
   workflow_dispatch:
 
@@ -17,7 +22,7 @@ concurrency:
 
 jobs:
   offline-test:
-    name: Offline email tests and disabled container
+    name: Offline email tests and isolated containers
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,6 +38,11 @@ jobs:
         run: node --test lib/launch-updates/src/*.test.mjs
       - name: Build a local-only review image from the allowlisted context
         run: docker build --pull --network=none --tag samra-resend-test:review lib/launch-updates
+      - name: Build the public waitlist review image from the allowlisted context
+        run: >-
+          docker build --pull --network=none
+          --file lib/launch-updates/Dockerfile.waitlist
+          --tag samra-public-waitlist:review lib/launch-updates
       - name: Verify the image runs as a non-root user
         run: >-
           timeout 20s docker run --rm --network=none --read-only
@@ -57,3 +67,19 @@ jobs:
               });
               console.log("Disabled container verified; no provider request.");
             '
+      - name: Verify the public container is non-root and fails closed without configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 20s docker run --rm --network=none --read-only \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit=64 --memory=128m --cpus=1 \
+            --entrypoint node samra-public-waitlist:review \
+            -e 'const ids = [process.getuid(), process.geteuid()]; if (ids.some(id => !Number.isInteger(id) || id <= 0)) process.exit(1); console.log("Non-root public runtime verified.");'
+          if timeout 20s docker run --rm --network=none --read-only \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit=64 --memory=128m --cpus=1 \
+            samra-public-waitlist:review; then
+            echo "Public container unexpectedly started without configuration." >&2
+            exit 1
+          fi

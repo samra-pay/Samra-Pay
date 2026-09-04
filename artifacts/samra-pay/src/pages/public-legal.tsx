@@ -48,22 +48,22 @@ const legalContent: Record<
       {
         title: localized("What this website stores", "ይህ ድረ ገጽ የሚያከማቸው"),
         body: localized(
-          "The language switch stores your English or Amharic preference in your browser. Analytics preferences are stored separately. This website does not request identity documents, account credentials, bank details, or payment information.",
-          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ያስቀምጣል። የትንታኔ ምርጫዎች በተለየ ይቀመጣሉ። ይህ ድረ ገጽ የማንነት ሰነዶችን፣ የአካውንት ማስረጃዎችን፣ የባንክ ዝርዝሮችን ወይም የክፍያ መረጃን አይጠይቅም።",
+          "The language switch stores your English or Amharic preference in your browser. Analytics preferences are stored separately. If you ask for updates, we collect only the email address you enter. This website does not request identity documents, account credentials, bank details, or payment information.",
+          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ያስቀምጣል። የትንታኔ ምርጫዎች በተለየ ይቀመጣሉ። መረጃ እንዲደርስዎ ከጠየቁ ያስገቡትን የኢሜይል አድራሻ ብቻ እንሰበስባለን። ይህ ድረ ገጽ የማንነት ሰነዶችን፣ የአካውንት ማስረጃዎችን፣ የባንክ ዝርዝሮችን ወይም የክፍያ መረጃን አይጠይቅም።",
         ),
       },
       {
         title: localized("Email updates", "የኢሜይል መረጃ"),
         body: localized(
-          "Email updates require a separate, voluntary choice. While sign-up is being connected, the form is disabled on public hosts. The local review form does not save or transmit addresses. Before collection begins, this notice will identify the email provider, use of your address, retention, and unsubscribe process.",
-          "የኢሜይል መረጃ የተለየ የፈቃደኝነት ምርጫ ይፈልጋል። ምዝገባው እየተገናኘ ባለበት ጊዜ ቅጹ በሕዝብ ድረ ገጾች ተዘግቷል። የአካባቢ ሙከራ ቅጹ አድራሻዎችን አያስቀምጥም ወይም አያስተላልፍም። መረጃ ከመሰብሰብ በፊት ይህ ማስታወቂያ የኢሜይል አቅራቢውን፣ የአድራሻ አጠቃቀምን፣ የማቆያ ጊዜንና ምዝገባ የማቋረጥ ሂደትን ይገልጻል።",
+          "Email updates require a separate, voluntary choice. When you submit the form, your address is sent to Resend, our email provider, and added to the Samra Pay pre-launch list for product and availability updates. We keep it until you unsubscribe or ask us to delete it. Each marketing email will include an unsubscribe option; Resend may retain a suppression record so we honor that choice. Email signup does not create a Samra Pay account or application.",
+          "የኢሜይል መረጃ የተለየ የፈቃደኝነት ምርጫ ይፈልጋል። ቅጹን ሲልኩ አድራሻዎ ወደ የኢሜይል አቅራቢያችን Resend ይላካል እና ለምርትና ለአቅርቦት መረጃ ወደ Samra Pay የቅድመ ማስጀመሪያ ዝርዝር ይጨመራል። ምዝገባዎን እስኪያቋርጡ ወይም እንድናጥፈው እስኪጠይቁ ድረስ እናስቀምጠዋለን። እያንዳንዱ የግብይት ኢሜይል ምዝገባ ማቋረጫ ይኖረዋል፤ Resend ምርጫዎን ለማክበር የማገጃ መዝገብ ሊያቆይ ይችላል። የኢሜይል ምዝገባ የSamra Pay አካውንት ወይም ማመልከቻ አይፈጥርም።",
         ),
       },
       {
         title: localized("Standard website data", "መደበኛ የድረ ገጽ መረጃ"),
         body: localized(
-          "Google-hosted delivery and security systems may process ordinary request data such as an IP address, browser type, requested page, and timestamp to deliver and protect the site. A separate privacy notice will govern any future signup or financial service.",
-          "በGoogle የሚስተናገዱ የማቅረቢያና የደህንነት ስርዓቶች ድረ ገጹን ለማቅረብና ለመጠበቅ እንደ IP አድራሻ፣ የአሳሽ ዓይነት፣ የተጠየቀው ገጽና የጊዜ ማህተም ያሉ መደበኛ የጥያቄ መረጃዎችን ሊያስኬዱ ይችላሉ። ማንኛውም የወደፊት ምዝገባ ወይም የፋይናንስ አገልግሎት በተለየ የግላዊነት ማስታወቂያ ይመራል።",
+          "Google-hosted delivery and security systems may process ordinary request data such as an IP address, browser type, requested page, and timestamp to deliver and protect the site and waitlist endpoint. A separate privacy notice will govern any future financial-service application.",
+          "በGoogle የሚስተናገዱ የማቅረቢያና የደህንነት ስርዓቶች ድረ ገጹንና የቅድመ ምዝገባ መገናኛውን ለማቅረብና ለመጠበቅ እንደ IP አድራሻ፣ የአሳሽ ዓይነት፣ የተጠየቀው ገጽና የጊዜ ማህተም ያሉ መደበኛ የጥያቄ መረጃዎችን ሊያስኬዱ ይችላሉ። ማንኛውም የወደፊት የፋይናንስ አገልግሎት ማመልከቻ በተለየ የግላዊነት ማስታወቂያ ይመራል።",
         ),
       },
       {
