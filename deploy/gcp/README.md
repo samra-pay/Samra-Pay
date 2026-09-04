@@ -28,6 +28,12 @@ Cloud Run public access uses the provider-recommended disabled Invoker IAM check
 and rejects `allUsers` or `allAuthenticatedUsers` service IAM bindings. This is
 compatible with domain-restricted sharing without weakening that
 organization-wide control when the policy is enforced.
+The public service and deployment controller use `GET /health`, which returns
+`{"status":"ok"}` without contacting Resend. Do not rename it to `/healthz`:
+Cloud Run reserves some paths ending in `z` and can return a frontend 404 before
+the request reaches the container. See Google's
+[reserved URL paths](https://docs.cloud.google.com/run/docs/known-issues#reserved-url-paths).
+The exact health response is required before Firebase Hosting is published.
 Before uploading a build, the controller verifies that the dedicated keyless
 production build identity retains only its two expected project roles and that
 the existing `gs://samra-pay-production_cloudbuild` source bucket is not

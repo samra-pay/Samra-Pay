@@ -207,6 +207,22 @@ test("keeps the service build context allowlisted and non-root", async () => {
   assert.match(cloudbuild, /requestedVerifyOption: VERIFIED/u);
 });
 
+test("checks a non-reserved health path before publishing hosting", async () => {
+  const source = await readFile(
+    "deploy/gcp/activate-public-waitlist-release.sh",
+    "utf8",
+  );
+  const healthCheck = source.indexOf('"${SERVICE_URL}/health"');
+  const healthFailure = source.indexOf(
+    "STOP: Cloud Run health verification failed",
+  );
+  const hostingDeploy = source.indexOf("firebase deploy --only hosting");
+  assert.ok(healthCheck >= 0, "the controller must request /health");
+  assert.ok(healthCheck < healthFailure);
+  assert.ok(healthFailure < hostingDeploy);
+  assert.doesNotMatch(source, /\$\{SERVICE_URL\}\/healthz/u);
+});
+
 test("keeps planning local and deployment separately authorized", async () => {
   const script = "deploy/gcp/activate-public-waitlist-release.sh";
   const output = execFileSync("bash", [script, "--plan"], {
@@ -266,8 +282,7 @@ test("keeps planning local and deployment separately authorized", async () => {
   assert.ok(sourceAccessApply >= 0);
   assert.ok(sourceAccessApply < buildSubmit);
   assert.ok(
-    sourceAccessApply >
-      source.indexOf("SAMRA_GCP_PUBLIC_WAITLIST_APPLY"),
+    sourceAccessApply > source.indexOf("SAMRA_GCP_PUBLIC_WAITLIST_APPLY"),
   );
   assert.match(source, /--member="\$\{BUILD_MEMBER\}"/u);
   assert.match(source, /--role="\$\{BUILD_SOURCE_ROLE\}"/u);
