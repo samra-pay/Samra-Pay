@@ -24,6 +24,10 @@ scale-to-zero Cloud Run service that can only get or create Resend Contacts in
 the configured Segment and Topic. It deploys no Samra database path, account,
 authentication, KYC, wallet, money movement, application flow, or automatic
 email. Deployment remains separately authorized and makes no DNS change.
+Cloud Run public access uses the provider-recommended disabled Invoker IAM check
+and rejects `allUsers` or `allAuthenticatedUsers` service IAM bindings. This is
+compatible with domain-restricted sharing without weakening that
+organization-wide control when the policy is enforced.
 Before uploading a build, the controller verifies that the dedicated keyless
 production build identity retains only its two expected project roles and that
 the existing `gs://samra-pay-production_cloudbuild` source bucket is not

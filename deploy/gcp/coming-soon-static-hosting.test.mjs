@@ -74,6 +74,8 @@ test("rejects product, database, sending, identity, cost, and DNS expansion", ()
       (value.waitlistService.buildSourceBucketRole =
         "roles/storage.objectAdmin"),
     (value) => (value.waitlistService.projectLevelStorageRoleAllowed = true),
+    (value) => (value.waitlistService.invokerIamCheckEnabled = true),
+    (value) => (value.waitlistService.publicIamPrincipalAllowed = true),
     (value) => (value.waitlistService.vpcAccess = true),
     (value) => (value.waitlistService.rawEmailLogsAllowed = true),
     (value) => (value.waitlistService.resubscribeUnsubscribedContact = true),
@@ -241,6 +243,11 @@ test("keeps planning local and deployment separately authorized", async () => {
   assert.match(source, /allUsers/u);
   assert.match(source, /allAuthenticatedUsers/u);
   assert.match(source, /condition/u);
+  assert.match(source, /--no-invoker-iam-check/u);
+  assert.match(source, /run\.googleapis\.com\/invoker-iam-disabled/u);
+  assert.match(source, /gcloud run services get-iam-policy/u);
+  assert.match(source, /Cloud Run service has a public IAM principal binding/u);
+  assert.doesNotMatch(source, /--allow-unauthenticated/u);
   assert.match(source, /--concurrency=2/u);
   assert.match(source, /No contact was created and no email was sent/u);
   assert.doesNotMatch(source, / \+\s+--/u);
