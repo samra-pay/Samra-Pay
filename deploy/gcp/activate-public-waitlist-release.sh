@@ -72,6 +72,9 @@ SERVICE="samra-launch-updates"
 RUNTIME_SERVICE_ACCOUNT_ID="samra-launch-updates"
 RUNTIME_SERVICE_ACCOUNT="${RUNTIME_SERVICE_ACCOUNT_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
 BUILD_SERVICE_ACCOUNT="samra-cloud-build-production@${PROJECT_ID}.iam.gserviceaccount.com"
+SOURCE_BUCKET="${PROJECT_ID}_cloudbuild"
+BUILD_MEMBER="serviceAccount:${BUILD_SERVICE_ACCOUNT}"
+BUILD_SOURCE_ROLE="roles/storage.objectViewer"
 REPOSITORY="samra-production"
 SECRET="samra-production-resend-api-key"
 SECRET_VERSION="1"
@@ -159,6 +162,72 @@ gcloud iam service-accounts describe "${BUILD_SERVICE_ACCOUNT}" \
   echo "STOP: production build identity has a user-managed key" >&2
   exit 1
 }
+
+gcloud projects get-iam-policy "${PROJECT_ID}" --format=json | \
+  node -e '
+    const fs = require("fs");
+    const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+    const expectedMember = process.argv[1];
+    const actual = [];
+    for (const binding of policy.bindings || []) {
+      if ((binding.members || []).includes(expectedMember)) {
+        actual.push({
+          role: binding.role,
+          condition: binding.condition ?? null,
+        });
+      }
+    }
+    actual.sort((left, right) => left.role.localeCompare(right.role));
+    const expected = [
+      { role: "roles/logging.logWriter", condition: null },
+      { role: "roles/serviceusage.serviceUsageConsumer", condition: null },
+    ];
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      process.stderr.write("STOP: production build identity project IAM drifted\n");
+      process.exit(1);
+    }
+  ' "${BUILD_MEMBER}"
+
+BUCKET_NAME="$(gcloud storage buckets describe "gs://${SOURCE_BUCKET}" --format='value(name)')"
+[[ "${BUCKET_NAME}" == "${SOURCE_BUCKET}" || "${BUCKET_NAME}" == "projects/_/buckets/${SOURCE_BUCKET}" ]] || {
+  echo "STOP: exact Cloud Build source bucket is missing" >&2
+  exit 1
+}
+
+inspect_build_source_policy() {
+  gcloud storage buckets get-iam-policy "gs://${SOURCE_BUCKET}" --format=json | \
+    node -e '
+      const fs = require("fs");
+      const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+      const expectedMember = process.argv[1];
+      const expectedRole = process.argv[2];
+      const publicMembers = new Set(["allUsers", "allAuthenticatedUsers"]);
+      const bindings = policy.bindings || [];
+      if (bindings.some((binding) =>
+        (binding.members || []).some((member) => publicMembers.has(member)))) {
+        process.stderr.write("STOP: Cloud Build source bucket has public IAM\n");
+        process.exit(1);
+      }
+      const actual = bindings
+        .filter((binding) => (binding.members || []).includes(expectedMember))
+        .map((binding) => ({
+          role: binding.role,
+          condition: binding.condition ?? null,
+        }));
+      if (actual.length === 0) {
+        process.stdout.write("missing");
+        process.exit(0);
+      }
+      const expected = [{ role: expectedRole, condition: null }];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        process.stderr.write("STOP: production build identity source-bucket IAM is broader than the reviewed binding or otherwise drifted\n");
+        process.exit(1);
+      }
+      process.stdout.write("ready");
+    ' "${BUILD_MEMBER}" "${BUILD_SOURCE_ROLE}"
+}
+
+BUILD_SOURCE_ACCESS_STATE="$(inspect_build_source_policy)"
 gcloud secrets describe "${SECRET}" \
   --project="${PROJECT_ID}" --format=json >/dev/null
 SECRET_STATE="$(gcloud secrets versions describe "${SECRET_VERSION}" \
@@ -209,6 +278,8 @@ echo "READ-ONLY PUBLIC WAITLIST REVIEW PASS"
 echo "Source: ${EXPECTED_SHA}"
 echo "Project: ${PROJECT_ID} (${PROJECT_NUMBER})"
 echo "Resend secret: pinned version 1 enabled; payload not read"
+echo "Build source bucket: gs://${SOURCE_BUCKET}"
+echo "Build source access: ${BUILD_SOURCE_ACCESS_STATE}"
 echo "Runtime identity: ${RUNTIME_IDENTITY_STATE}"
 echo "Cloud Run service: ${SERVICE_STATE}"
 echo "Build: website and waitlist tests passed"
@@ -226,6 +297,19 @@ node --input-type=module -e '
     requireApplyAuthorization: true,
   });
 ' "file://${ROOT_DIR}/deploy/gcp/validate-coming-soon-static-hosting.mjs"
+
+if [[ "${BUILD_SOURCE_ACCESS_STATE}" == "missing" ]]; then
+  gcloud storage buckets add-iam-policy-binding "gs://${SOURCE_BUCKET}" \
+    --member="${BUILD_MEMBER}" \
+    --role="${BUILD_SOURCE_ROLE}" \
+    --condition=None \
+    --quiet >/dev/null
+fi
+
+[[ "$(inspect_build_source_policy)" == "ready" ]] || {
+  echo "STOP: exact Cloud Build source-bucket binding was not verified after apply" >&2
+  exit 1
+}
 
 if [[ "${RUNTIME_IDENTITY_STATE}" == "missing" ]]; then
   gcloud iam service-accounts create "${RUNTIME_SERVICE_ACCOUNT_ID}" \
