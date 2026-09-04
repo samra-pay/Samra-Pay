@@ -164,6 +164,11 @@ export function validateComingSoonStaticHosting(
       service.serviceId === hosting.serviceId &&
       service.runtimeServiceAccount ===
         "samra-launch-updates@samra-pay-production.iam.gserviceaccount.com" &&
+      service.buildServiceAccount ===
+        "samra-cloud-build-production@samra-pay-production.iam.gserviceaccount.com" &&
+      service.buildSourceBucket === "samra-pay-production_cloudbuild" &&
+      service.buildSourceBucketRole === "roles/storage.objectViewer" &&
+      service.projectLevelStorageRoleAllowed === false &&
       service.imageRepository ===
         "us-east4-docker.pkg.dev/samra-pay-production/samra-production/samra-launch-updates" &&
       service.imageDigestRequiredForReview === true &&

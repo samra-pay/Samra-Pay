@@ -64,6 +64,16 @@ test("rejects product, database, sending, identity, cost, and DNS expansion", ()
     (value) => (value.waitlistService.concurrency = 20),
     (value) => (value.waitlistService.providerMinimumIntervalMs = 0),
     (value) => (value.waitlistService.secretVersion = "latest"),
+    (value) =>
+      (value.waitlistService.buildServiceAccount =
+        "samra-cloud-build-staging@samra-pay-staging.iam.gserviceaccount.com"),
+    (value) =>
+      (value.waitlistService.buildSourceBucket =
+        "samra-pay-staging_cloudbuild"),
+    (value) =>
+      (value.waitlistService.buildSourceBucketRole =
+        "roles/storage.objectAdmin"),
+    (value) => (value.waitlistService.projectLevelStorageRoleAllowed = true),
     (value) => (value.waitlistService.vpcAccess = true),
     (value) => (value.waitlistService.rawEmailLogsAllowed = true),
     (value) => (value.waitlistService.resubscribeUnsubscribedContact = true),
@@ -223,6 +233,14 @@ test("keeps planning local and deployment separately authorized", async () => {
   assert.match(source, /samra-production-resend-api-key/u);
   assert.match(source, /value\(parent\.id\)/u);
   assert.match(source, /value\(dockerConfig\.immutableTags\)/u);
+  assert.match(source, /SOURCE_BUCKET="\$\{PROJECT_ID\}_cloudbuild"/u);
+  assert.match(source, /BUILD_SOURCE_ROLE="roles\/storage\.objectViewer"/u);
+  assert.match(source, /gcloud projects get-iam-policy/u);
+  assert.match(source, /gcloud storage buckets describe/u);
+  assert.match(source, /gcloud storage buckets get-iam-policy/u);
+  assert.match(source, /allUsers/u);
+  assert.match(source, /allAuthenticatedUsers/u);
+  assert.match(source, /condition/u);
   assert.match(source, /--concurrency=2/u);
   assert.match(source, /No contact was created and no email was sent/u);
   assert.doesNotMatch(source, / \+\s+--/u);
@@ -230,6 +248,23 @@ test("keeps planning local and deployment separately authorized", async () => {
     source,
     /sql users create|sql databases create|secrets versions access|firestore databases create|auth:import/iu,
   );
+  assert.doesNotMatch(
+    source,
+    /gcloud projects add-iam-policy-binding|roles\/storage\.(?:admin|objectAdmin|objectUser)/iu,
+  );
+  const sourceAccessApply = source.indexOf(
+    'gcloud storage buckets add-iam-policy-binding "gs://${SOURCE_BUCKET}"',
+  );
+  const buildSubmit = source.indexOf("gcloud builds submit");
+  assert.ok(sourceAccessApply >= 0);
+  assert.ok(sourceAccessApply < buildSubmit);
+  assert.ok(
+    sourceAccessApply >
+      source.indexOf("SAMRA_GCP_PUBLIC_WAITLIST_APPLY"),
+  );
+  assert.match(source, /--member="\$\{BUILD_MEMBER\}"/u);
+  assert.match(source, /--role="\$\{BUILD_SOURCE_ROLE\}"/u);
+  assert.match(source, /--condition=None/u);
 
   const legacy = await readFile(
     "deploy/gcp/activate-coming-soon-static-hosting.sh",

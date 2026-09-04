@@ -24,6 +24,12 @@ scale-to-zero Cloud Run service that can only get or create Resend Contacts in
 the configured Segment and Topic. It deploys no Samra database path, account,
 authentication, KYC, wallet, money movement, application flow, or automatic
 email. Deployment remains separately authorized and makes no DNS change.
+Before uploading a build, the controller verifies that the dedicated keyless
+production build identity retains only its two expected project roles and that
+the existing `gs://samra-pay-production_cloudbuild` source bucket is not
+public. If the identity has no bucket binding, an explicitly authorized apply
+can add only unconditioned `roles/storage.objectViewer` on that exact bucket.
+Any conditional, broader, public, or project-level storage access fails closed.
 
 `review-coming-soon-production.sh --plan` locks the production boundary without
 reading cloud state: project `samra-pay-production` (`382465561715`), region
