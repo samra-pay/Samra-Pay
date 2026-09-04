@@ -49,7 +49,9 @@ test("rejects data collection, product activation, cost, and DNS drift", () => {
       (value.productionBoundary.monthlyInfrastructureHardStopUsd = 101),
     (value) => (value.hosting.provider = "cloud-run"),
     (value) => (value.hosting.projectAliasFileAllowed = true),
-    (value) => (value.publicBoundary.formsAllowed = true),
+    (value) => (value.publicBoundary.formsAllowed = false),
+    (value) => (value.publicBoundary.emailInputsDisabledOutsideLoopback = false),
+    (value) => (value.commercialSiteAmendment.resendActivationAllowed = true),
     (value) => (value.publicBoundary.emailCollectionAllowed = true),
     (value) => value.publicBoundary.apiRoutes.push("POST /waitlist"),
     (value) => (value.publicBoundary.databaseAccess = true),
@@ -279,19 +281,23 @@ test("fails closed when routed HTML or immutable asset caching drifts", () => {
   }
 });
 
-test("keeps the public source informational and free of signup controls", async () => {
+test("keeps the public source informational and the presentation form disabled outside loopback", async () => {
   const sourceFiles = await Promise.all(
     [
       "../../artifacts/samra-pay/src/pages/home.tsx",
       "../../artifacts/samra-pay/src/pages/faq.tsx",
       "../../artifacts/samra-pay/src/pages/blog.tsx",
+      "../../artifacts/samra-pay/src/components/launch-updates-form.tsx",
     ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
   );
   const source = sourceFiles.join("\n");
-  assert.doesNotMatch(source, /<form\b|type=["']email["']/iu);
+  assert.match(source, /<form\b[\s\S]*type=["']email["']/iu);
+  assert.match(source, /disabled=\{!preview\}/u);
+  assert.match(source, /isLocalUpdatesPreview\(window\.location\.hostname\)/u);
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage/iu);
   assert.doesNotMatch(source, /\/api\/v1\/waitlist\/subscriptions/iu);
   assert.doesNotMatch(source, /Preview Alpha signup/iu);
-  assert.match(source, /informational only/iu);
+  assert.match(source, /presentation-only/iu);
 });
 
 test("generates platform-specific image derivatives outside release source", async () => {
