@@ -174,6 +174,8 @@ export function validateComingSoonStaticHosting(
       service.imageDigestRequiredForReview === true &&
       service.ingress === "all" &&
       service.unauthenticated === true &&
+      service.invokerIamCheckEnabled === false &&
+      service.publicIamPrincipalAllowed === false &&
       service.minInstances === 0 &&
       service.maxInstances === 1 &&
       service.concurrency === 2 &&

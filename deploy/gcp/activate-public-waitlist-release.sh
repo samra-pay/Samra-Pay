@@ -84,6 +84,7 @@ SITE_ID="samra-pay-production"
 PUBLIC_URL="https://${SITE_ID}.web.app"
 CANONICAL_URL="https://www.samrapay.com"
 RESEND_CONFIRMATION="CONFIRMED_RESEND_SEGMENT_TOPIC_AND_FULL_ACCESS_KEY"
+INVOKER_IAM_ANNOTATION="run.googleapis.com/invoker-iam-disabled"
 
 [[ "${SAMRA_RESEND_CONFIGURATION_CONFIRMED}" == "${RESEND_CONFIRMATION}" ]] || {
   echo "STOP: confirm the exact Resend segment, topic, and full-access key before review" >&2
@@ -249,27 +250,54 @@ if gcloud iam service-accounts describe "${RUNTIME_SERVICE_ACCOUNT}" \
   }
 fi
 
+inspect_service_json() {
+  node -e '
+    let input = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => { input += chunk; });
+    process.stdin.on("end", () => {
+      const metadata = JSON.parse(input).metadata ?? {};
+      const labels = metadata.labels ?? {};
+      if (
+        labels["samra-component"] !== "public-waitlist" ||
+        labels.environment !== "production"
+      ) process.exit(2);
+      const value = metadata.annotations?.[process.argv[1]];
+      if (value === "true") process.stdout.write("public");
+      else if (value === undefined || value === "false")
+        process.stdout.write("private");
+      else process.exit(3);
+    });
+  ' "${INVOKER_IAM_ANNOTATION}"
+}
+
+assert_no_public_service_iam() {
+  gcloud run services get-iam-policy "${SERVICE}" \
+    --project="${PROJECT_ID}" --region="${REGION}" --format=json | \
+    node -e '
+      const fs = require("fs");
+      const policy = JSON.parse(fs.readFileSync(0, "utf8"));
+      const publicMembers = new Set(["allUsers", "allAuthenticatedUsers"]);
+      if ((policy.bindings || []).some((binding) =>
+        (binding.members || []).some((member) => publicMembers.has(member)))) {
+        process.stderr.write("STOP: Cloud Run service has a public IAM principal binding\n");
+        process.exit(1);
+      }
+    '
+}
+
 SERVICE_STATE="missing"
+SERVICE_ACCESS_STATE="missing"
 if SERVICE_JSON="$(gcloud run services describe "${SERVICE}" \
   --project="${PROJECT_ID}" --region="${REGION}" --format=json 2>/dev/null)"; then
-  SERVICE_STATE="$(
-    printf '%s' "${SERVICE_JSON}" | node -e '
-      let input = "";
-      process.stdin.setEncoding("utf8");
-      process.stdin.on("data", (chunk) => { input += chunk; });
-      process.stdin.on("end", () => {
-        const labels = JSON.parse(input).metadata?.labels ?? {};
-        if (
-          labels["samra-component"] !== "public-waitlist" ||
-          labels.environment !== "production"
-        ) process.exit(2);
-        process.stdout.write("owned");
-      });
-    '
+  SERVICE_ACCESS_STATE="$(
+    printf '%s' "${SERVICE_JSON}" | inspect_service_json
   )" || {
-    echo "STOP: an unowned service already uses the name ${SERVICE}" >&2
+    echo "STOP: the existing Cloud Run service ownership or invoker configuration drifted" >&2
     exit 1
   }
+  SERVICE_STATE="owned"
+  assert_no_public_service_iam
 fi
 
 printf '%s\n' "${VALIDATED}"
@@ -282,6 +310,7 @@ echo "Build source bucket: gs://${SOURCE_BUCKET}"
 echo "Build source access: ${BUILD_SOURCE_ACCESS_STATE}"
 echo "Runtime identity: ${RUNTIME_IDENTITY_STATE}"
 echo "Cloud Run service: ${SERVICE_STATE}"
+echo "Cloud Run public access: ${SERVICE_ACCESS_STATE}"
 echo "Build: website and waitlist tests passed"
 echo "Boundary: email only; no database or automatic email sending"
 echo "Expected incremental monthly cost: USD 0 at low volume; usage dependent"
@@ -351,7 +380,7 @@ gcloud run deploy "${SERVICE}" \
   --image="${IMAGE}" \
   --service-account="${RUNTIME_SERVICE_ACCOUNT}" \
   --ingress=all \
-  --allow-unauthenticated \
+  --no-invoker-iam-check \
   --min-instances=0 \
   --max-instances=1 \
   --concurrency=2 \
@@ -363,8 +392,22 @@ gcloud run deploy "${SERVICE}" \
   --labels="samra-component=public-waitlist,environment=production,data_classification=email-marketing-contact" \
   --quiet
 
-SERVICE_URL="$(gcloud run services describe "${SERVICE}" \
-  --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)')"
+SERVICE_JSON="$(gcloud run services describe "${SERVICE}" \
+  --project="${PROJECT_ID}" --region="${REGION}" --format=json)"
+[[ "$(printf '%s' "${SERVICE_JSON}" | inspect_service_json)" == "public" ]] || {
+  echo "STOP: Cloud Run Invoker IAM check was not disabled after deployment" >&2
+  exit 1
+}
+assert_no_public_service_iam
+SERVICE_URL="$(printf '%s' "${SERVICE_JSON}" | node -e '
+  const fs = require("fs");
+  const value = JSON.parse(fs.readFileSync(0, "utf8")).status?.url ?? "";
+  process.stdout.write(value);
+')"
+[[ "${SERVICE_URL}" =~ ^https://[^/]+\.run\.app$ ]] || {
+  echo "STOP: Cloud Run service URL could not be verified" >&2
+  exit 1
+}
 [[ "$(curl --fail --silent --show-error --max-time 30 \
   "${SERVICE_URL}/healthz")" == '{"status":"ok"}' ]] || {
   echo "STOP: Cloud Run health verification failed; hosting was not changed" >&2
