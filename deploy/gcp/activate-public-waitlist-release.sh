@@ -409,7 +409,7 @@ SERVICE_URL="$(printf '%s' "${SERVICE_JSON}" | node -e '
   exit 1
 }
 [[ "$(curl --fail --silent --show-error --max-time 30 \
-  "${SERVICE_URL}/healthz")" == '{"status":"ok"}' ]] || {
+  "${SERVICE_URL}/health")" == '{"status":"ok"}' ]] || {
   echo "STOP: Cloud Run health verification failed; hosting was not changed" >&2
   exit 1
 }
