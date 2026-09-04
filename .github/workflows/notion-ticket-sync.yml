@@ -1,0 +1,36 @@
+name: Notion ticket sync
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Update linked Notion tickets (false performs read-only verification)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  statuses: read
+concurrency:
+  group: notion-ticket-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main' && vars.NOTION_SYNC_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Test sync logic without credentials
+        run: node --test scripts/notion/sync.test.mjs
+      - name: Sync linked tickets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_SYNC_APPLY: ${{ github.event_name == 'schedule' || inputs.apply }}
+        run: node scripts/notion/sync.mjs
