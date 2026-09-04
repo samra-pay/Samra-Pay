@@ -1,7 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
-import { subscribePublicWaitlist } from "@/lib/public-waitlist";
 
 export function LaunchUpdatesForm() {
   const { language, text } = usePublicLanguage();
@@ -31,6 +30,7 @@ export function LaunchUpdatesForm() {
     setServiceError(false);
     setStatus("submitting");
     try {
+      const { subscribePublicWaitlist } = await import("@/lib/public-waitlist");
       await subscribePublicWaitlist({
         email: address,
         locale: language,
@@ -183,3 +183,5 @@ export function LaunchUpdatesForm() {
     </section>
   );
 }
+
+export default LaunchUpdatesForm;

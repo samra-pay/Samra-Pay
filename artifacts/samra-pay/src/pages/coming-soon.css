@@ -188,6 +188,9 @@ body:has(.coming-soon-site),
   max-width: 540px;
   scroll-margin-top: 110px;
 }
+.launch-updates-loading {
+  min-height: 150px;
+}
 .launch-updates h2 {
   font: 600 1.15rem/1.35 var(--app-font-sans);
   margin: 0 0 12px;

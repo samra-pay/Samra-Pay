@@ -119,7 +119,7 @@ describe("launch updates waitlist", () => {
     await act(async () => consent().click());
     await submit();
 
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     const [, init] = fetchSpy.mock.calls[0]!;
     expect(JSON.parse(String(init.body))).toEqual({
       email: "reader@example.com",
@@ -142,6 +142,7 @@ describe("launch updates waitlist", () => {
     await act(async () => consent().click());
     await submit();
 
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     const [, init] = fetchSpy.mock.calls[0]!;
     expect(JSON.parse(String(init.body)).website).toBe("https://bot.example");
     expect(host.querySelector('[role="alert"]')?.textContent).toBe(
@@ -165,6 +166,7 @@ describe("launch updates waitlist", () => {
     await enter(email(), "reader@example.com");
     await act(async () => consent().click());
     await submit();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     expect(host.querySelector('[role="status"]')?.textContent).toContain(
       "በቅድመ ማስጀመሪያ ዝርዝሩ ውስጥ ገብተዋል።",
     );
