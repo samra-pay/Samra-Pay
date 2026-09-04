@@ -29,8 +29,8 @@ const editorialLanes = [
     icon: Compass,
     label: localized("Building Samra", "Samraን መገንባት"),
     title: localized(
-      "What we learn on the road to Alpha.",
-      "ወደ Alpha በምንጓዝበት መንገድ የምንማረው።",
+      "The people and decisions shaping our launch.",
+      "የምረቃ ጉዟችንን የሚቀርጹ ሰዎችና ውሳኔዎች።",
     ),
     body: localized(
       "Product decisions, lessons from the community, and the operating questions that must be answered before launch.",
@@ -163,8 +163,8 @@ export default function Blog() {
                 <span />
                 {text(
                   localized(
-                    "No posts published yet. The first founder note is in progress.",
-                    "እስካሁን የታተመ ጽሑፍ የለም። የመጀመሪያው የመስራች ማስታወሻ በዝግጅት ላይ ነው።",
+                    "Our first founder note is coming next.",
+                    "የመጀመሪያው የመስራች ማስታወሻችን ቀጣይ ይሆናል።",
                   ),
                 )}
               </div>

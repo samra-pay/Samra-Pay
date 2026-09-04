@@ -26,7 +26,7 @@ Cloud, DNS, API, database, customer-data, and vendor state changed: no
 
 The approved release serves only the reviewed static public bundle through
 Firebase Hosting. It deploys no Cloud Run workload, API, database credential,
-migration, form, email collection, customer authentication, KYC,
+migration, operational form, email collection, customer authentication, KYC,
 wallet, money movement, or financial vendor integration. The September 2
 amendment permits only consent-gated public website GA4 without advertising;
 it does not grant standing deployment authorization.
@@ -142,7 +142,7 @@ echo "Source: ${EXPECTED_SHA}"
 echo "Project: ${PROJECT_ID} (${SAMRA_GCP_PROJECT_NUMBER})"
 echo "Firebase linkage: $([[ "${PROJECT_LINKED}" == "true" ]] && echo ready || echo missing)"
 echo "Hosting site: $([[ "${SITE_PRESENT}" == "true" ]] && echo ready || echo missing)"
-echo "Build: public static bundle passed; form and waitlist endpoint absent"
+echo "Build: public static bundle passed; presentation form disabled publicly; waitlist endpoint absent"
 echo "Incremental expected monthly cost: USD 0 within no-cost allowances"
 echo "Existing guarded estimate: USD 81.92; total-estimate hard stop: USD 100"
 
@@ -326,6 +326,6 @@ echo "Source: ${EXPECTED_SHA}"
 echo "URLs: ${PUBLIC_URL}, ${CANONICAL_URL}"
 echo "Firebase apps created: 0"
 echo "Route HTML cache: no-store; exact hashed asset bytes: immutable"
-echo "Forms, email collection, API routes, database access, and vendor activations: 0"
+echo "Presentation-only disabled email form: 1; email collection, API routes, database access, and vendor activations: 0"
 echo "Cloud Run, Cloud SQL, secret, and customer-bucket resource counts: unchanged"
 echo "Squarespace DNS changes: 0"

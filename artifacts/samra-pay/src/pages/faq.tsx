@@ -81,8 +81,8 @@ export default function FaqPage() {
               <p>
                 {text(
                   localized(
-                    "Samra Pay is still in development. These answers describe the current direction—not live services, final terms, or confirmed availability.",
-                    "Samra Pay አሁንም በግንባታ ላይ ነው። እነዚህ መልሶች የአሁኑን አቅጣጫ ይገልጻሉ፤ ቀጥታ አገልግሎቶችን፣ የመጨረሻ ውሎችን ወይም የተረጋገጠ አቅርቦትን አይደለም።",
+                    "Get to know the cards, transfers, and everyday benefits at the heart of Samra Pay—and what to expect as we launch.",
+                    "የSamra Pay መሠረት የሆኑትን ካርዶች፣ ዝውውሮችና ዕለታዊ ጥቅሞች ይወቁ፤ ስንጀምርም ምን እንደሚጠብቁ ይረዱ።",
                   ),
                 )}
               </p>
@@ -90,8 +90,8 @@ export default function FaqPage() {
                 <ShieldCheck aria-hidden="true" />
                 {text(
                   localized(
-                    "Limited Alpha planned for the U.S. and Canada · April 2027",
-                    "የተወሰነ Alpha በU.S. እና Canada ታቅዷል · April 2027",
+                    "Launching for the U.S. and Canada. Connected to Ethiopia.",
+                    "ለአሜሪካና ካናዳ እየተዘጋጀ። ከኢትዮጵያ ጋር የተገናኘ።",
                   ),
                 )}
               </p>

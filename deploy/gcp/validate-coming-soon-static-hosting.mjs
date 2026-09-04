@@ -143,7 +143,10 @@ export function validateComingSoonStaticHosting(
   const publicBoundary = contract.publicBoundary;
   assert(
     publicBoundary.informationalOnly === true &&
-      publicBoundary.formsAllowed === false &&
+      publicBoundary.formsAllowed === true &&
+      publicBoundary.formsPurpose ===
+        "presentation-only-disabled-public-email-interest" &&
+      publicBoundary.emailInputsDisabledOutsideLoopback === true &&
       publicBoundary.emailCollectionAllowed === false &&
       publicBoundary.apiRoutes.length === 0 &&
       publicBoundary.databaseAccess === false &&
@@ -157,6 +160,20 @@ export function validateComingSoonStaticHosting(
       publicBoundary.moneyMovement === false &&
       publicBoundary.vendorActivation === false,
     "The static public surface gained unapproved data collection or an application dependency",
+  );
+
+  const commercial = contract.commercialSiteAmendment;
+  assert(
+    commercial?.approvedOn === "2026-09-04" &&
+      commercial.approvedBy === "David Haile" &&
+      commercial.status === "approved-for-release" &&
+      commercial.scope ===
+        "audited public commercial copy and design; retired Alpha language removed" &&
+      commercial.presentationOnlyEmailForm === true &&
+      commercial.emailInputsDisabledOutsideLoopback === true &&
+      commercial.emailCollectionAllowed === false &&
+      commercial.resendActivationAllowed === false,
+    "The approved commercial-site amendment drifted",
   );
 
   const amendment = contract.analyticsAmendment;

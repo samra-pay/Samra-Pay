@@ -208,10 +208,10 @@ async function generateOpenGraphImage() {
     .resize(1200, 630, { fit: "cover" })
     .png({
       palette: true,
-      colours: 128,
-      quality: 85,
+      colours: 32,
+      quality: 70,
       compressionLevel: 9,
-      dither: 0.5,
+      dither: 0,
     })
     .toBuffer();
   const fileName = `og-preview-${contentHash(output)}.png`;

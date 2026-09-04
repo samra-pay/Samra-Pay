@@ -27,6 +27,16 @@
     "retentionOwner": "David Haile",
     "releaseApprovalRequired": true
   },
+  "commercialSiteAmendment": {
+    "approvedOn": "2026-09-04",
+    "approvedBy": "David Haile",
+    "status": "approved-for-release",
+    "scope": "audited public commercial copy and design; retired Alpha language removed",
+    "presentationOnlyEmailForm": true,
+    "emailInputsDisabledOutsideLoopback": true,
+    "emailCollectionAllowed": false,
+    "resendActivationAllowed": false
+  },
   "source": {
     "repository": "haileleuld87/Samra-Pay",
     "canonicalDesign": "Sites project appgprj_6a938306c6c08191a5d582603a18a2fe",
@@ -60,7 +70,9 @@
   },
   "publicBoundary": {
     "informationalOnly": true,
-    "formsAllowed": false,
+    "formsAllowed": true,
+    "formsPurpose": "presentation-only-disabled-public-email-interest",
+    "emailInputsDisabledOutsideLoopback": true,
     "emailCollectionAllowed": false,
     "apiRoutes": [],
     "databaseAccess": false,
@@ -128,7 +140,7 @@
     "custom-domain HTTPS after DNS validation",
     "home, features, cards, values, FAQ, blog, privacy, and terms routes",
     "English and Amharic controls",
-    "no form or email input",
+    "presentation email form visible but disabled; no submission or collection",
     "no waitlist or API endpoint in the public bundle",
     "security headers",
     "no Google requests before consent or after rejection",

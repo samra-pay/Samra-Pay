@@ -31,25 +31,32 @@ const legalContent: Record<
   }
 > = {
   privacy: {
-    eyebrow: localized("Privacy preview", "የግላዊነት ቅድመ መረጃ"),
+    eyebrow: localized("Website privacy", "የድረ ገጽ ግላዊነት"),
     title: localized(
-      "Privacy starts before the product is live.",
-      "ግላዊነት ምርቱ ከመጀመሩ በፊት ይጀምራል።",
+      "Your privacy. Your choices.",
+      "የእርስዎ ግላዊነት። የእርስዎ ምርጫዎች።",
     ),
     deck: localized(
-      "This page explains how the current concept website behaves. It is not the final privacy notice for future financial services.",
-      "ይህ ገጽ የአሁኑ የማሳያ ድረ ገጽ እንዴት እንደሚሠራ ያብራራል። ለወደፊት የፋይናንስ አገልግሎቶች የመጨረሻ የግላዊነት ማስታወቂያ አይደለም።",
+      "Learn how this website handles information and how you control optional analytics. Product-specific privacy notices will accompany financial services as they launch.",
+      "ይህ ድረ ገጽ መረጃን እንዴት እንደሚያስተዳድርና አማራጭ ትንታኔን እንዴት እንደሚቆጣጠሩ ይወቁ። ከእያንዳንዱ የፋይናንስ አገልግሎት ምረቃ ጋር የምርቱ የግላዊነት ማስታወቂያ ይቀርባል።",
     ),
     metaDescription: localized(
-      "Privacy information for the Samra Pay concept website.",
-      "ለSamra Pay የማሳያ ድረ ገጽ የግላዊነት መረጃ።",
+      "Your information and privacy choices on the Samra Pay website.",
+      "በSamra Pay ድረ ገጽ ያለዎት መረጃና የግላዊነት ምርጫዎች።",
     ),
     sections: [
       {
         title: localized("What this website stores", "ይህ ድረ ገጽ የሚያከማቸው"),
         body: localized(
-          "The language switch stores your English or Amharic preference in your browser. The current informational website has no signup form and does not collect an email address, identity document, account credential, bank detail, or payment information.",
-          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ውስጥ ያስቀምጣል። የአሁኑ የመረጃ ድረ ገጽ የምዝገባ ቅጽ የለውም እና የኢሜይል አድራሻ፣ የማንነት ሰነድ፣ የአካውንት ማስረጃ፣ የባንክ ዝርዝር ወይም የክፍያ መረጃ አይሰበስብም።",
+          "The language switch stores your English or Amharic preference in your browser. Analytics preferences are stored separately. This website does not request identity documents, account credentials, bank details, or payment information.",
+          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ያስቀምጣል። የትንታኔ ምርጫዎች በተለየ ይቀመጣሉ። ይህ ድረ ገጽ የማንነት ሰነዶችን፣ የአካውንት ማስረጃዎችን፣ የባንክ ዝርዝሮችን ወይም የክፍያ መረጃን አይጠይቅም።",
+        ),
+      },
+      {
+        title: localized("Email updates", "የኢሜይል መረጃ"),
+        body: localized(
+          "Email updates require a separate, voluntary choice. While sign-up is being connected, the form is disabled on public hosts. The local review form does not save or transmit addresses. Before collection begins, this notice will identify the email provider, use of your address, retention, and unsubscribe process.",
+          "የኢሜይል መረጃ የተለየ የፈቃደኝነት ምርጫ ይፈልጋል። ምዝገባው እየተገናኘ ባለበት ጊዜ ቅጹ በሕዝብ ድረ ገጾች ተዘግቷል። የአካባቢ ሙከራ ቅጹ አድራሻዎችን አያስቀምጥም ወይም አያስተላልፍም። መረጃ ከመሰብሰብ በፊት ይህ ማስታወቂያ የኢሜይል አቅራቢውን፣ የአድራሻ አጠቃቀምን፣ የማቆያ ጊዜንና ምዝገባ የማቋረጥ ሂደትን ይገልጻል።",
         ),
       },
       {
@@ -86,25 +93,25 @@ const legalContent: Record<
     ],
   },
   terms: {
-    eyebrow: localized("Terms preview", "የውሎች ቅድመ መረጃ"),
+    eyebrow: localized("Website terms", "የድረ ገጽ ውሎች"),
     title: localized(
-      "A concept website, with clear limits.",
-      "ግልጽ ገደብ ያለው የማሳያ ድረ ገጽ።",
+      "A clear foundation for our relationship.",
+      "ለግንኙነታችን ግልጽ መሠረት።",
     ),
     deck: localized(
-      "These interim terms apply only to the current informational preview. Final product terms will be published before any financial service becomes available.",
-      "እነዚህ ጊዜያዊ ውሎች ለአሁኑ የመረጃ ማሳያ ብቻ ይሠራሉ። ማንኛውም የፋይናንስ አገልግሎት ከመገኘቱ በፊት የመጨረሻ የምርት ውሎች ይታተማሉ።",
+      "These terms cover your use of the Samra Pay website. Each financial product will have its own eligibility requirements, disclosures, and agreement at enrollment.",
+      "እነዚህ ውሎች የSamra Pay ድረ ገጽ አጠቃቀምዎን ይመለከታሉ። እያንዳንዱ የፋይናንስ ምርት በምዝገባ ወቅት የራሱ የብቁነት መስፈርቶች፣ መግለጫዎችና ስምምነት ይኖሩታል።",
     ),
     metaDescription: localized(
-      "Interim website terms for the Samra Pay concept preview.",
-      "ለSamra Pay የማሳያ ድረ ገጽ ጊዜያዊ ውሎች።",
+      "Terms for using the Samra Pay website and exploring our launch portfolio.",
+      "የSamra Pay ድረ ገጽን ለመጠቀምና የምርት ስብስባችንን ለማሰስ የሚመለከቱ ውሎች።",
     ),
     sections: [
       {
-        title: localized("No live financial service", "ቀጥታ የፋይናንስ አገልግሎት የለም"),
+        title: localized("Our launch portfolio", "የምረቃ ምርት ስብስባችን"),
         body: localized(
-          "This website does not open accounts, issue cards, transfer money, hold funds, provide credit, or accept investments. The visible products, pricing, rewards, partnerships, and timelines are proposed and may change.",
-          "ይህ ድረ ገጽ ሂሳብ አይከፍትም፣ ካርድ አያወጣም፣ ገንዘብ አያስተላልፍም፣ ገንዘብ አይዝም፣ ክሬዲት አይሰጥም ወይም ኢንቨስትመንት አይቀበልም። የሚታዩት ምርቶች፣ ዋጋዎች፣ ሽልማቶች፣ አጋርነቶችና የጊዜ ሰሌዳዎች የታቀዱ ናቸው፤ ሊለወጡም ይችላሉ።",
+          "The portfolio presents our future product direction. Proposed pricing, rewards, partnerships, and timing remain subject to final agreements and may change. Product access will require a separate application and acceptance of final terms through the applicable authorized provider. Website visits and email updates do not create an account, card membership, or investment.",
+          "ስብስቡ የወደፊት የምርት አቅጣጫችንን ያቀርባል። የታቀዱ ዋጋዎች፣ ሽልማቶች፣ አጋርነቶችና ጊዜዎች በመጨረሻ ስምምነቶች ይገዛሉ፤ ሊለወጡም ይችላሉ። የምርት መዳረሻ በተፈቀደው አቅራቢ በኩል የተለየ ማመልከቻና የመጨረሻ ውሎችን መቀበል ይፈልጋል። የድረ ገጽ ጉብኝትና የኢሜይል መረጃ አካውንት፣ የካርድ አባልነት ወይም ኢንቨስትመንት አይፈጥሩም።",
         ),
       },
       {
@@ -183,8 +190,8 @@ export default function PublicLegalPage() {
                 <ShieldCheck aria-hidden="true" />
                 {text(
                   localized(
-                    `Interim website notice · ${kind === "privacy" ? "September 2" : "August 31"}, 2026`,
-                    `ጊዜያዊ የድረ ገጽ ማስታወቂያ · ${kind === "privacy" ? "September 2" : "August 31"}, 2026`,
+                    "Website notice · September 3, 2026",
+                    "የድረ ገጽ ማስታወቂያ · September 3, 2026",
                   ),
                 )}
               </p>
@@ -202,8 +209,8 @@ export default function PublicLegalPage() {
               <p>
                 {text(
                   localized(
-                    "This notice covers the public concept website only.",
-                    "ይህ ማስታወቂያ የሕዝብ የማሳያ ድረ ገጽን ብቻ ይሸፍናል።",
+                    "This notice covers the Samra Pay website.",
+                    "ይህ ማስታወቂያ የSamra Pay ድረ ገጽን ይመለከታል።",
                   ),
                 )}
               </p>
@@ -219,7 +226,22 @@ export default function PublicLegalPage() {
                   <p>{text(section.body)}</p>
                 </section>
               ))}
-              {kind === "privacy" && <p><a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">{text(localized("How Google uses data from sites that use its services", "Google አገልግሎቶቹን ከሚጠቀሙ ድረ ገጾች መረጃን እንዴት እንደሚጠቀም"))}</a></p>}
+              {kind === "privacy" && (
+                <p>
+                  <a
+                    href="https://policies.google.com/technologies/partner-sites"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {text(
+                      localized(
+                        "How Google uses data from sites that use its services",
+                        "Google አገልግሎቶቹን ከሚጠቀሙ ድረ ገጾች መረጃን እንዴት እንደሚጠቀም",
+                      ),
+                    )}
+                  </a>
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -231,8 +253,8 @@ export default function PublicLegalPage() {
               <h2 id="legal-cta-title">
                 {text(
                   localized(
-                    "Return to the public preview.",
-                    "ወደ ሕዝብ ማሳያው ይመለሱ።",
+                    "Explore your next chapter.",
+                    "የሚቀጥለውን ምዕራፍዎን ያስሱ።",
                   ),
                 )}
               </h2>

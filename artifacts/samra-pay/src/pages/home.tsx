@@ -4,7 +4,6 @@ import {
   LockKeyhole,
   PieChart,
   Send,
-  ShieldCheck,
   TrendingUp,
 } from "lucide-react";
 import {
@@ -19,6 +18,7 @@ import {
 } from "@/components/coming-soon-shell";
 import { OptimizedPicture } from "@/components/optimized-picture";
 import { PublicFaqAccordion } from "@/components/public-faq";
+import { LaunchUpdatesForm } from "@/components/launch-updates-form";
 import { homeFaqItems } from "@/content/public-faq";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 import { usePublicPageMeta } from "@/lib/public-page-meta";
@@ -26,12 +26,12 @@ import "./coming-soon.css";
 
 const homeMeta = {
   title: localized(
-    "Samra Pay — U.S. & Canada Alpha, April 2027",
-    "Samra Pay — የU.S. እና Canada Alpha፣ April 2027",
+    "Samra Pay — Your next chapter, connected",
+    "Samra Pay — የሚቀጥለው ምዕራፍዎ፣ በግንኙነት",
   ),
   description: localized(
-    "Samra Pay is building a financial home for Ethiopians in the U.S. and Canada. Limited Alpha is planned for April 2027.",
-    "Samra Pay በU.S. እና Canada ለሚኖሩ ኢትዮጵያውያን የገንዘብ ቤት እየገነባ ነው። የተወሰነ Alpha በApril 2027 ለመጀመር ታቅዷል።",
+    "Connecting life in the U.S. and Canada with Ethiopia. Explore Samra Pay cards and launch news.",
+    "በአሜሪካና ካናዳ ያለውን ሕይወት ከኢትዮጵያ ጋር ማገናኘት። የSamra Pay ካርዶችንና የምረቃ ዜናን ያስሱ።",
   ),
 };
 
@@ -44,24 +44,24 @@ const siteContent = {
         "በዕለታዊ ክፍያዎች የክሬዲት ታሪክዎን ያጠናክሩ።",
       ),
       description: localized(
-        "Designed to help eligible payments you already make support your credit journey, with reporting and eligibility tailored to each market—without taking on unnecessary debt.",
-        "አስፈላጊ ያልሆነ ዕዳ ሳይወስዱ፣ አስቀድመው የሚከፍሏቸው ብቁ ክፍያዎች የክሬዲት ጉዞዎን እንዲደግፉ በየገበያው ሁኔታ የተነደፈ።",
+        "Turn eligible everyday payments into credit-building progress, subject to local reporting and enrollment terms.",
+        "ብቁ ዕለታዊ ክፍያዎችን ወደ የክሬዲት እድገት ይቀይሩ፤ በአካባቢው ሪፖርትና የምዝገባ ውሎች መሠረት።",
       ),
     },
     {
       icon: Send,
       title: localized("More value reaches home", "የበለጠ ዋጋ ወደ አገር ቤት ይድረስ።"),
       description: localized(
-        "See the rate, fees, delivery estimate, and amount your loved one is expected to receive before you send. We’re building toward highly competitive pricing with no last-step surprises.",
-        "ከመላክዎ በፊት የምንዛሬ ተመኑን፣ ክፍያውን፣ የመድረሻ ግምቱንና የሚወዱት ሰው የሚቀበለውን መጠን ይመልከቱ። በመጨረሻው ደረጃ ድንገተኛ ክፍያ የሌለበት ተወዳዳሪ ተመን እየገነባን ነው።",
+        "Clear rates, fees, and delivery estimates—before you send. Designed to keep more value in every connection home.",
+        "ከመላክዎ በፊት ግልጽ ተመን፣ ክፍያና የመድረሻ ግምት። ወደ ቤት በሚደረግ እያንዳንዱ ግንኙነት የበለጠ ዋጋ ለማድረስ የተነደፈ።",
       ),
     },
     {
       icon: Gift,
       title: localized("Rewards for everyday spending", "በዕለታዊ ወጪዎች ሽልማት ያግኙ።"),
       description: localized(
-        "Designed so eligible purchases can earn rewards that add value to life here and strengthen your connection to home.",
-        "ብቁ ግዢዎች እዚህ ለሚኖረው ሕይወትዎ ዋጋ የሚጨምሩና ከቤት ጋር ያለዎትን ግንኙነት የሚያጠናክሩ ሽልማቶችን እንዲያገኙ የተነደፈ።",
+        "Rewards designed for eligible everyday purchases and your next journey home.",
+        "ለብቁ ዕለታዊ ግዢዎችና ለሚቀጥለው የአገር ቤት ጉዞዎ የተዘጋጁ ሽልማቶች።",
       ),
     },
   ],
@@ -74,8 +74,8 @@ const siteContent = {
     {
       icon: Send,
       label: localized(
-        "See what is planned across the portfolio",
-        "በካርድ ስብስቡ ውስጥ የታቀደውን ይመልከቱ",
+        "Discover the everyday essentials",
+        "የዕለት ተዕለት አስፈላጊ ባህሪያትን ይወቁ",
       ),
       href: "/features#included-title",
     },
@@ -90,8 +90,8 @@ const siteContent = {
     {
       icon: PieChart,
       label: localized(
-        "Understand what is still in development",
-        "አሁንም በልማት ላይ ያለውን ይረዱ",
+        "Get the details behind the benefits",
+        "ከጥቅሞቹ ጀርባ ያሉትን ዝርዝሮች ይወቁ",
       ),
       href: "/features#disclosure-title",
     },
@@ -149,8 +149,8 @@ export default function Home() {
               <span aria-hidden="true" />
               {text(
                 localized(
-                  "Alpha planned for April 2027",
-                  "Alpha ለApril 2027 ታቅዷል",
+                  "Your next chapter starts here",
+                  "የሚቀጥለው ምዕራፍዎ እዚህ ይጀምራል",
                 ),
               )}
             </div>
@@ -175,31 +175,11 @@ export default function Home() {
                 ),
               )}
             </p>
-            <div
-              className="static-launch-actions"
-              aria-label={text(
-                localized("Explore Samra Pay", "Samra Payን ያስሱ"),
-              )}
-            >
-              <a className="static-launch-primary" href="/features">
-                {text(
-                  localized("Explore what we’re building", "እየገነባን ያለነውን ያስሱ"),
-                )}
-                <ArrowRight aria-hidden="true" />
-              </a>
-              <a className="static-launch-secondary" href="/faq">
-                {text(localized("Read the FAQ", "ጥያቄና መልሱን ያንብቡ"))}
-              </a>
-            </div>
-            <p className="concept-note" id="concept-status">
-              <ShieldCheck aria-hidden="true" />
-              {text(
-                localized(
-                  "Samra Pay is in development",
-                  "Samra Pay በልማት ላይ ነው",
-                ),
-              )}
-            </p>
+            <LaunchUpdatesForm />
+            <a className="coming-hero-explore" href="/features">
+              {text(localized("Explore the card portfolio", "የካርድ ስብስቡን ያስሱ"))}
+              <ArrowRight aria-hidden="true" />
+            </a>
           </div>
 
           <div className="coming-hero-media">
@@ -417,8 +397,8 @@ export default function Home() {
               <p>
                 {text(
                   localized(
-                    "Founder notes, practical guidance, and honest conversations for Ethiopians building lives across borders. The first posts are coming soon.",
-                    "ድንበር ተሻግረው ሕይወት ለሚገነቡ ኢትዮጵያውያን የመስራች ማስታወሻዎች፣ ተግባራዊ መመሪያዎችና ግልጽ ውይይቶች። የመጀመሪያዎቹ ጽሑፎች በቅርቡ ይመጣሉ።",
+                    "Founder notes and conversations on life across borders. First stories coming soon.",
+                    "የመስራች ማስታወሻዎችና ድንበር ተሻጋሪ የሕይወት ውይይቶች። የመጀመሪያ ታሪኮች በቅርቡ።",
                   ),
                 )}
               </p>
@@ -438,16 +418,16 @@ export default function Home() {
               <h2 id="final-cta-title">
                 {text(
                   localized(
-                    "See what Samra Pay is building toward.",
-                    "Samra Pay ወደ ምን እየገነባ እንደሆነ ይመልከቱ።",
+                    "Your next chapter starts with Samra.",
+                    "የሚቀጥለው ምዕራፍዎ ከSamra ጋር ይጀምራል።",
                   ),
                 )}
               </h2>
               <p>
                 {text(
                   localized(
-                    "Limited Alpha is planned for the U.S. and Canada in April 2027. This public website is informational only; a separate updates option will be added later.",
-                    "የተወሰነ Alpha በU.S. እና Canada በApril 2027 ለመጀመር ታቅዷል። ይህ የሕዝብ ድረ ገጽ ለመረጃ ብቻ ነው፤ የተለየ የዜና ምዝገባ አማራጭ በኋላ ይጨመራል።",
+                    "Follow our launch. Explore the cards and benefits connecting life here with home.",
+                    "የምረቃ ጉዟችንን ይከታተሉ። የእዚህን ሕይወት ከቤት ጋር የሚያገናኙ ካርዶችንና ጥቅሞችን ያስሱ።",
                   ),
                 )}
               </p>
@@ -458,8 +438,8 @@ export default function Home() {
                 localized("Public site links", "የሕዝብ ድረ ገጽ አገናኞች"),
               )}
             >
-              <a className="static-launch-primary" href="/features">
-                {text(localized("Explore the product vision", "የምርት ራዕዩን ያስሱ"))}
+              <a className="static-launch-primary" href="#launch-updates">
+                {text(localized("Get launch updates", "የምረቃ ዜና ያግኙ"))}
                 <ArrowRight aria-hidden="true" />
               </a>
               <a className="static-launch-secondary" href="/values">

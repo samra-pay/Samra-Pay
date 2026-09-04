@@ -125,7 +125,9 @@ export async function inspectPublicBuild(directory) {
       violations.push(`${relativePath}: legacy or authentication chunk name`);
     }
 
-    if (forbiddenDistributionPaths.some((pattern) => pattern.test(relativePath))) {
+    if (
+      forbiddenDistributionPaths.some((pattern) => pattern.test(relativePath))
+    ) {
       violations.push(`${relativePath}: forbidden distribution path`);
     }
 
@@ -162,7 +164,9 @@ export async function inspectPublicBuild(directory) {
       }
     }
     for (const origin of [...unexpectedOrigins].sort()) {
-      violations.push(`${relativePath}: contains unexpected network origin ${origin}`);
+      violations.push(
+        `${relativePath}: contains unexpected network origin ${origin}`,
+      );
     }
   }
 
@@ -184,7 +188,10 @@ async function run() {
   );
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   run().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

@@ -30,12 +30,12 @@ import "./coming-soon.css";
 
 const featuresMeta = {
   title: localized(
-    "Samra Pay Card Portfolio — Coming Soon",
-    "የSamra Pay ካርድ ስብስብ — በቅርቡ",
+    "Samra Pay — Cards for your next chapter",
+    "Samra Pay — ለሚቀጥለው ምዕራፍዎ ካርዶች",
   ),
   description: localized(
-    "Explore Samra Pay's proposed charge, rewards, Ethiopian Airlines, and Elite 100 card concepts.",
-    "የSamra Pay የታቀዱ Charge፣ rewards፣ Ethiopian Airlines እና Elite 100 የካርድ ሀሳቦችን ያስሱ።",
+    "Discover the upcoming Samra Pay card portfolio: a credit-building foundation, everyday rewards, an airline co-brand proposal, and the invitation-only Elite 100 founding edition.",
+    "የሚመጣውን የSamra Pay ካርድ ስብስብ ይወቁ፦ የክሬዲት ታሪክ መሠረት፣ ዕለታዊ ሽልማቶች፣ የአየር መንገድ የጋራ ብራንድ ዕቅድና በግብዣ ብቻ የሚገኝ Elite 100 እትም።",
   ),
 };
 
@@ -89,7 +89,7 @@ const cardTiers = [
     label: "Proposed airline co-brand",
     headline: "Go further with every purchase.",
     description:
-      "The highest level is envisioned as an Ethiopian Airlines co-branded card with proposed 2X ShebaMiles on eligible spend.",
+      "Our airline tier pairs an Ethiopian Airlines co-brand proposal with a target of 2X ShebaMiles on eligible spend.",
     cardLine: "2X ShebaMiles",
     annualMembership: "$495",
     annualMiles: "45,000",
@@ -109,14 +109,14 @@ const cardTiers = [
     label: "Invitation only · Founding 100",
     headline: "For the first 100 who believed.",
     description:
-      "A handpicked Alpha group limited to the first 100 people who believed in Samra from the beginning.",
+      "An invitation-only founding edition for 100 people helping shape Samra’s next chapter, distinguished by individually numbered titanium cards.",
     cardLine: "Elite 100",
     annualMembership: null,
     annualMiles: null,
     benefits: [
-      "Handpicked Alpha membership",
+      "Founder-selected membership by invitation",
       "One of 100 individually numbered titanium cards",
-      "Recognition as part of Samra’s first Alpha group",
+      "Recognition as part of Samra’s founding community",
     ],
   },
 ];
@@ -165,9 +165,9 @@ const comparisonRows = [
   {
     label: "Availability",
     values: [
-      "Coming soon",
-      "Coming soon",
-      "Coming soon",
+      "Launch portfolio",
+      "Launch portfolio",
+      "Launch portfolio",
       "Invitation only · First 100",
     ],
   },
@@ -228,8 +228,8 @@ function CardArtwork({
       aria-label={
         isFounder
           ? language === "am"
-            ? "የSamra ቲታኒየም መስራች አባል ካርድ ቅድመ እይታ፣ ከ2026 ጀምሮ አባል፣ ከ100 ውስጥ ቁጥር 1"
-            : "Samra Elite 100 titanium card preview, Member since 2026, numbered 1 of 100"
+            ? "የSamra Elite 100 የቲታኒየም መስራች እትም ካርድ ንድፍ"
+            : "Samra Elite 100 titanium founding-edition card design"
           : undefined
       }
       aria-hidden={isFounder ? undefined : "true"}
@@ -248,7 +248,7 @@ function CardArtwork({
         {isFounder ? (
           <div className="portfolio-founder-identity">
             <strong>Samra</strong>
-            <span>{copy("Member since 2026")}</span>
+            <span>{copy("Founding member")}</span>
           </div>
         ) : (
           <ComingSoonLogo />
@@ -284,23 +284,23 @@ function CardArtwork({
       </div>
       {isFounder ? (
         <div className="portfolio-founder-index" aria-hidden="true">
-          <span>{copy("Limited serial")}</span>
-          <strong>
-            1<em>/100</em>
-          </strong>
+          <span>{copy("Limited edition")}</span>
+          <strong>100</strong>
         </div>
       ) : null}
       <div className="portfolio-card-bottomline">
         <span>{copy(tier.cardLine)}</span>
-        <img
-          className="portfolio-mastercard-logo"
-          src={mastercardSymbol}
-          alt=""
-          width="42"
-          height="26"
-          loading="lazy"
-          decoding="async"
-        />
+        {!isFounder && (
+          <img
+            className="portfolio-mastercard-logo"
+            src={mastercardSymbol}
+            alt=""
+            width="42"
+            height="26"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
       </div>
     </div>
   );
@@ -326,7 +326,7 @@ export default function Features() {
             <div className="portfolio-hero-copy">
               <div className="coming-status">
                 <span aria-hidden="true" />
-                {copy("Card portfolio · Coming soon")}
+                {copy("The next chapter in your wallet")}
               </div>
               <h1 id="portfolio-title">
                 {language === "en" ? (
@@ -358,7 +358,7 @@ export default function Features() {
                 <ShieldCheck aria-hidden="true" />
                 <span>
                   {copy(
-                    "All four products are in development and are not open for application.",
+                    "Explore the launch portfolio. Choose the path that speaks to your life.",
                   )}
                 </span>
               </div>
@@ -381,7 +381,7 @@ export default function Features() {
             </div>
             <p>
               {copy(
-                "Charge, Elite, and Ethiopian Airlines form a progression. Elite 100 is a handpicked Alpha edition with separate terms.",
+                "Charge, Elite, and the proposed Ethiopian Airlines tier form a progression. Elite 100 is a separate, invitation-only founding edition.",
               )}
             </p>
           </div>
@@ -392,6 +392,11 @@ export default function Features() {
               return (
                 <article
                   className={`portfolio-tier ${tier.className}`}
+                  id={
+                    tier.className === "is-founder"
+                      ? "elite-100"
+                      : `card-${tier.level}`
+                  }
                   key={tier.name}
                 >
                   <div className="portfolio-tier-visual">
@@ -404,7 +409,7 @@ export default function Features() {
                       <span className="portfolio-status-pill">
                         {tier.className === "is-founder"
                           ? copy("Invitation only")
-                          : copy("Coming soon")}
+                          : copy("Launch portfolio")}
                       </span>
                     </div>
                     <CardArtwork tier={tier} copy={copy} />
@@ -434,8 +439,8 @@ export default function Features() {
                           <dd>{copy("Founding 100")}</dd>
                         </div>
                         <div>
-                          <dt>{copy("Member")}</dt>
-                          <dd>{copy("Since 2026")}</dd>
+                          <dt>{copy("Access")}</dt>
+                          <dd>{copy("Invitation only")}</dd>
                         </div>
                       </dl>
                     ) : null}
@@ -482,7 +487,7 @@ export default function Features() {
           <div className="coming-container portfolio-included-heading">
             <div>
               <p className="section-eyebrow">
-                {copy("Planned across the portfolio")}
+                {copy("Built around everyday life")}
               </p>
               <h2 id="included-title">{copy("More value from day one.")}</h2>
             </div>
@@ -522,7 +527,7 @@ export default function Features() {
               </div>
               <p>
                 {copy(
-                  "The first three cards progress from financial foundation to rewards and airline value. Elite 100 sits beside them as invitation-only Alpha access.",
+                  "Compare the three everyday tiers and the distinct Elite 100 founding edition. Membership targets and proposed rewards are shown below.",
                 )}
               </p>
             </div>
@@ -597,16 +602,16 @@ export default function Features() {
             <div className="portfolio-disclosure-title">
               <ShieldCheck aria-hidden="true" />
               <div>
-                <p className="section-eyebrow">{copy("Product status")}</p>
+                <p className="section-eyebrow">{copy("The details")}</p>
                 <h2 id="disclosure-title">
-                  {copy("Concept benefits, clearly labeled.")}
+                  {copy("Clarity comes with the card.")}
                 </h2>
               </div>
             </div>
             <div className="portfolio-disclosure-copy">
               <p>
                 {copy(
-                  "Samra Pay Charge, Samra Pay Elite, the proposed Ethiopian Airlines co-branded card, and the Samra Elite 100 card are product concepts in development. They are not available for application or use.",
+                  "This portfolio presents the products we are preparing to launch. Product rollout, regional eligibility, and final terms will be shared with launch announcements.",
                 )}
               </p>
               <p>
@@ -631,7 +636,7 @@ export default function Features() {
               </p>
               <p>
                 {copy(
-                  "Samra Elite 100 is a proposed, invitation-only Alpha designation limited to 100 founder-selected members. Pricing, rewards, access, final benefits, and card issuance have not been established, and no Elite 100 cards are currently available.",
+                  "Samra Elite 100 is a separate founding edition for 100 founder-selected members, not an automatic upgrade from the airline tier. Its own pricing, benefits, and terms will accompany invitations. Artwork illustrates the edition, not an issued card or assigned membership number.",
                 )}
               </p>
             </div>
@@ -662,13 +667,13 @@ export default function Features() {
               </h2>
               <p>
                 {copy(
-                  "Limited Alpha is planned for the United States and Canada in April 2027.",
+                  "Follow our launch in the United States and Canada, and the next chapter of your connection to Ethiopia.",
                 )}
               </p>
             </div>
             <div className="portfolio-cta-actions">
-              <a className="portfolio-primary-link" href="/#concept-status">
-                {copy("View development status")}
+              <a className="portfolio-primary-link" href="/#launch-updates">
+                {copy("Get launch updates")}
                 <ArrowRight aria-hidden="true" />
               </a>
               <div

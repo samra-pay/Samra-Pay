@@ -20,8 +20,12 @@ const socialLinks = [
 
 export function ComingSoonLogo({ dark = false }: { dark?: boolean }) {
   return (
-    <span className={dark ? "coming-logo is-dark" : "coming-logo"} aria-label="Samra Pay">
-      <span>samra</span><em>pay</em>
+    <span
+      className={dark ? "coming-logo is-dark" : "coming-logo"}
+      aria-label="Samra Pay"
+    >
+      <span>samra</span>
+      <em>pay</em>
     </span>
   );
 }
@@ -30,9 +34,27 @@ function ComingSoonLanguageToggle({ className = "" }: { className?: string }) {
   const { language, setLanguage, text } = usePublicLanguage();
 
   return (
-    <div className={`coming-language-toggle ${className}`} role="group" aria-label={text(localized("Language", "ቋንቋ"))}>
-      <button type="button" lang="en" aria-pressed={language === "en"} onClick={() => setLanguage("en")}>EN</button>
-      <button type="button" lang="am" aria-pressed={language === "am"} onClick={() => setLanguage("am")}>አማ</button>
+    <div
+      className={`coming-language-toggle ${className}`}
+      role="group"
+      aria-label={text(localized("Language", "ቋንቋ"))}
+    >
+      <button
+        type="button"
+        lang="en"
+        aria-pressed={language === "en"}
+        onClick={() => setLanguage("en")}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        lang="am"
+        aria-pressed={language === "am"}
+        onClick={() => setLanguage("am")}
+      >
+        አማ
+      </button>
     </div>
   );
 }
@@ -52,9 +74,13 @@ export function ComingSoonHeader() {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
-    const backgroundElements = Array.from(document.querySelectorAll<HTMLElement>("main, footer"));
+    const backgroundElements = Array.from(
+      document.querySelectorAll<HTMLElement>("main, footer"),
+    );
     document.body.style.overflow = "hidden";
-    backgroundElements.forEach((element) => { element.inert = true; });
+    backgroundElements.forEach((element) => {
+      element.inert = true;
+    });
     window.requestAnimationFrame(() => {
       mobileNavRef.current?.querySelector<HTMLElement>("button")?.focus();
     });
@@ -65,7 +91,9 @@ export function ComingSoonHeader() {
       }
       if (event.key !== "Tab") return;
       const focusable = Array.from(
-        mobileNavRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [],
+        mobileNavRef.current?.querySelectorAll<HTMLElement>(
+          "a[href], button:not([disabled])",
+        ) ?? [],
       );
       if (!focusable.length) return;
       const first = focusable[0];
@@ -81,7 +109,9 @@ export function ComingSoonHeader() {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      backgroundElements.forEach((element) => { element.inert = false; });
+      backgroundElements.forEach((element) => {
+        element.inert = false;
+      });
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
@@ -93,21 +123,43 @@ export function ComingSoonHeader() {
         href="#main-content"
         aria-hidden={open || undefined}
         tabIndex={open ? -1 : undefined}
-        onClick={() => window.requestAnimationFrame(() => document.getElementById("main-content")?.focus({ preventScroll: true }))}
+        onClick={() =>
+          window.requestAnimationFrame(() =>
+            document
+              .getElementById("main-content")
+              ?.focus({ preventScroll: true }),
+          )
+        }
       >
         {text(localized("Skip to main content", "ወደ ዋናው ይዘት ይሂዱ"))}
       </a>
-      <a className="brand-link" href="/#top" aria-label={text(localized("Samra Pay home", "የSamra Pay መነሻ ገጽ"))} aria-hidden={open || undefined} tabIndex={open ? -1 : undefined}>
+      <a
+        className="brand-link"
+        href="/#top"
+        aria-label={text(localized("Samra Pay home", "የSamra Pay መነሻ ገጽ"))}
+        aria-hidden={open || undefined}
+        tabIndex={open ? -1 : undefined}
+      >
         <ComingSoonLogo dark />
       </a>
-      <nav className="coming-desktop-nav" aria-label={text(localized("Primary navigation", "ዋና ምናሌ"))}>
+      <nav
+        className="coming-desktop-nav"
+        aria-label={text(localized("Primary navigation", "ዋና ምናሌ"))}
+      >
         {publicNavigation.map((item) => (
-          <a key={item.href} href={item.href} aria-current={currentPath === item.href ? "page" : undefined}>
+          <a
+            key={item.href}
+            href={item.href}
+            aria-current={currentPath === item.href ? "page" : undefined}
+          >
             {text(item.label)}
           </a>
         ))}
       </nav>
       <div className="coming-header-actions">
+        <a className="coming-updates-link" href="/#launch-updates">
+          {text(localized("Stay informed", "ዜና ይከታተሉ"))}
+        </a>
         <ComingSoonLanguageToggle />
         <button
           type="button"
@@ -115,9 +167,11 @@ export function ComingSoonHeader() {
           ref={menuButtonRef}
           aria-hidden={open || undefined}
           tabIndex={open ? -1 : undefined}
-          aria-label={open
-            ? text(localized("Close navigation", "ምናሌውን ይዝጉ"))
-            : text(localized("Open navigation", "ምናሌውን ይክፈቱ"))}
+          aria-label={
+            open
+              ? text(localized("Close navigation", "ምናሌውን ይዝጉ"))
+              : text(localized("Open navigation", "ምናሌውን ይክፈቱ"))
+          }
           aria-expanded={open}
           aria-controls="coming-mobile-nav"
           onClick={() => setOpen((value) => !value)}
@@ -136,19 +190,40 @@ export function ComingSoonHeader() {
           aria-label={text(localized("Mobile navigation", "የሞባይል ምናሌ"))}
         >
           <div className="coming-mobile-nav-top">
-            <a href="/#top" aria-label={text(localized("Samra Pay home", "የSamra Pay መነሻ ገጽ"))} onClick={() => setOpen(false)}>
+            <a
+              href="/#top"
+              aria-label={text(
+                localized("Samra Pay home", "የSamra Pay መነሻ ገጽ"),
+              )}
+              onClick={() => setOpen(false)}
+            >
               <ComingSoonLogo dark />
             </a>
-            <button type="button" onClick={closeMenu} aria-label={text(localized("Close navigation", "ምናሌውን ይዝጉ"))}>
+            <button
+              type="button"
+              onClick={closeMenu}
+              aria-label={text(localized("Close navigation", "ምናሌውን ይዝጉ"))}
+            >
               <X aria-hidden="true" />
             </button>
           </div>
-          <nav className="coming-mobile-nav-links" aria-label={text(localized("Public pages", "የሕዝብ ገጾች"))}>
+          <nav
+            className="coming-mobile-nav-links"
+            aria-label={text(localized("Public pages", "የሕዝብ ገጾች"))}
+          >
             {publicNavigation.map((item) => (
-              <a key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={currentPath === item.href ? "page" : undefined}>
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                aria-current={currentPath === item.href ? "page" : undefined}
+              >
                 {text(item.label)}
               </a>
             ))}
+            <a href="/#launch-updates" onClick={() => setOpen(false)}>
+              {text(localized("Stay informed", "ዜና ይከታተሉ"))}
+            </a>
           </nav>
           <ComingSoonLanguageToggle className="coming-mobile-language" />
         </div>
@@ -164,58 +239,106 @@ export function ComingSoonFooter() {
     <footer className="coming-footer">
       <div className="coming-container coming-footer-grid">
         <div className="coming-footer-brand">
-          <a href="/#top" aria-label={text(localized("Samra Pay home", "የSamra Pay መነሻ ገጽ"))}><ComingSoonLogo /></a>
-          <p>{text(localized("Your financial home, built between here and home.", "እዚህም አገር ቤትም ያሉ የገንዘብ ጉዳዮችዎን ለማስተዳደር የተገነባ።"))}</p>
-          <small>© {new Date().getFullYear()} Samra Pay. {text(localized("Alpha planned for April 2027.", "Alpha ለApril 2027 ታቅዷል።"))}</small>
+          <a
+            href="/#top"
+            aria-label={text(localized("Samra Pay home", "የSamra Pay መነሻ ገጽ"))}
+          >
+            <ComingSoonLogo />
+          </a>
+          <p>
+            {text(
+              localized(
+                "Your financial home, built between here and home.",
+                "እዚህም አገር ቤትም ያሉ የገንዘብ ጉዳዮችዎን ለማስተዳደር የተገነባ።",
+              ),
+            )}
+          </p>
+          <small>
+            © {new Date().getFullYear()} Samra Pay.{" "}
+            {text(localized("All rights reserved.", "መብቱ በሕግ የተጠበቀ ነው።"))}
+          </small>
         </div>
         <div>
           <h3>{text(localized("Explore", "ያስሱ"))}</h3>
-          {publicNavigation.map((item) => <a href={item.href} key={item.href}>{text(item.label)}</a>)}
+          {publicNavigation.map((item) => (
+            <a href={item.href} key={item.href}>
+              {text(item.label)}
+            </a>
+          ))}
         </div>
         <div>
           <h3>{text(localized("Legal", "ሕጋዊ መረጃ"))}</h3>
-          <a href="/privacy">{text(localized("Privacy Policy", "የግላዊነት ፖሊሲ"))}</a>
-          <a href="/terms">{text(localized("Terms of Service", "የአገልግሎት ውሎች"))}</a>
-          <button className="analytics-preferences" type="button" onClick={() => window.dispatchEvent(new Event("samra-analytics-preferences"))}>{text(localized("Analytics preferences", "የትንታኔ ምርጫዎች"))}</button>
+          <a href="/privacy">
+            {text(localized("Privacy Policy", "የግላዊነት ፖሊሲ"))}
+          </a>
+          <a href="/terms">
+            {text(localized("Terms of Service", "የአገልግሎት ውሎች"))}
+          </a>
+          <button
+            className="analytics-preferences"
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(new Event("samra-analytics-preferences"))
+            }
+          >
+            {text(localized("Analytics preferences", "የትንታኔ ምርጫዎች"))}
+          </button>
         </div>
         <div>
-          <h3>{text(localized("Status", "ሁኔታ"))}</h3>
-          <p>{text(localized("U.S. + Canada Alpha · April 2027", "አሜሪካ + ካናዳ Alpha · April 2027"))}</p>
-          <p>{text(localized("No live financial services", "በአሁኑ ጊዜ የፋይናንስ አገልግሎት አይሰጥም።"))}</p>
-          <p>{text(localized("No sign-in or account access", "ወደ አካውንት መግባት ወይም አካውንት መጠቀም አይቻልም።"))}</p>
+          <h3>{text(localized("Our next chapter", "የሚቀጥለው ምዕራፋችን"))}</h3>
+          <p>
+            {text(
+              localized(
+                "Launching for the U.S. and Canada. Connected to Ethiopia.",
+                "ለአሜሪካና ካናዳ እየተዘጋጀ። ከኢትዮጵያ ጋር የተገናኘ።",
+              ),
+            )}
+          </p>
+          <a href="/#launch-updates">
+            {text(localized("Get launch updates", "የምረቃ ዜና ያግኙ"))}
+          </a>
         </div>
       </div>
-      <div className="coming-container coming-footer-social">
-        <div>
-          <h3>{text(localized("Follow Samra Pay", "Samra Payን ይከተሉ"))}</h3>
-          <p>{text(localized("Official social channels will be activated as profiles are confirmed.", "ኦፊሴላዊ የማህበራዊ ሚዲያ መለያዎች ሲረጋገጡ ይከፈታሉ።"))}</p>
+      {socialLinks.some((social) => social.href) && (
+        <div className="coming-container coming-footer-social">
+          <div>
+            <h3>{text(localized("Follow Samra Pay", "Samra Payን ይከተሉ"))}</h3>
+            <p>
+              {text(
+                localized(
+                  "Follow the people and stories behind Samra.",
+                  "ከSamra ጀርባ ያሉትን ሰዎችና ታሪኮች ይከታተሉ።",
+                ),
+              )}
+            </p>
+          </div>
+          <div
+            className="coming-social-links"
+            aria-label={text(
+              localized(
+                "Samra Pay social channels",
+                "የSamra Pay ማህበራዊ ሚዲያ መለያዎች",
+              ),
+            )}
+          >
+            {socialLinks
+              .filter((social) => social.href)
+              .map((social) => (
+                <a
+                  className="coming-social-link"
+                  href={social.href}
+                  key={social.label}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${social.label} — ${text(localized("opens in a new tab", "በአዲስ ትር ይከፈታል"))}`}
+                >
+                  {social.label}
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              ))}
+          </div>
         </div>
-        <div className="coming-social-links" aria-label={text(localized("Samra Pay social channels", "የSamra Pay ማህበራዊ ሚዲያ መለያዎች"))}>
-          {socialLinks.map((social) =>
-            social.href ? (
-              <a
-                className="coming-social-link"
-                href={social.href}
-                key={social.label}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${social.label} — ${text(localized("opens in a new tab", "በአዲስ ትር ይከፈታል"))}`}
-              >
-                {social.label}
-                <ArrowUpRight aria-hidden="true" />
-              </a>
-            ) : (
-              <span
-                className="coming-social-link is-pending"
-                key={social.label}
-                aria-label={`${social.label} — ${text(localized("profile coming soon", "መለያው በቅርቡ ይከፈታል"))}`}
-              >
-                {social.label}
-              </span>
-            ),
-          )}
-        </div>
-      </div>
+      )}
     </footer>
   );
 }
