@@ -1,25 +1,23 @@
 import { useId, useState, type FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
-
-// Presentation-only until the separately reviewed Resend endpoint is connected.
-// No email leaves this component, enters storage, or is sent to analytics.
-export function isLocalUpdatesPreview(hostname: string) {
-  return ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
-}
+import { subscribePublicWaitlist } from "@/lib/public-waitlist";
 
 export function LaunchUpdatesForm() {
-  const { text } = usePublicLanguage();
+  const { language, text } = usePublicLanguage();
   const fieldId = useId();
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
+  const [website, setWebsite] = useState("");
   const [error, setError] = useState<"email" | "consent" | null>(null);
-  const [reviewed, setReviewed] = useState(false);
-  const preview = isLocalUpdatesPreview(window.location.hostname);
+  const [serviceError, setServiceError] = useState(false);
+  const [status, setStatus] = useState<"idle" | "submitting" | "accepted">(
+    "idle",
+  );
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!preview) return;
+    if (status === "submitting") return;
     const address = email.trim();
     if (address.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
       setError("email");
@@ -30,9 +28,22 @@ export function LaunchUpdatesForm() {
       return;
     }
     setError(null);
-    setEmail("");
-    setConsent(false);
-    setReviewed(true);
+    setServiceError(false);
+    setStatus("submitting");
+    try {
+      await subscribePublicWaitlist({
+        email: address,
+        locale: language,
+        website,
+      });
+      setEmail("");
+      setConsent(false);
+      setWebsite("");
+      setStatus("accepted");
+    } catch {
+      setServiceError(true);
+      setStatus("idle");
+    }
   }
 
   return (
@@ -44,29 +55,19 @@ export function LaunchUpdatesForm() {
       <h2 id={`${fieldId}-title`}>
         {text(localized("Stay informed", "ዜና ይከታተሉ"))}
       </h2>
-      {preview && (
-        <p className="launch-updates-preview">
-          {text(
-            localized(
-              "Local test only. No email is saved or sent.",
-              "ለአካባቢ ሙከራ ብቻ። ኢሜይል አይቀመጥም ወይም አይላክም።",
-            ),
-          )}
-        </p>
-      )}
-      {reviewed ? (
+      {status === "accepted" ? (
         <div className="launch-updates-result" role="status">
           <div>
             <p>
               {text(
                 localized(
-                  "Test complete. No subscription created.",
-                  "ሙከራው ተጠናቋል። ምዝገባ አልተፈጠረም።",
+                  "You're on the pre-launch list. We'll keep you informed.",
+                  "በቅድመ ማስጀመሪያ ዝርዝሩ ውስጥ ገብተዋል። መረጃ እናደርስዎታለን።",
                 ),
               )}
             </p>
-            <button type="button" onClick={() => setReviewed(false)}>
-              {text(localized("Test again", "እንደገና ይሞክሩ"))}
+            <button type="button" onClick={() => setStatus("idle")}>
+              {text(localized("Add another email", "ሌላ ኢሜይል ያክሉ"))}
             </button>
           </div>
         </div>
@@ -88,21 +89,36 @@ export function LaunchUpdatesForm() {
               maxLength={254}
               placeholder="you@example.com"
               required
-              disabled={!preview}
+              disabled={status === "submitting"}
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value);
                 setError(null);
+                setServiceError(false);
               }}
               aria-invalid={error === "email" || undefined}
               aria-describedby={
                 error === "email" ? `${fieldId}-error` : undefined
               }
             />
-            <button type="submit" disabled={!preview}>
-              {text(localized("Keep me informed", "መረጃ ይላኩልኝ"))}
+            <button type="submit" disabled={status === "submitting"}>
+              {status === "submitting"
+                ? text(localized("Saving…", "በማስቀመጥ ላይ…"))
+                : text(localized("Keep me informed", "መረጃ ይላኩልኝ"))}
               <ArrowRight aria-hidden="true" />
             </button>
+          </div>
+          <div className="launch-updates-honeypot" aria-hidden="true">
+            <label htmlFor={`${fieldId}-website`}>Website</label>
+            <input
+              id={`${fieldId}-website`}
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+            />
           </div>
           <label
             className="launch-updates-consent"
@@ -112,11 +128,12 @@ export function LaunchUpdatesForm() {
               id={`${fieldId}-consent`}
               type="checkbox"
               checked={consent}
-              disabled={!preview}
+              disabled={status === "submitting"}
               required
               onChange={(event) => {
                 setConsent(event.target.checked);
                 setError(null);
+                setServiceError(false);
               }}
               aria-invalid={error === "consent" || undefined}
               aria-describedby={
@@ -148,12 +165,12 @@ export function LaunchUpdatesForm() {
               )}
             </p>
           )}
-          {!preview && (
-            <p className="launch-updates-preview" role="status">
+          {serviceError && (
+            <p className="launch-updates-error" role="alert">
               {text(
                 localized(
-                  "Email sign-up opens shortly.",
-                  "የኢሜይል ምዝገባ በቅርቡ ይከፈታል።",
+                  "We couldn't save your email. Please try again.",
+                  "ኢሜይልዎን ማስቀመጥ አልቻልንም። እባክዎ እንደገና ይሞክሩ።",
                 ),
               )}
             </p>

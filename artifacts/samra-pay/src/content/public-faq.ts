@@ -241,8 +241,8 @@ export const fullFaqItems: PublicFaqItem[] = [
     category: "company",
     question: localized("How can I get updates?", "ዜናዎችን እንዴት ማግኘት እችላለሁ?"),
     answer: localized(
-      "Visit Stay informed on the homepage for launch news and the email-updates option as it opens. Updates will cover product announcements and availability. Email consent is separate from card applications, and every update will include an unsubscribe option.",
-      "ለምረቃ ዜናና ሲከፈት ለኢሜይል መረጃ ምዝገባ በመነሻ ገጹ ያለውን ዜና ይከታተሉ ክፍል ይጎብኙ። መረጃዎች የምርት ማስታወቂያዎችንና አቅርቦትን ያካትታሉ። የኢሜይል ፈቃድ ከካርድ ማመልከቻ የተለየ ነው፤ እያንዳንዱ መልዕክት ምዝገባ ማቋረጫ አማራጭ ይኖረዋል።",
+      "Visit Stay informed on the homepage and submit your email for product and availability updates. Email consent is separate from any card application, and every marketing update will include an unsubscribe option.",
+      "ለምርትና ለአቅርቦት መረጃ በመነሻ ገጹ ያለውን ዜና ይከታተሉ ክፍል ይጎብኙ እና ኢሜይልዎን ያስገቡ። የኢሜይል ፈቃድ ከማንኛውም የካርድ ማመልከቻ የተለየ ነው፤ እያንዳንዱ የግብይት መልዕክት ምዝገባ ማቋረጫ አማራጭ ይኖረዋል።",
     ),
   },
 ];

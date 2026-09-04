@@ -5,6 +5,11 @@ import {
   validateComingSoonLaunch,
 } from "./validate-coming-soon-launch.mjs";
 
+const HTML_CACHE_CONTROL = "no-cache,no-store,must-revalidate";
+const IMMUTABLE_CACHE_CONTROL = "public,max-age=31536000,immutable";
+const ROUTED_HTML_REGEX = "^/[^.]*$";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -15,33 +20,14 @@ function required(environment, name) {
   return value;
 }
 
-const HTML_CACHE_CONTROL = "no-cache,no-store,must-revalidate";
-const IMMUTABLE_CACHE_CONTROL = "public,max-age=31536000,immutable";
-const ROUTED_HTML_REGEX = "^/[^.]*$";
-const PUBLIC_ANALYTICS_CSP =
-  "default-src 'self'; script-src 'self' https://www.googletagmanager.com/gtag/js; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; connect-src https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests";
-
-export function readPublicAnalyticsConfig() {
-  return JSON.parse(
-    readFileSync(
-      new URL(
-        "../../artifacts/samra-pay/src/content/public-analytics.json",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
-}
-
 function singleRule(rules, predicate) {
   const matches = rules.filter(predicate);
   return matches.length === 1 ? matches[0] : undefined;
 }
 
 function hasExactHeaders(rule, expected) {
-  if (!rule || rule.headers?.length !== Object.keys(expected).length) {
+  if (!rule || rule.headers?.length !== Object.keys(expected).length)
     return false;
-  }
   return Object.entries(expected).every(
     ([key, value]) =>
       rule.headers.filter(
@@ -65,6 +51,18 @@ export function readFirebaseHostingConfig() {
   );
 }
 
+export function readPublicAnalyticsConfig() {
+  return JSON.parse(
+    readFileSync(
+      new URL(
+        "../../artifacts/samra-pay/src/content/public-analytics.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+}
+
 export function validateComingSoonStaticHosting(
   contract = readComingSoonStaticHosting(),
   launch = readComingSoonLaunch(),
@@ -73,44 +71,69 @@ export function validateComingSoonStaticHosting(
 ) {
   const validatedLaunch = validateComingSoonLaunch(launch);
   const override = launch.staticInformationalOverride;
-
   assert(
-    contract.schemaVersion === 1 &&
-      contract.status === "approved-not-applied" &&
-      contract.phase === "coming-soon-static-informational-launch" &&
-      contract.decision.approvedOn === "2026-08-31" &&
-      contract.decision.scope === "public static informational website" &&
-      contract.decision.emailCollectionDeferred === true &&
-      contract.decision.standingApplyAuthorization === false,
-    "The static launch decision drifted",
-  );
-  assert(
-    contract.linkedLaunchContract === "deploy/gcp/coming-soon-launch.json" &&
-      validatedLaunch.deploymentAuthorized === false &&
-      validatedLaunch.dnsAuthorized === false &&
-      override.decisionStatus === "approved-for-exact-sha-release" &&
+    validatedLaunch.deploymentAuthorized === false &&
+      override.decisionStatus === "superseded-by-controlled-waitlist-pr" &&
+      override.approvedOn === "2026-09-04" &&
       override.linkedContract ===
         "deploy/gcp/coming-soon-static-hosting.json" &&
       override.hostingProvider === "firebase-hosting" &&
       override.publicInformationOnly === true &&
-      override.emailCollection === false &&
-      override.apiDeployment === false &&
+      override.emailCollection === true &&
+      override.apiDeployment === true &&
       override.databaseUse === false &&
-      override.vendorActivation === false &&
+      override.vendorActivation === "resend-contacts-only" &&
+      override.automaticEmailSending === false &&
+      override.deploymentAuthorized === false &&
       override.supersedesInteractiveLaunch === false,
-    "The static override must not authorize the interactive launch",
+    "The lean waitlist override drifted or authorized deployment",
+  );
+
+  assert(
+    contract.schemaVersion === 2 &&
+      contract.status === "approved-for-pr-not-applied" &&
+      contract.phase === "controlled-public-email-waitlist" &&
+      contract.decision.approvedOn === "2026-09-04" &&
+      contract.decision.approvedBy === "David Haile" &&
+      contract.decision.scope ===
+        "public website email waitlist backed only by Resend Contacts" &&
+      contract.decision.standingApplyAuthorization === false &&
+      contract.priorStaticRelease.sourceSha ===
+        "32c550321802c4747fa53871fb7b51c7977e9959" &&
+      contract.priorStaticRelease.status === "applied-and-live-verified" &&
+      contract.priorStaticRelease.emailCollection === false,
+    "The approved waitlist decision or prior release record drifted",
+  );
+
+  const amendment = contract.waitlistAmendment;
+  assert(
+    amendment.status === "approved-for-pr-not-deployment" &&
+      amendment.purpose === "product and availability updates before launch" &&
+      amendment.emailOnly === true &&
+      amendment.consentVersion === "public-waitlist-2026-09-04" &&
+      amendment.provider === "resend-contacts" &&
+      amendment.segmentName === "Samra Pay Pre-Launch Waitlist" &&
+      amendment.topicName === "Product and launch updates" &&
+      amendment.topicDefaultSubscription === "opt_out" &&
+      amendment.topicVisibility === "public" &&
+      amendment.segmentAndTopicIdsCommitted === false &&
+      amendment.automaticEmailSending === false &&
+      amendment.releaseApprovalRequired === true,
+    "The email-only waitlist amendment drifted",
   );
 
   const source = contract.source;
   assert(
     source.repository === "haileleuld87/Samra-Pay" &&
-      source.snapshotVersion === 13 &&
-      /^[0-9a-f]{40}$/u.test(source.snapshotCommit) &&
       source.releaseSource === "FULL_GIT_SHA" &&
       source.buildCommand === "pnpm --filter @workspace/samra-pay run build" &&
       source.buildDirectory === "artifacts/samra-pay/dist/public" &&
-      source.hostingConfig === "firebase.json",
-    "The exact-source static build boundary drifted",
+      source.hostingConfig === "firebase.json" &&
+      source.serviceContext === "lib/launch-updates" &&
+      source.serviceDockerfile === "lib/launch-updates/Dockerfile.waitlist" &&
+      source.serviceBuildConfig ===
+        "lib/launch-updates/cloudbuild.waitlist.yaml",
+    "The reviewed release source boundary drifted",
   );
 
   const boundary = contract.productionBoundary;
@@ -120,180 +143,140 @@ export function validateComingSoonStaticHosting(
       boundary.organizationId === "614833350075" &&
       boundary.operator === "me@davidhaile.com" &&
       boundary.region === "us-east4" &&
-      boundary.dataClassification === "public-informational" &&
+      boundary.dataClassification === "email-marketing-contact" &&
       boundary.existingInfrastructureGuardedEstimateUsd === 81.92 &&
-      boundary.monthlyInfrastructureHardStopUsd === 100 &&
-      boundary.remainingGuardedHeadroomUsd === 18.08,
-    "The production identity or USD 100 cost boundary drifted",
+      boundary.monthlyInfrastructureHardStopUsd === 100,
+    "The production identity, data classification, or cost guard drifted",
   );
 
   const hosting = contract.hosting;
+  const service = contract.waitlistService;
   assert(
     hosting.provider === "firebase-hosting" &&
       hosting.siteId === "samra-pay-production" &&
       hosting.defaultUrl === "https://samra-pay-production.web.app" &&
-      hosting.cdn === true &&
-      hosting.automaticTls === true &&
-      hosting.singlePageApplication === true &&
-      hosting.projectAliasFileAllowed === false &&
-      hosting.deployOnly === "hosting",
-    "The bounded Firebase Hosting target drifted",
+      hosting.canonicalDomain === "www.samrapay.com" &&
+      hosting.apiRewrite === "/api/v1/waitlist/subscriptions" &&
+      hosting.serviceId === "samra-launch-updates" &&
+      hosting.region === "us-east4" &&
+      hosting.pinTag === true &&
+      service.platform === "cloud-run" &&
+      service.serviceId === hosting.serviceId &&
+      service.runtimeServiceAccount ===
+        "samra-launch-updates@samra-pay-production.iam.gserviceaccount.com" &&
+      service.imageRepository ===
+        "us-east4-docker.pkg.dev/samra-pay-production/samra-production/samra-launch-updates" &&
+      service.imageDigestRequiredForReview === true &&
+      service.ingress === "all" &&
+      service.unauthenticated === true &&
+      service.minInstances === 0 &&
+      service.maxInstances === 1 &&
+      service.concurrency === 2 &&
+      service.timeoutSeconds === 10 &&
+      service.cpu === "1" &&
+      service.memory === "256Mi" &&
+      service.secretId === "samra-production-resend-api-key" &&
+      service.secretVersion === "1" &&
+      service.secretEnvironmentName === "RESEND_API_KEY" &&
+      service.segmentIdEnvironmentName === "SAMRA_RESEND_SEGMENT_ID" &&
+      service.topicIdEnvironmentName === "SAMRA_RESEND_TOPIC_ID" &&
+      JSON.stringify(service.allowedOrigins) ===
+        JSON.stringify([
+          "https://www.samrapay.com",
+          "https://samra-pay-production.web.app",
+        ]) &&
+      JSON.stringify(service.publicRoutes) ===
+        JSON.stringify([
+          "POST /api/v1/waitlist/subscriptions",
+          "GET /healthz",
+        ]) &&
+      service.databaseAccess === false &&
+      service.vpcAccess === false &&
+      service.rawEmailLogsAllowed === false &&
+      service.resubscribeUnsubscribedContact === false &&
+      service.providerMinimumIntervalMs === 550 &&
+      JSON.stringify(service.providerOperations) ===
+        JSON.stringify([
+          "get contact by email",
+          "create contact",
+          "add subscribed contact to segment",
+          "opt subscribed contact into topic",
+        ]),
+    "The bounded Cloud Run waitlist service drifted",
   );
 
   const publicBoundary = contract.publicBoundary;
   assert(
-    publicBoundary.informationalOnly === true &&
-      publicBoundary.formsAllowed === true &&
-      publicBoundary.formsPurpose ===
-        "presentation-only-disabled-public-email-interest" &&
-      publicBoundary.emailInputsDisabledOutsideLoopback === true &&
-      publicBoundary.emailCollectionAllowed === false &&
-      publicBoundary.apiRoutes.length === 0 &&
+    publicBoundary.formsAllowed === true &&
+      publicBoundary.formsPurpose === "controlled-pre-launch-email-waitlist" &&
+      publicBoundary.emailCollectionAllowed === true &&
+      JSON.stringify(publicBoundary.apiRoutes) ===
+        JSON.stringify(["POST /api/v1/waitlist/subscriptions"]) &&
+      JSON.stringify(publicBoundary.collectedFields) ===
+        JSON.stringify(["email"]) &&
       publicBoundary.databaseAccess === false &&
-      publicBoundary.secrets.length === 0 &&
-      publicBoundary.analytics === true &&
-      publicBoundary.ordinaryHostingRequestLogsOnly === false &&
-      publicBoundary.advertisingPixels === false &&
       publicBoundary.customerAuthentication === false &&
       publicBoundary.kyc === false &&
       publicBoundary.wallet === false &&
       publicBoundary.moneyMovement === false &&
-      publicBoundary.vendorActivation === false,
-    "The static public surface gained unapproved data collection or an application dependency",
+      publicBoundary.financialVendorActivation === false &&
+      publicBoundary.emailProviderActivation === "resend-contacts-only" &&
+      publicBoundary.automaticCampaignSending === false,
+    "The public surface expanded beyond an email-only waitlist",
   );
 
-  const commercial = contract.commercialSiteAmendment;
+  const analyticsContract = contract.analyticsAmendment;
   assert(
-    commercial?.approvedOn === "2026-09-04" &&
-      commercial.approvedBy === "David Haile" &&
-      commercial.status === "approved-for-release" &&
-      commercial.scope ===
-        "audited public commercial copy and design; retired Alpha language removed" &&
-      commercial.presentationOnlyEmailForm === true &&
-      commercial.emailInputsDisabledOutsideLoopback === true &&
-      commercial.emailCollectionAllowed === false &&
-      commercial.resendActivationAllowed === false,
-    "The approved commercial-site amendment drifted",
-  );
-
-  const amendment = contract.analyticsAmendment;
-  assert(
-    amendment?.approvedOn === "2026-09-02" &&
-      amendment.approvedBy === "David Haile" &&
-      amendment.status === "approved-for-implementation-not-deployment" &&
-      amendment.scope === "consent-gated public website GA4; no advertising" &&
-      amendment.configuration ===
+    analyticsContract.scope ===
+      "consent-gated public website GA4; no advertising" &&
+      analyticsContract.configuration ===
         "artifacts/samra-pay/src/content/public-analytics.json" &&
-      amendment.accountId === "406796105" &&
-      amendment.propertyId === "552617317" &&
-      amendment.streamId === "15667615640" &&
-      amendment.basicConsentMode === true &&
-      amendment.productionCanonicalOriginOnly === true &&
-      amendment.advertisingFeatures === false &&
-      amendment.enhancedMeasurement === false &&
-      amendment.eventRetentionMonths === 2 &&
-      amendment.retentionOwner === "David Haile" &&
-      amendment.releaseApprovalRequired === true &&
-      Object.keys(analytics).length === 5 &&
+      analyticsContract.basicConsentMode === true &&
+      analyticsContract.productionCanonicalOriginOnly === true &&
+      analyticsContract.advertisingFeatures === false &&
+      analyticsContract.enhancedMeasurement === false &&
+      analyticsContract.eventRetentionMonths === 2 &&
       analytics.measurementId === "G-T4THKMM4Y5" &&
       analytics.origin === "https://www.samrapay.com" &&
       analytics.consentDays === 180 &&
       analytics.cookieDays === 60 &&
-      analytics.cookiePrefix === "samra_public" &&
-      contract.security.contentSecurityPolicy === PUBLIC_ANALYTICS_CSP,
-    "The consent-gated public analytics amendment or CSP drifted",
+      analytics.cookiePrefix === "samra_public",
+    "The independent consent-gated analytics boundary drifted",
   );
 
-  const effects = contract.providerManagedEffects;
+  const rewrites = firebase.hosting.rewrites;
   assert(
-    effects.firebaseProjectLinkageAllowed === true &&
-      effects.providerManagedApiAndServiceAgentCreationAllowed === true &&
-      effects.firebaseAuthenticationAllowed === false &&
-      effects.firestoreDatabaseAllowed === false &&
-      effects.realtimeDatabaseAllowed === false &&
-      effects.cloudStorageBucketAllowed === false &&
-      effects.firebaseAppRegistrationAllowed === false,
-    "Firebase linkage must not activate data or identity products",
+    firebase.hosting.public === source.buildDirectory &&
+      firebase.hosting.trailingSlash === false &&
+      rewrites.length === 2 &&
+      rewrites[0].source === hosting.apiRewrite &&
+      rewrites[0].run?.serviceId === hosting.serviceId &&
+      rewrites[0].run?.region === hosting.region &&
+      rewrites[0].run?.pinTag === true &&
+      rewrites[1].source === "**" &&
+      rewrites[1].destination === "/index.html",
+    "firebase.json does not route only the reviewed waitlist endpoint",
   );
 
-  const cost = contract.cost;
-  assert(
-    cost.currency === "USD" &&
-      cost.expectedIncrementalMonthlyCostUsd === 0 &&
-      cost.noCostStorageGib === 10 &&
-      cost.noCostMonthlyTransferGib === 10 &&
-      cost.storageAboveNoCostUsdPerGib === 0.026 &&
-      cost.transferAboveNoCostUsdPerGib === 0.15 &&
-      cost.usageDependent === true &&
-      cost.spendingCap === false &&
-      cost.hardStopRequiresReassessmentAtTotalMonthlyEstimateUsd === 100,
-    "The static hosting cost guard drifted",
-  );
-
-  const domain = contract.domain;
-  assert(
-    domain.dnsOwner === "Squarespace" &&
-      domain.apex === "samrapay.com" &&
-      domain.canonicalDomain === "www.samrapay.com" &&
-      domain.apexBehavior === "redirect-to-canonical" &&
-      domain.preserveDnsRecordTypes.includes("MX") &&
-      domain.preserveDnsRecordTypes.includes("DMARC") &&
-      domain.preserveUnrelatedRecords === true &&
-      domain.decisionApproved === true &&
-      domain.standingDnsAuthorization === false,
-    "The Squarespace DNS preservation boundary drifted",
-  );
-
-  assert(
-    contract.release.activationEnvironment ===
-      "SAMRA_GCP_STATIC_HOSTING_APPLY" &&
-      contract.release.activationSentinel ===
-        "AUTHORIZED_COMING_SOON_STATIC_HOSTING" &&
-      contract.release.exactShaRequired === true &&
-      contract.release.cleanWorkingTreeRequired === true &&
-      contract.release.reviewBeforeApply === true &&
-      contract.release.postAuditRequired === true &&
-      contract.release.recordPriorReleaseRequired === true,
-    "The exact-SHA release gate drifted",
-  );
-
-  const hostingConfig = firebase.hosting;
-  const headerRules = hostingConfig.headers;
+  const headerRules = firebase.hosting.headers;
   const globalSecurityRule = singleRule(
     headerRules,
     (rule) => rule.source === "**",
   );
-  const routedHtmlRule = singleRule(
-    headerRules,
-    (rule) => rule.regex === ROUTED_HTML_REGEX,
-  );
-  const indexRule = singleRule(
-    headerRules,
-    (rule) => rule.source === "/index.html",
-  );
-  const cacheRules = headerRules.filter((rule) =>
-    rule.headers?.some((header) => header.key === "Cache-Control"),
-  );
-  const immutableSources = ["/assets/**", "/icons/**", "/og-preview-*.png"];
-  const exactCacheRule = (source, value) =>
+  const exactCacheRule = (sourceName, value) =>
     hasExactHeaders(
-      singleRule(headerRules, (rule) => rule.source === source),
+      singleRule(headerRules, (rule) => rule.source === sourceName),
       { "Cache-Control": value },
     );
   assert(
-    hostingConfig.public === source.buildDirectory &&
-      hostingConfig.trailingSlash === false &&
-      hostingConfig.rewrites.length === 1 &&
-      hostingConfig.rewrites[0].source === "**" &&
-      hostingConfig.rewrites[0].destination === "/index.html" &&
-      headerRules.length === 6 &&
-      cacheRules.length === 5 &&
-      hasExactHeaders(routedHtmlRule, {
-        "Cache-Control": HTML_CACHE_CONTROL,
-      }) &&
-      hasExactHeaders(indexRule, { "Cache-Control": HTML_CACHE_CONTROL }) &&
-      immutableSources.every((cacheSource) =>
-        exactCacheRule(cacheSource, IMMUTABLE_CACHE_CONTROL),
+    headerRules.length === 6 &&
+      exactCacheRule("/assets/**", IMMUTABLE_CACHE_CONTROL) &&
+      exactCacheRule("/icons/**", IMMUTABLE_CACHE_CONTROL) &&
+      exactCacheRule("/og-preview-*.png", IMMUTABLE_CACHE_CONTROL) &&
+      exactCacheRule("/index.html", HTML_CACHE_CONTROL) &&
+      hasExactHeaders(
+        singleRule(headerRules, (rule) => rule.regex === ROUTED_HTML_REGEX),
+        { "Cache-Control": HTML_CACHE_CONTROL },
       ) &&
       hasExactHeaders(globalSecurityRule, {
         "Content-Security-Policy": contract.security.contentSecurityPolicy,
@@ -303,38 +286,73 @@ export function validateComingSoonStaticHosting(
         "Permissions-Policy": contract.security.permissionsPolicy,
         "Strict-Transport-Security": contract.security.hsts,
       }) &&
-      !contract.security.hsts.includes("includeSubDomains"),
-    "firebase.json does not enforce the reviewed static hosting boundary",
+      contract.security.contentSecurityPolicy.includes("connect-src 'self'") &&
+      !contract.security.contentSecurityPolicy.includes("unsafe-"),
+    "firebase.json does not enforce the reviewed cache and security boundary",
+  );
+
+  assert(
+    contract.cost.currency === "USD" &&
+      contract.cost.expectedIncrementalMonthlyCostUsd === 0 &&
+      contract.cost.usageDependent === true &&
+      contract.cost.spendingCap === false &&
+      contract.cost.hardStopRequiresReassessmentAtTotalMonthlyEstimateUsd ===
+        100 &&
+      contract.domain.dnsOwner === "Squarespace" &&
+      contract.domain.canonicalDomain === "www.samrapay.com" &&
+      contract.domain.preserveDnsRecordTypes.includes("MX") &&
+      contract.domain.preserveDnsRecordTypes.includes("DMARC") &&
+      contract.domain.preserveUnrelatedRecords === true &&
+      contract.domain.dnsChangeAuthorized === false,
+    "The cost or DNS preservation boundary drifted",
+  );
+
+  assert(
+    contract.release.activationEnvironment ===
+      "SAMRA_GCP_PUBLIC_WAITLIST_APPLY" &&
+      contract.release.activationSentinel ===
+        "AUTHORIZED_PUBLIC_WAITLIST_RELEASE" &&
+      contract.release.exactShaRequired === true &&
+      contract.release.cleanWorkingTreeRequired === true &&
+      contract.release.reviewBeforeApply === true &&
+      contract.release.segmentAndTopicIdsRequiredAtRuntime === true &&
+      contract.release.postAuditRequired === true &&
+      contract.release.recordPriorReleaseRequired === true &&
+      contract.excluded.includes("Samra database storage") &&
+      contract.excluded.includes("automatic welcome email") &&
+      contract.excluded.includes("financial APIs") &&
+      contract.excluded.includes("Squarespace DNS changes"),
+    "The release gate or exclusions drifted",
   );
 
   const serialized = JSON.stringify({ contract, firebase });
   assert(
-    !/postgres(?:ql)?:\/\/|BEGIN (?:RSA|OPENSSH) PRIVATE KEY|api[_-]?key|password|versions\/latest/iu.test(
+    !/\bre_[A-Za-z0-9_-]{10,}\b|BEGIN (?:RSA|OPENSSH) PRIVATE KEY|postgres(?:ql)?:\/\//iu.test(
       serialized,
     ),
-    "Static hosting configuration contains a credential or database URL",
+    "Waitlist configuration contains credential material or a database URL",
   );
 
   return Object.freeze({
-    schemaVersion: contract.schemaVersion,
-    status: "validated-approved-not-applied",
+    schemaVersion: 2,
+    status: "validated-approved-for-pr-not-applied",
     phase: contract.phase,
     projectId: boundary.projectId,
     projectNumber: boundary.projectNumber,
     siteId: hosting.siteId,
-    defaultUrl: hosting.defaultUrl,
-    canonicalDomain: domain.canonicalDomain,
-    informationalOnly: true,
-    emailCollectionAllowed: false,
-    publicApiRouteCount: 0,
+    serviceId: service.serviceId,
+    canonicalDomain: hosting.canonicalDomain,
+    emailCollectionAllowed: true,
+    publicApiRouteCount: 1,
     databaseAccess: false,
+    automaticEmailSending: false,
     analytics: "consent-gated-ga4",
     expectedIncrementalMonthlyCostUsd: 0,
     existingInfrastructureGuardedEstimateUsd:
       boundary.existingInfrastructureGuardedEstimateUsd,
     monthlyInfrastructureHardStopUsd: boundary.monthlyInfrastructureHardStopUsd,
     applyAuthorized: false,
-    standingDnsAuthorization: false,
+    dnsChangeAuthorized: false,
   });
 }
 
@@ -350,23 +368,39 @@ export function validateStaticHostingEnvironment(
     organizationId: required(environment, "SAMRA_GCP_ORGANIZATION_ID"),
     operator: required(environment, "SAMRA_GCP_OPERATOR_ACCOUNT"),
     expectedSha: required(environment, "SAMRA_GCP_EXPECTED_SHA"),
+    segmentId: required(environment, "SAMRA_RESEND_SEGMENT_ID"),
+    topicId: required(environment, "SAMRA_RESEND_TOPIC_ID"),
   };
   assert(
     result.projectId === contract.productionBoundary.projectId &&
       result.projectNumber === contract.productionBoundary.projectNumber &&
       result.organizationId === contract.productionBoundary.organizationId &&
       result.operator === contract.productionBoundary.operator &&
-      /^[0-9a-f]{40}$/u.test(result.expectedSha),
-    "The static hosting activation environment does not match the reviewed production boundary",
+      /^[0-9a-f]{40}$/u.test(result.expectedSha) &&
+      UUID.test(result.segmentId) &&
+      UUID.test(result.topicId) &&
+      result.segmentId !== result.topicId,
+    "The production identity, SHA, segment, or topic input is invalid",
   );
   if (options.requireApplyAuthorization === true) {
     assert(
-      required(environment, contract.release.activationEnvironment) ===
+      environment.SAMRA_GCP_PUBLIC_WAITLIST_APPLY ===
         contract.release.activationSentinel,
-      "The exact static hosting activation sentinel is required",
+      "Public waitlist deployment is not authorized",
+    );
+  } else {
+    assert(
+      !environment.SAMRA_GCP_PUBLIC_WAITLIST_APPLY,
+      "Apply authorization is not accepted during review",
     );
   }
   return Object.freeze(result);
+}
+
+function run() {
+  process.stdout.write(
+    `${JSON.stringify(validateComingSoonStaticHosting())}\n`,
+  );
 }
 
 if (
@@ -374,9 +408,7 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    process.stdout.write(
-      `${JSON.stringify(validateComingSoonStaticHosting())}\n`,
-    );
+    run();
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

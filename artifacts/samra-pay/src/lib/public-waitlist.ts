@@ -1,25 +1,26 @@
 import type { PublicLanguage } from "./public-i18n";
 
-export const COMING_SOON_CONSENT_VERSION = "coming-soon-2026-08-30";
+export const COMING_SOON_CONSENT_VERSION = "public-waitlist-2026-09-04";
 
 type WaitlistReceipt = Readonly<{
   accepted: true;
   acceptedAt: string;
 }>;
 
-export async function subscribePublicWaitlist(input: Readonly<{
-  email: string;
-  locale: PublicLanguage;
-  website?: string;
-  idempotencyKey?: string;
-}>): Promise<WaitlistReceipt> {
+export async function subscribePublicWaitlist(
+  input: Readonly<{
+    email: string;
+    locale: PublicLanguage;
+    website?: string;
+    idempotencyKey?: string;
+  }>,
+): Promise<WaitlistReceipt> {
   const response = await fetch("/api/v1/waitlist/subscriptions", {
     method: "POST",
     credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
-      "Idempotency-Key":
-        input.idempotencyKey ?? globalThis.crypto.randomUUID(),
+      "Idempotency-Key": input.idempotencyKey ?? globalThis.crypto.randomUUID(),
     },
     body: JSON.stringify({
       email: input.email,

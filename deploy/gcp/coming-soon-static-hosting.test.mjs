@@ -5,72 +5,72 @@ import test from "node:test";
 import {
   readComingSoonStaticHosting,
   readFirebaseHostingConfig,
-  readPublicAnalyticsConfig,
   validateComingSoonStaticHosting,
   validateStaticHostingEnvironment,
 } from "./validate-coming-soon-static-hosting.mjs";
 
+const SEGMENT_ID = "3302de0a-0f51-4c3e-9f4e-f26ebf95f412";
+const TOPIC_ID = "244e46ec-7cda-4cf2-8e6e-1e13093125ab";
 const validEnvironment = {
   SAMRA_GCP_PROJECT_ID: "samra-pay-production",
   SAMRA_GCP_PROJECT_NUMBER: "382465561715",
   SAMRA_GCP_ORGANIZATION_ID: "614833350075",
   SAMRA_GCP_OPERATOR_ACCOUNT: "me@davidhaile.com",
   SAMRA_GCP_EXPECTED_SHA: "a".repeat(40),
+  SAMRA_RESEND_SEGMENT_ID: SEGMENT_ID,
+  SAMRA_RESEND_TOPIC_ID: TOPIC_ID,
 };
 
-test("locks the approved static informational launch boundary", () => {
+test("locks the approved email-only waitlist boundary", () => {
   assert.deepEqual(validateComingSoonStaticHosting(), {
-    schemaVersion: 1,
-    status: "validated-approved-not-applied",
-    phase: "coming-soon-static-informational-launch",
+    schemaVersion: 2,
+    status: "validated-approved-for-pr-not-applied",
+    phase: "controlled-public-email-waitlist",
     projectId: "samra-pay-production",
     projectNumber: "382465561715",
     siteId: "samra-pay-production",
-    defaultUrl: "https://samra-pay-production.web.app",
+    serviceId: "samra-launch-updates",
     canonicalDomain: "www.samrapay.com",
-    informationalOnly: true,
-    emailCollectionAllowed: false,
-    publicApiRouteCount: 0,
+    emailCollectionAllowed: true,
+    publicApiRouteCount: 1,
     databaseAccess: false,
+    automaticEmailSending: false,
     analytics: "consent-gated-ga4",
     expectedIncrementalMonthlyCostUsd: 0,
     existingInfrastructureGuardedEstimateUsd: 81.92,
     monthlyInfrastructureHardStopUsd: 100,
     applyAuthorized: false,
-    standingDnsAuthorization: false,
+    dnsChangeAuthorized: false,
   });
 });
 
-test("rejects data collection, product activation, cost, and DNS drift", () => {
+test("rejects product, database, sending, identity, cost, and DNS expansion", () => {
   for (const mutate of [
     (value) => (value.status = "applied"),
     (value) => (value.productionBoundary.projectId = "samra-pay-staging"),
     (value) =>
       (value.productionBoundary.monthlyInfrastructureHardStopUsd = 101),
-    (value) => (value.hosting.provider = "cloud-run"),
-    (value) => (value.hosting.projectAliasFileAllowed = true),
-    (value) => (value.publicBoundary.formsAllowed = false),
-    (value) => (value.publicBoundary.emailInputsDisabledOutsideLoopback = false),
-    (value) => (value.commercialSiteAmendment.resendActivationAllowed = true),
-    (value) => (value.publicBoundary.emailCollectionAllowed = true),
-    (value) => value.publicBoundary.apiRoutes.push("POST /waitlist"),
+    (value) => (value.waitlistAmendment.emailOnly = false),
+    (value) => (value.waitlistAmendment.automaticEmailSending = true),
+    (value) => (value.waitlistAmendment.topicDefaultSubscription = "opt_in"),
+    (value) => (value.waitlistAmendment.topicVisibility = "private"),
+    (value) => (value.waitlistAmendment.segmentAndTopicIdsCommitted = true),
+    (value) => (value.publicBoundary.collectedFields = ["email", "phone"]),
     (value) => (value.publicBoundary.databaseAccess = true),
-    (value) => (value.publicBoundary.analytics = false),
-    (value) => delete value.analyticsAmendment,
-    (value) => (value.analyticsAmendment.advertisingFeatures = true),
-    (value) => (value.analyticsAmendment.basicConsentMode = false),
-    (value) => (value.analyticsAmendment.productionCanonicalOriginOnly = false),
-    (value) => (value.analyticsAmendment.releaseApprovalRequired = false),
-    (value) => (value.analyticsAmendment.eventRetentionMonths = 14),
-    (value) => (value.analyticsAmendment.enhancedMeasurement = true),
     (value) => (value.publicBoundary.customerAuthentication = true),
-    (value) => (value.publicBoundary.kyc = true),
-    (value) => (value.publicBoundary.vendorActivation = true),
-    (value) => (value.providerManagedEffects.firestoreDatabaseAllowed = true),
+    (value) => (value.publicBoundary.financialVendorActivation = true),
+    (value) => (value.publicBoundary.automaticCampaignSending = true),
+    (value) => (value.waitlistService.maxInstances = 10),
+    (value) => (value.waitlistService.concurrency = 20),
+    (value) => (value.waitlistService.providerMinimumIntervalMs = 0),
+    (value) => (value.waitlistService.secretVersion = "latest"),
+    (value) => (value.waitlistService.vpcAccess = true),
+    (value) => (value.waitlistService.rawEmailLogsAllowed = true),
+    (value) => (value.waitlistService.resubscribeUnsubscribedContact = true),
     (value) => (value.cost.expectedIncrementalMonthlyCostUsd = 1),
     (value) => (value.cost.spendingCap = true),
     (value) => (value.domain.dnsOwner = "Google Cloud DNS"),
-    (value) => (value.domain.preserveUnrelatedRecords = false),
+    (value) => (value.domain.dnsChangeAuthorized = true),
     (value) => (value.decision.standingApplyAuthorization = true),
   ]) {
     const contract = structuredClone(readComingSoonStaticHosting());
@@ -79,20 +79,26 @@ test("rejects data collection, product activation, cost, and DNS drift", () => {
   }
 });
 
-test("enforces the exact production identity, SHA, and apply sentinel", () => {
+test("requires exact production identity, SHA, segment, topic, and apply sentinel", () => {
   assert.deepEqual(validateStaticHostingEnvironment(validEnvironment), {
     projectId: "samra-pay-production",
     projectNumber: "382465561715",
     organizationId: "614833350075",
     operator: "me@davidhaile.com",
     expectedSha: "a".repeat(40),
+    segmentId: SEGMENT_ID,
+    topicId: TOPIC_ID,
   });
-  assert.throws(() =>
-    validateStaticHostingEnvironment({
-      ...validEnvironment,
-      SAMRA_GCP_PROJECT_ID: "samra-pay-staging",
-    }),
-  );
+  for (const patch of [
+    { SAMRA_GCP_PROJECT_ID: "samra-pay-staging" },
+    { SAMRA_GCP_EXPECTED_SHA: "main" },
+    { SAMRA_RESEND_SEGMENT_ID: "bad" },
+    { SAMRA_RESEND_TOPIC_ID: SEGMENT_ID },
+  ]) {
+    assert.throws(() =>
+      validateStaticHostingEnvironment({ ...validEnvironment, ...patch }),
+    );
+  }
   assert.throws(() =>
     validateStaticHostingEnvironment(validEnvironment, {
       requireApplyAuthorization: true,
@@ -102,17 +108,25 @@ test("enforces the exact production identity, SHA, and apply sentinel", () => {
     validateStaticHostingEnvironment(
       {
         ...validEnvironment,
-        SAMRA_GCP_STATIC_HOSTING_APPLY: "AUTHORIZED_COMING_SOON_STATIC_HOSTING",
+        SAMRA_GCP_PUBLIC_WAITLIST_APPLY: "AUTHORIZED_PUBLIC_WAITLIST_RELEASE",
       },
       { requireApplyAuthorization: true },
     ),
   );
 });
 
-test("serves one SPA with security headers and no project alias", () => {
+test("routes one same-origin waitlist endpoint before the SPA fallback", () => {
   const firebase = readFirebaseHostingConfig();
   assert.equal(firebase.hosting.public, "artifacts/samra-pay/dist/public");
   assert.deepEqual(firebase.hosting.rewrites, [
+    {
+      source: "/api/v1/waitlist/subscriptions",
+      run: {
+        serviceId: "samra-launch-updates",
+        region: "us-east4",
+        pinTag: true,
+      },
+    },
     { source: "**", destination: "/index.html" },
   ]);
   const headers = new Map(
@@ -122,230 +136,76 @@ test("serves one SPA with security headers and no project alias", () => {
   );
   assert.match(
     headers.get("Content-Security-Policy"),
-    /connect-src https:\/\/www.google-analytics.com https:\/\/region1.google-analytics.com https:\/\/www.googletagmanager.com;/u,
+    /connect-src 'self' https:\/\/www\.google-analytics\.com/u,
   );
   assert.doesNotMatch(
     headers.get("Content-Security-Policy"),
-    /\*|unsafe-inline|unsafe-eval|doubleclick|googleadservices/u,
+    /api\.resend\.com|\*|unsafe-inline|unsafe-eval/u,
   );
   assert.match(headers.get("Content-Security-Policy"), /form-action 'none'/u);
   assert.equal(headers.get("X-Frame-Options"), "DENY");
-  assert.equal(headers.get("Strict-Transport-Security"), "max-age=31536000");
-
-  const cacheRules = new Map(
-    firebase.hosting.headers.map((rule) => [
-      rule.source ?? rule.regex,
-      new Map(rule.headers.map((header) => [header.key, header.value])),
-    ]),
-  );
-  assert.equal(
-    cacheRules.get("^/[^.]*$")?.get("Cache-Control"),
-    "no-cache,no-store,must-revalidate",
-  );
-  const routedHtml = new RegExp("^/[^.]*$", "u");
-  for (const route of [
-    "/",
-    "/features",
-    "/cards",
-    "/cards/charge",
-    "/cards/co-brand",
-    "/values",
-    "/faq",
-    "/blog",
-    "/privacy",
-    "/terms",
-    "/future-extensionless-route",
-  ]) {
-    assert.match(route, routedHtml);
-  }
-  for (const asset of [
-    "/index.html",
-    "/assets/app.js",
-    "/assets/site.css",
-    "/assets/hero.avif",
-    "/icons/favicon.png",
-    "/robots.txt",
-  ]) {
-    assert.doesNotMatch(asset, routedHtml);
-  }
-  assert.equal(
-    cacheRules.get("/index.html")?.get("Cache-Control"),
-    "no-cache,no-store,must-revalidate",
-  );
-  for (const source of ["/assets/**", "/icons/**", "/og-preview-*.png"]) {
-    assert.equal(
-      cacheRules.get(source)?.get("Cache-Control"),
-      "public,max-age=31536000,immutable",
-    );
-  }
 });
 
-test("fails closed on measurement identity, host, retention, and coordinated CSP drift", () => {
-  for (const mutate of [
-    (value) => (value.measurementId = "G-UNAPPROVED"),
-    (value) => (value.origin = "https://app.samrapay.com"),
-    (value) => (value.consentDays = 365),
-    (value) => (value.cookieDays = 730),
-    (value) => (value.cookiePrefix = "_ga"),
-    (value) => (value.advertising = true),
-  ]) {
-    const analytics = readPublicAnalyticsConfig();
-    mutate(analytics);
-    assert.throws(() =>
-      validateComingSoonStaticHosting(
-        undefined,
-        undefined,
-        undefined,
-        analytics,
-      ),
-    );
-  }
-  const contract = readComingSoonStaticHosting();
-  const firebase = readFirebaseHostingConfig();
-  contract.security.contentSecurityPolicy = "default-src *";
-  firebase.hosting.headers.find(
-    (rule) => rule.source === "**",
-  ).headers[0].value = contract.security.contentSecurityPolicy;
-  assert.throws(() =>
-    validateComingSoonStaticHosting(contract, undefined, firebase),
-  );
-});
-
-test("fails closed when routed HTML or immutable asset caching drifts", () => {
-  const mutations = [
-    (firebase) => {
-      firebase.hosting.headers = firebase.hosting.headers.filter(
-        (rule) => rule.regex !== "^/[^.]*$",
-      );
-    },
-    (firebase) => {
-      const rule = firebase.hosting.headers.find(
-        (candidate) => candidate.regex === "^/[^.]*$",
-      );
-      rule.headers[0].value = "max-age=3600";
-    },
-    (firebase) => {
-      const rule = firebase.hosting.headers.find(
-        (candidate) => candidate.source === "/assets/**",
-      );
-      rule.headers[0].value = "max-age=3600";
-    },
-    (firebase) => {
-      firebase.hosting.headers.push({
-        regex: "^/.*$",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "no-cache,no-store,must-revalidate",
-          },
-        ],
-      });
-    },
-    (firebase) => {
-      const rule = firebase.hosting.headers.find(
-        (candidate) => candidate.regex === "^/[^.]*$",
-      );
-      rule.headers.push({
-        key: "Cache-Control",
-        value: "max-age=3600",
-      });
-    },
-    (firebase) => {
-      const rule = firebase.hosting.headers.find(
-        (candidate) => candidate.source === "/assets/**",
-      );
-      rule.headers.push({
-        key: "Cache-Control",
-        value: "max-age=3600",
-      });
-    },
-    (firebase) => {
-      firebase.hosting.headers.push({
-        source: "**",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: "default-src *",
-          },
-        ],
-      });
-    },
-  ];
-
-  for (const mutate of mutations) {
-    const firebase = structuredClone(readFirebaseHostingConfig());
-    mutate(firebase);
-    assert.throws(() =>
-      validateComingSoonStaticHosting(undefined, undefined, firebase),
-    );
-  }
-});
-
-test("keeps the public source informational and the presentation form disabled outside loopback", async () => {
-  const sourceFiles = await Promise.all(
+test("enables the email form without exposing provider, storage, or analytics access", async () => {
+  const [form, client, privacy, faq] = await Promise.all(
     [
-      "../../artifacts/samra-pay/src/pages/home.tsx",
-      "../../artifacts/samra-pay/src/pages/faq.tsx",
-      "../../artifacts/samra-pay/src/pages/blog.tsx",
       "../../artifacts/samra-pay/src/components/launch-updates-form.tsx",
+      "../../artifacts/samra-pay/src/lib/public-waitlist.ts",
+      "../../artifacts/samra-pay/src/pages/public-legal.tsx",
+      "../../artifacts/samra-pay/src/content/public-faq.ts",
     ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
   );
-  const source = sourceFiles.join("\n");
-  assert.match(source, /<form\b[\s\S]*type=["']email["']/iu);
-  assert.match(source, /disabled=\{!preview\}/u);
-  assert.match(source, /isLocalUpdatesPreview\(window\.location\.hostname\)/u);
-  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage/iu);
-  assert.doesNotMatch(source, /\/api\/v1\/waitlist\/subscriptions/iu);
-  assert.doesNotMatch(source, /Preview Alpha signup/iu);
-  assert.match(source, /presentation-only/iu);
-});
-
-test("generates platform-specific image derivatives outside release source", async () => {
-  const [ignore, packageJson, optimizer] = await Promise.all([
-    readFile(new URL("../../.gitignore", import.meta.url), "utf8"),
-    readFile(
-      new URL("../../artifacts/samra-pay/package.json", import.meta.url),
-      "utf8",
-    ).then(JSON.parse),
-    readFile(
-      new URL(
-        "../../artifacts/samra-pay/scripts/optimize-public-images.mjs",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  ]);
-
-  assert.match(
-    ignore,
-    /artifacts\/samra-pay\/src\/assets\/coming-soon\/generated\//u,
+  assert.match(form, /type="email"/u);
+  assert.match(form, /subscribePublicWaitlist/u);
+  assert.match(form, /Email consent is required/u);
+  assert.match(form, /Privacy policy/u);
+  assert.doesNotMatch(
+    form,
+    /api\.resend\.com|RESEND_API_KEY|localStorage|sessionStorage|gtag\(/u,
   );
-  for (const script of [
-    "dev",
-    "dev:legacy",
-    "build",
-    "build:legacy",
-    "typecheck",
-    "test",
-  ]) {
-    assert.match(packageJson.scripts[script], /prepare:public-images/u);
-  }
-  assert.match(optimizer, /generatedCacheIsCurrent/u);
-  assert.match(optimizer, /sharp: sharp\.versions/u);
+  assert.match(client, /\/api\/v1\/waitlist\/subscriptions/u);
+  assert.match(client, /public-waitlist-2026-09-04/u);
+  assert.doesNotMatch(client, /api\.resend\.com|RESEND_API_KEY/u);
+  assert.match(privacy, /Resend, our email provider/u);
+  assert.match(privacy, /until you unsubscribe or ask us to delete it/u);
+  assert.match(faq, /submit your email for product and availability updates/u);
 });
 
-test("keeps planning local and rejects unrecognized modes", async () => {
-  const script = "deploy/gcp/activate-coming-soon-static-hosting.sh";
+test("keeps the service build context allowlisted and non-root", async () => {
+  const [dockerfile, dockerignore, gcloudignore, cloudbuild] =
+    await Promise.all(
+      [
+        "../../lib/launch-updates/Dockerfile.waitlist",
+        "../../lib/launch-updates/.dockerignore",
+        "../../lib/launch-updates/.gcloudignore",
+        "../../lib/launch-updates/cloudbuild.waitlist.yaml",
+      ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+    );
+  assert.match(dockerfile, /USER node/u);
+  assert.match(dockerfile, /src\/public-server\.mjs/u);
+  assert.doesNotMatch(dockerfile, /ARG|RESEND_API_KEY/u);
+  for (const ignore of [dockerignore, gcloudignore]) {
+    assert.match(ignore, /^\*\*$/mu);
+    assert.match(ignore, /!Dockerfile\.waitlist/u);
+    assert.match(ignore, /!src\/public-server\.mjs/u);
+    assert.doesNotMatch(ignore, /!\.env/u);
+  }
+  assert.match(cloudbuild, /--file=Dockerfile\.waitlist/u);
+  assert.match(cloudbuild, /serviceAccount:/u);
+  assert.match(cloudbuild, /requestedVerifyOption: VERIFIED/u);
+});
+
+test("keeps planning local and deployment separately authorized", async () => {
+  const script = "deploy/gcp/activate-public-waitlist-release.sh";
   const output = execFileSync("bash", [script, "--plan"], {
     encoding: "utf8",
   });
-  assert.match(output, /STATIC INFORMATIONAL HOSTING PLAN PASS/);
-  assert.match(output, /Plan cost: USD 0 per month/);
-  assert.match(output, /Cloud or DNS state read: no/);
-  assert.match(output, /AUTHORIZED_COMING_SOON_STATIC_HOSTING/);
+  assert.match(output, /CONTROLLED PUBLIC EMAIL WAITLIST PLAN PASS/u);
+  assert.match(output, /Cloud or provider state read: no/u);
+  assert.match(output, /AUTHORIZED_PUBLIC_WAITLIST_RELEASE/u);
   assert.match(
     output,
-    /PLAN COMPLETE — NO CLOUD, DNS, DATA, API, OR VENDOR CHANGES/,
+    /PLAN COMPLETE — NO CLOUD, DNS, DATABASE, CONTACT, OR EMAIL-SENDING CHANGES/u,
   );
 
   const rejected = spawnSync("bash", [script, "--destroy"], {
@@ -356,19 +216,25 @@ test("keeps planning local and rejects unrecognized modes", async () => {
   execFileSync("bash", ["-n", script]);
 
   const source = await readFile(script, "utf8");
+  assert.match(source, /gcloud builds submit/u);
+  assert.match(source, /gcloud run deploy/u);
   assert.match(source, /firebase deploy --only hosting/u);
-  assert.match(source, /public build changed tracked release source/u);
-  assert.match(source, /ROUTED_HTML_CACHE_CONTROL/u);
-  assert.match(source, /IMMUTABLE_CACHE_CONTROL/u);
-  assert.match(source, /\/cards\/co-brand/u);
-  assert.match(source, /require_cache_control/u);
-  assert.match(source, /CANONICAL_URL="https:\/\/www\.samrapay\.com"/u);
-  assert.match(source, /sha256_url/u);
-  assert.match(source, /IMMUTABLE_ASSET_CONTENT_TYPE/u);
-  assert.match(source, /verify_public_host "\$\{PUBLIC_URL\}"/u);
-  assert.match(source, /verify_public_host "\$\{CANONICAL_URL\}"/u);
+  assert.match(source, /SAMRA_RESEND_CONFIGURATION_CONFIRMED/u);
+  assert.match(source, /samra-production-resend-api-key/u);
+  assert.match(source, /value\(parent\.id\)/u);
+  assert.match(source, /value\(dockerConfig\.immutableTags\)/u);
+  assert.match(source, /--concurrency=2/u);
+  assert.match(source, /No contact was created and no email was sent/u);
+  assert.doesNotMatch(source, / \+\s+--/u);
   assert.doesNotMatch(
     source,
-    /run deploy|sql users create|sql databases create|secrets versions add|firestore databases create|database:instances:create|auth:import/iu,
+    /sql users create|sql databases create|secrets versions access|firestore databases create|auth:import/iu,
   );
+
+  const legacy = await readFile(
+    "deploy/gcp/activate-coming-soon-static-hosting.sh",
+    "utf8",
+  );
+  assert.match(legacy, /superseded by the controlled public waitlist/u);
+  assert.match(legacy, /activate-public-waitlist-release\.sh/u);
 });

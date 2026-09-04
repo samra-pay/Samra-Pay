@@ -43,7 +43,6 @@ const forbiddenBundleContent = [
   /Loading secure onboarding/iu,
   /Start synthetic onboarding/iu,
   /Synthetic backend identity/iu,
-  /\/api\/v1\/waitlist\/subscriptions/iu,
   /Email address · preview only/iu,
   /Preview Alpha signup/iu,
 ];

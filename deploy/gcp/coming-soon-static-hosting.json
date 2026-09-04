@@ -1,51 +1,53 @@
 {
-  "schemaVersion": 1,
-  "status": "approved-not-applied",
-  "phase": "coming-soon-static-informational-launch",
+  "schemaVersion": 2,
+  "status": "approved-for-pr-not-applied",
+  "phase": "controlled-public-email-waitlist",
   "decision": {
-    "approvedOn": "2026-08-31",
+    "approvedOn": "2026-09-04",
     "approvedBy": "David Haile",
-    "scope": "public static informational website",
-    "emailCollectionDeferred": true,
+    "scope": "public website email waitlist backed only by Resend Contacts",
     "standingApplyAuthorization": false
   },
   "linkedLaunchContract": "deploy/gcp/coming-soon-launch.json",
+  "priorStaticRelease": {
+    "sourceSha": "32c550321802c4747fa53871fb7b51c7977e9959",
+    "status": "applied-and-live-verified",
+    "emailCollection": false
+  },
+  "waitlistAmendment": {
+    "status": "approved-for-pr-not-deployment",
+    "purpose": "product and availability updates before launch",
+    "emailOnly": true,
+    "consentVersion": "public-waitlist-2026-09-04",
+    "provider": "resend-contacts",
+    "segmentName": "Samra Pay Pre-Launch Waitlist",
+    "topicName": "Product and launch updates",
+    "topicDefaultSubscription": "opt_out",
+    "topicVisibility": "public",
+    "segmentAndTopicIdsCommitted": false,
+    "automaticEmailSending": false,
+    "releaseApprovalRequired": true
+  },
   "analyticsAmendment": {
     "approvedOn": "2026-09-02",
     "approvedBy": "David Haile",
-    "status": "approved-for-implementation-not-deployment",
     "scope": "consent-gated public website GA4; no advertising",
     "configuration": "artifacts/samra-pay/src/content/public-analytics.json",
-    "accountId": "406796105",
-    "propertyId": "552617317",
-    "streamId": "15667615640",
     "basicConsentMode": true,
     "productionCanonicalOriginOnly": true,
     "advertisingFeatures": false,
     "enhancedMeasurement": false,
-    "eventRetentionMonths": 2,
-    "retentionOwner": "David Haile",
-    "releaseApprovalRequired": true
-  },
-  "commercialSiteAmendment": {
-    "approvedOn": "2026-09-04",
-    "approvedBy": "David Haile",
-    "status": "approved-for-release",
-    "scope": "audited public commercial copy and design; retired Alpha language removed",
-    "presentationOnlyEmailForm": true,
-    "emailInputsDisabledOutsideLoopback": true,
-    "emailCollectionAllowed": false,
-    "resendActivationAllowed": false
+    "eventRetentionMonths": 2
   },
   "source": {
     "repository": "haileleuld87/Samra-Pay",
-    "canonicalDesign": "Sites project appgprj_6a938306c6c08191a5d582603a18a2fe",
-    "snapshotVersion": 13,
-    "snapshotCommit": "4669b3482761373121b4ce06d0f1b20835181d2d",
     "releaseSource": "FULL_GIT_SHA",
     "buildCommand": "pnpm --filter @workspace/samra-pay run build",
     "buildDirectory": "artifacts/samra-pay/dist/public",
-    "hostingConfig": "firebase.json"
+    "hostingConfig": "firebase.json",
+    "serviceContext": "lib/launch-updates",
+    "serviceDockerfile": "lib/launch-updates/Dockerfile.waitlist",
+    "serviceBuildConfig": "lib/launch-updates/cloudbuild.waitlist.yaml"
   },
   "productionBoundary": {
     "projectId": "samra-pay-production",
@@ -53,113 +55,124 @@
     "organizationId": "614833350075",
     "operator": "me@davidhaile.com",
     "region": "us-east4",
-    "dataClassification": "public-informational",
+    "dataClassification": "email-marketing-contact",
     "existingInfrastructureGuardedEstimateUsd": 81.92,
-    "monthlyInfrastructureHardStopUsd": 100,
-    "remainingGuardedHeadroomUsd": 18.08
+    "monthlyInfrastructureHardStopUsd": 100
   },
   "hosting": {
     "provider": "firebase-hosting",
     "siteId": "samra-pay-production",
     "defaultUrl": "https://samra-pay-production.web.app",
-    "cdn": true,
-    "automaticTls": true,
-    "singlePageApplication": true,
-    "projectAliasFileAllowed": false,
-    "deployOnly": "hosting"
+    "canonicalDomain": "www.samrapay.com",
+    "apiRewrite": "/api/v1/waitlist/subscriptions",
+    "serviceId": "samra-launch-updates",
+    "region": "us-east4",
+    "pinTag": true
+  },
+  "waitlistService": {
+    "platform": "cloud-run",
+    "serviceId": "samra-launch-updates",
+    "runtimeServiceAccount": "samra-launch-updates@samra-pay-production.iam.gserviceaccount.com",
+    "imageRepository": "us-east4-docker.pkg.dev/samra-pay-production/samra-production/samra-launch-updates",
+    "imageDigestRequiredForReview": true,
+    "ingress": "all",
+    "unauthenticated": true,
+    "minInstances": 0,
+    "maxInstances": 1,
+    "concurrency": 2,
+    "timeoutSeconds": 10,
+    "cpu": "1",
+    "memory": "256Mi",
+    "secretId": "samra-production-resend-api-key",
+    "secretVersion": "1",
+    "secretEnvironmentName": "RESEND_API_KEY",
+    "segmentIdEnvironmentName": "SAMRA_RESEND_SEGMENT_ID",
+    "topicIdEnvironmentName": "SAMRA_RESEND_TOPIC_ID",
+    "allowedOrigins": [
+      "https://www.samrapay.com",
+      "https://samra-pay-production.web.app"
+    ],
+    "publicRoutes": ["POST /api/v1/waitlist/subscriptions", "GET /healthz"],
+    "databaseAccess": false,
+    "vpcAccess": false,
+    "rawEmailLogsAllowed": false,
+    "resubscribeUnsubscribedContact": false,
+    "providerMinimumIntervalMs": 550,
+    "providerOperations": [
+      "get contact by email",
+      "create contact",
+      "add subscribed contact to segment",
+      "opt subscribed contact into topic"
+    ]
   },
   "publicBoundary": {
-    "informationalOnly": true,
     "formsAllowed": true,
-    "formsPurpose": "presentation-only-disabled-public-email-interest",
-    "emailInputsDisabledOutsideLoopback": true,
-    "emailCollectionAllowed": false,
-    "apiRoutes": [],
+    "formsPurpose": "controlled-pre-launch-email-waitlist",
+    "emailCollectionAllowed": true,
+    "apiRoutes": ["POST /api/v1/waitlist/subscriptions"],
+    "collectedFields": ["email"],
     "databaseAccess": false,
-    "secrets": [],
-    "analytics": true,
-    "advertisingPixels": false,
     "customerAuthentication": false,
     "kyc": false,
     "wallet": false,
     "moneyMovement": false,
-    "vendorActivation": false,
-    "ordinaryHostingRequestLogsOnly": false
+    "financialVendorActivation": false,
+    "emailProviderActivation": "resend-contacts-only",
+    "automaticCampaignSending": false
   },
   "security": {
-    "contentSecurityPolicy": "default-src 'self'; script-src 'self' https://www.googletagmanager.com/gtag/js; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; connect-src https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
+    "contentSecurityPolicy": "default-src 'self'; script-src 'self' https://www.googletagmanager.com/gtag/js; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
     "referrerPolicy": "strict-origin-when-cross-origin",
     "xContentTypeOptions": "nosniff",
     "xFrameOptions": "DENY",
     "permissionsPolicy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
-    "hsts": "max-age=31536000",
-    "hstsIncludeSubDomains": false
-  },
-  "providerManagedEffects": {
-    "firebaseProjectLinkageAllowed": true,
-    "providerManagedApiAndServiceAgentCreationAllowed": true,
-    "firebaseAuthenticationAllowed": false,
-    "firestoreDatabaseAllowed": false,
-    "realtimeDatabaseAllowed": false,
-    "cloudStorageBucketAllowed": false,
-    "firebaseAppRegistrationAllowed": false
+    "hsts": "max-age=31536000"
   },
   "cost": {
     "currency": "USD",
     "expectedIncrementalMonthlyCostUsd": 0,
-    "noCostStorageGib": 10,
-    "noCostMonthlyTransferGib": 10,
-    "storageAboveNoCostUsdPerGib": 0.026,
-    "transferAboveNoCostUsdPerGib": 0.15,
+    "assumption": "low-volume scale-to-zero service within provider allowances",
     "usageDependent": true,
     "spendingCap": false,
     "hardStopRequiresReassessmentAtTotalMonthlyEstimateUsd": 100
   },
   "domain": {
     "dnsOwner": "Squarespace",
-    "apex": "samrapay.com",
     "canonicalDomain": "www.samrapay.com",
-    "apexBehavior": "redirect-to-canonical",
     "preserveDnsRecordTypes": ["MX", "TXT", "SPF", "DKIM", "DMARC"],
     "preserveUnrelatedRecords": true,
-    "decisionApproved": true,
-    "standingDnsAuthorization": false
+    "dnsChangeAuthorized": false
   },
   "release": {
-    "activationEnvironment": "SAMRA_GCP_STATIC_HOSTING_APPLY",
-    "activationSentinel": "AUTHORIZED_COMING_SOON_STATIC_HOSTING",
+    "activationEnvironment": "SAMRA_GCP_PUBLIC_WAITLIST_APPLY",
+    "activationSentinel": "AUTHORIZED_PUBLIC_WAITLIST_RELEASE",
     "exactShaRequired": true,
     "cleanWorkingTreeRequired": true,
     "reviewBeforeApply": true,
+    "segmentAndTopicIdsRequiredAtRuntime": true,
     "postAuditRequired": true,
     "recordPriorReleaseRequired": true,
-    "rollback": "restore the recorded prior Firebase Hosting release without rebuilding"
+    "rollback": "restore the prior Firebase Hosting release and prior Cloud Run revision"
   },
   "postLaunchVerification": [
     "default Firebase Hosting HTTPS URL",
-    "custom-domain HTTPS after DNS validation",
-    "home, features, cards, values, FAQ, blog, privacy, and terms routes",
-    "English and Amharic controls",
-    "presentation email form visible but disabled; no submission or collection",
-    "no waitlist or API endpoint in the public bundle",
-    "security headers",
-    "no Google requests before consent or after rejection",
-    "single sanitized page_view after consent on canonical www only",
-    "Analytics preferences withdrawal and cookie cleanup",
-    "email and verification DNS records preserved"
+    "canonical custom-domain HTTPS",
+    "English and Amharic waitlist form",
+    "one approved synthetic waitlist address appears in the exact Resend segment and topic",
+    "existing unsubscribed contact is not resubscribed",
+    "no email address in application logs or analytics",
+    "privacy notice names Resend and unsubscribe behavior",
+    "no product account, KYC, wallet, money movement, or database path exposed"
   ],
   "excluded": [
-    "Cloud Run deployment",
-    "load balancer",
-    "Cloud Armor",
-    "database credential",
-    "database migration",
-    "customer data",
-    "email collection",
+    "automatic welcome email",
+    "double opt-in workflow",
+    "Samra database storage",
     "Auth0",
     "Persona",
     "Crossmint",
     "financial APIs",
-    "Squarespace registrar transfer"
+    "remittance or card application",
+    "Squarespace DNS changes"
   ]
 }

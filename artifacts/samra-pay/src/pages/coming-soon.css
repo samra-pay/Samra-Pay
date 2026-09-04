@@ -261,6 +261,14 @@ body:has(.coming-soon-site),
   margin: 2px 0 0;
   width: 18px;
 }
+.launch-updates-honeypot {
+  height: 1px;
+  left: -10000px;
+  overflow: hidden;
+  position: absolute;
+  top: auto;
+  width: 1px;
+}
 .launch-updates-notice {
   color: var(--cs-muted);
   font-size: 0.72rem;

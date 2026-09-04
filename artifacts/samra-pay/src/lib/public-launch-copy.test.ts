@@ -166,8 +166,9 @@ describe("commercial launch copy", () => {
       [...translated].filter((english) => !featureCopyAm[english]),
     ).toEqual([]);
   });
-  it("keeps the email form free of collection, analytics, storage and provider credentials", () => {
+  it("keeps waitlist collection behind the reviewed helper and out of browser storage and analytics", () => {
     const source = read("../components/launch-updates-form.tsx");
+    expect(source).toContain("subscribePublicWaitlist");
     expect(source).not.toMatch(
       /fetch\(|XMLHttpRequest|sendBeacon|localStorage|sessionStorage|indexedDB|gtag\(|dataLayer|api\.resend\.com|RESEND_API_KEY/,
     );

@@ -1,0 +1,17 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=Dockerfile.waitlist
+      - --tag=${_IMAGE}
+      - .
+images:
+  - ${_IMAGE}
+options:
+  logging: CLOUD_LOGGING_ONLY
+  requestedVerifyOption: VERIFIED
+substitutions:
+  _BUILD_SERVICE_ACCOUNT: invalid
+  _IMAGE: us-east4-docker.pkg.dev/samra-pay-production/samra-production/samra-launch-updates:INVALID
+serviceAccount: projects/$PROJECT_ID/serviceAccounts/${_BUILD_SERVICE_ACCOUNT}
+timeout: 600s

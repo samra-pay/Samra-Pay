@@ -1,7 +1,16 @@
-# Private Resend connection test
+# Resend launch updates
 
-This package prepares one private connectivity test. It is not a public signup
-service or a financial-runtime integration. No website form imports it.
+This package contains two strictly separate paths:
+
+- the controlled public email-only waitlist in `public-server.mjs`,
+  `public-waitlist-service.mjs`, and `waitlist-resend.mjs`; and
+- the older private one-message connection test.
+
+The public service accepts the website's single email field, requires explicit
+email consent, and creates a contact in one configured Resend Segment and Topic.
+An existing subscribed contact is added to that Segment and Topic; a globally
+unsubscribed contact is left unchanged. It does not send an email, use a Samra
+database, create an account or application, or access any financial runtime.
 
 ## Current state
 
@@ -15,15 +24,9 @@ identity, key-only access, build/deployment/cleanup, and a $1 incremental spendi
 limit, subject to build review and permission checks. The sender is
 `Samra Pay <updates@mail.samrapay.com>`; replies go to `support@samrapay.com`.
 
-Cloud execution remains blocked: the browser could not verify its
-admin-enforced policy for `console.cloud.google.com`. Do not bypass that policy
-or expand the existing read-only GitHub production auditor. This submission
-does not deploy a job, read a secret payload, spend the cloud-test budget or
-send an email. GitHub's normal review CI is separate from cloud execution.
-
-The public website, DNS, database, financial services, staging-only build
-contract and existing production IAM are outside this submission's mutation
-scope. The earlier commercial website edits are not included.
+The private test history does not authorize the public service. The public
+waitlist has its own exact-SHA review and apply gate in
+`deploy/gcp/activate-public-waitlist-release.sh`.
 
 ## Offline checks
 
