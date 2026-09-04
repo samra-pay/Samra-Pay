@@ -26,7 +26,10 @@ function withoutPublicAnalytics(csp) {
       `img-src 'self' data: ${ANALYTICS_CONNECTIONS};`,
       "img-src 'self' data:;",
     )
-    .replace(`connect-src ${ANALYTICS_CONNECTIONS};`, "connect-src 'none';");
+    .replace(
+      `connect-src 'self' ${ANALYTICS_CONNECTIONS};`,
+      "connect-src 'none';",
+    );
   assert.equal(
     restricted,
     PREVIEW_CSP,
@@ -78,8 +81,18 @@ export function hostingConfig(firebase) {
   assert.equal(hosting.trailingSlash, false);
   assert.deepEqual(
     hosting.rewrites,
-    [{ source: "**", destination: "/index.html" }],
-    "Only static rewrites are allowed",
+    [
+      {
+        source: "/api/v1/waitlist/subscriptions",
+        run: {
+          serviceId: "samra-launch-updates",
+          region: "us-east4",
+          pinTag: true,
+        },
+      },
+      { source: "**", destination: "/index.html" },
+    ],
+    "Only the reviewed production waitlist and static rewrites are allowed",
   );
   const headers = hosting.headers.map((rule) => {
     assert(
