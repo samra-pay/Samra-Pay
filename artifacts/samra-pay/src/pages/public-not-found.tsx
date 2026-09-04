@@ -43,17 +43,14 @@ export default function PublicNotFound() {
             <p>404</p>
             <h1 id="not-found-title">
               {text(
-                localized(
-                  "This page is not part of the public preview.",
-                  "ይህ ገጽ የሕዝብ ማሳያው አካል አይደለም።",
-                ),
+                localized("Let’s find your way back.", "ወደ ትክክለኛው ገጽ እንመለስ።"),
               )}
             </h1>
             <span>
               {text(
                 localized(
-                  "Use the public navigation or return home. Account access and sign-in are not available on this website.",
-                  "የሕዝብ ምናሌውን ይጠቀሙ ወይም ወደ መነሻ ይመለሱ። በዚህ ድረ ገጽ ወደ አካውንት መግባት ወይም አካውንት መጠቀም አይቻልም።",
+                  "We couldn’t find this page. Explore the card portfolio, get answers, or head back to the homepage.",
+                  "ይህን ገጽ ማግኘት አልቻልንም። የካርድ ስብስቡን ያስሱ፣ መልሶችን ያግኙ ወይም ወደ መነሻ ገጽ ይመለሱ።",
                 ),
               )}
             </span>

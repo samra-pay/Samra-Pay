@@ -118,8 +118,8 @@ const productPrinciples = [
     icon: ShieldCheck,
     title: localized("Earn trust before scale.", "ከመስፋፋት በፊት እምነትን ያግኙ።"),
     body: localized(
-      "Alpha is for testing carefully, listening closely, and proving the operating model before broader release.",
-      "Alpha በጥንቃቄ ለመፈተሽ፣ በቅርብ ለማዳመጥና ከሰፊ ምረቃ በፊት የአሠራር ሞዴሉን ለማረጋገጥ ነው።",
+      "Trust grows through careful testing, close listening, and dependable service. Those standards will guide every stage of our launch.",
+      "እምነት በጥንቃቄ በመፈተሽ፣ በቅርብ በማዳመጥና በሚታመን አገልግሎት ያድጋል። እነዚህ መስፈርቶች እያንዳንዱን የምረቃችንን ደረጃ ይመራሉ።",
     ),
   },
 ];
@@ -176,8 +176,8 @@ export default function Values() {
                 <ShieldCheck aria-hidden="true" />
                 {text(
                   localized(
-                    "Limited Alpha planned for the U.S. and Canada · April 2027",
-                    "የተወሰነ Alpha በU.S. እና Canada ታቅዷል · April 2027",
+                    "Launching for the U.S. and Canada. Connected to Ethiopia.",
+                    "ለአሜሪካና ካናዳ እየተዘጋጀ። ከኢትዮጵያ ጋር የተገናኘ።",
                   ),
                 )}
               </p>
