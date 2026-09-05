@@ -1474,3 +1474,4 @@ async function loginWorkforce(
   assert.match(cookie, /^samra_ops_session=/);
   return Object.freeze({ Cookie: cookie });
 }
+import "./crossmint-customer-postgres.test";

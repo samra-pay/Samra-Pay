@@ -81,7 +81,7 @@ export const customerWallets = samraCore.table(
     check("customer_wallets_asset_chk", sql`${table.asset} = 'USDC'`),
     check(
       "customer_wallets_environment_chk",
-      sql`${table.environment} = 'synthetic'`,
+      sql`(${table.environment} = 'synthetic' and ${table.configurationVersion} = 'crossmint-synthetic-v1') or (${table.environment} = 'staging' and ${table.configurationVersion} = 'crossmint-sandbox-evm-customer-email-v1')`,
     ),
     check(
       "customer_wallets_provider_request_key_chk",

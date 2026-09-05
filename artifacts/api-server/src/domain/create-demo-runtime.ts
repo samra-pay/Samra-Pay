@@ -26,6 +26,7 @@ import {
   DeterministicFakePersonaAdapter,
 } from "./customer-identity";
 import { PersonaSandboxAdapter, PersonaWebhookService } from "./persona";
+import { CrossmintCustomerSandboxAdapter } from "./crossmint-customer-sandbox";
 import {
   CustomerWalletProvisioningService,
   DeterministicFakeCrossmintAdapter,
@@ -44,7 +45,18 @@ export function createConfiguredDemoRuntime(
   const customerIdentityCaseStore = new PostgresCustomerIdentityCaseStore(
     context,
   );
-  const customerWalletStore = new PostgresCustomerWalletStore(context);
+  const walletConfig = config.customerWalletProvider ?? {
+    mode: "fake" as const,
+  };
+  const customerWalletStore = new PostgresCustomerWalletStore(
+    context,
+    walletConfig.mode === "fake"
+      ? { mode: "fake" }
+      : {
+          mode: walletConfig.mode,
+          allowedCustomerId: walletConfig.allowedCustomerId,
+        },
+  );
   const customerActorResolver =
     config.customerAuth.mode === "auth0"
       ? new Auth0CustomerActorResolver(
@@ -94,12 +106,19 @@ export function createConfiguredDemoRuntime(
       config.customerAuth.mode === "auth0"
         ? new CustomerWalletProvisioningService({
             store: customerWalletStore,
-            provider: new DeterministicFakeCrossmintAdapter(),
+            provider:
+              walletConfig.mode === "crossmint-sandbox-customer"
+                ? new CrossmintCustomerSandboxAdapter(walletConfig)
+                : new DeterministicFakeCrossmintAdapter(),
           })
         : undefined,
     ids: new RandomIdGenerator(),
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
-    readiness: () => assertPostgresRuntimeReady(connection.pool),
+    readiness: () =>
+      assertPostgresRuntimeReady(connection.pool, {
+        customerControlledSandboxWallets:
+          walletConfig.mode === "crossmint-sandbox-customer",
+      }),
     close: () => connection.pool.end(),
   });
 }

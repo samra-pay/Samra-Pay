@@ -120,6 +120,13 @@
       "when": 1788094800000,
       "tag": "0016_marketing_waitlist",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788588000000,
+      "tag": "0017_customer_controlled_sandbox_wallets",
+      "breakpoints": true
     }
   ]
 }

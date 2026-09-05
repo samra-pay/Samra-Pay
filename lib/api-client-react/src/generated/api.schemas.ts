@@ -262,14 +262,28 @@ export const CustomerWalletState = {
   error: "error",
 } as const;
 
-export const StartCustomerWalletProvisioningRequestValue = {
-  bundleVersion: "alpha-wallet-non-production-v1",
-  documentVersion: "alpha-wallet-non-production-v1",
-  locale: "en-US",
-  decision: "accepted",
+export type StartCustomerWalletProvisioningRequestBundleVersion =
+  (typeof StartCustomerWalletProvisioningRequestBundleVersion)[keyof typeof StartCustomerWalletProvisioningRequestBundleVersion];
+
+export const StartCustomerWalletProvisioningRequestBundleVersion = {
+  "alpha-wallet-non-production-v1": "alpha-wallet-non-production-v1",
+  "sandbox-customer-wallet-v1": "sandbox-customer-wallet-v1",
 } as const;
-export type StartCustomerWalletProvisioningRequest =
-  typeof StartCustomerWalletProvisioningRequestValue;
+
+export type StartCustomerWalletProvisioningRequestDocumentVersion =
+  (typeof StartCustomerWalletProvisioningRequestDocumentVersion)[keyof typeof StartCustomerWalletProvisioningRequestDocumentVersion];
+
+export const StartCustomerWalletProvisioningRequestDocumentVersion = {
+  "alpha-wallet-non-production-v1": "alpha-wallet-non-production-v1",
+  "sandbox-customer-wallet-v1": "sandbox-customer-wallet-v1",
+} as const;
+
+export interface StartCustomerWalletProvisioningRequest {
+  bundleVersion: StartCustomerWalletProvisioningRequestBundleVersion;
+  documentVersion: StartCustomerWalletProvisioningRequestDocumentVersion;
+  locale: "en-US";
+  decision: "accepted";
+}
 
 export type CustomerWalletProvider =
   (typeof CustomerWalletProvider)[keyof typeof CustomerWalletProvider];
@@ -290,6 +304,8 @@ export type CustomerWalletConfigurationVersion =
 
 export const CustomerWalletConfigurationVersion = {
   "crossmint-synthetic-v1": "crossmint-synthetic-v1",
+  "crossmint-sandbox-evm-customer-email-v1":
+    "crossmint-sandbox-evm-customer-email-v1",
 } as const;
 
 export interface CustomerWallet {
@@ -303,7 +319,7 @@ export interface CustomerWallet {
   custodyModel: string | null;
   publicAddress: string | null;
   configurationVersion: CustomerWalletConfigurationVersion;
-  synthetic: true;
+  synthetic: boolean;
   /** @minimum 1 */
   version: number;
   readyAt: string | null;

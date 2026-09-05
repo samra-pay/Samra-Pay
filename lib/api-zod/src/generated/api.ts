@@ -485,8 +485,14 @@ export const StartCustomerWalletProvisioningHeader = zod.object({
 });
 
 export const StartCustomerWalletProvisioningBody = zod.object({
-  bundleVersion: zod.literal("alpha-wallet-non-production-v1"),
-  documentVersion: zod.literal("alpha-wallet-non-production-v1"),
+  bundleVersion: zod.enum([
+    "alpha-wallet-non-production-v1",
+    "sandbox-customer-wallet-v1",
+  ]),
+  documentVersion: zod.enum([
+    "alpha-wallet-non-production-v1",
+    "sandbox-customer-wallet-v1",
+  ]),
   locale: zod.literal("en-US"),
   decision: zod.literal("accepted"),
 });
@@ -506,8 +512,11 @@ export const StartCustomerWalletProvisioningResponse = zod.object({
   network: zod.union([zod.string(), zod.null()]),
   custodyModel: zod.union([zod.string(), zod.null()]),
   publicAddress: zod.union([zod.string(), zod.null()]),
-  configurationVersion: zod.enum(["crossmint-synthetic-v1"]),
-  synthetic: zod.literal(true),
+  configurationVersion: zod.enum([
+    "crossmint-synthetic-v1",
+    "crossmint-sandbox-evm-customer-email-v1",
+  ]),
+  synthetic: zod.boolean(),
   version: zod.number().int().min(1),
   readyAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
   createdAt: zod.string().datetime({ offset: true }),
@@ -531,8 +540,11 @@ export const GetCustomerWalletResponse = zod.object({
   network: zod.union([zod.string(), zod.null()]),
   custodyModel: zod.union([zod.string(), zod.null()]),
   publicAddress: zod.union([zod.string(), zod.null()]),
-  configurationVersion: zod.enum(["crossmint-synthetic-v1"]),
-  synthetic: zod.literal(true),
+  configurationVersion: zod.enum([
+    "crossmint-synthetic-v1",
+    "crossmint-sandbox-evm-customer-email-v1",
+  ]),
+  synthetic: zod.boolean(),
   version: zod.number().int().min(1),
   readyAt: zod.union([zod.string().datetime({ offset: true }), zod.null()]),
   createdAt: zod.string().datetime({ offset: true }),

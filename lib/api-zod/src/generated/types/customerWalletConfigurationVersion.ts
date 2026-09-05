@@ -11,4 +11,6 @@ export type CustomerWalletConfigurationVersion =
 
 export const CustomerWalletConfigurationVersion = {
   "crossmint-synthetic-v1": "crossmint-synthetic-v1",
+  "crossmint-sandbox-evm-customer-email-v1":
+    "crossmint-sandbox-evm-customer-email-v1",
 } as const;
