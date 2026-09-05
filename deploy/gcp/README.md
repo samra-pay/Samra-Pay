@@ -19,6 +19,10 @@ next PR by the controlled email-only waitlist governed by
 [`activate-coming-soon-static-hosting.sh`](activate-coming-soon-static-hosting.sh).
 The legacy controller delegates to
 [`activate-public-waitlist-release.sh`](activate-public-waitlist-release.sh).
+For a separately scoped people-image refresh, first use the
+[read-only live Hosting inspection](../hosting/README.md) to establish the
+current version, configuration and file manifest. The waitlist controller is
+not a hosting-only image publisher.
 This release enables one email field, one same-origin Firebase rewrite, and one
 scale-to-zero Cloud Run service that can only get or create Resend Contacts in
 the configured Segment and Topic. It deploys no Samra database path, account,
