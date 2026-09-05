@@ -57,6 +57,10 @@ and the current-state index in the same PR.
 | Public marketing versus authenticated financial surfaces                 | Accepted: [surface boundary](architecture/public-product-surface-boundary.md); activation is separately authorized                                            |
 | Merge enforcement                                                        | Code implemented; GitHub activation blocked: [merge controls](operations/repository-merge-controls.md)                                                        |
 
+The [5 September reporting decision](architecture/optional-qase-reporting.md)
+makes Qase optional for release and staging reporting; GitHub engineering gates
+and immutable local evidence remain mandatory.
+
 ## Open decisions and next evidence
 
 Owner for each decision below: David Haile. Execution ownership remains

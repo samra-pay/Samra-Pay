@@ -74,7 +74,7 @@ test("rejects authority, routing, identity, and evidence drift", () => {
     (value) =>
       (value.probeRunner.dedicatedRuntimeIdentity =
         "samra-api-staging@samra-pay-staging.iam.gserviceaccount.com"),
-    (value) => (value.qase.oneCombinedRunRequired = false),
+    (value) => (value.qase.oneCombinedRunRequired = true),
   ]) {
     const changed = structuredClone(readStagingRevisionProbeContract());
     mutate(changed);
@@ -130,7 +130,7 @@ test("keeps the controller free of public, traffic-percentage, secret, vendor, a
   assert.match(controller, /--remove-tags/);
 });
 
-test("binds both evidence planes to one completed protected Qase run", async () => {
+test("retains both evidence planes with optional protected Qase reporting", async () => {
   const workflow = await readFile(
     new URL(
       "../../.github/workflows/staging-verification-probe.yml",
@@ -157,6 +157,29 @@ test("binds both evidence planes to one completed protected Qase run", async () 
     workflow,
     /qase-tms\/gh-actions\/run-complete@[0-9a-f]{40}(?:\s+#.*)?/,
   );
+  assert.match(
+    workflow,
+    /report_to_qase:[\s\S]*?type: boolean\n        default: false\n        required: false/,
+  );
+  assert.match(
+    workflow,
+    /id: qase_create\n        continue-on-error: true\n        if: inputs.mode == 'verify' && inputs.report_to_qase && success\(\)/,
+  );
+  assert.match(
+    workflow,
+    /id: qase_complete\n        continue-on-error: true\n        if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && !cancelled\(\)/,
+  );
+  assert.match(
+    workflow,
+    /name: Record final tamper-evident staging verification\n        if: inputs.mode == 'verify' && success\(\)/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /requires the protected Qase token|steps.qase_complete.outcome ==/,
+  );
+  for (const id of ["qase_create", "qase_upload", "qase_complete"]) {
+    assert.ok(workflow.includes(`"${id}":"\${{ steps.${id}.outcome }}"`));
+  }
   assert.match(workflow, /exact-image-private-database\.xml/);
   assert.match(workflow, /exact-deployed-revision-private-http\.xml/);
   assert.match(workflow, /record-staging-verification\.mjs build/);

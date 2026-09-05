@@ -50,12 +50,10 @@ const requiredGates = [
   "resilience",
   "recovery",
   "performance",
-  "qase_create",
-  "qase_upload",
-  "qase_complete",
 ].map((id) => ({ id, title: id, includeInQase: !id.startsWith("qase") }));
 const contract: ReleaseEvidenceContract = {
-  version: 1,
+  version: 2,
+  qaseReporting: "optional",
   workflow: ".github/workflows/release-candidate.yml",
   manifest: "artifacts/release-candidate/release-evidence-manifest.json",
   manifestHash: "artifacts/release-candidate/release-evidence-manifest.sha256",
@@ -78,6 +76,10 @@ const workflow = [
   "    inputs:",
   "      candidate_sha:",
   "        required: true",
+  "      report_to_qase:",
+  "        type: boolean",
+  "        default: false",
+  "        required: false",
   "cancel-in-progress: false",
   "  runtime-image-security:",
   "    name: Release runtime image security (${{ matrix.id }})",
@@ -167,13 +169,22 @@ const workflow = [
   "        run: release-evidence -- gate-junit",
   "      - name: Create Qase release-candidate run",
   "        id: qase_create",
-  "        if: steps.qase_payload.outcome == 'success' && !cancelled()",
+  "        continue-on-error: true",
+  "        if: inputs.report_to_qase && steps.qase_payload.outcome == 'success' && !cancelled()",
   "      - name: Upload release gates to Qase",
   "        id: qase_upload",
+  "        continue-on-error: true",
   "      - name: Complete Qase release-candidate run",
   "        id: qase_complete",
+  "        continue-on-error: true",
   "        if: steps.qase_create.outputs.id != '' && !cancelled()",
   "      - name: Record Qase release identity",
+  "        if: always()",
+  "        env:",
+  "          QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}",
+  "          QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}",
+  '          QASE_REPORTING_RESULTS: {"qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}',
+  "        run: release-evidence -- qase-metadata",
   "      - name: Build content-addressed release evidence manifest",
   "        env:",
   `          RELEASE_GATE_RESULTS: {${manifestGatePayload}}`,
@@ -215,6 +226,50 @@ describe("validateReleaseCandidateContract", () => {
         automatedReports: reports,
       }),
     ).not.toThrow();
+  });
+
+  it("rejects reporting policy drift or an engineering gate replaced by Qase", () => {
+    for (const changed of [
+      workflow.replace("default: false", "default: true"),
+      workflow.replace("if: inputs.report_to_qase &&", "if:"),
+      replaceInStep(
+        workflow,
+        "Record Qase release identity",
+        "if: always()",
+        "if: success()",
+      ),
+      replaceInStep(
+        workflow,
+        "Upload release gates to Qase",
+        "continue-on-error: true",
+        "continue-on-error: false",
+      ),
+      replaceInStep(
+        workflow,
+        "Record Qase release identity",
+        '"qase_create":"${{ steps.qase_create.outcome }}"',
+        '"qase_create":"success"',
+      ),
+    ]) {
+      expect(() =>
+        validateReleaseCandidateContract(contract, changed, {
+          automatedReports: reports,
+        }),
+      ).toThrow();
+    }
+    expect(() =>
+      validateReleaseCandidateContract(
+        {
+          ...contract,
+          requiredGates: [
+            { id: "qase_create", title: "Qase", includeInQase: true },
+            ...requiredGates.slice(1),
+          ],
+        },
+        workflow,
+        { automatedReports: reports },
+      ),
+    ).toThrow(/all ten engineering gates/);
   });
 
   it("rejects a floating candidate checkout", () => {

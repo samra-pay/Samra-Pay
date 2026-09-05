@@ -95,8 +95,9 @@
   "qase": {
     "project": "SAMP",
     "environment": "google-cloud-staging",
-    "oneCombinedRunRequired": true,
-    "imageAndProbeJUnitRequired": true
+    "oneCombinedRunRequired": false,
+    "imageAndProbeJUnitRequired": true,
+    "reporting": "optional"
   },
   "promotionEligibleOnlyAfterCombinedEvidence": true,
   "workflowImplemented": true,

@@ -188,7 +188,15 @@ function buildVerification() {
     qase: {
       project: "SAMP",
       environment: "google-cloud-staging",
-      status: "passed",
+      policy: "optional",
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "success",
+          qase_upload: "success",
+          qase_complete: "success",
+        },
+      },
       runId: "74",
       runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
       imageJUnitIncluded: true,

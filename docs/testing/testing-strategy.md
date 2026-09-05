@@ -87,7 +87,8 @@ Stop the merge or release when any of the following is true:
    accepted.
 5. An API outage silently exposes mock financial data.
 6. The tested commit differs from the candidate commit.
-7. Qase environment attribution or required evidence is missing.
+7. Required exact-revision evidence or environment attribution is missing.
+   External Qase reporting is optional; its local status must remain accurate.
 8. A governed customer, mobile, or operations artifact is missing, ambiguous,
    or exceeds its approved raw or gzip budget.
 

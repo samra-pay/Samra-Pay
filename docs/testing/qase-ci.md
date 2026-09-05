@@ -202,24 +202,27 @@ lane.
 
 ## Release-candidate reporting
 
-The manual `Immutable release candidate` workflow creates one Qase run for the
-exact candidate SHA and uploads `release-gates.xml`. Its stable cases summarize
-candidate identity, full workspace quality, commercial isolation, migrations,
-PostgreSQL/ledger controls, HTTP and restart behavior, weekly resilience, and
-the million-posting performance gate. The detailed JUnit files remain in the
-same GitHub release artifact and are individually SHA-256 hashed by the release
-manifest. Persistence, HTTP/restart, resilience, and performance run against
-four independent disposable PostgreSQL databases to prevent cross-suite state
-from changing later test baselines.
+The manual `Immutable release candidate` workflow always retains its ten
+engineering gate results, detailed JUnit/JSON reports, and SHA-256 manifest in
+GitHub. Its `report_to_qase` input defaults to false. When enabled, it mirrors
+`release-gates.xml` to one Qase run for the exact candidate SHA. Persistence,
+HTTP/restart, resilience, recovery, and performance use five independent
+disposable PostgreSQL databases.
 
-Qase creation, upload, and completion are required release gates. An ordinary
-Qase outage remains non-blocking for pull-request CI, but it blocks release-
-candidate certification because the required traceability record is missing.
-The candidate artifact is still uploaded first and records the failed Qase gate.
-Qase run creation starts only after the stable gate payload exists. Once a run
-is created, the workflow closes it even when result upload fails, preventing an
-orphaned in-progress run while preserving the failed upload gate.
-The full contract is [`release-evidence-contract.json`](release-evidence-contract.json).
+Qase creation, upload, and completion are optional reporting outcomes. Quota,
+credential, and service errors do not block release eligibility. The mandatory
+local `qase-run.json` records the reporting selection, actual step outcomes, and
+nullable run ID/URL; it is hashed with every other required evidence file.
+Reporting never overrides a failed or missing engineering check. Once a run
+exists, completion is attempted even after an upload failure unless cancelled.
+The private staging verification workflow applies the same reporting policy,
+while preserving both required technical evidence planes and routing cleanup.
+
+The full version 2 contract is
+[`release-evidence-contract.json`](release-evidence-contract.json); the
+[decision record](../architecture/optional-qase-reporting.md) explains the
+transition and fresh-evidence requirement. Historical Qase runs and daily/weekly
+reporting schedules are unchanged.
 
 ## Manual scope
 

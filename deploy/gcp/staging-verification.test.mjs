@@ -203,7 +203,15 @@ function combined(overrides = {}) {
     qase: {
       project: "SAMP",
       environment: "google-cloud-staging",
-      status: "passed",
+      policy: "optional",
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "success",
+          qase_upload: "success",
+          qase_complete: "success",
+        },
+      },
       runId: "74",
       runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
       imageJUnitIncluded: true,
@@ -260,7 +268,7 @@ test("rejects mismatched, incomplete, unsafe, or overstated combined evidence", 
   for (const mutate of [
     (value) => (value.checks.ledger = "failed"),
     (value) => delete value.checks.audit,
-    (value) => (value.qase.status = "in_progress"),
+    (value) => (value.qase.reporting.outcomes.qase_create = "skipped"),
     (value) => (value.qase.environment = "github-ci-postgres"),
     (value) => (value.qase.imageJUnitIncluded = false),
     (value) => (value.probeGitHub.runId = 32619000001),
@@ -345,34 +353,45 @@ test("builds and verifies the final manifest through the operator CLI", async ()
     imageHash,
   );
   await writeStagingRevisionProbeManifest(probe(), probeManifest, probeHash);
-  const build = await execFileAsync(process.execPath, [
-    "deploy/gcp/record-staging-verification.mjs",
-    "build",
-    "--zero-traffic-manifest",
-    zeroManifest,
-    "--zero-traffic-hash",
-    zeroHash,
-    "--image-manifest",
-    imageManifest,
-    "--image-hash",
-    imageHash,
-    "--probe-manifest",
-    probeManifest,
-    "--probe-hash",
-    probeHash,
-    "--controller-sha",
-    controllerSha,
-    "--qase-run-id",
-    "74",
-    "--qase-run-url",
-    "https://app.qase.io/run/SAMP/dashboard/74",
-    "--generated-at",
-    "2026-08-23T00:40:00.000Z",
-    "--output",
-    finalManifest,
-    "--hash-output",
-    finalHash,
-  ]);
+  const build = await execFileAsync(
+    process.execPath,
+    [
+      "deploy/gcp/record-staging-verification.mjs",
+      "build",
+      "--zero-traffic-manifest",
+      zeroManifest,
+      "--zero-traffic-hash",
+      zeroHash,
+      "--image-manifest",
+      imageManifest,
+      "--image-hash",
+      imageHash,
+      "--probe-manifest",
+      probeManifest,
+      "--probe-hash",
+      probeHash,
+      "--controller-sha",
+      controllerSha,
+      "--generated-at",
+      "2026-08-23T00:40:00.000Z",
+      "--output",
+      finalManifest,
+      "--hash-output",
+      finalHash,
+    ],
+    {
+      env: {
+        ...process.env,
+        QASE_REPORTING_ENABLED: "true",
+        QASE_RUN_ID: "74",
+        QASE_REPORTING_RESULTS: JSON.stringify({
+          qase_create: "success",
+          qase_upload: "success",
+          qase_complete: "success",
+        }),
+      },
+    },
+  );
   assert.equal(JSON.parse(build.stdout).status, "passed");
   const verify = await execFileAsync(process.execPath, [
     "deploy/gcp/record-staging-verification.mjs",
@@ -396,4 +415,58 @@ test("generates two passing deployed-revision JUnit cases", () => {
   assert.match(junit, /tests="2" failures="0"/);
   assert.match(junit, /STAGING-REVISION-001/);
   assert.match(junit, /STAGING-REVISION-002/);
+});
+
+test("builds optional staging reporting without weakening either evidence plane", () => {
+  for (const outcomes of [
+    {
+      qase_create: "skipped",
+      qase_upload: "skipped",
+      qase_complete: "skipped",
+    },
+    {
+      qase_create: "failure",
+      qase_upload: "skipped",
+      qase_complete: "skipped",
+    },
+  ]) {
+    const qase = {
+      project: "SAMP",
+      environment: "google-cloud-staging",
+      policy: "optional",
+      reporting: { enabled: outcomes.qase_create !== "skipped", outcomes },
+      runId: null,
+      runUrl: null,
+      imageJUnitIncluded: false,
+      probeJUnitIncluded: false,
+    };
+    const manifest = combined({ qase });
+    assert.equal(manifest.status, "passed");
+    assert.equal(manifest.schemaVersion, 2);
+    for (const mutate of [
+      (value) => (value.checks.ledger = "failed"),
+      (value) => delete value.checks.serviceAuthentication,
+      (value) => (value.temporaryRoutingRestored = false),
+      (value) => (value.schemaVersion = 1),
+    ]) {
+      const changed = structuredClone(manifest);
+      mutate(changed);
+      assert.throws(() => validateStagingVerificationManifest(changed));
+    }
+    assert.throws(() =>
+      combined({
+        qase,
+        imageVerification: { ...imageVerification(), status: "failed" },
+      }),
+    );
+    assert.throws(() =>
+      combined({
+        qase,
+        probe: {
+          ...probe(),
+          routing: { ...probe().routing, tagRemoved: false },
+        },
+      }),
+    );
+  }
 });

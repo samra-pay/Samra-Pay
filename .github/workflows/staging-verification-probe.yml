@@ -33,6 +33,11 @@ on:
         description: For verify only, enter AUTHORIZED_STAGING_REVISION_PROBE
         required: false
         type: string
+      report_to_qase:
+        description: Optionally mirror combined staging results to Qase (non-blocking)
+        type: boolean
+        default: false
+        required: false
 
 permissions:
   contents: read
@@ -95,7 +100,6 @@ jobs:
         env:
           SAMRA_WORKFLOW_MODE: ${{ inputs.mode }}
           SAMRA_WORKFLOW_AUTHORIZATION: ${{ inputs.authorization }}
-          QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
         run: |
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
@@ -110,10 +114,6 @@ jobs:
           if [[ "${SAMRA_WORKFLOW_MODE}" == "verify" ]]; then
             [[ "${SAMRA_WORKFLOW_AUTHORIZATION}" == "AUTHORIZED_STAGING_REVISION_PROBE" ]] || {
               echo "Verify mode requires the exact revision-probe authorization." >&2
-              exit 1
-            }
-            [[ -n "${QASE_TESTOPS_API_TOKEN}" ]] || {
-              echo "Verify mode requires the protected Qase token." >&2
               exit 1
             }
           fi
@@ -207,7 +207,9 @@ jobs:
 
       - name: Create one Qase Google Cloud staging run
         id: qase_create
-        if: inputs.mode == 'verify' && success()
+        continue-on-error: true
+        if: inputs.mode == 'verify' && inputs.report_to_qase && success()
+        timeout-minutes: 2
         uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
@@ -218,7 +220,9 @@ jobs:
 
       - name: Upload both evidence planes to the same Qase run
         id: qase_upload
+        continue-on-error: true
         if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && success()
+        timeout-minutes: 2
         uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
@@ -229,7 +233,9 @@ jobs:
 
       - name: Complete the combined Qase run
         id: qase_complete
-        if: inputs.mode == 'verify' && steps.qase_upload.outcome == 'success' && success()
+        continue-on-error: true
+        if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && !cancelled()
+        timeout-minutes: 2
         uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
@@ -237,7 +243,12 @@ jobs:
           id: ${{ steps.qase_create.outputs.id }}
 
       - name: Record final tamper-evident staging verification
-        if: inputs.mode == 'verify' && steps.qase_complete.outcome == 'success' && success()
+        if: inputs.mode == 'verify' && success()
+        env:
+          QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}
+          QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}
+          QASE_REPORTING_RESULTS: >-
+            {"qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
         shell: bash
         run: |
           set -euo pipefail
@@ -249,8 +260,6 @@ jobs:
             --probe-manifest artifacts/staging-release/staging-verification-probe.json \
             --probe-hash artifacts/staging-release/staging-verification-probe.sha256 \
             --controller-sha "${GITHUB_SHA}" \
-            --qase-run-id "${{ steps.qase_create.outputs.id }}" \
-            --qase-run-url "https://app.qase.io/run/SAMP/dashboard/${{ steps.qase_create.outputs.id }}" \
             --output artifacts/staging-release/staging-verification.json \
             --hash-output artifacts/staging-release/staging-verification.sha256
           node deploy/gcp/record-staging-verification.mjs verify \

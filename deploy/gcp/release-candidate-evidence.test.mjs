@@ -145,18 +145,31 @@ async function writeEvidence(root, relativePath, content) {
   return Buffer.from(serialized);
 }
 
+const disabledReporting = {
+  enabled: false,
+  outcomes: {
+    qase_create: "skipped",
+    qase_upload: "skipped",
+    qase_complete: "skipped",
+  },
+};
+
 async function createFixture() {
   const root = await mkdtemp(join(tmpdir(), "samra-release-lineage-"));
   const evidenceRoot = join(root, "download");
   const contractPath = join(root, "release-evidence-contract.json");
   const requiredGates = [
-    { id: "identity", title: "Identity", includeInQase: true },
-    { id: "resilience", title: "Resilience", includeInQase: true },
-    { id: "recovery", title: "Recovery", includeInQase: true },
-    { id: "qase_create", title: "Qase create", includeInQase: false },
-    { id: "qase_upload", title: "Qase upload", includeInQase: false },
-    { id: "qase_complete", title: "Qase complete", includeInQase: false },
-  ];
+    "identity",
+    "security",
+    "quality",
+    "commercial",
+    "migrations",
+    "postgres_persistence",
+    "postgres_http",
+    "resilience",
+    "recovery",
+    "performance",
+  ].map((id) => ({ id, title: id, includeInQase: true }));
   const requiredEvidenceFiles = [
     RELEASE_IDENTITY_EVIDENCE,
     RELEASE_GATE_EVIDENCE,
@@ -164,7 +177,8 @@ async function createFixture() {
     ...RELEASE_RECOVERY_EVIDENCE,
   ];
   const contract = {
-    version: 1,
+    version: 2,
+    qaseReporting: "optional",
     workflow: ".github/workflows/release-candidate.yml",
     manifest: RELEASE_EVIDENCE_MANIFEST,
     manifestHash: RELEASE_EVIDENCE_MANIFEST_HASH,
@@ -207,8 +221,8 @@ async function createFixture() {
         RELEASE_GATE_EVIDENCE,
         [
           '<?xml version="1.0" encoding="utf-8"?>',
-          '<testsuites name="Release Candidate" tests="3" failures="0" skipped="0">',
-          '  <testsuite name="Release Candidate Gates" tests="3" failures="0" skipped="0">',
+          '<testsuites name="Release Candidate" tests="10" failures="0" skipped="0">',
+          '  <testsuite name="Release Candidate Gates" tests="10" failures="0" skipped="0">',
           `    <property name="release_id" value="rc-${candidateSha.slice(0, 12)}"/>`,
           `    <property name="candidate_sha" value="${candidateSha}"/>`,
           "  </testsuite>",
@@ -220,10 +234,12 @@ async function createFixture() {
     [
       RELEASE_QASE_EVIDENCE,
       await writeEvidence(evidenceRoot, RELEASE_QASE_EVIDENCE, {
+        schemaVersion: 2,
+        reporting: disabledReporting,
         project: "SAMP",
         environment: "github-ci-postgres",
-        runId: "9",
-        runUrl: "https://app.qase.io/run/SAMP/dashboard/9",
+        runId: null,
+        runUrl: null,
       }),
     ],
     [
@@ -252,7 +268,8 @@ async function createFixture() {
     };
   });
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    qaseReporting: disabledReporting,
     releaseId: `rc-${candidateSha.slice(0, 12)}`,
     candidateSha,
     gitTreeSha,
@@ -262,8 +279,8 @@ async function createFixture() {
     workflowRunAttempt: runAttempt,
     workflowRunUrl: runUrl,
     qaseEnvironment: "github-ci-postgres",
-    qaseRunId: "9",
-    qaseRunUrl: "https://app.qase.io/run/SAMP/dashboard/9",
+    qaseRunId: null,
+    qaseRunUrl: null,
     gateResults: Object.fromEntries(
       requiredGates.map(({ id }) => [id, "success"]),
     ),
@@ -508,4 +525,123 @@ test("the verifier never shells out or imports cloud/vendor clients", async () =
     source,
     /node:child_process|execFile|spawn|gcloud|@google|qase\/|postgres(?:ql)?:\/\//i,
   );
+});
+
+async function rehashFixture(fixture, evidencePath, evidence) {
+  if (evidencePath) {
+    const bytes = await writeEvidence(
+      fixture.evidenceRoot,
+      evidencePath,
+      evidence,
+    );
+    Object.assign(
+      fixture.manifest.evidenceFiles.find(({ path }) => path === evidencePath),
+      {
+        bytes: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      },
+    );
+  }
+  const bytes = await writeEvidence(
+    fixture.evidenceRoot,
+    RELEASE_EVIDENCE_MANIFEST,
+    fixture.manifest,
+  );
+  await writeEvidence(
+    fixture.evidenceRoot,
+    RELEASE_EVIDENCE_MANIFEST_HASH,
+    `${createHash("sha256").update(bytes).digest("hex")}  release-evidence-manifest.json\n`,
+  );
+}
+function verifyFixture(fixture) {
+  return verifyReleaseCandidateEvidence({
+    ...fixture,
+    candidateSha,
+    releaseRunId: runId,
+    releaseRunAttempt: String(runAttempt),
+    runMetadata: runMetadata(),
+  });
+}
+
+test("optional Qase failures pass downstream only with all engineering gates and local evidence", async () => {
+  for (const qase of [
+    {
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "failure",
+          qase_upload: "skipped",
+          qase_complete: "skipped",
+        },
+      },
+      runId: null,
+      runUrl: null,
+    },
+    {
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "success",
+          qase_upload: "failure",
+          qase_complete: "failure",
+        },
+      },
+      runId: "9",
+      runUrl: "https://app.qase.io/run/SAMP/dashboard/9",
+    },
+    {
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "success",
+          qase_upload: "success",
+          qase_complete: "success",
+        },
+      },
+      runId: "9",
+      runUrl: "https://app.qase.io/run/SAMP/dashboard/9",
+    },
+  ]) {
+    const fixture = await createFixture();
+    Object.assign(fixture.manifest, {
+      qaseReporting: qase.reporting,
+      qaseRunId: qase.runId,
+      qaseRunUrl: qase.runUrl,
+    });
+    await rehashFixture(fixture, RELEASE_QASE_EVIDENCE, {
+      schemaVersion: 2,
+      project: "SAMP",
+      environment: "github-ci-postgres",
+      ...qase,
+    });
+    assert.equal((await verifyFixture(fixture)).overallStatus, "passed");
+    for (const id of fixture.contract.requiredGates.map(({ id }) => id)) {
+      for (const outcome of ["failure", "skipped", "cancelled", "missing"]) {
+        fixture.manifest.gateResults[id] = outcome;
+        await rehashFixture(fixture);
+        await assert.rejects(
+          verifyFixture(fixture),
+          /every contracted gate passed/,
+        );
+      }
+      fixture.manifest.gateResults[id] = "success";
+    }
+  }
+});
+
+test("rejects legacy evidence and rehashed reporting contradictions", async () => {
+  const legacy = await createFixture();
+  legacy.manifest.schemaVersion = 1;
+  await rehashFixture(legacy);
+  await assert.rejects(verifyFixture(legacy), /manifest identity/);
+  const inconsistent = await createFixture();
+  await rehashFixture(inconsistent, RELEASE_QASE_EVIDENCE, {
+    schemaVersion: 2,
+    project: "SAMP",
+    environment: "github-ci-postgres",
+    reporting: { ...disabledReporting, enabled: true },
+    runId: null,
+    runUrl: null,
+  });
+  await assert.rejects(verifyFixture(inconsistent), /Qase evidence drifted/);
 });

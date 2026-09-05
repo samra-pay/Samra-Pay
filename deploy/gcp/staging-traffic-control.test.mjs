@@ -195,7 +195,15 @@ function buildVerification() {
     qase: {
       project: "SAMP",
       environment: "google-cloud-staging",
-      status: "passed",
+      policy: "optional",
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "success",
+          qase_upload: "success",
+          qase_complete: "success",
+        },
+      },
       runId: "74",
       runUrl: "https://app.qase.io/run/SAMP/dashboard/74",
       imageJUnitIncluded: true,
@@ -563,4 +571,39 @@ test("post-mutation snapshot and assertion failures invoke automatic rollback", 
     assert.equal(result.status, 71, result.stderr);
     assert.equal(result.stdout.trim(), `ROLLBACK:${failureStage}`);
   }
+});
+
+test("preserves optional reporting through promotion without relaxing checks or rollback evidence", () => {
+  const verification = structuredClone(buildVerification());
+  verification.qase = {
+    project: "SAMP",
+    environment: "google-cloud-staging",
+    policy: "optional",
+    reporting: {
+      enabled: false,
+      outcomes: {
+        qase_create: "skipped",
+        qase_upload: "skipped",
+        qase_complete: "skipped",
+      },
+    },
+    runId: null,
+    runUrl: null,
+    imageJUnitIncluded: false,
+    probeJUnitIncluded: false,
+  };
+  const promotion = buildPromotion({ verification });
+  assert.equal(promotion.verification.qaseRunId, null);
+  assert.equal(validateStagingPromotionManifest(promotion), promotion);
+  const changed = structuredClone(promotion);
+  changed.verification.checks.ledger = "failed";
+  assert.throws(() => validateStagingPromotionManifest(changed));
+  const legacy = structuredClone(buildPromotion());
+  delete legacy.verification.qaseReporting;
+  assert.equal(validateStagingPromotionManifest(legacy), legacy);
+  legacy.verification.qaseRunId = null;
+  assert.throws(
+    () => validateStagingPromotionManifest(legacy),
+    /Legacy promotion Qase identity/,
+  );
 });

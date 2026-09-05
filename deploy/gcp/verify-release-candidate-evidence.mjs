@@ -1,3 +1,4 @@
+import { validateOptionalQaseReporting } from "./qase-reporting.mjs";
 import { createHash } from "node:crypto";
 import {
   lstat,
@@ -167,7 +168,8 @@ function parseJson(content, label) {
 
 function validateContract(contract) {
   assert(
-    contract?.version === 1 &&
+    contract?.version === 2 &&
+      contract.qaseReporting === "optional" &&
       contract.workflow === RELEASE_WORKFLOW &&
       contract.manifest === RELEASE_EVIDENCE_MANIFEST &&
       contract.manifestHash === RELEASE_EVIDENCE_MANIFEST_HASH &&
@@ -180,6 +182,27 @@ function validateContract(contract) {
       new Set(contract.requiredGates.map(({ id }) => id)).size ===
         contract.requiredGates.length,
     "Release gate contract is invalid",
+  );
+  assert(
+    haveSameMembersInOrder(
+      contract.requiredGates.map(({ id }) => id),
+      [
+        "identity",
+        "security",
+        "quality",
+        "commercial",
+        "migrations",
+        "postgres_persistence",
+        "postgres_http",
+        "resilience",
+        "recovery",
+        "performance",
+      ],
+    ) &&
+      contract.requiredGates.every(
+        ({ includeInQase }) => includeInQase === true,
+      ),
+    "Release contract must preserve all ten engineering gates",
   );
   assert(
     contract.requiredGates.some(({ id }) => id === "resilience"),
@@ -292,17 +315,17 @@ function validateIdentity(identity, manifest, run) {
 }
 
 function validateQase(qase, manifest) {
+  const reporting = manifest.qaseReporting;
   assert(
-    qase?.project === QASE_PROJECT &&
+    qase?.schemaVersion === 2 &&
+      qase.project === QASE_PROJECT &&
       qase.environment === QASE_ENVIRONMENT &&
-      typeof qase.runId === "string" &&
-      INTEGER_PATTERN.test(qase.runId) &&
+      JSON.stringify(qase.reporting) === JSON.stringify(reporting) &&
       qase.runId === manifest.qaseRunId &&
-      qase.runUrl ===
-        `https://app.qase.io/run/${QASE_PROJECT}/dashboard/${qase.runId}` &&
       qase.runUrl === manifest.qaseRunUrl,
     "Release Qase evidence drifted",
   );
+  validateOptionalQaseReporting(reporting, qase.runId, qase.runUrl);
 }
 
 function validateGateJunit(source, contract, manifest) {
@@ -320,7 +343,7 @@ function validateGateJunit(source, contract, manifest) {
         `<property name="candidate_sha" value="${manifest.candidateSha}"/>`,
       ) &&
       !source.includes("<failure"),
-    "Release gate JUnit does not prove every Qase gate passed",
+    "Release gate JUnit does not prove every engineering gate passed",
   );
 }
 
@@ -445,7 +468,7 @@ export async function verifyReleaseCandidateEvidence(input) {
   );
   const manifest = parseJson(manifestBytes, "Release evidence manifest");
   assert(
-    manifest?.schemaVersion === 1 &&
+    manifest?.schemaVersion === 2 &&
       manifest.releaseId === `rc-${candidateSha.slice(0, 12)}` &&
       manifest.candidateSha === candidateSha &&
       SHA_PATTERN.test(manifest.gitTreeSha) &&

@@ -34,8 +34,9 @@
   "qase": {
     "project": "SAMP",
     "environment": "google-cloud-staging",
-    "completedPassingRunRequired": true,
-    "exactRunUrlRequired": true
+    "completedPassingRunRequired": false,
+    "exactRunUrlRequired": true,
+    "reporting": "optional"
   },
   "imageVerificationFoundation": {
     "status": "workflow-implemented-execution-not-authorized",
@@ -91,7 +92,7 @@
     "verification of a different commit, service, or revision",
     "claiming every check traversed the deployed HTTP revision",
     "partial combined required-check evidence",
-    "non-passing or incomplete Qase staging run",
+    "missing or inconsistent local Qase reporting record",
     "traffic percentage mutation",
     "persistent revision tag or service URL",
     "public IAM mutation",

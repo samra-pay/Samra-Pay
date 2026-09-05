@@ -64,7 +64,8 @@ export function validateStagingVerificationContract(
   assert(
     contract.qase.project === "SAMP" &&
       contract.qase.environment === "google-cloud-staging" &&
-      contract.qase.completedPassingRunRequired === true &&
+      contract.qase.completedPassingRunRequired === false &&
+      contract.qase.reporting === "optional" &&
       contract.qase.exactRunUrlRequired === true,
     "Staging verification Qase authority drifted",
   );
@@ -139,7 +140,7 @@ export function validateStagingVerificationContract(
     "verification of a different commit, service, or revision",
     "claiming every check traversed the deployed HTTP revision",
     "partial combined required-check evidence",
-    "non-passing or incomplete Qase staging run",
+    "missing or inconsistent local Qase reporting record",
     "traffic percentage mutation",
     "persistent revision tag or service URL",
     "public IAM mutation",

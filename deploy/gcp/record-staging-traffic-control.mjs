@@ -1,3 +1,4 @@
+import { validateOptionalQaseReporting } from "./qase-reporting.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
@@ -215,6 +216,7 @@ export function buildStagingPromotionManifest(input) {
         input.verificationManifestSha256,
         "Verification manifest hash",
       ),
+      qaseReporting: structuredClone(verification.qase.reporting),
       qaseProject: verification.qase.project,
       qaseEnvironment: verification.qase.environment,
       qaseRunId: verification.qase.runId,
@@ -258,12 +260,25 @@ export function validateStagingPromotionManifest(manifest) {
     manifest.verification.manifestSha256,
     "Verification manifest hash",
   );
+  if (manifest.verification.qaseReporting !== undefined) {
+    validateOptionalQaseReporting(
+      manifest.verification.qaseReporting,
+      manifest.verification.qaseRunId,
+      manifest.verification.qaseRunUrl,
+    );
+  } else {
+    // Historical promotion receipts retain their original mandatory run identity.
+    assert(
+      typeof manifest.verification.qaseRunId === "string" &&
+        /^[1-9][0-9]*$/.test(manifest.verification.qaseRunId) &&
+        manifest.verification.qaseRunUrl ===
+          `https://app.qase.io/run/SAMP/dashboard/${manifest.verification.qaseRunId}`,
+      "Legacy promotion Qase identity drifted",
+    );
+  }
   assert(
     manifest.verification.qaseProject === "SAMP" &&
       manifest.verification.qaseEnvironment === "google-cloud-staging" &&
-      /^\d+$/.test(manifest.verification.qaseRunId) &&
-      manifest.verification.qaseRunUrl ===
-        `https://app.qase.io/run/SAMP/dashboard/${manifest.verification.qaseRunId}` &&
       JSON.stringify(Object.keys(manifest.verification.checks)) ===
         JSON.stringify(STAGING_VERIFICATION_CHECKS) &&
       STAGING_VERIFICATION_CHECKS.every(

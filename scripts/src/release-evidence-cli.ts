@@ -11,6 +11,8 @@ import {
   readContract,
   splitReleaseEvidenceInvocation,
   verifyManifest,
+  validateQaseReporting,
+  type QaseReporting,
   writeManifestAndHash,
   type ReleaseIdentity,
 } from "./release-evidence";
@@ -95,17 +97,30 @@ async function main(): Promise<void> {
   }
 
   if (command === "qase-metadata") {
-    const runId = required(argumentsByName, "run-id");
+    const runId = process.env.QASE_RUN_ID?.trim() || null;
+    const enabled = requiredEnvironment("QASE_REPORTING_ENABLED");
+    if (!["true", "false"].includes(enabled))
+      throw new Error("Invalid Qase reporting flag.");
+    const reporting: QaseReporting = {
+      enabled: enabled === "true",
+      outcomes: parseGateResults(requiredEnvironment("QASE_REPORTING_RESULTS")),
+    };
+    const runUrl = runId
+      ? `https://app.qase.io/run/SAMP/dashboard/${runId}`
+      : null;
+    validateQaseReporting(reporting, runId, runUrl);
     const output = resolve(workspaceRoot, required(argumentsByName, "output"));
     await mkdir(dirname(output), { recursive: true });
     await writeFile(
       output,
       `${JSON.stringify(
         {
+          schemaVersion: 2,
+          reporting,
           project: "SAMP",
           environment: contract.qaseEnvironment,
           runId,
-          runUrl: `https://app.qase.io/run/SAMP/dashboard/${runId}`,
+          runUrl,
         },
         null,
         2,
@@ -118,9 +133,14 @@ async function main(): Promise<void> {
   if (command === "manifest") {
     const identity = await readIdentity(required(argumentsByName, "identity"));
     const qase = await readOptionalJson<{
-      runId: string;
-      runUrl: string;
+      reporting: QaseReporting;
+      runId: string | null;
+      runUrl: string | null;
     }>(resolve(workspaceRoot, required(argumentsByName, "qase")));
+    if (!qase)
+      throw new Error(
+        "Local Qase reporting evidence is required, even when reporting is disabled.",
+      );
     const manifest = await createReleaseEvidenceManifest({
       workspaceRoot,
       contract,
@@ -128,7 +148,10 @@ async function main(): Promise<void> {
       gateResults: parseGateResults(
         requiredEnvironment("RELEASE_GATE_RESULTS"),
       ),
-      ...(qase ? { qaseRunId: qase.runId, qaseRunUrl: qase.runUrl } : {}),
+      qaseReporting: qase.reporting,
+      ...(qase.runId && qase.runUrl
+        ? { qaseRunId: qase.runId, qaseRunUrl: qase.runUrl }
+        : {}),
       generatedAt: new Date().toISOString(),
     });
     const manifestPath = resolve(workspaceRoot, contract.manifest);
