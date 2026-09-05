@@ -1,5 +1,5 @@
 // Fixed internal reporting scope. No customer, finance, or provider runtime data.
-export const REPO = 'haileleuld87/Samra-Pay';
+export const REPO = 'samra-pay/Samra-Pay';
 // The sole Owner on this fixed health row supplies the canonical default user ID.
 export const HEALTH_PAGE = '3d214b38-4266-81c9-93d1-d74cd5bef647';
 export const OUTPUTS = {

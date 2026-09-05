@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "repository": "samra-pay/Samra-Pay",
+  "repositoryId": "1335175962",
+  "ownerId": "320532147",
+  "sha": "33bbad186e1f44e175aa6e7b910bc67918830d14",
+  "ciInputs": {
+    "qase_report": false,
+    "run_commercial": true
+  },
+  "runs": {
+    "ci": {
+      "runId": 33981431002,
+      "headSha": "33bbad186e1f44e175aa6e7b910bc67918830d14",
+      "event": "workflow_dispatch",
+      "createdAt": "2026-09-05T17:35:21Z",
+      "updatedAt": "2026-09-05T17:42:04Z",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/samra-pay/Samra-Pay/actions/runs/33981431002",
+      "jobs": [
+        {
+          "name": "Linux quality gate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "PostgreSQL HTTP acceptance gate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "PostgreSQL persistence gate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Daily commercial isolation gate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Qase automated acceptance report",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Required CI",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "security": {
+      "runId": 33981434685,
+      "headSha": "33bbad186e1f44e175aa6e7b910bc67918830d14",
+      "event": "workflow_dispatch",
+      "createdAt": "2026-09-05T17:35:25Z",
+      "updatedAt": "2026-09-05T17:38:43Z",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/samra-pay/Samra-Pay/actions/runs/33981434685",
+      "jobs": [
+        {
+          "name": "Trivy repository scan",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Trivy runtime image scan (design-system)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Semgrep source security policy",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Trivy runtime image scan (migrations)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Trivy runtime image scan (api)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Trivy runtime image scan (operations-web)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Trivy runtime image scan (customer-web)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Repository security policy",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Required security",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Main transfer baseline only; later commits need their own checks.",
+    "Qase report intentionally skipped.",
+    "No cloud access, provider, deployment, or production-readiness evidence."
+  ]
+}

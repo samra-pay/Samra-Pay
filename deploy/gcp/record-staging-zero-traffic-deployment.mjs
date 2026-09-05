@@ -16,7 +16,7 @@ export const ZERO_TRAFFIC_SERVICE_NAMES = Object.freeze([
 const PROJECT_ID = "samra-pay-staging";
 const PROJECT_NUMBER = "934122615631";
 const REGION = "us-east4";
-const SOURCE_REPOSITORY = "haileleuld87/Samra-Pay";
+const SOURCE_REPOSITORY = "samra-pay/Samra-Pay";
 const DEPLOYER_IDENTITY =
   "samra-github-deployer-staging@samra-pay-staging.iam.gserviceaccount.com";
 const SHA_PATTERN = /^[0-9a-f]{40}$/;

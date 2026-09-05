@@ -85,8 +85,8 @@ The separately reviewed federation setup must provide:
 
 The controller account's `roles/iam.workloadIdentityUser` principal is restricted
 to the pool's `attribute.repository_id/1335175962`. The provider condition must
-match all of repository `haileleuld87/Samra-Pay`, repository ID `1335175962`,
-owner ID `237485986`, ref `refs/heads/main`, event `workflow_dispatch`, workflow
+match all of repository `samra-pay/Samra-Pay`, repository ID `1335175962`,
+owner ID `320532147`, ref `refs/heads/main`, event `workflow_dispatch`, workflow
 `Staging migrations`, exact `.github/workflows/staging-migrations.yml@refs/heads/main`
 workflow reference and environment `staging-migrations`. Map the repository ID
 claim to the same named attribute. The controller checks the exact condition;

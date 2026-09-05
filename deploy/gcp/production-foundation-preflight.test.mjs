@@ -33,7 +33,7 @@ test("locks one prepared keyless production preflight boundary", () => {
     productionProjectId: "samra-pay-production",
     productionProjectNumber: "382465561715",
     stagingProjectId: "samra-pay-staging",
-    repository: "haileleuld87/Samra-Pay",
+    repository: "samra-pay/Samra-Pay",
     repositoryId: "1335175962",
     workflowPath: ".github/workflows/production-foundation-preflight.yml",
     protectedEnvironment: "production-foundation-review",
@@ -143,7 +143,7 @@ test("keeps the one-time bootstrap exact, resumable, keyless, and authorization-
     "gcloud iam workload-identity-pools providers create-oidc",
     'PROVIDER_DISPLAY_NAME="Samra production preflight"',
     '--display-name="${PROVIDER_DISPLAY_NAME}"',
-    "assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main'",
+    "assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main'",
     "assertion.environment=='production-foundation-review'",
     "roles/iam.workloadIdentityUser",
     "--managed-by=user",
@@ -194,7 +194,7 @@ test("workflow is manual, main-only, protected, pinned, read-only, and preserves
     workflow,
     /environment:\n      name: production-foundation-review/,
   );
-  assert.match(workflow, /github\.repository == 'haileleuld87\/Samra-Pay'/);
+  assert.match(workflow, /github\.repository == 'samra-pay\/Samra-Pay'/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow, /persist-credentials: false/);

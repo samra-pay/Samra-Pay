@@ -40,11 +40,11 @@ The PR may be merged while publishing is disabled. Build artifacts will be avail
 
    ```text
    assertion.repository_id=='1335175962' &&
-   assertion.repository_owner_id=='237485986' &&
-   assertion.repository=='haileleuld87/Samra-Pay' &&
+   assertion.repository_owner_id=='320532147' &&
+   assertion.repository=='samra-pay/Samra-Pay' &&
    assertion.ref=='refs/heads/main' &&
    assertion.event_name=='workflow_run' &&
-   assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/public-site-preview-publish.yml@refs/heads/main' &&
+   assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/public-site-preview-publish.yml@refs/heads/main' &&
    assertion.environment=='public-site-preview'
    ```
 

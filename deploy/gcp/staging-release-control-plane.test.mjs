@@ -38,7 +38,7 @@ function buildManifest(overrides = {}) {
     projectNumber: "934122615631",
     region: "us-east4",
     repository: "samra-staging",
-    sourceRepository: "haileleuld87/Samra-Pay",
+    sourceRepository: "samra-pay/Samra-Pay",
     cloudBuildId: "0ebc07c2-3e97-4d6c-8ff3-1bbf6229db00",
     publisherIdentity:
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
@@ -218,7 +218,7 @@ test("rejects unsafe release-candidate run identifiers in stored lineage", () =>
   const unsafe = structuredClone(buildManifest());
   unsafe.releaseCandidate.workflowRunId = "9007199254740992";
   unsafe.releaseCandidate.workflowRunUrl =
-    "https://github.com/haileleuld87/Samra-Pay/actions/runs/9007199254740992";
+    "https://github.com/samra-pay/Samra-Pay/actions/runs/9007199254740992";
   unsafe.releaseCandidate.artifactName = `samra-rc-${sha.slice(0, 12)}-run-9007199254740992-attempt-1`;
 
   assert.throws(

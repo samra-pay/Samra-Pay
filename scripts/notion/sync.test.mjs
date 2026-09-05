@@ -1,9 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { prNumber, transition, sync, SOURCE, REPO } from './sync.mjs';
 const green = [{ name: 'Linux quality gate', status: 'completed', conclusion: 'success' }];
 test('only exact repository PR URLs are accepted', () => {
+  assert.equal(REPO, 'samra-pay/Samra-Pay');
   assert.equal(prNumber(`https://github.com/${REPO}/pull/151`), 151);
+  const previous = JSON.parse(readFileSync(new URL('../../deploy/gcp/staging-github-enterprise-migration.json', import.meta.url))).repository.previousAuthority.nameWithOwner;
+  assert.equal(prNumber(`https://github.com/${previous}/pull/151`), null);
   for (const url of ['https://evil.test/pull/1', `https://github.com/${REPO}/pull/1?token=x`, 'https://github.com/other/repo/pull/1']) assert.equal(prNumber(url), null);
 });
 test('merge alone never proves readiness or release', () => {

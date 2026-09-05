@@ -31,7 +31,7 @@ test("locks federation to the stable private-repository identity and staging bou
     status: "validated",
     projectId: "samra-pay-staging",
     projectNumber: "934122615631",
-    repository: "haileleuld87/Samra-Pay",
+    repository: "samra-pay/Samra-Pay",
     repositoryId: "1335175962",
     allowedRef: "refs/heads/main",
     workflowPath: ".github/workflows/staging-image-publication.yml",
@@ -41,7 +41,7 @@ test("locks federation to the stable private-repository identity and staging bou
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
     permissionCount: 19,
   });
-  assert.equal(contract.github.repositoryOwnerId, "237485986");
+  assert.equal(contract.github.repositoryOwnerId, "320532147");
   assert.equal(contract.github.allowedEvent, "workflow_dispatch");
   assert.equal(
     contract.github.protectedEnvironment,
@@ -174,7 +174,7 @@ test("creates only the reviewed keyless trust and least-privilege bindings", () 
     "assertion.ref=='refs/heads/main'",
     "assertion.event_name=='workflow_dispatch'",
     "assertion.workflow=='Staging image publication'",
-    "assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-image-publication.yml@refs/heads/main'",
+    "assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-image-publication.yml@refs/heads/main'",
     "assertion.environment=='staging-image-publication'",
     "roles/storage.objectCreator",
     "roles/iam.serviceAccountUser",
@@ -288,7 +288,7 @@ test("workflow is manual, main-only, keyless, protected, and reuses the reviewed
   assert.match(workflow, /version: v0\.70\.0/);
   assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/);
   assert.match(workflow, /persist-credentials: false/);
-  assert.match(workflow, /github\.repository == 'haileleuld87\/Samra-Pay'/);
+  assert.match(workflow, /github\.repository == 'samra-pay\/Samra-Pay'/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
   assert.equal(

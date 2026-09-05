@@ -369,7 +369,7 @@ async function main(env = process.env) {
     record: (data) =>
       writeFile(path.join(root, "release.json"), JSON.stringify(data, null, 2)),
   });
-  const body = `### Samra Pay site preview\n\n[Open preview](${evidence.url})\n\nCommit: \`${identity.sha}\`\n\nExpires: ${evidence.expires}. Updates when an eligible build passes. If a newer build fails, this link still represents the commit shown above.\n\nStatic informational site only. Publicly shareable review URL; no login or data collection. Production is unchanged. Approval and the exact-SHA production release remain separate.\n\n[Build evidence](https://github.com/haileleuld87/Samra-Pay/actions/runs/${identity.runId})`;
+  const body = `### Samra Pay site preview\n\n[Open preview](${evidence.url})\n\nCommit: \`${identity.sha}\`\n\nExpires: ${evidence.expires}. Updates when an eligible build passes. If a newer build fails, this link still represents the commit shown above.\n\nStatic informational site only. Publicly shareable review URL; no login or data collection. Production is unchanged. Approval and the exact-SHA production release remain separate.\n\n[Build evidence](https://github.com/samra-pay/Samra-Pay/actions/runs/${identity.runId})`;
   await postComment(api, identity, body);
   if (env.GITHUB_STEP_SUMMARY)
     await appendFile(env.GITHUB_STEP_SUMMARY, `${body}\n`);

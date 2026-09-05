@@ -6,9 +6,9 @@ import {
   verifyPromotionManifest,
 } from "./record-staging-traffic-control.mjs";
 
-const SOURCE_REPOSITORY = "haileleuld87/Samra-Pay";
+const SOURCE_REPOSITORY = "samra-pay/Samra-Pay";
 const SOURCE_REPOSITORY_ID = "1335175962";
-const SOURCE_REPOSITORY_OWNER_ID = "237485986";
+const SOURCE_REPOSITORY_OWNER_ID = "320532147";
 const SOURCE_BRANCH = "main";
 const SOURCE_REF = `refs/heads/${SOURCE_BRANCH}`;
 const API_ROOT = `https://api.github.com/repos/${SOURCE_REPOSITORY}`;

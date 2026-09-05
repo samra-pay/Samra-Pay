@@ -4,10 +4,10 @@
   "environment": "staging",
   "dataClassification": "synthetic-only",
   "github": {
-    "owner": "haileleuld87",
+    "owner": "samra-pay",
     "repository": "Samra-Pay",
     "repositoryId": "1335175962",
-    "repositoryOwnerId": "237485986",
+    "repositoryOwnerId": "320532147",
     "allowedRef": "refs/heads/main",
     "allowedEvent": "workflow_dispatch",
     "workflowName": "Staging traffic control",
@@ -41,7 +41,7 @@
       "attribute.workflow_ref": "assertion.workflow_ref",
       "attribute.environment": "assertion.environment"
     },
-    "commonCondition": "assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging traffic control' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-traffic-control.yml@refs/heads/main'",
+    "commonCondition": "assertion.repository=='samra-pay/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging traffic control' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-traffic-control.yml@refs/heads/main'",
     "promotionEnvironmentCondition": "assertion.environment=='staging-traffic-promotion'",
     "rollbackEnvironmentCondition": "assertion.environment=='staging-traffic-rollback'"
   },

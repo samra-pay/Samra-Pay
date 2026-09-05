@@ -35,7 +35,7 @@ REPOSITORY_ID="1335175962"
 POOL_RESOURCE="projects/${PROJECT_NUMBER}/locations/${LOCATION}/workloadIdentityPools/${POOL_ID}"
 PROVIDER_RESOURCE="${POOL_RESOURCE}/providers/${PROVIDER_ID}"
 FEDERATED_MEMBER="principalSet://iam.googleapis.com/${POOL_RESOURCE}/attribute.repository_id/${REPOSITORY_ID}"
-ATTRIBUTE_CONDITION="assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging verification probe' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-verification-probe.yml@refs/heads/main' && assertion.environment=='staging-verification'"
+ATTRIBUTE_CONDITION="assertion.repository=='samra-pay/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging verification probe' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-verification-probe.yml@refs/heads/main' && assertion.environment=='staging-verification'"
 
 export SAMRA_GCP_PROJECT_ID SAMRA_GCP_PROJECT_NUMBER SAMRA_GCP_ORGANIZATION_ID
 export SAMRA_GCP_REGION SAMRA_GCP_OPERATOR_ACCOUNT

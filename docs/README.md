@@ -11,6 +11,15 @@ are dated records from the linked runbooks, **not a fresh cloud/vendor audit**.
 Evidence applies only to its recorded scope and SHA; later commits need their
 own checks and release evidence.
 
+GitHub-only update on **2026-09-05** at
+`33bbad186e1f44e175aa6e7b910bc67918830d14`: the repository transfer to
+`samra-pay/Samra-Pay` and main ruleset enforcement are verified. The broader
+capability baseline above remains historical. See the
+[transfer and release-freeze record](operations/enterprise-transfer-2026-09-05.md).
+The source-authority update reconciles contracts, recovery provenance and
+Notion tooling with that organization. Google trust has not been applied, and
+the release freeze remains active pending separate cutover evidence.
+
 ## Alpha north star
 
 Samra Pay's Alpha is a synthetic-first remittance product with a Samra-owned
@@ -40,7 +49,7 @@ explicit approval for that scope. None of these states implies another.
 | Public waitlist | Controlled Resend Contacts service/Firebase rewrite and disabled-by-default UI; older PostgreSQL waitlist model also remains in source | This review establishes implementation, not collection or inbox delivery | Separate exact-release authorization, privacy and provider/configuration evidence; [launch contract](../deploy/gcp/coming-soon-static-hosting.json) |
 | Mobile distribution | Expo application and native auth boundary | Historical Firebase project linkage; app registration/distribution not verified here | Device/build evidence and native activation |
 | Quality | CI/security, PostgreSQL, resilience, performance, container and immutable release gates | Required CI/security and portability passed for the baseline SHA; see evidence below | Candidate-specific results, governed manual Qase evidence and separate release approval |
-| Merge protection | Required-check contracts and CODEOWNERS | GitHub `main.protected=false`; rulesets API HTTP 403 on Sept 5 | Plan/organization decision and enforced ruleset read-back |
+| Merge protection | Required-check contracts and CODEOWNERS | Ruleset `22344977` enforced after the Sept 5 organization transfer; exact checks, PR, queue, no force-push/deletion or bypass | Keep exact-candidate checks and current settings evidence; source/cloud authority cutover remains pending |
 | Operations | Portal, workforce controls, cases, incident runbooks and synthetic recovery rehearsal | Staffed coverage, live monitoring, cloud restore and service targets not established | [Operational readiness](operations/operational-readiness.md) |
 | Replit | Temporary preview/rollback support | Not code, design, financial, database or production truth | Retire only after governed replacement evidence |
 

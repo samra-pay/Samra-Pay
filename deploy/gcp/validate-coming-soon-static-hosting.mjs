@@ -124,7 +124,7 @@ export function validateComingSoonStaticHosting(
 
   const source = contract.source;
   assert(
-    source.repository === "haileleuld87/Samra-Pay" &&
+    source.repository === "samra-pay/Samra-Pay" &&
       source.releaseSource === "FULL_GIT_SHA" &&
       source.buildCommand === "pnpm --filter @workspace/samra-pay run build" &&
       source.buildDirectory === "artifacts/samra-pay/dist/public" &&
