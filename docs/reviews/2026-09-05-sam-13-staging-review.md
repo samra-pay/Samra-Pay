@@ -1,7 +1,9 @@
 # SAM-13: optional waitlist profile — staging review
 
 Task: https://app.notion.com/p/3d214b3842668176891ae05071d0f0bc
-Base inspected: `11f45f54efa5673722f0ff8ee885f739c01a843c` on main.
+Initial base: `11f45f54efa5673722f0ff8ee885f739c01a843c`.
+Integrated main `71951724d9739518f105ab32f7fd15162c6b9232` (SAM-11); retained
+both Values-page and signup styles, then reran the frontend build/tests.
 
 ## Change
 
@@ -20,7 +22,7 @@ Blank profile fields are omitted. No SMS, OTP, database or financial flow added.
 - Node 24.15.0; frozen dependency install (pnpm 11.25.0 locally; CI pins 11.19.0).
 - Marketing service: 95 tests passed, including malformed profile, create,
   blank fields, existing/unsubscribed contacts, conflict and provider rejection.
-- Public frontend: 223 tests passed; production build and public bundle boundary passed.
+- Public frontend: 225 tests passed; production build and public bundle boundary passed.
 - Workspace typecheck passed.
 - Deployment contracts: 255 tests passed in sandbox; the six loopback tests
   initially hit sandbox EPERM. The entire 14-test proxy suite passed when run
