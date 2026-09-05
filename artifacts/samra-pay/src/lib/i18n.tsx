@@ -26,7 +26,8 @@ const STRINGS = {
   'nav.remittance': { en: 'Remittance', am: 'ሐዋላ' },
   'nav.socialHouse': { en: 'Tomoca Social House', am: 'ቶሞካ ማህበራዊ ቤት' },
   'nav.askSamra': { en: 'Ask Samra', am: 'ሳምራን ይጠይቁ' },
-  'nav.signIn': { en: 'Sign In', am: 'ይግቡ' },
+  'nav.createAccount': { en: 'Create account', am: 'መለያ ይፍጠሩ' },
+  'nav.signIn': { en: 'Log in', am: 'ይግቡ' },
   'nav.applyNow': { en: 'Apply Now', am: 'አሁን ያመልክቱ' },
 
   // Dashboard navigation

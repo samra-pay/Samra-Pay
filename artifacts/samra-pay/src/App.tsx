@@ -20,6 +20,7 @@ import SocialHouse from "@/pages/social-house";
 import AskSamra from "@/pages/ask-samra";
 import LegalPage from "@/pages/legal";
 import Login from "@/pages/login";
+import CustomerSession from "@/pages/customer-session";
 import { DashboardHomeRoute } from "@/pages/dashboard-route";
 import { DashboardCards } from "@/pages/dashboard/cards";
 import { DashboardCredit } from "@/pages/dashboard/credit";
@@ -90,7 +91,17 @@ function Router() {
         <Route path="/" component={Home} />
 
         {/* No navbar/footer on login */}
-        <Route path="/login" component={Login} />
+        <Route path="/login">
+          <Login />
+        </Route>
+        <Route path="/signup">
+          <Login signup />
+        </Route>
+        <Route path="/session">
+          <CustomerAuthGuard>
+            <CustomerSession />
+          </CustomerAuthGuard>
+        </Route>
         <Route path="/onboarding">
           <CustomerAuthGuard>
             <RoutedErrorBoundary>

@@ -36,7 +36,9 @@ async function bootstrapPublicSite() {
   createRoot(rootElement!).render(
     <PublicLanguageProvider>
       <PublicPage />
-      <PublicAnalyticsConsent showPrompt={!!route} />
+      <PublicAnalyticsConsent
+        showPrompt={!!route && route !== "login" && route !== "signup"}
+      />
     </PublicLanguageProvider>,
   );
 

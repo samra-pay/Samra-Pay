@@ -121,8 +121,8 @@ export function Navbar() {
             </span>
           </Link>
           <Button asChild variant="gold" className={cn("rounded-full px-6 font-medium", langClass)}>
-            <Link href="/login" lang={langAttr}>
-              {t("nav.applyNow")}
+            <Link href="/signup" lang={langAttr}>
+              {t("nav.createAccount")}
             </Link>
           </Button>
         </div>
@@ -178,8 +178,8 @@ export function Navbar() {
               {t("nav.signIn")}
             </Link>
             <Button asChild variant="gold" className={cn("w-full rounded-full", langClass)} onClick={() => setIsMobileMenuOpen(false)}>
-              <Link href="/login" lang={langAttr}>
-                {t("nav.applyNow")}
+              <Link href="/signup" lang={langAttr}>
+                {t("nav.createAccount")}
               </Link>
             </Button>
           </div>

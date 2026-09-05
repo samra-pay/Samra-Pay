@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Menu, X } from "lucide-react";
+import { configuredCustomerLinks } from "@/lib/public-customer-entry";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 
 const publicNavigation = [
@@ -63,6 +64,7 @@ export function ComingSoonHeader() {
   const [open, setOpen] = useState(false);
   const { text } = usePublicLanguage();
   const currentPath = window.location.pathname;
+  const customerLinks = configuredCustomerLinks();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileNavRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +162,22 @@ export function ComingSoonHeader() {
         <a className="coming-updates-link" href="/#launch-updates">
           {text(localized("Stay informed", "ዜና ይከታተሉ"))}
         </a>
+        {customerLinks ? (
+          <>
+            <a
+              className="customer-entry-nav"
+              href={`${import.meta.env.BASE_URL}login`}
+            >
+              {text(localized("Log in", "ይግቡ"))}
+            </a>
+            <a
+              className="customer-entry-nav"
+              href={`${import.meta.env.BASE_URL}signup`}
+            >
+              {text(localized("Create account", "መለያ ይፍጠሩ"))}
+            </a>
+          </>
+        ) : null}
         <ComingSoonLanguageToggle />
         <button
           type="button"
@@ -221,6 +239,22 @@ export function ComingSoonHeader() {
                 {text(item.label)}
               </a>
             ))}
+            {customerLinks ? (
+              <>
+                <a
+                  href={`${import.meta.env.BASE_URL}login`}
+                  onClick={() => setOpen(false)}
+                >
+                  {text(localized("Log in", "ይግቡ"))}
+                </a>
+                <a
+                  href={`${import.meta.env.BASE_URL}signup`}
+                  onClick={() => setOpen(false)}
+                >
+                  {text(localized("Create account", "መለያ ይፍጠሩ"))}
+                </a>
+              </>
+            ) : null}
             <a href="/#launch-updates" onClick={() => setOpen(false)}>
               {text(localized("Stay informed", "ዜና ይከታተሉ"))}
             </a>

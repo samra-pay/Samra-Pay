@@ -1,10 +1,23 @@
-export type PublicRoute = "home" | "features" | "values" | "faq" | "blog" | "privacy" | "terms";
+export type PublicRoute =
+  | "login"
+  | "signup"
+  | "home"
+  | "features"
+  | "values"
+  | "faq"
+  | "blog"
+  | "privacy"
+  | "terms";
 
 export function normalizePublicPath(pathname: string, basePath = "/"): string {
-  const normalizedBase = basePath === "/" ? "/" : `/${basePath.replace(/^\/+|\/+$/g, "")}`;
+  const normalizedBase =
+    basePath === "/" ? "/" : `/${basePath.replace(/^\/+|\/+$/g, "")}`;
   let path = pathname || "/";
 
-  if (normalizedBase !== "/" && (path === normalizedBase || path.startsWith(`${normalizedBase}/`))) {
+  if (
+    normalizedBase !== "/" &&
+    (path === normalizedBase || path.startsWith(`${normalizedBase}/`))
+  ) {
     path = path.slice(normalizedBase.length) || "/";
   }
 
@@ -13,11 +26,19 @@ export function normalizePublicPath(pathname: string, basePath = "/"): string {
   return path || "/";
 }
 
-export function resolvePublicRoute(pathname: string, basePath = "/"): PublicRoute | null {
+export function resolvePublicRoute(
+  pathname: string,
+  basePath = "/",
+): PublicRoute | null {
   const path = normalizePublicPath(pathname, basePath);
 
+  if (path === "/login") return "login";
+  if (path === "/signup") return "signup";
   if (path === "/") return "home";
-  if (["/features", "/cards", "/cards/charge", "/cards/co-brand"].includes(path)) return "features";
+  if (
+    ["/features", "/cards", "/cards/charge", "/cards/co-brand"].includes(path)
+  )
+    return "features";
   if (path === "/values") return "values";
   if (path === "/faq") return "faq";
   if (path === "/blog") return "blog";

@@ -2,6 +2,9 @@ import type { PublicRoute } from "./public-routes";
 
 export function loadPublicPage(route: PublicRoute | null) {
   switch (route) {
+    case "login":
+    case "signup":
+      return import("../pages/public-customer-entry");
     case "home":
       return import("../pages/home");
     case "features":
