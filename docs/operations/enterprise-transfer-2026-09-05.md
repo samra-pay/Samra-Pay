@@ -109,3 +109,25 @@ database, provider activation, cloud deployment, public traffic and production
 approval were outside this transfer. The operational-readiness contract remains
 production-blocked. Continue the operational and staged-release gates only with
 their required evidence and bounded authority.
+
+## Governed source merge
+
+[PR #177](https://github.com/samra-pay/Samra-Pay/pull/177) subsequently merged
+through the required queue at `2026-09-05T18:25:59Z`. Its reviewed head was
+`bff157da5db0bd9b16f55c08bb7b7b60205c282f`; the queue produced and merged
+`14b46dc3e62453810a1e8261a34a7b1cccc6336c`, which was read back on main.
+Both merge-group runs passed for that exact commit:
+[CI 33983767241](https://github.com/samra-pay/Samra-Pay/actions/runs/33983767241)
+and [Security 33983767215](https://github.com/samra-pay/Samra-Pay/actions/runs/33983767215).
+This is completed queue-execution evidence in addition to the earlier settings
+audit. It does not prove a Google trust update, provider test or deployment.
+
+The CLI's initial merge attempt returned `Auto merge is not allowed for this
+repository` without queuing. The operator used GitHub's supported
+[`enqueuePullRequest` mutation](https://docs.github.com/en/graphql/reference/mutations#enqueuepullrequest)
+with the exact PR ID, `expectedHeadOid` and `jump: false`. Auto-merge settings,
+required checks, queue enforcement and bypass actors were not changed.
+
+The next source tool prepares [Google trust review and read-back](github-authority-cutover-review.md).
+It cannot apply the proposal or resume workflows. The [operational closure plan](operational-closure-plan.md)
+retains the unresolved operational and provider gates.

@@ -2,6 +2,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const WORKSPACE_ROOT = path.resolve(import.meta.dirname, "../..");
 const CONTRACT_PATH = path.join(
@@ -824,7 +827,100 @@ export function validateOperationalReadiness(
   assertPackageWiring(inputs);
 }
 
+export function buildOperationalReadinessReport(
+  contract: OperationalReadinessContract,
+  inputs: OperationalReadinessValidationInputs,
+  provenance: Readonly<{
+    candidateSha: string;
+    checkedOutSha: string;
+    sourceTreeClean: boolean;
+    observedAt: string;
+  }>,
+) {
+  validateOperationalReadiness(contract, inputs);
+  if (
+    typeof provenance.candidateSha !== "string" ||
+    !/^[0-9a-f]{40}$/.test(provenance.candidateSha) ||
+    provenance.candidateSha !== provenance.checkedOutSha ||
+    typeof provenance.sourceTreeClean !== "boolean" ||
+    !Number.isFinite(Date.parse(provenance.observedAt))
+  ) {
+    throw new Error(
+      "Readiness report requires exact checked-out SHA and timestamp.",
+    );
+  }
+  return {
+    schemaVersion: 1,
+    status: "production-blocked",
+    productionReady: false,
+    deploymentAuthorized: false,
+    candidateSha: provenance.candidateSha,
+    checkedOutSha: provenance.checkedOutSha,
+    sourceTreeClean: provenance.sourceTreeClean,
+    observedAt: provenance.observedAt,
+    evidenceEligible: provenance.sourceTreeClean,
+    contractPath: "docs/operations/operational-readiness.json",
+    contractSha256: createHash("sha256")
+      .update(JSON.stringify(contract))
+      .digest("hex"),
+    contractHashEncoding: "JSON.stringify UTF-8",
+    productionApproval: contract.productionApproval,
+    pillars: contract.pillars.map(
+      ({ id, state, blockingConditions, evidencePaths }) => ({
+        id,
+        state,
+        blockingConditions,
+        evidencePaths,
+      }),
+    ),
+    hardStops: contract.hardStops,
+  } as const;
+}
+
+export function requireProductionReadiness(
+  contract: OperationalReadinessContract,
+  inputs: OperationalReadinessValidationInputs,
+): void {
+  // Consult the governed source contract, never a caller-supplied green report.
+  validateOperationalReadiness(contract, inputs);
+  if (
+    contract.productionApproval !== "approved" ||
+    contract.hardStops.some((stop) => stop.state === "blocked") ||
+    contract.pillars.some((pillar) => pillar.blockingConditions.length > 0)
+  ) {
+    throw new Error(
+      "Production-ready claim rejected: operational readiness remains blocked.",
+    );
+  }
+}
+
 function main(): void {
+  const options = new Map<string, string>();
+  const args = process.argv.slice(2);
+  for (let index = 0; index < args.length; index++) {
+    const key = args[index]!;
+    if (
+      !["--report", "--candidate-sha", "--claim", "--require-clean"].includes(
+        key,
+      ) ||
+      options.has(key)
+    ) {
+      throw new Error("Unknown or duplicate readiness argument.");
+    }
+    const value = key === "--require-clean" ? "true" : args[++index];
+    if (!value || value.startsWith("--"))
+      throw new Error("Missing readiness argument value.");
+    options.set(key, value);
+  }
+  if (options.has("--claim") && options.get("--claim") !== "production-ready") {
+    throw new Error("Unsupported readiness claim.");
+  }
+  if (
+    !options.has("--report") &&
+    (options.has("--candidate-sha") || options.has("--require-clean"))
+  ) {
+    throw new Error("Candidate and clean-tree flags require a report.");
+  }
   const contract = JSON.parse(
     fs.readFileSync(CONTRACT_PATH, "utf8"),
   ) as OperationalReadinessContract;
@@ -837,7 +933,7 @@ function main(): void {
   const workspacePackage = JSON.parse(
     fs.readFileSync(WORKSPACE_PACKAGE_PATH, "utf8"),
   ) as OperationalReadinessValidationInputs["workspacePackage"];
-  validateOperationalReadiness(contract, {
+  const inputs: OperationalReadinessValidationInputs = {
     evidencePathExists: (relativePath) =>
       fs.existsSync(path.join(WORKSPACE_ROOT, relativePath)),
     backendResilienceWorkflow: fs.readFileSync(
@@ -847,10 +943,58 @@ function main(): void {
     apiPackage,
     scriptsPackage,
     workspacePackage,
-  });
+  };
+  validateOperationalReadiness(contract, inputs);
+  if (options.has("--report")) {
+    const git = (args: string[]) =>
+      execFileSync("git", ["-C", WORKSPACE_ROOT, ...args], {
+        encoding: "utf8",
+        timeout: 10_000,
+        maxBuffer: 2 * 1024 * 1024,
+      }).trim();
+    const clean =
+      git(["status", "--porcelain", "--untracked-files=normal"]) === "";
+    if (options.has("--require-clean") && !clean)
+      throw new Error("Readiness evidence requires a clean source tree.");
+    const report = buildOperationalReadinessReport(contract, inputs, {
+      candidateSha: options.get("--candidate-sha") ?? "",
+      checkedOutSha: git(["rev-parse", "HEAD"]),
+      sourceTreeClean: clean,
+      observedAt: new Date().toISOString(),
+    });
+    const output = path.resolve(WORKSPACE_ROOT, options.get("--report")!);
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, JSON.stringify(report, null, 2) + "\n", {
+      flag: "wx",
+      mode: 0o600,
+    });
+  }
+  if (options.has("--claim")) {
+    try {
+      requireProductionReadiness(contract, inputs);
+    } catch (error) {
+      console.error(
+        error instanceof Error ? error.message : "Readiness claim rejected.",
+      );
+      process.exitCode = 2;
+      return;
+    }
+  }
   console.log(
     `Operational readiness valid: ${contract.pillars.length} bounded pillars; production remains ${contract.productionApproval}.`,
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  try {
+    main();
+  } catch (error) {
+    console.error(
+      error instanceof Error ? error.message : "Readiness validation failed.",
+    );
+    process.exitCode = 1;
+  }
+}
