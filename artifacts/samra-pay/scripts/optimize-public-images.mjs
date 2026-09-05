@@ -29,6 +29,8 @@ const imagePlans = [
     source: "hero-woman-coffee.png",
     widths: [640, 960, 1200],
     webpQuality: 70,
+    // Keep the detailed 1200px portrait inside the existing 100 KB fallback budget.
+    webpQualityByWidth: { 1200: 58 },
     avifQuality: 54,
     maximumBytes: 100_000,
   },
@@ -182,7 +184,7 @@ async function generateResponsiveImages() {
       const webp = await pipeline
         .clone()
         .webp({
-          quality: plan.webpQuality,
+          quality: plan.webpQualityByWidth?.[width] ?? plan.webpQuality,
           effort: 6,
           smartSubsample: false,
         })
