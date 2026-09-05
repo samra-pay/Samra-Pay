@@ -16,6 +16,16 @@ Samra Pay owns the customer-to-wallet relationship and all financial product
 state. Crossmint owns only the provider capability confirmed in its executed
 commercial and technical terms.
 
+## Customer control decision
+
+Every outgoing alpha transfer must be initiated and approved by the customer.
+The selected direction is a customer passkey with customer-controlled recovery;
+Samra must not hold customer signing or recovery authority. See
+[customer wallet control](customer-wallet-control.md) for the implemented
+preparation, privacy change, pending client enrollment, and activation gates.
+The dormant adapter now prepares customer email recovery per owner; wallet
+creation is explicitly pending passkey enrollment and is not transfer readiness.
+
 ## Samra-owned model
 
 One `customer_wallet` record represents the product wallet independent of a
@@ -77,8 +87,9 @@ The implemented evidence covers:
 - exact consent-to-wallet foreign-key evidence;
 - append-only lifecycle transitions and provider mapping;
 - deterministic fake Crossmint creation from opaque Samra identifiers only;
-- a dormant sandbox adapter that sends only the opaque `userId:<Samra-id>`
-  owner, a stable idempotency key, and one reviewed EVM wallet configuration;
+- a dormant sandbox adapter that sends the opaque `userId:<Samra-id>`
+  owner, a stable idempotency key, and customer email recovery from a trusted
+  per-customer resolver (not yet connected);
 - strict sandbox response validation, bounded timeouts and payloads, generic
   failures, and no provider body or credential leakage;
 - atomic mapping attachment and onboarding transition to `wallet_ready`;
@@ -149,9 +160,9 @@ customer migration requirements.
 - deterministic fake-adapter tests for create, replay, concurrent create,
   timeout, restart, changed-command rejection, and conflicting results;
 - sandbox-adapter tests for exact API version and endpoint, `X-API-KEY`
-  server-only transport, opaque `userId` ownership, idempotency, smart and MPC
-  configuration validation, response normalization, payload bounds, and
-  generic failures;
+  server-only transport, opaque `userId` ownership, stable request identity,
+  per-customer recovery, rejection of MPC/server/global signer configurations,
+  response normalization, streamed payload bounds, and generic failures;
 - wallet and provider mapping writes are atomic and immutable where required;
 - authenticated event replay creates no duplicate state or ledger effect;
 - provider payloads and secrets are absent from API, audit, analytics, logs,

@@ -9,7 +9,8 @@
     "./generated-transport": "./src/generated-transport.ts",
     "./legal": "./src/legal.ts",
     "./onboarding": "./src/onboarding.ts",
-    "./react": "./src/react.tsx"
+    "./react": "./src/react.tsx",
+    "./wallet-approval": "./src/wallet-approval.ts"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/*.test.ts",

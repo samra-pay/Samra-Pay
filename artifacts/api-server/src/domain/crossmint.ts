@@ -11,40 +11,43 @@ type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>;
 
-export type CrossmintSandboxAdminSigner =
-  | Readonly<{ type: "server" }>
-  | Readonly<{ type: "external-wallet"; address: string }>;
+/** Trusted, per-customer enrollment evidence; never accept this from a request body.
+ * The resolver must read a verified, consented customer recovery enrollment.
+ * It must preserve the enrollment across retries and reject changed ownership.
+ */
+export type CrossmintCustomerRecovery = Readonly<{
+  ownerLocator: string;
+  type: "email";
+  email: string;
+}>;
 
-export type CrossmintSandboxAdapterConfig = Readonly<
-  {
-    apiKey: string;
-    apiVersion: typeof CROSSMINT_SANDBOX_API_VERSION;
-    chainType: "evm";
-    configurationVersion: string;
-    requestTimeoutMilliseconds?: number;
-  } & (
-    | Readonly<{
-        walletType: "smart";
-        adminSigner: CrossmintSandboxAdminSigner;
-      }>
-    | Readonly<{
-        walletType: "mpc";
-      }>
-  )
->;
+export type CrossmintSandboxAdapterConfig = Readonly<{
+  apiKey: string;
+  apiVersion: typeof CROSSMINT_SANDBOX_API_VERSION;
+  chainType: "evm";
+  walletType: "smart";
+  configurationVersion: "crossmint-sandbox-customer-recovery-v1";
+  requestTimeoutMilliseconds?: number;
+}>;
 
 export class CrossmintSandboxAdapter implements CustomerWalletProvider {
   readonly provider = "crossmint" as const;
   readonly #apiKey: string;
   readonly #configurationVersion: string;
-  readonly #walletType: "smart" | "mpc";
-  readonly #adminSigner: CrossmintSandboxAdminSigner | undefined;
+  readonly #resolveCustomerRecovery: (
+    ownerLocator: string,
+  ) => Promise<CrossmintCustomerRecovery>;
   readonly #requestTimeoutMilliseconds: number;
   readonly #fetch: FetchLike;
 
   constructor(
     config: CrossmintSandboxAdapterConfig,
-    dependencies: Readonly<{ fetch?: FetchLike }> = {},
+    dependencies: Readonly<{
+      fetch?: FetchLike;
+      resolveCustomerRecovery: (
+        ownerLocator: string,
+      ) => Promise<CrossmintCustomerRecovery>;
+    }>,
   ) {
     assertApiKey(config.apiKey);
     if (config.apiVersion !== CROSSMINT_SANDBOX_API_VERSION) {
@@ -54,22 +57,20 @@ export class CrossmintSandboxAdapter implements CustomerWalletProvider {
       throw new Error("The Crossmint sandbox chain type is not approved.");
     }
     if (
-      !/^crossmint-sandbox-[a-z0-9][a-z0-9-]{0,95}$/u.test(
-        config.configurationVersion,
-      )
+      config.configurationVersion !== "crossmint-sandbox-customer-recovery-v1"
     ) {
       throw new Error(
         "The Crossmint sandbox configuration version is invalid.",
       );
     }
-    if (config.walletType === "smart") {
-      assertAdminSigner(config.adminSigner);
-      this.#adminSigner = Object.freeze({ ...config.adminSigner });
-    } else if (config.walletType === "mpc") {
-      this.#adminSigner = undefined;
-    } else {
-      throw new Error("The Crossmint sandbox wallet type is not approved.");
+    // Reject legacy/global signers even if supplied by untyped configuration.
+    if (config.walletType !== "smart" || "adminSigner" in config) {
+      throw new Error("Customer wallets require customer-controlled recovery.");
     }
+    if (typeof dependencies?.resolveCustomerRecovery !== "function") {
+      throw new Error("Customer recovery enrollment is required.");
+    }
+    this.#resolveCustomerRecovery = dependencies.resolveCustomerRecovery;
     const requestTimeoutMilliseconds =
       config.requestTimeoutMilliseconds ?? 4_000;
     if (
@@ -84,7 +85,6 @@ export class CrossmintSandboxAdapter implements CustomerWalletProvider {
 
     this.#apiKey = config.apiKey;
     this.#configurationVersion = config.configurationVersion;
-    this.#walletType = config.walletType;
     this.#requestTimeoutMilliseconds = requestTimeoutMilliseconds;
     this.#fetch = dependencies.fetch ?? fetch;
   }
@@ -98,22 +98,35 @@ export class CrossmintSandboxAdapter implements CustomerWalletProvider {
       configurationVersion: string;
     }>,
   ): Promise<CustomerWalletProviderResult> {
+    // A caller must not change ownership or retry identity while enrollment loads.
+    input = Object.freeze({ ...input });
     assertCreateInput(input, this.#configurationVersion);
-    const body =
-      this.#walletType === "smart"
-        ? {
-            chainType: "evm" as const,
-            type: "smart" as const,
-            config: {
-              adminSigner: this.#adminSigner,
-            },
-            owner: input.ownerLocator,
-          }
-        : {
-            chainType: "evm" as const,
-            type: "mpc" as const,
-            owner: input.ownerLocator,
-          };
+    // Copy only validated values. Do not retain recovery PII in provider mappings.
+    let recovery: CrossmintCustomerRecovery;
+    try {
+      const resolved = await this.#resolveCustomerRecovery(input.ownerLocator);
+      if (
+        resolved?.ownerLocator !== input.ownerLocator ||
+        resolved.type !== "email" ||
+        typeof resolved.email !== "string" ||
+        resolved.email.length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(resolved.email)
+      )
+        throw providerFailure();
+      recovery = Object.freeze({
+        ownerLocator: resolved.ownerLocator,
+        type: "email",
+        email: resolved.email,
+      });
+    } catch {
+      throw providerFailure();
+    }
+    const body = {
+      chainType: "evm" as const,
+      type: "smart" as const,
+      config: { adminSigner: { type: "email", email: recovery.email } },
+      owner: input.ownerLocator,
+    };
 
     let response: Response;
     try {
@@ -152,10 +165,7 @@ export class CrossmintSandboxAdapter implements CustomerWalletProvider {
 
     let parsed: unknown;
     try {
-      const rawBody = await response.text();
-      if (Buffer.byteLength(rawBody, "utf8") > MAX_RESPONSE_BYTES) {
-        throw providerFailure();
-      }
+      const rawBody = await readBoundedResponse(response);
       parsed = JSON.parse(rawBody) as unknown;
     } catch {
       throw providerFailure();
@@ -163,32 +173,20 @@ export class CrossmintSandboxAdapter implements CustomerWalletProvider {
     return normalizeCreateResponse({
       value: parsed,
       expectedOwner: input.ownerLocator,
-      expectedWalletType: this.#walletType,
-      expectedAdminSigner: this.#adminSigner,
+      expectedRecoveryEmail: recovery.email,
       configurationVersion: this.#configurationVersion,
     });
   }
 }
 
 function assertApiKey(value: string): void {
-  if (value.length < 16 || value.length > 512 || /[^\x21-\x7e]/u.test(value)) {
-    throw new Error("The Crossmint sandbox server API key is invalid.");
-  }
-}
-
-function assertAdminSigner(value: CrossmintSandboxAdminSigner): void {
-  if (value.type === "server") {
-    if (Object.keys(value).length !== 1) {
-      throw new Error("The Crossmint server signer configuration is invalid.");
-    }
-    return;
-  }
   if (
-    value.type !== "external-wallet" ||
-    !isEvmAddress(value.address) ||
-    Object.keys(value).length !== 2
+    typeof value !== "string" ||
+    value.length < 16 ||
+    value.length > 512 ||
+    /[^\x21-\x7e]/u.test(value)
   ) {
-    throw new Error("The Crossmint external signer configuration is invalid.");
+    throw new Error("The Crossmint sandbox server API key is invalid.");
   }
 }
 
@@ -213,12 +211,34 @@ function assertCreateInput(
   }
 }
 
+async function readBoundedResponse(response: Response): Promise<string> {
+  if (!response.body) throw providerFailure();
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      length += next.value.byteLength;
+      if (length > MAX_RESPONSE_BYTES) {
+        // Cancel without waiting for an untrusted producer to acknowledge it.
+        void reader.cancel().catch(() => undefined);
+        throw providerFailure();
+      }
+      chunks.push(next.value);
+    }
+    return Buffer.concat(chunks, length).toString("utf8");
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 function normalizeCreateResponse(
   input: Readonly<{
     value: unknown;
     expectedOwner: string;
-    expectedWalletType: "smart" | "mpc";
-    expectedAdminSigner: CrossmintSandboxAdminSigner | undefined;
+    expectedRecoveryEmail: string;
     configurationVersion: string;
   }>,
 ): CustomerWalletProviderResult {
@@ -226,24 +246,20 @@ function normalizeCreateResponse(
   const address = root?.["address"];
   if (
     root?.["chainType"] !== "evm" ||
-    root?.["type"] !== input.expectedWalletType ||
+    root?.["type"] !== "smart" ||
     root?.["owner"] !== input.expectedOwner ||
     typeof address !== "string" ||
     !isEvmAddress(address)
   ) {
     throw providerFailure();
   }
-  if (input.expectedWalletType === "smart") {
-    assertResponseSigner(root, input.expectedAdminSigner);
-  }
+  assertResponseSigner(root, input.expectedRecoveryEmail);
   const normalizedAddress = address.toLowerCase();
   return Object.freeze({
     providerWalletRef: `evm:${normalizedAddress}`,
     network: "evm",
-    custodyModel: custodyModelFor(
-      input.expectedWalletType,
-      input.expectedAdminSigner,
-    ),
+    // Creation proves recovery configuration, not enrolled passkey control.
+    custodyModel: "smart-customer-recovery-pending-passkey",
     publicAddress: normalizedAddress,
     configurationVersion: input.configurationVersion,
   });
@@ -251,30 +267,23 @@ function normalizeCreateResponse(
 
 function assertResponseSigner(
   root: Record<string, unknown>,
-  expected: CrossmintSandboxAdminSigner | undefined,
+  expectedEmail: string,
 ): void {
   const config = asRecord(root["config"]);
   const actual = asRecord(config?.["adminSigner"]);
-  if (!expected || actual?.["type"] !== expected.type) {
+  if (actual?.["type"] !== "email" || actual["email"] !== expectedEmail) {
     throw providerFailure();
   }
-  if (
-    expected.type === "external-wallet" &&
-    (typeof actual?.["address"] !== "string" ||
-      actual["address"].toLowerCase() !== expected.address.toLowerCase())
-  ) {
-    throw providerFailure();
+  // Unexpected operational authority on a newly created wallet needs review.
+  for (const field of ["delegatedSigners", "signers"]) {
+    const signers = config?.[field];
+    if (
+      signers !== undefined &&
+      (!Array.isArray(signers) || signers.length !== 0)
+    ) {
+      throw providerFailure();
+    }
   }
-}
-
-function custodyModelFor(
-  walletType: "smart" | "mpc",
-  signer: CrossmintSandboxAdminSigner | undefined,
-): string {
-  if (walletType === "mpc") return "mpc";
-  return signer?.type === "external-wallet"
-    ? "smart-external-wallet"
-    : "smart-server-signer";
 }
 
 function isEvmAddress(value: string): boolean {
