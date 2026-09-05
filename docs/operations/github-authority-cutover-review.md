@@ -56,8 +56,20 @@ user-managed controller keys and all nine workflows `disabled_manually`.
 For every observed provider in the selected pool, the tool requires the exact
 former or exact target condition from source, the governed issuer and mapping,
 no custom audience or uploaded issuer key, and no unexpected or duplicate provider.
-The selected controller must have exactly one unconditional
-`roles/iam.workloadIdentityUser` binding to its stable repository-ID principal.
+The selected controller's entire direct IAM policy must contain only one
+unconditional `roles/iam.workloadIdentityUser` binding to its stable repository-ID
+principal. Additional direct grants fail review, including custom roles.
+
+Project-level Service Account Token Creator, Service Account OpenID Connect
+Identity Token Creator, Workload Identity User and Service Account User grants
+also fail review because controllers inherit them. Conditional grants are not
+exempted: this tool does not evaluate CEL or establish effective access. Inspect
+dependencies and resolve these grants through a separately authorized IAM review
+before proposing a condition update. Malformed IAM bindings also fail review.
+
+This is a bounded check for known access paths, not a complete role-permission or
+effective-access analyzer. Custom project roles, basic/admin roles, service-agent
+roles and organization/folder inheritance still require independent inspection.
 Missing, broadened, wildcard or dual-owner trust fails review.
 
 ## Bounded approval and independent read-back

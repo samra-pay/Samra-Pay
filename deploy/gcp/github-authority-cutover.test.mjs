@@ -291,6 +291,73 @@ test("read-back accepts only the selected condition change and keeps release blo
   }
 });
 
+test("project-wide service-account access cannot produce a cutover proposal", () => {
+  for (const id of ["staging-publication", "production-preflight"]) {
+    for (const role of [
+      "roles/iam.serviceAccountTokenCreator",
+      "roles/iam.serviceAccountOpenIdTokenCreator",
+      "roles/iam.workloadIdentityUser",
+      "roles/iam.serviceAccountUser",
+    ]) {
+      for (const condition of [undefined, { expression: "false" }]) {
+        const snapshot = fixture(id);
+        snapshot.projectPolicy.bindings.push({
+          role,
+          members: ["serviceAccount:synthetic-sdk@example.invalid"],
+          ...(condition ? { condition } : {}),
+        });
+        assert.throws(
+          () => review(snapshot),
+          /inherited service-account access/,
+        );
+        assert.throws(
+          () => verifyCutoverSnapshots(snapshot, updated(snapshot), { now }),
+          /inherited service-account access/,
+        );
+      }
+    }
+  }
+});
+
+test("an exact federation binding cannot conceal another direct controller grant", () => {
+  for (const role of [
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountUser",
+    "roles/iam.serviceAccountAdmin",
+    "projects/synthetic/roles/customSigner",
+  ]) {
+    const snapshot = fixture();
+    snapshot.serviceAccountPolicy.bindings.push({
+      role,
+      members: ["user:synthetic@example.invalid"],
+    });
+    assert.throws(() => review(snapshot), /only the exact federation binding/);
+  }
+});
+
+test("malformed project IAM is rejected without treating it as no access", () => {
+  for (const binding of [
+    null,
+    {},
+    { role: "roles/viewer" },
+    { role: "roles/viewer", members: [] },
+    { role: "roles/viewer", members: [null] },
+  ]) {
+    const snapshot = fixture();
+    snapshot.projectPolicy.bindings.push(binding);
+    assert.throws(() => review(snapshot), /Project IAM is malformed/);
+  }
+});
+
+test("unrelated project grants still require an independent full IAM audit", () => {
+  const snapshot = fixture();
+  snapshot.projectPolicy.bindings.push({
+    role: "roles/viewer",
+    members: ["user:synthetic@example.invalid"],
+  });
+  assert.equal(review(snapshot).independentFullIamAuditRequired, true);
+});
+
 test("capture invokes metadata reads only and binds the active human, main and freeze", () => {
   const s = fixture("staging-publication", new Date().toISOString());
   const calls = [];
