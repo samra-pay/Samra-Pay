@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
-import pg from "pg";
 import {
+  createDatabase,
+  type DatabaseConnection,
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   ALPHA_WALLET_PROVISIONING_DISCLOSURE,
   CUSTOMER_CONTROLLED_SANDBOX_CONFIGURATION_VERSION,
@@ -28,7 +29,7 @@ const result = (suffix = randomUUID().replaceAll("-", "")) => ({
   configurationVersion: CUSTOMER_CONTROLLED_SANDBOX_CONFIGURATION_VERSION,
 });
 
-async function fixture(pool: pg.Pool, approved = true) {
+async function fixture(pool: DatabaseConnection["pool"], approved = true) {
   const context = new PostgresPersistenceContext(pool);
   const auth = {
     issuer: "https://crossmint-test.us.auth0.com/",
@@ -89,9 +90,9 @@ test("sandbox PostgreSQL wallet consent, ownership, immutable mapping, retries, 
     throw new Error(
       "TEST_DATABASE_URL is required for sandbox wallet persistence tests.",
     );
-  const pool = new pg.Pool({
+  const { pool } = createDatabase({
     connectionString: process.env["TEST_DATABASE_URL"],
-    max: 4,
+    poolConfig: { max: 4 },
   });
   try {
     await assertPostgresRuntimeReady(pool, {
