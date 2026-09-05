@@ -3796,3 +3796,6 @@ a.coming-social-link:hover {
     grid-area: auto;
   }
 }
+
+.coming-header-actions .customer-entry-nav { display: inline-flex; align-items: center; min-height: 44px; font-size: .85rem; font-weight: 600; }
+@media (max-width: 1000px) { .coming-header-actions .customer-entry-nav { display: none; } }

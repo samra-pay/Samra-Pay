@@ -15,10 +15,15 @@ import { useLocation } from "wouter";
 
 import {
   resolveAuth0ReturnTo,
-  resolveWebCustomerAuthConfig,
   withApplicationPath,
+  resolveWebCustomerAuthConfig,
   type WebCustomerAuthConfig,
 } from "./auth0-config";
+import {
+  customerLoginOptions,
+  hasAuth0RedirectParameters,
+  type CustomerEntryIntent,
+} from "./customer-entry";
 import { resolveWebPublicEnvironment } from "./public-runtime-config";
 
 export type CustomerAuthStatus =
@@ -27,7 +32,7 @@ export type CustomerAuthStatus =
 type CustomerAuthSession = Readonly<{
   status: CustomerAuthStatus;
   error: Error | null;
-  signIn: () => Promise<void>;
+  signIn: (intent?: CustomerEntryIntent) => Promise<void>;
   signOut: () => Promise<void>;
 }>;
 
@@ -117,10 +122,12 @@ function Auth0SessionBridge({
             const result = await auth0.handleRedirectCallback<{
               returnTo?: unknown;
             }>();
-            returnTo = result.appState?.returnTo;
+            returnTo =
+              result.appState?.returnTo ??
+              withApplicationPath(config.applicationUri, "/session");
           } finally {
             const safeReturnTo = resolveAuth0ReturnTo(
-              returnTo,
+              returnTo ?? withApplicationPath(config.applicationUri, "/login"),
               config.applicationUri,
             );
             window.history.replaceState({}, document.title, safeReturnTo);
@@ -148,6 +155,7 @@ function Auth0SessionBridge({
         setClient(auth0);
         setError(cause instanceof Error ? cause : new Error(String(cause)));
         setStatus("error");
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }
     };
 
@@ -158,30 +166,27 @@ function Auth0SessionBridge({
     };
   }, [config]);
 
-  const signIn = useCallback(async () => {
-    if (!client) {
-      setError(new Error("Auth0 is not ready for sign-in"));
-      setStatus("error");
-      return;
-    }
+  const signIn = useCallback(
+    async (intent: CustomerEntryIntent = "login") => {
+      if (!client) {
+        setError(new Error("Auth0 is not ready for sign-in"));
+        setStatus("error");
+        return;
+      }
 
-    setError(null);
-    setStatus("loading");
-    try {
-      await client.loginWithRedirect({
-        appState: {
-          returnTo: withApplicationPath(config.applicationUri, "/onboarding"),
-        },
-        authorizationParams: {
-          audience: config.audience,
-          redirect_uri: config.applicationUri,
-        },
-      });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error(String(cause)));
-      setStatus("error");
-    }
-  }, [client, config.applicationUri, config.audience]);
+      setError(null);
+      setStatus("loading");
+      try {
+        await client.loginWithRedirect(
+          customerLoginOptions(intent, config.applicationUri, config.audience),
+        );
+      } catch (cause) {
+        setError(cause instanceof Error ? cause : new Error(String(cause)));
+        setStatus("error");
+      }
+    },
+    [client, config.applicationUri, config.audience],
+  );
 
   const signOut = useCallback(async () => {
     if (!client) {
@@ -233,14 +238,6 @@ function createAccessTokenGetter(
     }
     return token;
   };
-}
-
-function hasAuth0RedirectParameters(search: string): boolean {
-  const parameters = new URLSearchParams(search);
-  return (
-    parameters.has("state") &&
-    (parameters.has("code") || parameters.has("error"))
-  );
 }
 
 export function CustomerAuthGuard({

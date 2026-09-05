@@ -1,3 +1,4 @@
+import { shouldLoadCustomerApp } from "./lib/customer-entry";
 import { createRoot } from "react-dom/client";
 import { PublicLanguageProvider } from "./lib/public-i18n";
 import { loadKnownPublicPage } from "./lib/public-page-loader";
@@ -14,7 +15,10 @@ async function bootstrapLegacySite() {
     window.location.pathname,
     import.meta.env.BASE_URL,
   );
-  const publicPage = loadKnownPublicPage(route);
+  // Entry routes and OAuth callbacks must reach the connected app, even when
+  // the registered callback URI is the otherwise-public homepage.
+  const isCustomerEntry = shouldLoadCustomerApp(route, window.location.search);
+  const publicPage = isCustomerEntry ? null : loadKnownPublicPage(route);
 
   if (publicPage) {
     const { default: PublicPage } = await publicPage;

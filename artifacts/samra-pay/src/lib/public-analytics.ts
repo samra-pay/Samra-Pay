@@ -58,7 +58,7 @@ export function storeAnalyticsChoice(choice: AnalyticsChoice) {
 export function publicPageParameters(href: string, referrer: string) {
   const url = new URL(href);
   const route = resolvePublicRoute(url.pathname);
-  if (url.origin !== config.origin || !route) return null;
+  if (url.origin !== config.origin || !route || route === "login" || route === "signup") return null;
   let referralOrigin = "";
   try {
     const referral = new URL(referrer);
