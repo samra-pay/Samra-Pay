@@ -24,11 +24,11 @@
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.22.0",
+    "tsx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/pg": "^8.20.0",
-    "tsx": "catalog:"
+    "@types/pg": "^8.20.0"
   }
 }

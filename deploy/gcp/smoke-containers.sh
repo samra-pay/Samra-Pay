@@ -40,7 +40,7 @@ cleanup() {
       "  \"imageTag\": \"${SAMRA_CONTAINER_IMAGE_TAG}\"," \
       '  "database": "disposable-postgresql-16",' \
       '  "images": ["api", "customer-web", "operations-web", "design-system-preview", "migrations"],' \
-      '  "probes": ["api-health", "api-readiness", "customer-spa", "customer-api-proxy", "operations-spa", "operations-api-proxy", "operations-api-disabled", "design-system-spa"]' \
+      '  "probes": ["staging-database-access-runtime", "api-health", "api-readiness", "customer-spa", "customer-api-proxy", "operations-spa", "operations-api-proxy", "operations-api-disabled", "design-system-spa"]' \
       '}' >"${SAMRA_SMOKE_ROOT}/container-portability.json"
     printf '%s\n' \
       '<?xml version="1.0" encoding="utf-8"?>' \
@@ -100,6 +100,11 @@ assert_non_root_image "samra-customer-web:${SAMRA_CONTAINER_IMAGE_TAG}"
 assert_non_root_image "samra-operations-web:${SAMRA_CONTAINER_IMAGE_TAG}"
 assert_non_root_image "samra-design-system-preview:${SAMRA_CONTAINER_IMAGE_TAG}"
 assert_non_root_image "samra-migrations:${SAMRA_CONTAINER_IMAGE_TAG}"
+
+docker run --rm --network none --entrypoint node \
+  "samra-migrations:${SAMRA_CONTAINER_IMAGE_TAG}" \
+  ../../deploy/gcp/smoke-staging-database-access.mjs \
+  >"${SAMRA_SMOKE_ROOT}/staging-database-access-runtime.log" 2>&1
 
 docker run --rm --network host \
   --env DATABASE_URL="${DATABASE_URL}" \
