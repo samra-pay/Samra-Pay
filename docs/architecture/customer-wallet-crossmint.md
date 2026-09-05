@@ -5,11 +5,12 @@
 Crossmint is the locked Alpha wallet provider. The Samra-owned PostgreSQL
 wallet aggregate, explicit non-production consent, authenticated API contract,
 immutable provider mapping, deterministic fake adapter, and failure/replay
-controls are implemented. A fail-closed server-only sandbox adapter is also
-implemented but remains dormant and unreachable from the runtime. The live
-Crossmint integration is not enabled. The Alpha scope is wallet creation and
-normalized lifecycle evidence for an
-approved USDC configuration; it does not assume bank funding, Plaid
+controls are implemented. The older server/external-signer sandbox adapter
+remains dormant. The separate `CrossmintCustomerSandboxAdapter` is selectable
+only through the guarded, creation-only `crossmint-sandbox-customer` staging
+mode. A deployed Samra-to-Crossmint connection is not evidenced. The Alpha
+scope is wallet creation and normalized lifecycle evidence for an approved
+USDC configuration; it does not assume bank funding, Plaid
 compatibility, card issuing, Ethiopia payout, or unrestricted money movement.
 
 Samra Pay owns the customer-to-wallet relationship and all financial product
@@ -71,7 +72,7 @@ Both endpoints are present only in the Auth0 plus PostgreSQL runtime. Start
 requires `Idempotency-Key` and the exact non-production wallet disclosure. A
 changed command cannot replace an existing wallet.
 
-The implemented evidence covers:
+The synthetic foundation evidence covers:
 
 - one wallet per Samra customer and onboarding aggregate;
 - exact consent-to-wallet foreign-key evidence;
@@ -89,12 +90,24 @@ The implemented evidence covers:
 - readiness and migration-compatibility coverage for the new relations and
   mutation guards.
 
-This proves the internal boundary and the adapter's deterministic request and
-normalization behavior against mocked responses. It does not prove a Crossmint
-account, real sandbox call, approved asset/network choice, custody model,
-public address, webhook, or USDC movement. The PostgreSQL wallet store still
-accepts only `crossmint-synthetic-v1`; attempting to wire the sandbox adapter
-without a separately reviewed activation change therefore fails closed.
+These synthetic tests prove the internal boundary and deterministic behavior
+against mocked responses. Separately, the dated
+[sandbox connection record](../operations/crossmint-sandbox-connection.md)
+documents a console-created wallet and authenticated provider GET. That
+evidence does not establish a deployed Samra API, durable customer mapping,
+webhooks, signer enrollment, recovery, or USDC movement.
+
+The newer customer-controlled backend path uses migration
+`0017_customer_controlled_sandbox_wallets` to permit guarded staging mappings
+alongside synthetic mappings. It requires staging, Auth0, PostgreSQL, an
+allowlisted Samra customer, an approved identity case, the separate
+`sandbox-customer-wallet-v1` disclosure, and disabled workers/operations.
+Its provider adapter can create a wallet with customer email recovery but
+cannot sign, transfer, or recover funds. A ready address still requires
+`await_customer_signer_setup`; it grants no funding entitlement.
+The existing synthetic client disclosure does not authorize this sandbox path.
+Use the [deployment package](../operations/staging-wallet-deployment-package.md)
+for the unresolved activation evidence and bounded next steps.
 
 ## Connected web and mobile boundary
 

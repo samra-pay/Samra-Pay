@@ -21,6 +21,10 @@ Read the [product and engineering documentation index](docs/README.md). It is
 the canonical current-state map and separates implemented, tested, deployed,
 and blocked capabilities.
 
+For implementation, read [AGENTS.md](AGENTS.md), the
+[local setup and contribution guide](CONTRIBUTING.md), and
+[engineering authority and decisions](docs/engineering-governance.md).
+
 The two governing architecture documents are:
 
 - [Alpha platform and vendor boundary](docs/architecture/alpha-platform.md)

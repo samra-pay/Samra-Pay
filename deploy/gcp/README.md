@@ -112,7 +112,7 @@ authorized, and the phase creates no credential, secret version, migration,
 customer row, Cloud Run workload, edge resource, vendor integration, or DNS
 record.
 
-## Current verified staging state
+## Recorded staging foundation state
 
 The authorized synthetic staging foundation now contains:
 
@@ -127,11 +127,14 @@ The authorized synthetic staging foundation now contains:
   recovery, storage bounds, and deletion protection;
 - database-secret metadata with zero credential versions.
 
-Cloud Run services and jobs, database users and credentials, schema migrations,
-application images, public endpoints, live vendors, real customer data, and
-production resources do not exist in this phase. The
-[product documentation index](../../docs/README.md) separates this live cloud
-substrate from future application deployment.
+This records the staging foundation's bounded post-audit, not a fresh inventory.
+That phase did not create Cloud Run workloads, database credentials, schema
+migrations, application images, public endpoints, or vendor connections.
+Production is separate and has the recorded foundation/static release above.
+Refresh the exact project, resource, secret-version metadata, and schema evidence
+before execution. The [product documentation index](../../docs/README.md)
+distinguishes historical resource observations from implemented code and
+unverified application activation.
 
 ## Foundation contract
 

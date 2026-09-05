@@ -36,8 +36,12 @@ The `main` ruleset must:
 
 The repository currently returns HTTP 403 for both branch-protection and
 ruleset configuration because those controls are unavailable for this private
-repository on its present GitHub plan. This was verified on 2026-09-02. The
-workflow files and contract do not substitute for the GitHub setting.
+repository on its present GitHub plan (initial verification: 2026-09-02).
+Read-only verification on 2026-09-05 again reported `main.protected=false`
+at `5bf1659413a8a3918a3fa3b58829d98c1bd47470`; the rulesets API returned
+HTTP 403 with "Upgrade to GitHub Pro or make this repository public to enable
+this feature." Both required checks passed for that SHA. The workflow files,
+green results, and contract do not substitute for the GitHub setting.
 
 `CODEOWNERS` assigns the control surfaces to the repository owner, but it does
 not create independent review. If a qualified second maintainer is available,
@@ -51,3 +55,16 @@ After the repository plan supports rulesets, record a read-back of the applied
 merge queue, force-push protection, deletion protection, and bypass policy.
 Until that read-back exists, describe green-main enforcement as implemented in
 code but not enforced by GitHub.
+
+Decision owner: David Haile. Use the existing
+[Enterprise migration plan](github-enterprise-control-plane-migration.md) if
+an organization transfer is selected. Do not change visibility, purchase a
+plan, transfer ownership, or reissue cloud federation merely to clear this
+blocker. Those actions require a separate decision and their existing controls.
+
+The next activation must verify support for the complete contract, including
+merge queue, before changing the plan or repository. Record the resulting
+ruleset ID, review time, exact check contexts, queue and bypass settings, and a
+read-back. Until then, contributors must still use reviewed PRs and verify the
+exact candidate's required checks; this is a working practice, not enforced
+protection.

@@ -14,9 +14,9 @@ The approved sequence is:
 2. connect Auth0 staging authentication using separate public SPA and Native
    Application identifiers plus exact API issuer/audience values;
 3. activate Persona sandbox only after its data and support controls pass;
-4. keep the deterministic Crossmint adapter active until the dormant sandbox
-   adapter, credential scope, wallet configuration, and operating model pass an
-   independent activation review.
+4. keep the deterministic Crossmint adapter active until the separate
+   customer-controlled sandbox lane, credential scope, wallet configuration,
+   and operating model pass an independent activation review.
 
 ## Samra-owned truth
 
@@ -113,27 +113,30 @@ Activation remains blocked on the Persona inventory, approved PII field map and
 retention policy, support and appeal workflow, zero-traffic synthetic webhook
 evidence, restart evidence, and independent post-audit.
 
-## Crossmint dormant sandbox adapter
+## Crossmint adapters and activation boundary
 
-Crossmint remains the deterministic fake adapter in every runtime. A
-server-only sandbox adapter is implemented for controlled activation later,
-but no runtime imports it, no environment mode selects it, and the PostgreSQL
-wallet store rejects its non-synthetic result shape. This is an intentional
-three-layer fail-closed barrier.
+The standard staging deployment contract still uses the deterministic fake
+adapter. The older server/external-signer adapter remains dormant. A separate
+`CrossmintCustomerSandboxAdapter` is now selectable by
+`SAMRA_CUSTOMER_WALLET_PROVIDER_MODE=crossmint-sandbox-customer` with staging,
+Auth0, PostgreSQL, one allowlisted customer, and workers/operations disabled.
+Migration 0017 supports this guarded mapping. This source capability does not
+activate it in the standard staging controller or authorize a provider call.
 
-The dormant credential contract reserves:
+The separately authorized customer sandbox lane uses:
 
 ```text
 CROSSMINT_SERVER_API_KEY -> samra-staging-crossmint-server-api-key:<numeric-version>
 ```
 
-The reviewed sandbox API origin is
-`https://staging.crossmint.com/api/2025-06-09`. The adapter pins that version,
-uses the documented `X-API-KEY` server header and `x-idempotency-key`, and sends
-only `userId:customer_<opaque-id>` as the owner. It supports explicitly
-configured EVM smart wallets with a server or external-wallet admin signer and
-EVM MPC wallets. It does not choose among those custody models. Response
-address, owner, chain, wallet type, and signer evidence must match exactly.
+The customer adapter uses the pinned sandbox API, an opaque
+`userId:customer_<opaque-id>` owner, stable idempotency, and EVM smart-wallet
+creation with the allowlisted tester's email recovery. It has no signing,
+transfer, or recovery operation. Server/external/MPC signer options in the
+older adapter are not the accepted customer-controlled configuration.
+See [connection evidence](crossmint-sandbox-connection.md) for the recorded
+console lookup and [deployment package](staging-wallet-deployment-package.md)
+for the private API, disclosure, credential, and remaining activation gates.
 
 The server key must have only the reviewed create-wallet scope and must never
 appear in web or mobile code. No secret object, secret version, API service
