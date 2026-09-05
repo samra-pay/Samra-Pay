@@ -239,9 +239,10 @@ Never store the token in source code, workflow YAML, logs, or test fixtures.
 
 ## Vendor contracts and API entitlement (2026-09-05)
 
-The optional CI Qase job is now **opt-in**. Set repository variable
+The optional CI, weekly resilience and ledger-performance Qase jobs are now **opt-in**. Set repository variable
 `QASE_REPORT_ENABLED=true` only after API entitlement is confirmed, or use
-manual dispatch with `qase_report=true`. Explicit `qase_report=false` skips it.
+CI manual dispatch with `qase_report=true`. Explicit `qase_report=false` skips CI reporting.
+Weekly/performance reporting requires the repository variable even on manual dispatch.
 No token, plan, or vendor configuration is changed by this revision.
 
 CI run 33947575186 / job 101256523210 returned HTTP 403:

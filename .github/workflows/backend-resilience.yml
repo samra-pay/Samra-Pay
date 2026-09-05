@@ -157,6 +157,7 @@ jobs:
     needs: resilience
     if: >-
       always() &&
+      vars.QASE_REPORT_ENABLED == 'true' &&
       needs.resilience.result != 'cancelled' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
@@ -166,6 +167,11 @@ jobs:
       QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
+      - name: Check out reporting status helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
       - name: Download weekly resilience evidence
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -173,6 +179,7 @@ jobs:
           path: test-results
 
       - name: Validate weekly resilience JUnit payloads
+        id: qase-payloads
         run: |
           for report in \
             test-results/weekly-concurrency-soak.xml \
@@ -210,6 +217,7 @@ jobs:
           path: test-results
 
       - name: Complete Qase weekly resilience run
+        id: qase-complete
         if: >-
           always() &&
           steps.qase-run-create.outputs.id != '' &&
@@ -220,3 +228,22 @@ jobs:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run-create.outputs.id }}
+
+      - name: Record actual Qase delivery outcome
+        if: always()
+        env:
+          QASE_PAYLOAD_OUTCOME: ${{ steps.qase-payloads.outcome }}
+          QASE_RUN_ID: ${{ steps.qase-run-create.outputs.id }}
+          QASE_UPLOAD_OUTCOME: ${{ steps.qase-upload-resilience.outcome }}
+          QASE_COMPLETE_OUTCOME: ${{ steps.qase-complete.outcome }}
+          QASE_COMPLETION_REQUIRED: "true"
+        run: node scripts/qase-delivery-status.mjs
+
+      - name: Preserve Qase delivery receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qase-weekly-resilience-delivery-receipt
+          path: qase-delivery.json
+          if-no-files-found: error
+          retention-days: 30

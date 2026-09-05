@@ -72,3 +72,16 @@ test("CI keeps Qase optional and always records delivery instead of treating tol
   assert.match(qase, /path: qase-delivery\.json/);
   assert.doesNotMatch(workflow.split("  required-ci:")[1], /- qase-report/);
 });
+
+
+test("weekly and performance Qase delivery use the same opt-in and truthful receipt", () => {
+  for (const file of ["backend-resilience.yml", "ledger-performance.yml"]) {
+    const workflow = readFileSync(new URL(`../.github/workflows/${file}`, import.meta.url), "utf8");
+    const qase = workflow.split("  qase-report:")[1];
+    assert.match(qase, /vars\.QASE_REPORT_ENABLED == 'true'/);
+    assert.match(qase, /github\.event\.pull_request\.head\.repo\.fork == false/);
+    assert.match(qase, /name: Record actual Qase delivery outcome\n\s+if: always\(\)/);
+    assert.match(qase, /run: node scripts\/qase-delivery-status\.mjs/);
+    assert.match(qase, /path: qase-delivery\.json/);
+  }
+});
