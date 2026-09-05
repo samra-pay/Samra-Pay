@@ -75,6 +75,47 @@ describe("commercial launch copy", () => {
     expect(read("../../index.html")).not.toMatch(retiredCopy);
   });
   for (const language of ["en", "am"] as const) {
+    it(
+      "renders five distinct SAMRA values with accessible translated names in " +
+        language,
+      () => {
+        const host = document.createElement("div");
+        host.innerHTML = markup(Values, language);
+        const cards = [...host.querySelectorAll(".value-card")];
+        expect(cards).toHaveLength(5);
+        expect(
+          cards
+            .map(
+              (card) => card.querySelector(".value-card-top span")?.textContent,
+            )
+            .join(""),
+        ).toBe("SAMRA");
+        expect(new Set(cards.map((card) => card.id)).size).toBe(5);
+        for (const card of cards) {
+          const label = card.querySelector("h2");
+          expect(card.getAttribute("aria-labelledby")).toBe(label?.id);
+          expect(label?.textContent).toBeTruthy();
+          expect(
+            card.querySelector(".value-card-tagline")?.textContent,
+          ).toBeTruthy();
+          if (language === "am") {
+            expect(label?.textContent).toMatch(/[\u1200-\u137f]/);
+            expect(
+              card.querySelector(".value-card-tagline")?.textContent,
+            ).toMatch(/[\u1200-\u137f]/);
+          }
+        }
+        expect(host.querySelector("#value-access h2")?.textContent).toBe(
+          language === "en" ? "Access" : "ተደራሽነት",
+        );
+        expect(
+          host.querySelector("#value-accountability h2")?.textContent,
+        ).toBe(language === "en" ? "Accountability" : "ተጠያቂነት");
+        expect(host.querySelector(".page-cta a")?.getAttribute("href")).toBe(
+          "/features",
+        );
+      },
+    );
     it.each(pages)(
       "removes retired status copy and supplies navigation on %s in " +
         language,

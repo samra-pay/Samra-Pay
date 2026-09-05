@@ -3753,3 +3753,46 @@ a.coming-social-link:hover {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* SAM-11: five values plus the existing community portraits. */
+.values-page .value-card-top {
+  margin-bottom: 28px;
+}
+.values-page .value-card-top span {
+  font-size: 2rem;
+  letter-spacing: 0;
+}
+.values-page .value-card .value-card-tagline {
+  color: var(--cs-ink);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.values-portrait-card {
+  align-self: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: center;
+  padding: 24px 0;
+  min-width: 0;
+}
+.values-portrait-card .values-trust-portrait {
+  aspect-ratio: 3 / 5;
+  border-width: 2px;
+  transform: none !important;
+}
+.values-portrait-card .values-trust-portrait:nth-child(2) {
+  margin-top: 28px;
+}
+@media (max-width: 620px) {
+  .values-portrait-card .values-trust-portrait.is-primary {
+    aspect-ratio: 3 / 5;
+    grid-area: auto;
+  }
+  .values-portrait-card .values-trust-portrait.is-secondary,
+  .values-portrait-card .values-trust-portrait.is-tertiary {
+    grid-area: auto;
+  }
+}
