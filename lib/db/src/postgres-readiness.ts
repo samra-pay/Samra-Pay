@@ -33,6 +33,7 @@ type ReadinessQueryable = Pick<pg.Pool, "query">;
  */
 export async function assertPostgresRuntimeReady(
   pool: ReadinessQueryable,
+  options: Readonly<{ customerControlledSandboxWallets?: boolean }> = {},
 ): Promise<void> {
   const result = await pool.query<{ relation_name: string }>(
     `SELECT relation_name
@@ -45,5 +46,25 @@ export async function assertPostgresRuntimeReady(
     throw new Error(
       `PostgreSQL schema is not ready; ${result.rows.length} required relation(s) are missing.`,
     );
+  }
+  if (options.customerControlledSandboxWallets) {
+    const guards = await pool.query<{ ready: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'samra_core.customer_wallet_provider_mappings'::regclass
+            AND tgname = 'customer_wallet_mapping_configuration_guard'
+            AND tgenabled = 'O' AND NOT tgisinternal
+       ) AND EXISTS (
+         SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'samra_core.customer_wallets'::regclass
+            AND conname = 'customer_wallets_environment_chk' AND convalidated
+            AND pg_get_constraintdef(oid) LIKE '%crossmint-sandbox-evm-customer-email-v1%'
+       ) AS ready`,
+    );
+    if (guards.rows[0]?.ready !== true) {
+      throw new Error(
+        "PostgreSQL customer-controlled sandbox wallet migration is not ready.",
+      );
+    }
   }
 }

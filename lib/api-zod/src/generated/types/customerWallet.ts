@@ -21,7 +21,7 @@ export interface CustomerWallet {
   custodyModel: string | null;
   publicAddress: string | null;
   configurationVersion: CustomerWalletConfigurationVersion;
-  synthetic: true;
+  synthetic: boolean;
   /** @minimum 1 */
   version: number;
   readyAt: string | null;

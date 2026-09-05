@@ -7,7 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "test": "NODE_ENV=test node --import tsx --test src/*.test.ts && node --test test/run-with-junit.test.mjs",
+    "test": "NODE_ENV=test node --import tsx --test src/*.test.ts && node --test test/run-with-junit.test.mjs test/crossmint-sandbox-read.test.mjs",
     "test:postgres": "NODE_ENV=test node --import tsx --test test/postgres.test.ts",
     "test:postgres:junit": "node test/run-with-junit.mjs test-results/postgres-persistence.xml 'PostgreSQL persistence' test/postgres.test.ts",
     "test:ledger-journals": "NODE_ENV=test node --import tsx --test test/ledger-journal-assurance.test.ts",

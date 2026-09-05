@@ -138,6 +138,8 @@ export * from "./resolveOperationsReconciliationExceptionRequest";
 export * from "./runReconciliationRequest";
 export * from "./selectScenarioRequest";
 export * from "./startCustomerWalletProvisioningRequest";
+export * from "./startCustomerWalletProvisioningRequestBundleVersion";
+export * from "./startCustomerWalletProvisioningRequestDocumentVersion";
 export * from "./submitCustomerConsentBundleRequest";
 export * from "./subscribeWaitlistRequest";
 export * from "./subscribeWaitlistRequestLocale";

@@ -331,7 +331,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CustomerWallet"
         "201":
-          description: Wallet record created and synthetic provider mapping attached
+          description: Wallet record created and the configured non-production provider mapping attached
           content:
             application/json:
               schema:
@@ -1705,10 +1705,10 @@ components:
       properties:
         bundleVersion:
           type: string
-          const: alpha-wallet-non-production-v1
+          enum: [alpha-wallet-non-production-v1, sandbox-customer-wallet-v1]
         documentVersion:
           type: string
-          const: alpha-wallet-non-production-v1
+          enum: [alpha-wallet-non-production-v1, sandbox-customer-wallet-v1]
         locale:
           type: string
           const: en-US
@@ -1742,10 +1742,9 @@ components:
           anyOf: [{ type: string }, { type: "null" }]
         configurationVersion:
           type: string
-          enum: [crossmint-synthetic-v1]
+          enum: [crossmint-synthetic-v1, crossmint-sandbox-evm-customer-email-v1]
         synthetic:
           type: boolean
-          const: true
         version:
           type: integer
           minimum: 1

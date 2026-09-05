@@ -1,6 +1,14 @@
 export type BackendMode = "disabled" | "demo";
 export type ProviderMode = "fake";
 export type PersistenceMode = "memory" | "postgres";
+export type CustomerWalletProviderConfig =
+  | Readonly<{ mode: "fake" }>
+  | Readonly<{
+      mode: "crossmint-sandbox-customer";
+      apiKey: string;
+      allowedCustomerId: string;
+      recoveryEmail: string;
+    }>;
 export type CustomerAuthConfig =
   | Readonly<{ mode: "disabled" }>
   | Readonly<{
@@ -30,6 +38,7 @@ export type ApiRuntimeConfig = Readonly<{
   internalOperationsEnabled?: boolean;
   customerAuth: CustomerAuthConfig;
   customerIdentityProvider?: CustomerIdentityProviderConfig;
+  customerWalletProvider?: CustomerWalletProviderConfig;
 }>;
 
 export function loadApiRuntimeConfig(
@@ -43,6 +52,8 @@ export function loadApiRuntimeConfig(
   const devControlsEnabled =
     backendMode === "demo" &&
     providerMode === "fake" &&
+    environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"] !==
+      "crossmint-sandbox-customer" &&
     environment["NODE_ENV"] !== "production";
   const operationsRequested = parseBoolean(
     environment["SAMRA_INTERNAL_OPERATIONS_ENABLED"],
@@ -76,7 +87,65 @@ export function loadApiRuntimeConfig(
     internalOperationsEnabled: operationsRequested,
     customerAuth,
     customerIdentityProvider,
+    customerWalletProvider: parseCustomerWalletProvider(
+      environment,
+      customerAuth,
+      persistenceMode,
+    ),
   });
+}
+
+function parseCustomerWalletProvider(
+  environment: NodeJS.ProcessEnv,
+  customerAuth: CustomerAuthConfig,
+  persistenceMode: PersistenceMode,
+): CustomerWalletProviderConfig {
+  const mode = environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"];
+  if (mode === undefined || mode === "fake")
+    return Object.freeze({ mode: "fake" });
+  if (mode !== "crossmint-sandbox-customer") {
+    throw new Error(
+      "SAMRA_CUSTOMER_WALLET_PROVIDER_MODE supports only fake or crossmint-sandbox-customer.",
+    );
+  }
+  if (
+    environment["SAMRA_DEPLOYMENT_ENVIRONMENT"] !== "staging" ||
+    customerAuth.mode !== "auth0" ||
+    persistenceMode !== "postgres" ||
+    environment["SAMRA_INTERNAL_OPERATIONS_ENABLED"] === "true" ||
+    environment["SAMRA_RUN_WORKER"] === "true"
+  ) {
+    throw new Error(
+      "Customer-controlled sandbox wallets require staging, Auth0, PostgreSQL, and disabled workers and operations controls.",
+    );
+  }
+  const apiKey = requireEnvironmentValue(
+    environment,
+    "CROSSMINT_SERVER_API_KEY",
+  );
+  const allowedCustomerId = requireEnvironmentValue(
+    environment,
+    "CROSSMINT_SANDBOX_CUSTOMER_ID",
+  );
+  const recoveryEmail = requireEnvironmentValue(
+    environment,
+    "CROSSMINT_SANDBOX_RECOVERY_EMAIL",
+  );
+  if (!/^sk_staging_[A-Za-z0-9]{16,480}$/u.test(apiKey)) {
+    throw new Error("CROSSMINT_SERVER_API_KEY must be a staging server key.");
+  }
+  if (!/^customer_[0-9a-f]{32}$/u.test(allowedCustomerId)) {
+    throw new Error(
+      "CROSSMINT_SANDBOX_CUSTOMER_ID must be one opaque Samra customer ID.",
+    );
+  }
+  if (
+    recoveryEmail.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(recoveryEmail)
+  ) {
+    throw new Error("CROSSMINT_SANDBOX_RECOVERY_EMAIL is invalid.");
+  }
+  return Object.freeze({ mode, apiKey, allowedCustomerId, recoveryEmail });
 }
 
 function parseCustomerIdentityProvider(

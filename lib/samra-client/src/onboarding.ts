@@ -77,8 +77,10 @@ export type CustomerWalletState =
   "created" | "provisioning" | "ready" | "restricted" | "error";
 
 export type StartCustomerWalletProvisioningInput = Readonly<{
-  bundleVersion: "alpha-wallet-non-production-v1";
-  documentVersion: "alpha-wallet-non-production-v1";
+  bundleVersion:
+    "alpha-wallet-non-production-v1" | "sandbox-customer-wallet-v1";
+  documentVersion:
+    "alpha-wallet-non-production-v1" | "sandbox-customer-wallet-v1";
   locale: "en-US";
   decision: "accepted";
 }>;
@@ -100,8 +102,9 @@ export type CustomerWalletSnapshot = Readonly<{
   network: string | null;
   custodyModel: string | null;
   publicAddress: string | null;
-  configurationVersion: "crossmint-synthetic-v1";
-  synthetic: true;
+  configurationVersion:
+    "crossmint-synthetic-v1" | "crossmint-sandbox-evm-customer-email-v1";
+  synthetic: boolean;
   version: number;
   readyAt: string | null;
   createdAt: string;
