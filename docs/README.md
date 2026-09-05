@@ -117,6 +117,7 @@ explicit approval for that scope. None of these states implies another.
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)
 - [Public and product surface boundary](architecture/public-product-surface-boundary.md)
 - [Repository merge controls](operations/repository-merge-controls.md)
+- [Read-only GitHub merge settings audit](operations/repository-settings-audit.md)
 - [Coming-soon Google Cloud launch](operations/coming-soon-cloud-launch.md)
 - [Staging CI/CD, traceability, promotion, and rollback](operations/staging-release-control-plane.md)
 - [Testing strategy](testing/testing-strategy.md)

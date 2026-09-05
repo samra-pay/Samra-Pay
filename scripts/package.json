@@ -12,6 +12,7 @@
     "validate-action-pins": "tsx ./src/validate-action-pins.ts",
     "validate-migration-policy": "tsx ./src/validate-migration-policy.ts",
     "validate-repository-controls": "tsx ./src/validate-repository-controls.ts",
+    "audit-repository-settings": "node ./src/audit-repository-settings.ts",
     "validate-operational-readiness": "tsx ./src/validate-operational-readiness.ts",
     "validate-experience-budgets": "tsx ./src/validate-experience-budgets.ts",
     "release-evidence": "tsx ./src/release-evidence-cli.ts",
