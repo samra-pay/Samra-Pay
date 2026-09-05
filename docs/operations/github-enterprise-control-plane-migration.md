@@ -2,6 +2,21 @@
 
 ## Decision
 
+**2026-09-05 update:** David approved the GitHub-only transfer and protection
+package. The private repository is now `samra-pay/Samra-Pay`, stable ID
+`1335175962`, owner ID `320532147`, with permanent main ruleset `22344977`
+verified active. The [dated execution record](enterprise-transfer-2026-09-05.md)
+governs current GitHub status. Releases remain paused. Source-authority
+contracts and Google trust have not been cut over.
+
+The starting state and sequence below are retained as historical planning
+context. Their trial/recovery/authorization observations are superseded by the
+dated execution record; they are not reasons to repeat the completed transfer.
+The current contract inventories **69** operational authority files and six
+planned Google boundaries, superseding the older counts below. Its validator
+still enforces the prepared personal-owner state and must change with the
+source-authority cutover.
+
 Samra Pay source control, CI/CD governance, deployment approvals, and Google
 Cloud workload identity will move from the founder's personal GitHub namespace
 to the Enterprise-backed `samra-pay` organization.

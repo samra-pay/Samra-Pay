@@ -3,8 +3,12 @@
 The repository validator checks workflow source. This auditor checks GitHub's
 effective rules for `main` against the existing
 [repository control contract](../testing/repository-controls.json). It does not
-change GitHub settings or activate the
-[prepared Enterprise migration](github-enterprise-control-plane-migration.md).
+change GitHub settings or activate the remaining
+[cloud authority cutover](github-enterprise-control-plane-migration.md).
+
+After the Sept 5 ownership transfer, the command below has a
+[known stale-authority limitation](#post-transfer-invocation-limitation)
+until the migration contract is updated.
 
 ## Run and retain evidence
 
@@ -68,9 +72,26 @@ readiness. Legacy branch protection alone cannot satisfy the required merge
 queue/ruleset contract. Keep exact-candidate CI evidence and release approval
 separate.
 
-## Current activation decision
+## Post-transfer invocation limitation
 
-The [recorded enforcement gap](repository-merge-controls.md) remains a platform
+The [Sept 5 transfer](enterprise-transfer-2026-09-05.md) completed, and the
+permanent main ruleset passed live read-back. The checked-in migration contract
+still names the former personal owner; the standard CLI therefore cannot yet
+produce successful new-owner identity evidence. Do not suppress that failure.
+
+The retained transfer audit invoked the existing exported
+`auditRepositorySettings` function with the independently verified organization
+repository name and IDs, and separately compared the saved rules against the
+approved payload, including GitHub Actions app `15368`. Its target override and
+auditor hash are recorded in the evidence. This was a bounded transfer audit,
+not a change to the normal command or its authority contract.
+
+Update the migration contract, validator and tests together in the next
+source-authority PR before relying on the standard command for fresh evidence.
+
+## Historical activation decision
+
+The [former enforcement gap](repository-merge-controls.md) required a platform
 decision. GitHub documents private-repository merge queues as an
 [organization feature on Enterprise Cloud](https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue).
 A personal Pro upgrade alone does not satisfy this repository's full policy.

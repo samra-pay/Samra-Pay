@@ -137,8 +137,8 @@ existing task/decision rather than creating a duplicate board entry. Update
 status and architecture docs in the same PR as the change.
 
 Require successful `Required CI` and `Required security` on the exact candidate,
-plus affected conditional gates. They are a required working practice even
-while GitHub enforcement is unavailable. A merge or green build is not a
+plus affected conditional gates. GitHub enforces the required checks, PRs and
+merge queue under the organization ruleset. A merge or green build is not a
 deployment. See [merge controls](docs/operations/repository-merge-controls.md).
 For live enforcement evidence, use the
 [read-only settings audit](docs/operations/repository-settings-audit.md) with the
