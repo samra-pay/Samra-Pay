@@ -1,8 +1,34 @@
 # Google trust cutover review
 
-Status: offline review tooling prepared; live Google inventory, cloud apply and
-release resumption remain outstanding. The source authority and account recovery
-prerequisites are recorded in [the transfer record](enterprise-transfer-2026-09-05.md).
+Status: the two existing providers were repaired and independently read back on
+September 5, 2026. The keyless production preflight passed on
+`eddc1558392eecf0946e2c6e2c74866c947c833b`. Six planned staging controllers remain
+absent from the successful inventory, and release resumption remains outstanding.
+See [the dated repair evidence](evidence/2026-09-05-cloud-trust-repair.json) and
+[the transfer record](enterprise-transfer-2026-09-05.md).
+
+The approved changes removed the two Firebase project-level Token Creator grants,
+updated only the existing providers' repository-owner conditions, and restored the
+staging publisher's two missing source-required read permissions. The final role
+has the governed 19 permissions. Project bindings did not change during that role
+repair. Operator-collected before/after metadata is retained privately outside Git;
+it is not the repository's same-process capture or a signed cloud attestation.
+The organization deny-policy inventory remains unverified after an access denial.
+
+The Enterprise retention ceiling and inherited repository setting now allow 365
+days. [The successful keyless preflight](https://github.com/samra-pay/Samra-Pay/actions/runs/33990597344)
+uploaded an artifact expiring September 5, 2027; its downloaded digest and source
+SHA were verified. These results establish the existing preflight path, not the
+missing staging controllers, provider runtime acceptance, or production readiness.
+
+The same day's metadata inventory found a runnable private Cloud SQL instance in
+each project with backups and PITR enabled. It did not prove backup freshness or a
+restore drill. Both instances report `ALLOW_UNENCRYPTED_AND_ENCRYPTED`; actual
+client transport was not tested and must satisfy the governed TLS boundary before
+runtime activation. Staging's bootstrap database secret has enabled version `1`,
+but its runtime database secret has no versions. Production's runtime and migration
+database secrets also have no versions. Neither project has monitoring alert
+policies. No secret payloads or database contents were read.
 
 ## Scope and current inventory
 
