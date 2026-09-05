@@ -9,3 +9,4 @@
 !src/public-server.mjs
 !src/public-waitlist-service.mjs
 !src/waitlist-resend.mjs
+!src/waitlist-profile.mjs

@@ -2,14 +2,19 @@
 
 This package contains two strictly separate paths:
 
-- the controlled public email-only waitlist in `public-server.mjs`,
-  `public-waitlist-service.mjs`, and `waitlist-resend.mjs`; and
+- the controlled public marketing waitlist in `public-server.mjs`,
+  `public-waitlist-service.mjs`, `waitlist-resend.mjs`, and `waitlist-profile.mjs`; and
 - the older private one-message connection test.
 
-The public service accepts the website's single email field, requires explicit
+The public service accepts email plus optional first name and international-format
+mobile number, requires explicit
 email consent, and creates a contact in one configured Resend Segment and Topic.
 An existing subscribed contact is added to that Segment and Topic; a globally
-unsubscribed contact is left unchanged. It does not send an email, use a Samra
+unsubscribed contact is left unchanged. Optional profile fields are written only
+when creating a new contact; repeated public submissions never update a profile.
+Phone format validation does not verify ownership, reachability, or SMS consent.
+The Resend custom property `phone_number` must exist as a string before release.
+See [SAM-13 staging review](../../docs/reviews/2026-09-05-sam-13-staging-review.md). It does not send an email, use a Samra
 database, create an account or application, or access any financial runtime.
 
 ## Current state

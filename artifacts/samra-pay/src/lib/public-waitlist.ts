@@ -10,6 +10,8 @@ type WaitlistReceipt = Readonly<{
 export async function subscribePublicWaitlist(
   input: Readonly<{
     email: string;
+    firstName?: string;
+    phoneNumber?: string;
     locale: PublicLanguage;
     website?: string;
     idempotencyKey?: string;
@@ -24,6 +26,10 @@ export async function subscribePublicWaitlist(
     },
     body: JSON.stringify({
       email: input.email,
+      ...(input.firstName?.trim() ? { firstName: input.firstName.trim() } : {}),
+      ...(input.phoneNumber?.trim()
+        ? { phoneNumber: input.phoneNumber.trim() }
+        : {}),
       consent: true,
       consentVersion: COMING_SOON_CONSENT_VERSION,
       locale: input.locale,

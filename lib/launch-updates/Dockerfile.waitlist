@@ -2,7 +2,7 @@
 FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
 
 WORKDIR /app
-COPY --chown=node:node src/public-server.mjs src/public-waitlist-service.mjs src/waitlist-resend.mjs ./src/
+COPY --chown=node:node src/public-server.mjs src/public-waitlist-service.mjs src/waitlist-resend.mjs src/waitlist-profile.mjs ./src/
 
 ENV NODE_ENV=production
 USER node
