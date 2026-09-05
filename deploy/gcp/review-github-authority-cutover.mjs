@@ -307,15 +307,35 @@ export function reviewCutoverSnapshot(s, { now = Date.now() } = {}) {
       Array.isArray(s.serviceAccountPolicy.bindings),
     "Complete IAM snapshots required",
   );
-  const bindings = s.serviceAccountPolicy.bindings.filter(
-    (item) => item.role === "roles/iam.workloadIdentityUser",
+  // Project grants are inherited by every controller in this project. Even a
+  // conditional grant needs a separate effective-access review; this tool must
+  // not evaluate CEL or assume an expired-looking condition makes it harmless.
+  const inheritedAccessRoles = new Set([
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountOpenIdTokenCreator",
+    "roles/iam.workloadIdentityUser",
+    "roles/iam.serviceAccountUser",
+  ]);
+  assert(
+    s.projectPolicy.bindings.every(
+      (item) =>
+        item &&
+        typeof item.role === "string" &&
+        Array.isArray(item.members) &&
+        item.members.length > 0 &&
+        item.members.every((member) => typeof member === "string" && member) &&
+        !inheritedAccessRoles.has(item.role),
+    ),
+    "Project IAM is malformed or grants inherited service-account access; independent IAM remediation required",
   );
+  const bindings = s.serviceAccountPolicy.bindings;
   const principal = `principalSet://iam.googleapis.com/${poolName(b)}/attribute.repository_id/${a.stableId}`;
   assert(
     bindings.length === 1 &&
+      bindings[0]?.role === "roles/iam.workloadIdentityUser" &&
       !bindings[0].condition &&
       canonical(bindings[0].members) === canonical([principal]),
-    "Controller federation binding must be exact",
+    "Controller IAM must contain only the exact federation binding",
   );
   const changeNeeded = p.attributeCondition !== b.targetCondition;
   return {
