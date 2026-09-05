@@ -4,7 +4,7 @@
 
 Samra Pay uses GitHub as the source and approval authority, Google Cloud Build
 as the image builder, Artifact Registry as the immutable image store, Cloud Run
-as the future runtime, and Qase as governed test evidence. These systems are
+as the future runtime, and Qase as optional test reporting. These systems are
 connected by exact identifiers. None of them may infer that a build, deployment,
 test, traffic change, or vendor activation authorizes the next stage.
 
@@ -13,8 +13,8 @@ exact-revision probing, combined verification evidence recording,
 exact-revision promotion, rollback, and immutable deployment-history
 controllers are implemented. Both verification workflows remain dormant and
 unauthorized. Exact-image evidence is intentionally non-promotable by itself;
-the final recorder also requires the private exact-revision probe and one shared
-passing Qase run. Federated identities, protected environments, and every Cloud
+the final recorder also requires the private exact-revision probe and accurate
+local reporting metadata. External Qase reporting is optional. Federated identities, protected environments, and every Cloud
 Run mutation remain separately activated and authorized; no service is live.
 The promotion path deliberately cannot perform first-ever activation because a
 release without a prior healthy revision has no proven rollback target.
