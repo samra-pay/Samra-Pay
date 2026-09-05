@@ -22,8 +22,10 @@ in the contract's `history`. Do not repeat the completed transfer.
 ## Source inventory and regression checks
 
 The earlier 69-file deployment inventory missed recovery and Notion ownership
-checks. The validator now scans the whole source repository, excluding generated
-directories and binary files. It checks plain and escaped repository names,
+checks. The validator scans Git-tracked and non-ignored source files across the
+whole repository. It excludes ignored local data, generated output and binary
+files; tracked files remain covered even when an ignore rule matches them.
+It checks plain and escaped repository names,
 former owner IDs and explicit owner assignments.
 
 Four fixed migration-control files retain historical identity constants and

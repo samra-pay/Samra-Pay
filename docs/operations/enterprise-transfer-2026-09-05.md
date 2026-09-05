@@ -89,8 +89,9 @@ and environment checks. Regression tests reject the former owner, wrong IDs,
 wildcard/dual-owner trust and premature release resumption. Historical evidence
 URLs retain their original authority and date through exact-line exceptions.
 The whole-source scan replaces the earlier 69-file deployment-only inventory,
-which missed the recovery test and Notion tooling. Generated dependencies,
-build output and binary assets are excluded from that source scan.
+which missed the recovery test and Notion tooling. The scan uses Git-tracked
+and non-ignored files, excludes ignored local data and generated output, and
+skips binary assets. Tracked files cannot evade it through an ignore rule.
 
 Acceptance requires current-main settings audit without an override, targeted
 migration/federation/evidence tests, the Google Cloud contract suite, and exact

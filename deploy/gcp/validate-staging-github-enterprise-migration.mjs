@@ -1,4 +1,11 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  lstatSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -84,8 +91,30 @@ function sourceFiles(root, contract) {
   const excluded = new Set(
     contract.operationalReferences.migrationControlFiles,
   );
-  return contract.operationalReferences.scanRoots
-    .flatMap((scanRoot) => listFiles(join(root, scanRoot)))
+  // Respect Git's source boundary so local credentials and generated evidence
+  // are never read. Tracked files remain covered even if a rule ignores them.
+  const files = existsSync(join(root, ".git"))
+    ? execFileSync(
+        "git",
+        [
+          "-C",
+          root,
+          "ls-files",
+          "--cached",
+          "--others",
+          "--exclude-standard",
+          "-z",
+        ],
+        { encoding: "utf8", timeout: 10_000, maxBuffer: 8 * 1024 * 1024 },
+      )
+        .split("\0")
+        .filter(Boolean)
+        .map((path) => join(root, path))
+    : contract.operationalReferences.scanRoots.flatMap((scanRoot) =>
+        listFiles(join(root, scanRoot)),
+      );
+  return [...new Set(files)]
+    .filter((path) => existsSync(path) && lstatSync(path).isFile())
     .map((path) => ({ path, relativePath: relative(root, path) }))
     .filter(({ relativePath }) => !excluded.has(relativePath))
     .map((file) => ({ ...file, bytes: readFileSync(file.path) }))

@@ -259,3 +259,32 @@ test("federation contracts reject former-owner, wildcard and dual-owner trust", 
     }
   }
 });
+
+test("Git inventory excludes ignored local data but still covers tracked and new source", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "samra-authority-git-"));
+  try {
+    execFileSync("git", ["init", "--quiet", fixture]);
+    writeFileSync(join(fixture, ".gitignore"), ".env\ntmp/\n");
+    writeFileSync(join(fixture, ".env"), "REPO=haileleuld87/Samra-Pay");
+    mkdirSync(join(fixture, "tmp"));
+    writeFileSync(
+      join(fixture, "tmp/evidence.json"),
+      '{"repository":"samra-pay/Samra-Pay"}',
+    );
+    assert.deepEqual(findFormerAuthorityReferences(fixture, contract), []);
+    assert.deepEqual(findOperationalAuthorityReferences(fixture, contract), []);
+    writeFileSync(
+      join(fixture, "source.mjs"),
+      'const repo="haileleuld87/Samra-Pay";',
+    );
+    assert.deepEqual(findFormerAuthorityReferences(fixture, contract), [
+      "source.mjs",
+    ]);
+    execFileSync("git", ["-C", fixture, "add", "--force", "tmp/evidence.json"]);
+    assert.deepEqual(findOperationalAuthorityReferences(fixture, contract), [
+      "tmp/evidence.json",
+    ]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
