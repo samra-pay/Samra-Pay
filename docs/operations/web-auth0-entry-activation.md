@@ -61,3 +61,34 @@ build using the recorded prior revision. Never restore access by bypassing
 Auth0 or Samra authorization checks.
 
 Reference: [Auth0 Universal Login experience](https://auth0.com/docs/authenticate/login/auth0-universal-login/universal-login-vs-classic-login/universal-experience).
+
+
+## Light-background Auth0 logo (prepared September 5, 2026)
+
+The development login previously used the dark square website icon as a logo.
+That favicon creates a visible black tile on the ivory login card. Use the
+transparent full wordmark for the hosted login header; retain the square icon
+for the browser favicon.
+
+- Recommended header: `/brand/samra-pay-wordmark-light-fd7c56413c.svg`, centered,
+  **40px high** (approximately 183px wide).
+- Compact alternative: `/brand/samra-pay-monogram-light-6f68591538.svg`, 64px high.
+- Palette: forest `#234333`, muted gold `#a2781f`, on existing ivory `#f7f4ec`
+  or paper `#fffdf8`.
+
+These self-contained SVG paths derive from the existing logo letterforms:
+Outfit 700 with -0.06em tracking and EB Garamond 500 Italic with a 0.14em gap
+for the public wordmark (`coming-soon.css`); Outfit 800 and EB Garamond 500
+Italic with a 0.05em gap for the compact `SamraLogo` mark. Glyph outlines come
+from the repository's pinned `@expo-google-fonts/outfit@0.4.3` and
+`@expo-google-fonts/eb-garamond@0.4.3` font packages. No AI-generated artwork
+is included. No background rectangle, raster, external font dependency, script,
+or remote resource is embedded.
+
+Status: assets prepared and locally rendered, **not deployed or configured**.
+After an authorized website release, verify the selected HTTPS asset returns
+200 with SVG content and renders correctly. Then set the Auth0 theme Logo URL
+and tenant Logo URL to that verified asset, set the header height to 40px, and
+check both hosted login and signup. Do not save a guessed/unpublished asset URL.
+Preserve the favicon, authentication settings and any unrelated unsaved edits.
+Rollback: restore the previous logo URL and 52px height.
