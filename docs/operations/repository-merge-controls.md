@@ -50,6 +50,10 @@ approvals. Do not invent reviewer separation for a solo-maintained repository.
 
 ## Activation evidence
 
+Use the [read-only settings audit](repository-settings-audit.md) to produce
+dated, exact-SHA metadata evidence. Missing or unreadable controls block the
+report; successful workflow validation cannot substitute for this read-back.
+
 After the repository plan supports rulesets, record a read-back of the applied
 `main` ruleset showing the two exact check names, strict/up-to-date enforcement,
 merge queue, force-push protection, deletion protection, and bypass policy.

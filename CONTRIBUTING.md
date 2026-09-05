@@ -140,3 +140,6 @@ Require successful `Required CI` and `Required security` on the exact candidate,
 plus affected conditional gates. They are a required working practice even
 while GitHub enforcement is unavailable. A merge or green build is not a
 deployment. See [merge controls](docs/operations/repository-merge-controls.md).
+For live enforcement evidence, use the
+[read-only settings audit](docs/operations/repository-settings-audit.md) with the
+reviewed current `main` SHA. It does not replace candidate CI or authorize merge.
