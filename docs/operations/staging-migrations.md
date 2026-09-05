@@ -60,6 +60,10 @@ separately gated. This migration lane remains synthetic-only.
 
 ## Federation prerequisites — not applied by this change
 
+The executable [migration identity setup](staging-migration-foundation.md)
+now provides offline plan, live metadata review, separately authorized apply,
+and a post-setup audit. Its implementation does not establish live activation.
+
 Use project `samra-pay-staging` / `934122615631`, organization `614833350075`,
 region `us-east4`. The existing foundation must first provide private SQL and
 separate migration/runtime database credentials. No credential version is

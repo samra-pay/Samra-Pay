@@ -14,6 +14,27 @@ import {
   writeMigrationManifest,
 } from "./staging-migration-evidence.mjs";
 
+export function migrationProviderTrust(repository = "haileleuld87/Samra-Pay") {
+  const claims = [
+    "repository",
+    "repository_id",
+    "repository_owner_id",
+    "ref",
+    "event_name",
+    "workflow",
+    "workflow_ref",
+    "environment",
+  ];
+  return {
+    issuerUri: "https://token.actions.githubusercontent.com",
+    attributeMapping: Object.fromEntries([
+      ["google.subject", "assertion.sub"],
+      ...claims.map((claim) => [`attribute.${claim}`, `assertion.${claim}`]),
+    ]),
+    attributeCondition: `assertion.repository=='${repository}' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='${M.workflow}' && assertion.workflow_ref=='${repository}/${M.workflowPath}@refs/heads/main' && assertion.environment=='${M.environment}'`,
+  };
+}
+
 export const MIGRATION_CONTROLLER_PERMISSIONS = Object.freeze(
   [
     "artifactregistry.dockerimages.get",
@@ -335,7 +356,9 @@ export async function runStagingMigrations({
     `--workload-identity-pool=${M.pool}`,
     "--location=global",
   );
-  const condition = `assertion.repository=='${env.GITHUB_REPOSITORY}' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='${M.workflow}' && assertion.workflow_ref=='${env.GITHUB_REPOSITORY}/${M.workflowPath}@refs/heads/main' && assertion.environment=='${M.environment}'`;
+  const condition = migrationProviderTrust(
+    env.GITHUB_REPOSITORY,
+  ).attributeCondition;
   assert(
     provider.state === "ACTIVE" &&
       provider.oidc?.issuerUri ===

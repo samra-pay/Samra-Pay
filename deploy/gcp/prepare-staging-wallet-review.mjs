@@ -22,6 +22,7 @@ export const REVIEW_FILES = Object.freeze([
   "deploy/gcp/staging-release-control-plane.json",
   "deploy/gcp/verify-github-upstream-artifact.mjs",
   "deploy/gcp/run-staging-migrations.mjs",
+  "deploy/gcp/staging-migration-foundation.mjs",
   "deploy/gcp/staging-migration-evidence.mjs",
   "deploy/gcp/verify-staging-migration-prerequisite.mjs",
   "lib/db/staging-migrate.mjs",
