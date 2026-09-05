@@ -92,6 +92,20 @@ jobs:
       - name: Validate immutable release-candidate contract
         run: pnpm run test:release-contract
 
+      - name: Record operational readiness without production approval
+        run: >-
+          node scripts/src/validate-operational-readiness.ts
+          --report tmp/operational-readiness.json
+          --candidate-sha "${GITHUB_SHA}" --require-clean
+
+      - name: Preserve operational readiness evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: operational-readiness-${{ github.sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: tmp/operational-readiness.json
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Typecheck workspace
         run: pnpm run typecheck
 

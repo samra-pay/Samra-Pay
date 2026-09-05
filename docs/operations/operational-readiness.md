@@ -57,3 +57,13 @@ reviewed decisions:
 
 Any of those actions may create spend or touch cloud, vendor, credential, or
 customer-data boundaries. This repository slice does not authorize them.
+
+## Closure work and CI evidence
+
+The [operational closure plan](operational-closure-plan.md) lists the implementation,
+owner decisions, isolated provider authorization packages and acceptance evidence
+for each blocked pillar. Required CI now retains a clean-checkout, exact-SHA
+readiness report with all blockers; a `--claim production-ready` invocation fails
+while the source contract remains blocked. A successful build is not operational
+approval. Google trust inventory and condition-only review use the separate
+[cutover review tool](github-authority-cutover-review.md).
