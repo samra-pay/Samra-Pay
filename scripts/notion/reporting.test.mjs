@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { report, recordState, planRecords, planPulls, summarizePeriods, periodFor, midnight, makeClient, queryAll, rich, textValue } from './reporting.mjs';
+import { report, recordState, planRecords, planPulls, summarizePeriods, periodFor, midnight, makeClient, queryAll, rich, textValue, formatReportingError } from './reporting.mjs';
 import { REPO, OWNER, HEALTH_PAGE, OUTPUTS, SOURCES, OUTPUT_SCHEMAS } from './reporting-config.mjs';
 
 const NOW = '2026-09-05T12:00:00.000Z';
@@ -128,6 +128,30 @@ test('rate limits obey Retry-After and ambiguous creates are not blindly replaye
   const secret = makeClient({ githubToken: 'fixture', notionToken: 'fixture', pause: async () => {}, fetcher: async () => { throw new Error('secret-token-value'); } });
   await assert.rejects(secret('notion', 'pages', 'POST', {}), error => !error.message.includes('secret-token-value'));
 });
+test('HTTP diagnostics retain only fixed request metadata and known property paths', async () => {
+  const secret = 'private-token-and-source-value';
+  for (const code of ['validation_error', secret]) {
+    const client = makeClient({ githubToken: secret, notionToken: secret, pause: async () => {}, fetcher: async () => ({
+      ok: false, status: 400, json: async () => ({ code, message: `body.properties.Cursor.rich_text[0].text.content should be valid, instead was ${secret}. body.properties.Owner.people[0].id is ${id}. body.properties.${secret}.rich_text should be valid.`, request_id: secret }),
+    }) });
+    await assert.rejects(client('notion', `pages/${id}`, 'PATCH', { secret }), error => {
+      const output = formatReportingError(error);
+      assert.match(output, /service=notion; method=PATCH; status=400/);
+      assert.equal(output.includes('code=validation_error'), code === 'validation_error');
+      assert.equal(output.includes('body.properties.Cursor'), code === 'validation_error');
+      assert.equal(output.includes('body.properties.Owner'), code === 'validation_error');
+      assert.equal(output.includes(secret), false); assert.equal(output.includes(id), false);
+      return true;
+    });
+  }
+});
+test('unknown throwables and hostile error accessors cannot leak through the formatter', () => {
+  const secret = 'private-error-message';
+  const hostile = Object.defineProperty({}, 'message', { get() { throw new Error(secret); } });
+  for (const error of [secret, new Error(secret), { message: secret, status: secret, code: secret }, hostile, null]) {
+    assert.equal(formatReportingError(error), 'Capture failed (phase=unknown; reason=internal).');
+  }
+});
 
 function fixture() {
   const health = { id: HEALTH_PAGE, parent: { data_source_id: OUTPUTS.health }, properties: { Cursor: { id: 'cursor', ...rich('') }, 'Last success': { date: null }, 'Monitoring since': { date: null } } };
@@ -224,7 +248,46 @@ test('missing schema, corrupt state, and duplicate keys fail without a false hea
   const duplicate = fixture(); await run(duplicate, { dryRun: false }); duplicate.dbs[OUTPUTS.periods].push(structuredClone(duplicate.dbs[OUTPUTS.periods][0]));
   await assert.rejects(run(duplicate), /duplicate reporting key/);
 });
+test('a rejected final checkpoint records sanitized phase, HTTP status and cursor sizes', async () => {
+  const f = fixture(); const secret = 'private-checkpoint-value'; let submittedCursor;
+  const fetcher = async (url, init) => {
+    const body = init.body ? JSON.parse(init.body) : {};
+    if (init.method === 'PATCH' && body.properties?.Cursor) {
+      submittedCursor = body.properties.Cursor.rich_text;
+      return { ok: false, status: 400, json: async () => ({ code: 'validation_error', message: `body.properties.Cursor.rich_text[0].text.content should be valid, instead was ${secret}. ${id}` }) };
+    }
+    return f.fetcher(url, init);
+  };
+  await assert.rejects(run(f, { dryRun: false, fetcher }), error => {
+    const output = formatReportingError(error);
+    assert.match(output, /phase=health.commit; reason=http; service=notion; method=PATCH; status=400; code=validation_error/);
+    const lengths = submittedCursor.map(part => part.text.content.length);
+    assert.ok(output.includes(`cursorChars=${lengths.reduce((a, b) => a + b, 0)}`));
+    assert.ok(output.includes(`cursorSegments=${lengths.length}`));
+    assert.ok(output.includes(`cursorMaxSegment=${Math.max(...lengths)}`));
+    const details = textValue(f.health.properties.Details);
+    assert.ok(details.startsWith(output));
+    for (const value of [secret, id, OWNER, task.id]) assert.equal(details.includes(value), false);
+    return true;
+  });
+  assert.equal(f.health.properties['Run state'].select.name, 'Failed');
+  assert.equal(f.health.properties['Last success'].date, null);
+  assert.equal(textValue(f.health.properties.Cursor), '');
+  assert.equal(f.dbs[OUTPUTS.periods].length, 3);
+});
+test('unexpected exceptions are sanitized in persisted failure details and retain their phase', async () => {
+  const f = fixture(); const secret = 'private-pause-error'; let calls = 0;
+  await assert.rejects(run(f, { dryRun: false, pause: async () => { if (++calls === 1) throw new Error(secret); } }), error => {
+    assert.equal(formatReportingError(error), 'Capture failed (phase=schema; reason=internal).');
+    assert.equal(textValue(f.health.properties.Details).includes(secret), false);
+    assert.match(textValue(f.health.properties.Details), /phase=schema; reason=internal/);
+    return true;
+  });
+});
 test('state size is bounded and credential-bearing workflow remains main-only and opt-in', () => {
+  const maximum = rich('x'.repeat(180000)).rich_text;
+  assert.equal(maximum.length, 100);
+  assert.ok(maximum.every(part => part.text.content.length === 1800));
   assert.throws(() => rich('x'.repeat(180001)), /size limit/);
   const workflow = readFileSync(new URL('../../.github/workflows/notion-ticket-sync.yml', import.meta.url), 'utf8');
   assert.match(workflow, /github.ref == 'refs\/heads\/main'/);

@@ -8,6 +8,42 @@ const COMPLETIONS = ['Completed', 'Release recorded', 'Gate cleared'];
 const ZONE = 'America/New_York';
 const MAX_PAGES = 100;
 const GAP_MS = 45 * 60 * 1000;
+const diagnostics = new WeakMap();
+const NOTION_ERROR_CODES = new Set(['invalid_json', 'invalid_request_url', 'invalid_request', 'validation_error', 'missing_version', 'unauthorized', 'restricted_resource', 'object_not_found', 'conflict_error', 'rate_limited', 'internal_server_error', 'bad_gateway', 'service_unavailable', 'database_connection_unavailable', 'gateway_timeout', 'service_overload']);
+const PROPERTY_NAMES = [...new Set(Object.values(OUTPUT_SCHEMAS).flatMap(Object.keys))];
+function requestFailure(message, metadata) {
+  const error = new Error(message);
+  diagnostics.set(error, metadata);
+  return error;
+}
+async function httpFailure(response, service, method) {
+  const metadata = { reason: 'http', service, method, status: response.status };
+  // Error messages can echo submitted values. Retain only known codes and
+  // literal property paths from our fixed schemas; never retain the message.
+  if (service === 'notion') {
+    try {
+      const body = await response.json();
+      if (NOTION_ERROR_CODES.has(body?.code)) metadata.code = body.code;
+      if (body?.code === 'validation_error' && typeof body.message === 'string') {
+        const message = body.message.slice(0, 20000);
+        metadata.fields = PROPERTY_NAMES.filter(name => [`.${name}`, `["${name}"]`, `['${name}']`].some(suffix =>
+          ['.', '[', ' should ', ' is '].some(end => message.includes(`body.properties${suffix}${end}`))
+        )).map(name => `body.properties.${name}`);
+      }
+    } catch { /* Status remains useful if the error body is not JSON. */ }
+  }
+  return requestFailure(`${service} request failed: HTTP ${response.status}.`, metadata);
+}
+export function formatReportingError(error) {
+  // No reads of error.message, stacks, causes, response bodies or unknown keys.
+  const d = error && (typeof error === 'object' || typeof error === 'function') ? diagnostics.get(error) : null;
+  if (!d) return 'Capture failed (phase=unknown; reason=internal).';
+  const parts = [`phase=${d.phase ?? 'request'}`, `reason=${d.reason ?? 'internal'}`];
+  for (const key of ['service', 'method', 'status', 'code']) if (d[key] !== undefined) parts.push(`${key}=${d[key]}`);
+  if (d.fields?.length) parts.push(`fields=${d.fields.join(',')}`);
+  if (d.phase === 'health.commit' && d.cursor) parts.push(`cursorChars=${d.cursor.chars}`, `cursorSegments=${d.cursor.segments}`, `cursorMaxSegment=${d.cursor.maxSegment}`);
+  return `Capture failed (${parts.join('; ')}).`;
+}
 const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
 const clockFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
 export const textValue = p => (p?.rich_text ?? p?.title ?? []).map(t => t.plain_text ?? t.text?.content ?? '').join('');
@@ -150,7 +186,7 @@ export function summarizePeriods(events, since, now, gaps = []) {
 }
 export function makeClient({ githubToken, notionToken, fetcher = fetch, pause = sleep }) {
   return async function request(service, path, method = 'GET', body) {
-    if (!['notion', 'github'].includes(service) || path.startsWith('/') || path.includes('://')) throw new Error('Invalid reporting endpoint.');
+    if (!['notion', 'github'].includes(service) || !['GET', 'POST', 'PATCH'].includes(method) || path.startsWith('/') || path.includes('://')) throw new Error('Invalid reporting endpoint.');
     for (let attempt = 0; attempt < 4; attempt++) {
       if (service === 'notion') await pause(350);
       let response;
@@ -160,14 +196,15 @@ export function makeClient({ githubToken, notionToken, fetcher = fetch, pause = 
           headers: { Authorization: `Bearer ${service === 'notion' ? notionToken : githubToken}`, 'Content-Type': 'application/json', ...(service === 'notion' ? { 'Notion-Version': '2025-09-03' } : { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }) },
           ...(body ? { body: JSON.stringify(body) } : {}),
         });
-      } catch { throw new Error(`${service} request failed; retry the capture run.`); }
-      if (response.ok) { try { return await response.json(); } catch { throw new Error(`${service} returned invalid JSON.`); } }
+      } catch { throw requestFailure(`${service} request failed; retry the capture run.`, { reason: 'network', service, method }); }
+      if (response.ok) { try { return await response.json(); } catch { throw requestFailure(`${service} returned invalid JSON.`, { reason: 'invalid_json', service, method }); } }
+      if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599) throw requestFailure('Invalid HTTP response status.', { reason: 'invalid_status', service, method });
       // Never blindly replay an ambiguous create. Event keys are checked next run.
       const retryable = [429, 529].includes(response.status) || (method === 'GET' && [500, 502, 503, 504].includes(response.status));
-      if (!retryable || attempt === 3) throw new Error(`${service} request failed: HTTP ${response.status}.`);
+      if (!retryable || attempt === 3) throw await httpFailure(response, service, method);
       const header = response.headers?.get('retry-after');
       const seconds = header !== null && header !== undefined ? Number(header) : 2 ** attempt;
-      if (!Number.isFinite(seconds) || seconds < 0 || seconds > 60) throw new Error(`${service} rate limited; retry the capture run later.`);
+      if (!Number.isFinite(seconds) || seconds < 0 || seconds > 60) throw requestFailure(`${service} rate limited; retry the capture run later.`, { reason: 'retry_after', service, method, status: response.status });
       await pause(Math.max(seconds * 1000, 1000));
     }
   };
@@ -244,7 +281,8 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
   now = validTime(now);
   if (runUrl && !new RegExp(`^https://github.com/${REPO}/actions/runs/[1-9][0-9]*$`).test(runUrl)) throw new Error('Invalid workflow run URL.');
   const request = makeClient({ githubToken, notionToken, fetcher, pause });
-  let health;
+  let health, cursorSummary;
+  let phase = 'schema';
   try {
     for (const source of SOURCES) {
       const schema = await request('notion', `data_sources/${source.id}`);
@@ -254,17 +292,21 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
       const schema = await request('notion', `data_sources/${id}`);
       for (const [prop, type] of Object.entries(OUTPUT_SCHEMAS[name])) if (schema.properties?.[prop]?.type !== type) throw new Error(`Unexpected ${name} schema: ${prop}.`);
     }
+    phase = 'health.read';
     health = await request('notion', `pages/${HEALTH_PAGE}`);
     if (health.parent?.data_source_id !== OUTPUTS.health || health.archived || health.in_trash) throw new Error('Unexpected capture health page.');
     const previous = await readCursor(request, health);
     const since = dateValue(health.properties['Monitoring since']) ? validTime(dateValue(health.properties['Monitoring since'])) : now;
     const last = dateValue(health.properties['Last success']);
     if (since > now || (last && validTime(last) > now)) throw new Error('Capture clock precedes saved state.');
+    phase = 'sources.read';
     const records = [];
     for (const source of SOURCES) for (const page of await queryAll(request, source.id)) records.push({ source, page });
+    phase = 'outputs.read';
     const activities = await queryAll(request, OUTPUTS.activity);
     const periodRows = indexRows(await queryAll(request, OUTPUTS.periods), 'Period key');
     const mergedRows = indexRows(await queryAll(request, OUTPUTS.merged), 'GitHub PR');
+    phase = 'pulls.read';
     const pulls = new Map();
     for (let page = 1; page <= MAX_PAGES; page++) {
       const rows = await request('github', `repos/${REPO}/pulls?state=all&sort=updated&direction=desc&per_page=100&page=${page}`);
@@ -273,6 +315,7 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
       if (rows.length < 100) break;
       if (page === MAX_PAGES) throw new Error('GitHub pagination limit reached; refusing incomplete capture.');
     }
+    phase = 'plan';
     const notionPlan = planRecords(records, previous.states, since, now);
     const gitPlan = planPulls([...pulls.values()], since, now);
     const savedEvents = decodeEvents(activities);
@@ -282,16 +325,21 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
     if (last && Date.parse(now) - Date.parse(last) > GAP_MS) gaps.push([validTime(last), now]);
     const state = { version: 1, states: notionPlan.states, gaps };
     const cursorProperty = rich(JSON.stringify(state)); // Bound state before any writes.
+    const cursorLengths = cursorProperty.rich_text.map(part => part.text.content.length);
+    cursorSummary = { chars: cursorLengths.reduce((a, b) => a + b, 0), segments: cursorLengths.length, maxSegment: Math.max(0, ...cursorLengths) };
     const periods = summarizePeriods([...savedEvents, ...newEvents], since, now, gaps);
     const summary = { dryRun, baseline: !last, sourceRecords: records.length, newEvents: newEvents.length, mergedPRs: gitPlan.merged.length, periods: periods.length, defaultOwners: notionPlan.owners.length };
     if (dryRun) return summary;
+    phase = 'health.start';
     await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Running'), 'Last attempt': date(now), 'Monitoring since': date(since), 'Run URL': { url: runUrl } } });
+    phase = 'events.write';
     for (const event of newEvents) {
       // A previous ambiguous POST can have succeeded. Requery its stable key.
       const found = await request('notion', `data_sources/${OUTPUTS.activity}/query`, 'POST', { page_size: 2, filter: { property: 'Event key', rich_text: { equals: event.key } } });
       if (!Array.isArray(found.results) || found.has_more || found.results.length > 1) throw new Error('Ambiguous activity key.');
       if (!found.results.length) await request('notion', 'pages', 'POST', { parent: { type: 'data_source_id', data_source_id: OUTPUTS.activity }, properties: eventFields(event) });
     }
+    phase = 'pulls.write';
     for (const pr of gitPlan.merged) {
       const old = mergedRows.get(pr.html_url);
       const properties = { Name: rich(`#${pr.number} ${pr.title}`.slice(0, 1800), 'title'), 'PR number': { number: pr.number }, State: select('Merged'), 'GitHub PR': { url: pr.html_url }, 'Merged at': date(pr.merged_at), 'Merge commit': rich(pr.merge_commit_sha), 'PR head commit': rich(pr.head.sha), Repository: rich(REPO) };
@@ -305,7 +353,9 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
         if (Object.keys(updates).length) await request('notion', `pages/${old.id}`, 'PATCH', { properties: updates });
       }
     }
+    phase = 'owners.write';
     for (const owner of notionPlan.owners) await request('notion', `pages/${owner.id}`, 'PATCH', { properties: { [owner.property]: people() } });
+    phase = 'periods.write';
     for (const p of periods) {
       const old = periodRows.get(p.key);
       const name = p.cadence === 'Week' ? `Week of ${p.start}` : p.cadence === 'Month' ? p.start.slice(0, 7) : `${p.start.slice(0, 4)} Q${Math.floor((Number(p.start.slice(5, 7)) - 1) / 3) + 1}`;
@@ -321,19 +371,22 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
     for (const [key, row] of periodRows) if (!periodKeys.has(key) && row.properties.Current?.checkbox) {
       await request('notion', `pages/${row.id}`, 'PATCH', { properties: { Current: { checkbox: false } } });
     }
+    phase = 'health.commit';
     await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Healthy'), 'Last success': date(now), Cursor: cursorProperty, Owner: people(), Details: rich(`Captured ${records.length} source records and checked ${pulls.size} PRs. Added ${newEvents.length} events. Notion completion timestamps are first observed; transient changes between checks can be missed.`) } });
     return summary;
   } catch (error) {
+    const failure = error && (typeof error === 'object' || typeof error === 'function') ? error : new Error('Unknown capture failure.');
+    diagnostics.set(failure, { ...diagnostics.get(failure), phase, cursor: cursorSummary });
     // Last success and cursor stay unchanged. A disabled or inaccessible writer
     // also becomes visibly stale through the native Notion freshness formula.
     if (!dryRun) {
-      try { await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Failed'), 'Last attempt': date(now), 'Run URL': { url: runUrl }, Details: rich('Capture failed. Last success is unchanged. Check the workflow run for schema, access, rate-limit, or retry errors.') } }); } catch { /* GitHub failure plus stale timestamp remains the fallback. */ }
+      try { await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Failed'), 'Last attempt': date(now), 'Run URL': { url: runUrl }, Details: rich(`${formatReportingError(failure)} Last success is unchanged. Check the workflow run.`) } }); } catch { /* GitHub failure plus stale timestamp remains the fallback. */ }
     }
-    throw error;
+    throw failure;
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   report({ githubToken: process.env.GITHUB_TOKEN, notionToken: process.env.NOTION_TOKEN, dryRun: process.env.NOTION_SYNC_APPLY !== 'true', runUrl: process.env.GITHUB_RUN_ID ? `https://github.com/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}` : null })
     .then(result => console.log(JSON.stringify(result)))
-    .catch(() => { console.error('Notion reporting failed. Verify source access, schema, cursor integrity, and API limits before retrying.'); process.exitCode = 1; });
+    .catch(error => { console.error(formatReportingError(error)); process.exitCode = 1; });
 }
