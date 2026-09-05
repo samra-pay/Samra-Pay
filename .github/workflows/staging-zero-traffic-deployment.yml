@@ -128,10 +128,7 @@ jobs:
               exit 1
             }
           fi
-          if [[ "${SAMRA_STAGING_TARGET_SERVICE}" == "samra-api" ]]; then
-            echo "STOP: API zero-traffic deployment remains blocked until a governed staging-migration workflow produces exact run-bound evidence." >&2
-            exit 1
-          elif [[ "${SAMRA_STAGING_TARGET_SERVICE}" == "samra-customer-web" ]]; then
+          if [[ "${SAMRA_STAGING_TARGET_SERVICE}" != "samra-design-system-preview" ]]; then
             [[ "${SAMRA_PREREQUISITE_RUN_ID}" =~ ^[0-9]+$ ]]
             [[ "${SAMRA_PREREQUISITE_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
             [[ -n "${SAMRA_PREREQUISITE_ARTIFACT_NAME}" ]]
@@ -156,7 +153,15 @@ jobs:
             --run-attempt "${SAMRA_PUBLICATION_RUN_ATTEMPT}" \
             --artifact-name "${publication_artifact}" \
             --output-prefix publication
-          if [[ "${SAMRA_STAGING_TARGET_SERVICE}" == "samra-customer-web" ]]; then
+          if [[ "${SAMRA_STAGING_TARGET_SERVICE}" == "samra-api" ]]; then
+            node deploy/gcp/verify-github-upstream-artifact.mjs \
+              --kind staging-migration \
+              --candidate-sha "${GITHUB_SHA}" \
+              --run-id "${SAMRA_PREREQUISITE_RUN_ID}" \
+              --run-attempt "${SAMRA_PREREQUISITE_RUN_ATTEMPT}" \
+              --artifact-name "${SAMRA_PREREQUISITE_ARTIFACT_NAME}" \
+              --output-prefix migration
+          elif [[ "${SAMRA_STAGING_TARGET_SERVICE}" == "samra-customer-web" ]]; then
             node deploy/gcp/verify-github-upstream-artifact.mjs \
               --kind staging-zero-traffic-deployment \
               --service samra-api \
@@ -177,10 +182,20 @@ jobs:
           run-id: ${{ inputs.publication_run_id }}
 
       - name: Download prerequisite evidence
-        if: inputs.service != 'samra-design-system-preview'
+        if: inputs.service == 'samra-customer-web'
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           artifact-ids: ${{ steps.verify_upstream.outputs.prerequisite_artifact_id }}
+          digest-mismatch: error
+          path: ${{ runner.temp }}/samra-prerequisite-source
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prerequisite_run_id }}
+
+      - name: Download governed migration evidence
+        if: inputs.service == 'samra-api'
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          artifact-ids: ${{ steps.verify_upstream.outputs.migration_artifact_id }}
           digest-mismatch: error
           path: ${{ runner.temp }}/samra-prerequisite-source
           github-token: ${{ github.token }}
@@ -200,6 +215,12 @@ jobs:
           }
           cp "${manifests[0]}" "${SAMRA_STAGING_PREREQUISITE_MANIFEST}"
           cp "${hashes[0]}" "${SAMRA_STAGING_PREREQUISITE_HASH}"
+
+      - name: Verify migration contents and publication binding before Google authentication
+        if: inputs.service == 'samra-api'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node deploy/gcp/verify-staging-migration-prerequisite.mjs
 
       - name: Obtain short-lived Google credentials
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
@@ -229,12 +250,15 @@ jobs:
 
       - name: Run read-only zero-traffic review
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash deploy/gcp/deploy-staging-zero-traffic.sh --review
 
       - name: Deploy one reviewed revision at zero traffic
         if: inputs.mode == 'deploy'
         shell: bash
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           SAMRA_GCP_ZERO_TRAFFIC_APPLY: AUTHORIZED_STAGING_ZERO_TRAFFIC_DEPLOYMENT
         run: bash deploy/gcp/deploy-staging-zero-traffic.sh --apply
 

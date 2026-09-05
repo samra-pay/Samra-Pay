@@ -26,7 +26,7 @@
       ".github/workflows/staging-verification-probe.yml",
       ".github/workflows/staging-traffic-control.yml"
     ],
-    "apiMigrationProducerStatus": "missing-blocking-api-and-dependent-customer-web-deployment"
+    "apiMigrationProducerStatus": "implemented-execution-and-federation-not-authorized"
   },
   "artifactPublication": {
     "workflow": ".github/workflows/staging-image-publication.yml",

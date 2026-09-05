@@ -72,6 +72,7 @@ function artifactListing(overrides = {}) {
 
 test("governs every accepted upstream workflow and canonical artifact name", () => {
   assert.deepEqual(Object.keys(UPSTREAM_ARTIFACT_CONTRACTS), [
+    "staging-migration",
     "staging-image-publication",
     "staging-zero-traffic-deployment",
     "staging-image-verification",
@@ -93,7 +94,7 @@ test("governs every accepted upstream workflow and canonical artifact name", () 
     () =>
       validateGitHubUpstreamRunMetadata(
         runMetadata(),
-        input({ kind: "staging-migration" }),
+        input({ kind: "operator-migration" }),
       ),
     /Unsupported upstream artifact kind/,
   );
@@ -368,7 +369,7 @@ test("all privileged downstream workflows verify GitHub provenance before cloud 
 
   assert.match(
     workflows["staging-zero-traffic-deployment.yml"],
-    /API zero-traffic deployment remains blocked until a governed staging-migration workflow/,
+    /verify-staging-migration-prerequisite\.mjs/,
   );
   assert.match(
     workflows["staging-zero-traffic-deployment.yml"],

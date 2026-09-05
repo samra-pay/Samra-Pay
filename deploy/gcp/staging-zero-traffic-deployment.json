@@ -119,7 +119,7 @@
   },
   "services": {
     "samra-api": {
-      "executionStatus": "blocked-no-governed-migration-producer",
+      "executionStatus": "requires-governed-migration-evidence",
       "imageName": "samra-api",
       "serviceAccountId": "samra-api-staging",
       "ingress": "internal-and-cloud-load-balancing",

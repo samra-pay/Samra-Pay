@@ -159,6 +159,21 @@ secret_version_count() {
     '
 }
 
+# Resolve the single enabled version once for each bounded operation. Never let
+# Secret Manager choose a different version through the moving latest alias.
+secret_version_pin() {
+  gcloud secrets versions list "$1" --project="${PROJECT_ID}" --format=json | node -e '
+    const versions = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const enabled = versions.filter((version) => version.state === "ENABLED");
+    const version = enabled[0]?.name?.split("/").at(-1);
+    if (enabled.length !== 1 || !/^[1-9][0-9]*$/.test(version || "")) {
+      process.stderr.write("STOP: one enabled numeric secret version is required\n");
+      process.exit(1);
+    }
+    process.stdout.write(version);
+  '
+}
+
 RUNTIME_VERSION_COUNT="$(secret_version_count "${RUNTIME_SECRET}")"
 MIGRATION_VERSION_COUNT="$(secret_version_count "${MIGRATION_SECRET}")"
 BOOTSTRAP_VERSION_COUNT="$(secret_version_count "${BOOTSTRAP_SECRET}")"
@@ -267,13 +282,15 @@ run_access_job() {
   local secret="$2"
   local environment_name="$3"
   local action="$4"
+  local secret_version
+  secret_version="$(secret_version_pin "${secret}")"
 
   cleanup_job
   gcloud run jobs create "${JOB}" --project="${PROJECT_ID}" --region="${REGION}" \
     --image="${IMAGE}" --service-account="${service_account}" \
     --network="${NETWORK}" --subnet="${SUBNET}" --vpc-egress=private-ranges-only \
     --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=10m \
-    --set-secrets="${environment_name}=${secret}:latest" \
+    --set-secrets="${environment_name}=${secret}:${secret_version}" \
     --command=pnpm \
     --args=--filter,@workspace/db,run,staging:access,"${action}" \
     --labels=environment=staging,data_classification=synthetic,application=samra-pay,git-sha="${EXPECTED_SHA}" \
@@ -283,13 +300,16 @@ run_access_job() {
 }
 
 run_migration_job() {
+  local migration_version
+  migration_version="$(secret_version_pin "${MIGRATION_SECRET}")"
   cleanup_job
   gcloud run jobs create "${JOB}" --project="${PROJECT_ID}" --region="${REGION}" \
     --image="${IMAGE}" --service-account="${MIGRATION_SERVICE_ACCOUNT}" \
     --network="${NETWORK}" --subnet="${SUBNET}" --vpc-egress=private-ranges-only \
     --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=10m \
-    --set-secrets="DATABASE_URL=${MIGRATION_SECRET}:latest" \
-    --command=pnpm --args=db:migrate \
+    --set-secrets="DATABASE_URL=${MIGRATION_SECRET}:${migration_version}" \
+    --set-env-vars="SAMRA_DEPLOYMENT_ENVIRONMENT=staging,SAMRA_CANDIDATE_SHA=${EXPECTED_SHA},SAMRA_MIGRATION_SECRET_VERSION=${migration_version}" \
+    --command=node --args=./staging-migrate.mjs,--bootstrap \
     --labels=environment=staging,data_classification=synthetic,application=samra-pay,git-sha="${EXPECTED_SHA}" \
     --quiet >/dev/null
   job_exists=true
@@ -326,7 +346,8 @@ if [[ "${BOOTSTRAP_VERSION_COUNT}" == "0" && "${RUNTIME_VERSION_COUNT}" == "0" ]
     "${BOOTSTRAP_URL}" "${MIGRATION_URL}" "${RUNTIME_URL}" | \
     gcloud secrets versions add "${BOOTSTRAP_SECRET}" --project="${PROJECT_ID}" --data-file=- >/dev/null
 elif [[ "${BOOTSTRAP_VERSION_COUNT}" == "1" ]]; then
-  BOOTSTRAP_PAYLOAD="$(gcloud secrets versions access latest --secret="${BOOTSTRAP_SECRET}" --project="${PROJECT_ID}")"
+  BOOTSTRAP_PIN="$(secret_version_pin "${BOOTSTRAP_SECRET}")"
+  BOOTSTRAP_PAYLOAD="$(gcloud secrets versions access "${BOOTSTRAP_PIN}" --secret="${BOOTSTRAP_SECRET}" --project="${PROJECT_ID}")"
   BOOTSTRAP_PAYLOAD="$(printf '%s' "${BOOTSTRAP_PAYLOAD}" | node -e '
     const fs = require("fs");
     const value = JSON.parse(fs.readFileSync(0, "utf8"));
@@ -367,11 +388,13 @@ if [[ "${RUNTIME_VERSION_COUNT}" == "0" ]]; then
     gcloud secrets versions add "${RUNTIME_SECRET}" --project="${PROJECT_ID}" --data-file=- >/dev/null
 else
   if [[ "${BOOTSTRAP_VERSION_COUNT}" == "1" ]]; then
-    [[ "$(gcloud secrets versions access latest --secret="${MIGRATION_SECRET}" --project="${PROJECT_ID}")" == "${MIGRATION_URL}" ]] || {
+    MIGRATION_PIN="$(secret_version_pin "${MIGRATION_SECRET}")"
+    RUNTIME_PIN="$(secret_version_pin "${RUNTIME_SECRET}")"
+    [[ "$(gcloud secrets versions access "${MIGRATION_PIN}" --secret="${MIGRATION_SECRET}" --project="${PROJECT_ID}")" == "${MIGRATION_URL}" ]] || {
       echo "STOP: migration secret does not match the recoverable bootstrap payload" >&2
       exit 1
     }
-    [[ "$(gcloud secrets versions access latest --secret="${RUNTIME_SECRET}" --project="${PROJECT_ID}")" == "${RUNTIME_URL}" ]] || {
+    [[ "$(gcloud secrets versions access "${RUNTIME_PIN}" --secret="${RUNTIME_SECRET}" --project="${PROJECT_ID}")" == "${RUNTIME_URL}" ]] || {
       echo "STOP: runtime secret does not match the recoverable bootstrap payload" >&2
       exit 1
     }

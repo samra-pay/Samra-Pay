@@ -3,6 +3,13 @@
 Prepared 2026-09-05. **Review only; no cloud execution is authorized by this
 document or by a successful packet-generation command.**
 
+Implementation follow-up: the [governed staging migration workflow](staging-migrations.md)
+now implements the producer and API prerequisite verification described below.
+Bootstrap uses numeric secret versions and shares the database lock. The
+preparation inventory below records the original PR 158 baseline; it is not a
+claim that these code gaps remain open. Federation, database access, TLS and
+actual cloud execution remain unverified and separately authorized.
+
 ## Outcome and source
 
 The next product milestone is one wallet created through Samra's authenticated
