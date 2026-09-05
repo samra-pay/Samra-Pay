@@ -6,9 +6,9 @@ effective rules for `main` against the existing
 change GitHub settings or activate the remaining
 [cloud authority cutover](github-enterprise-control-plane-migration.md).
 
-After the Sept 5 ownership transfer, the command below has a
-[known stale-authority limitation](#post-transfer-invocation-limitation)
-until the migration contract is updated.
+Version 2 of the migration contract uses the verified organization authority.
+The command below requires no target override. The
+[initial transfer audit](#initial-post-transfer-audit) remains historical evidence.
 
 ## Run and retain evidence
 
@@ -72,12 +72,13 @@ readiness. Legacy branch protection alone cannot satisfy the required merge
 queue/ruleset contract. Keep exact-candidate CI evidence and release approval
 separate.
 
-## Post-transfer invocation limitation
+## Initial post-transfer audit
 
 The [Sept 5 transfer](enterprise-transfer-2026-09-05.md) completed, and the
-permanent main ruleset passed live read-back. The checked-in migration contract
-still names the former personal owner; the standard CLI therefore cannot yet
-produce successful new-owner identity evidence. Do not suppress that failure.
+permanent main ruleset passed live read-back. At transfer time, the migration
+contract still named the former personal owner, so the standard CLI could not
+produce successful new-owner identity evidence. Version 2 now uses the verified
+organization identity.
 
 The retained transfer audit invoked the existing exported
 `auditRepositorySettings` function with the independently verified organization
@@ -86,8 +87,9 @@ approved payload, including GitHub Actions app `15368`. Its target override and
 auditor hash are recorded in the evidence. This was a bounded transfer audit,
 not a change to the normal command or its authority contract.
 
-Update the migration contract, validator and tests together in the next
-source-authority PR before relying on the standard command for fresh evidence.
+The migration contract, validator and tests were updated together. Passing
+offline validation proves source consistency; run the normal auditor against
+the reviewed main SHA for fresh GitHub enforcement evidence.
 
 ## Historical activation decision
 

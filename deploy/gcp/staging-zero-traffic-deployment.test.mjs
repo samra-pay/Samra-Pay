@@ -61,7 +61,7 @@ function publication() {
     projectNumber: "934122615631",
     region: "us-east4",
     repository: "samra-staging",
-    sourceRepository: "haileleuld87/Samra-Pay",
+    sourceRepository: "samra-pay/Samra-Pay",
     cloudBuildId: "0ebc07c2-3e97-4d6c-8ff3-1bbf6229db00",
     publisherIdentity:
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",

@@ -16,6 +16,9 @@ GitHub-only update on **2026-09-05** at
 `samra-pay/Samra-Pay` and main ruleset enforcement are verified. The broader
 capability baseline above remains historical. See the
 [transfer and release-freeze record](operations/enterprise-transfer-2026-09-05.md).
+The source-authority update reconciles contracts, recovery provenance and
+Notion tooling with that organization. Google trust has not been applied, and
+the release freeze remains active pending separate cutover evidence.
 
 ## Alpha north star
 

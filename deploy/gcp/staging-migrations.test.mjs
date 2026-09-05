@@ -64,13 +64,13 @@ const future = () => new Date(Date.now() + 1800000).toISOString();
 function environment() {
   return {
     GITHUB_SHA: candidate,
-    GITHUB_REPOSITORY: "haileleuld87/Samra-Pay",
+    GITHUB_REPOSITORY: "samra-pay/Samra-Pay",
     GITHUB_REPOSITORY_ID: "1335175962",
-    GITHUB_REPOSITORY_OWNER_ID: "237485986",
+    GITHUB_REPOSITORY_OWNER_ID: "320532147",
     GITHUB_REF: "refs/heads/main",
     GITHUB_EVENT_NAME: "workflow_dispatch",
     GITHUB_WORKFLOW_REF:
-      "haileleuld87/Samra-Pay/.github/workflows/staging-migrations.yml@refs/heads/main",
+      "samra-pay/Samra-Pay/.github/workflows/staging-migrations.yml@refs/heads/main",
     GITHUB_RUN_ID: "20",
     GITHUB_RUN_ATTEMPT: "1",
     SAMRA_PUBLICATION_RUN_ID: "10",
@@ -94,7 +94,7 @@ function publication() {
     projectNumber: M.projectNumber,
     region: M.region,
     repository: "samra-staging",
-    sourceRepository: "haileleuld87/Samra-Pay",
+    sourceRepository: "samra-pay/Samra-Pay",
     cloudBuildId: "0ebc07c2-3e97-4d6c-8ff3-1bbf6229db00",
     publisherIdentity:
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
@@ -437,8 +437,8 @@ test("migration artifacts bind publication, run, contents and cleanup without au
 test("GitHub provenance accepts only the registered successful same-SHA migration producer", () => {
   const repo = {
     id: 1335175962,
-    full_name: "haileleuld87/Samra-Pay",
-    owner: { id: 237485986 },
+    full_name: "samra-pay/Samra-Pay",
+    owner: { id: 320532147 },
   };
   const metadata = {
     id: 20,
@@ -450,7 +450,7 @@ test("GitHub provenance accepts only the registered successful same-SHA migratio
     head_sha: candidate,
     status: "completed",
     conclusion: "success",
-    html_url: "https://github.com/haileleuld87/Samra-Pay/actions/runs/20",
+    html_url: "https://github.com/samra-pay/Samra-Pay/actions/runs/20",
     repository: repo,
     head_repository: repo,
   };
@@ -588,7 +588,7 @@ test("controller review performs only metadata reads and refuses drift before jo
     const policy = (role, account) => ({
       bindings: [{ role, members: [account] }],
     });
-    const condition = `assertion.repository=='${env.GITHUB_REPOSITORY}' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='${M.workflow}' && assertion.workflow_ref=='${env.GITHUB_REPOSITORY}/${M.workflowPath}@refs/heads/main' && assertion.environment=='${M.environment}'`;
+    const condition = `assertion.repository=='${env.GITHUB_REPOSITORY}' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='${M.workflow}' && assertion.workflow_ref=='${env.GITHUB_REPOSITORY}/${M.workflowPath}@refs/heads/main' && assertion.environment=='${M.environment}'`;
     const sql = {
       name: M.instance,
       region: M.region,

@@ -42,14 +42,14 @@ LOG_LOCATION="global"
 LOG_VIEW="samra-staging-revision-probe"
 LOG_FILTER='resource.type="cloud_run_job" AND resource.labels.job_name="samra-staging-revision-probe"'
 AUTHORIZATION="AUTHORIZED_STAGING_REVISION_PROBE_FEDERATION"
-REPOSITORY="haileleuld87/Samra-Pay"
+REPOSITORY="samra-pay/Samra-Pay"
 REPOSITORY_ID="1335175962"
-REPOSITORY_OWNER_ID="237485986"
+REPOSITORY_OWNER_ID="320532147"
 POOL_RESOURCE="projects/${PROJECT_NUMBER}/locations/${LOCATION}/workloadIdentityPools/${POOL_ID}"
 PROVIDER_RESOURCE="${POOL_RESOURCE}/providers/${PROVIDER_ID}"
 FEDERATED_MEMBER="principalSet://iam.googleapis.com/${POOL_RESOURCE}/attribute.repository_id/${REPOSITORY_ID}"
 ATTRIBUTE_MAPPING="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.event_name=assertion.event_name,attribute.workflow=assertion.workflow,attribute.workflow_ref=assertion.workflow_ref,attribute.environment=assertion.environment"
-ATTRIBUTE_CONDITION="assertion.repository=='${REPOSITORY}' && assertion.repository_id=='${REPOSITORY_ID}' && assertion.repository_owner_id=='${REPOSITORY_OWNER_ID}' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging verification probe' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-verification-probe.yml@refs/heads/main' && assertion.environment=='staging-verification'"
+ATTRIBUTE_CONDITION="assertion.repository=='${REPOSITORY}' && assertion.repository_id=='${REPOSITORY_ID}' && assertion.repository_owner_id=='${REPOSITORY_OWNER_ID}' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging verification probe' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-verification-probe.yml@refs/heads/main' && assertion.environment=='staging-verification'"
 CUSTOM_ROLE_PERMISSIONS="compute.networks.get,compute.subnetworks.get,iam.serviceAccountKeys.list,iam.serviceAccounts.get,logging.views.get,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,run.executions.get,run.executions.list,run.jobs.create,run.jobs.delete,run.jobs.get,run.jobs.run,run.operations.get,run.revisions.get,run.services.get,run.services.getIamPolicy,run.services.update,serviceusage.services.list,serviceusage.services.use"
 REQUIRED_APIS=(artifactregistry.googleapis.com compute.googleapis.com iam.googleapis.com iamcredentials.googleapis.com logging.googleapis.com run.googleapis.com serviceusage.googleapis.com sts.googleapis.com)
 

@@ -14,7 +14,7 @@ import {
   writeMigrationManifest,
 } from "./staging-migration-evidence.mjs";
 
-export function migrationProviderTrust(repository = "haileleuld87/Samra-Pay") {
+export function migrationProviderTrust(repository = "samra-pay/Samra-Pay") {
   const claims = [
     "repository",
     "repository_id",
@@ -31,7 +31,7 @@ export function migrationProviderTrust(repository = "haileleuld87/Samra-Pay") {
       ["google.subject", "assertion.sub"],
       ...claims.map((claim) => [`attribute.${claim}`, `assertion.${claim}`]),
     ]),
-    attributeCondition: `assertion.repository=='${repository}' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='${M.workflow}' && assertion.workflow_ref=='${repository}/${M.workflowPath}@refs/heads/main' && assertion.environment=='${M.environment}'`,
+    attributeCondition: `assertion.repository=='${repository}' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='${M.workflow}' && assertion.workflow_ref=='${repository}/${M.workflowPath}@refs/heads/main' && assertion.environment=='${M.environment}'`,
   };
 }
 
@@ -147,9 +147,9 @@ export function validateMigrationControllerEnvironment(
     "Exact candidate SHA required",
   );
   assert(
-    env.GITHUB_REPOSITORY === "haileleuld87/Samra-Pay" &&
+    env.GITHUB_REPOSITORY === "samra-pay/Samra-Pay" &&
       env.GITHUB_REPOSITORY_ID === "1335175962" &&
-      env.GITHUB_REPOSITORY_OWNER_ID === "237485986",
+      env.GITHUB_REPOSITORY_OWNER_ID === "320532147",
     "Wrong repository identity",
   );
   assert(

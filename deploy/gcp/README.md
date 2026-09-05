@@ -349,9 +349,10 @@ The controlled move from the founder's personal GitHub namespace to the
 Enterprise-backed Samra Pay organization is documented in
 [`docs/operations/github-enterprise-control-plane-migration.md`](../../docs/operations/github-enterprise-control-plane-migration.md)
 and machine-validated by `staging-github-enterprise-migration.json`. Its
-read-only review inventories every operational personal-authority dependency
-and rejects target-organization authority before repository transfer is
-explicitly authorized.
+read-only review scans the whole source tree, verifies organization authority,
+preserves explicit historical evidence, and rejects remaining operational
+references to the former owner. GitHub transfer is complete; live Google trust
+cutover and release resumption remain pending.
 
 ### Keyless zero-traffic Cloud Run deployment
 
@@ -536,7 +537,7 @@ SAMRA_GCP_EXPECTED_SHA="$(git rev-parse HEAD)" \
 ### Keyless GitHub-to-Google publication
 
 `staging-github-federation.json` locks the GitHub publication boundary to the
-private `haileleuld87/Samra-Pay` repository by both name and stable numeric
+private `samra-pay/Samra-Pay` repository by both name and stable numeric
 repository and owner IDs. Google accepts only an OIDC token for a manual
 `.github/workflows/staging-image-publication.yml` invocation on
 `refs/heads/main` using the protected `staging-image-publication` environment.

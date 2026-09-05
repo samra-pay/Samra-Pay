@@ -73,25 +73,29 @@ CI, Security and existing offline checks remain enabled. The production
 foundation preflight is read-only and remains enabled, but its old-owner
 Google trust cannot be represented as working after transfer.
 
-## Follow-up source-authority PR
+## Source-authority update
 
-The migration JSON still describes an unauthorized transfer, trial billing,
-blocked recovery and personal active authority. Those observations are stale:
+At transfer time the migration JSON described an unauthorized transfer, trial
+billing, blocked recovery and personal active authority. Those observations were stale:
 paid activation, passkey/recovery prerequisites and the transfer were completed
-before this record. Preserve the earlier observation as history and add the
-new dated state with distinct GitHub-complete/cloud-pending phases.
+before this record. Version 2 retains the earlier observation as history and
+records the new GitHub-complete/cloud-pending phase. It keeps live trust apply
+and release resumption unauthorized.
 
-Update the migration contract, its validator and tests, the 69 inventoried
-operational authority files, and affected runbooks together. Keep stable
+The source update reconciles the migration contract, its validator and tests,
+operational authority files, recovery provenance and Notion tooling. It keeps stable
 repository ID `1335175962`, new owner ID `320532147`, exact workflow/ref/event
-and environment checks. Add rejection cases for the former owner, wrong IDs,
+and environment checks. Regression tests reject the former owner, wrong IDs,
 wildcard/dual-owner trust and premature release resumption. Historical evidence
-URLs retain their original authority and date.
+URLs retain their original authority and date through exact-line exceptions.
+The whole-source scan replaces the earlier 69-file deployment-only inventory,
+which missed the recovery test and Notion tooling. Generated dependencies,
+build output and binary assets are excluded from that source scan.
 
 Acceptance requires current-main settings audit without an override, targeted
 migration/federation/evidence tests, the Google Cloud contract suite, and exact
-candidate CI/security. The [normal audit command's temporary limitation](repository-settings-audit.md#post-transfer-invocation-limitation)
-must be resolved in that change. Coordinate with open PR #175 on Qase reporting
+candidate CI/security. The [normal audit command](repository-settings-audit.md)
+now reads the organization authority directly. Coordinate with open PR #175 on Qase reporting
 instead of duplicating or overriding that work.
 
 Then separately review and authorize Google trust changes against current

@@ -40,14 +40,14 @@ PRODUCTION_ROLE_PERMISSIONS="billing.resourcebudgets.read,iam.serviceAccountKeys
 STAGING_ROLE_PERMISSIONS="resourcemanager.projects.get"
 FEDERATION_ROLE="roles/iam.workloadIdentityUser"
 AUTHORIZATION="AUTHORIZED_PRODUCTION_FOUNDATION_PREFLIGHT"
-REPOSITORY="haileleuld87/Samra-Pay"
+REPOSITORY="samra-pay/Samra-Pay"
 REPOSITORY_ID="1335175962"
-REPOSITORY_OWNER_ID="237485986"
+REPOSITORY_OWNER_ID="320532147"
 POOL_RESOURCE="projects/${PROJECT_NUMBER}/locations/${LOCATION}/workloadIdentityPools/${POOL_ID}"
 PROVIDER_RESOURCE="${POOL_RESOURCE}/providers/${PROVIDER_ID}"
 FEDERATED_MEMBER="principalSet://iam.googleapis.com/${POOL_RESOURCE}/attribute.repository_id/${REPOSITORY_ID}"
 ATTRIBUTE_MAPPING="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.event_name=assertion.event_name,attribute.workflow=assertion.workflow,attribute.workflow_ref=assertion.workflow_ref,attribute.environment=assertion.environment"
-ATTRIBUTE_CONDITION="assertion.repository=='${REPOSITORY}' && assertion.repository_id=='${REPOSITORY_ID}' && assertion.repository_owner_id=='${REPOSITORY_OWNER_ID}' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Production foundation preflight' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main' && assertion.environment=='production-foundation-review'"
+ATTRIBUTE_CONDITION="assertion.repository=='${REPOSITORY}' && assertion.repository_id=='${REPOSITORY_ID}' && assertion.repository_owner_id=='${REPOSITORY_OWNER_ID}' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Production foundation preflight' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main' && assertion.environment=='production-foundation-review'"
 REQUIRED_APIS=(
   billingbudgets.googleapis.com
   cloudbilling.googleapis.com

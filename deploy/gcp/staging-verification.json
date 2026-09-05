@@ -3,7 +3,7 @@
   "status": "evidence-plane-implemented-execution-not-authorized",
   "environment": "staging",
   "dataClassification": "synthetic-only",
-  "sourceRepository": "haileleuld87/Samra-Pay",
+  "sourceRepository": "samra-pay/Samra-Pay",
   "deployableServices": [
     "samra-api",
     "samra-customer-web",

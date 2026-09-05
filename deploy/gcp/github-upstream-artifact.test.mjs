@@ -15,8 +15,8 @@ const runAttempt = 2;
 const artifactId = 7_654_321;
 const repository = {
   id: 1_335_175_962,
-  full_name: "haileleuld87/Samra-Pay",
-  owner: { id: 237_485_986 },
+  full_name: "samra-pay/Samra-Pay",
+  owner: { id: 320_532_147 },
 };
 
 function input(overrides = {}) {
@@ -42,7 +42,7 @@ function runMetadata(overrides = {}) {
     head_sha: candidateSha,
     status: "completed",
     conclusion: "success",
-    html_url: `https://github.com/haileleuld87/Samra-Pay/actions/runs/${runId}`,
+    html_url: `https://github.com/samra-pay/Samra-Pay/actions/runs/${runId}`,
     repository,
     head_repository: repository,
     ...overrides,
@@ -54,8 +54,8 @@ function artifactListing(overrides = {}) {
     id: artifactId,
     name: input().artifactName,
     size_in_bytes: 4096,
-    url: `https://api.github.com/repos/haileleuld87/Samra-Pay/actions/artifacts/${artifactId}`,
-    archive_download_url: `https://api.github.com/repos/haileleuld87/Samra-Pay/actions/artifacts/${artifactId}/zip`,
+    url: `https://api.github.com/repos/samra-pay/Samra-Pay/actions/artifacts/${artifactId}`,
+    archive_download_url: `https://api.github.com/repos/samra-pay/Samra-Pay/actions/artifacts/${artifactId}/zip`,
     expired: false,
     digest: `sha256:${"b".repeat(64)}`,
     workflow_run: {
@@ -108,7 +108,7 @@ test("accepts one successful exact-main run and one exact immutable artifact", a
   });
   assert.equal(
     result.workflowRef,
-    "haileleuld87/Samra-Pay/.github/workflows/staging-zero-traffic-deployment.yml@refs/heads/main",
+    "samra-pay/Samra-Pay/.github/workflows/staging-zero-traffic-deployment.yml@refs/heads/main",
   );
   assert.equal(result.artifact.id, String(artifactId));
   assert.equal(result.artifact.name, input().artifactName);
@@ -242,7 +242,7 @@ test("rejects run identity, source, attempt, event, or result drift", () => {
     { head_sha: "c".repeat(40) },
     { status: "in_progress" },
     { conclusion: "failure" },
-    { html_url: "https://github.com/haileleuld87/Samra-Pay/actions/runs/1" },
+    { html_url: "https://github.com/samra-pay/Samra-Pay/actions/runs/1" },
     { repository: { ...repository, id: 1 } },
     { repository: { ...repository, owner: { id: 1 } } },
     { head_repository: { ...repository, full_name: "attacker/fork" } },

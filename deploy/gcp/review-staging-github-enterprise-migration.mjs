@@ -34,4 +34,5 @@ console.log(
   `Operational authority references inventoried: ${result.currentAuthorityFileCount}`,
 );
 console.log(`Blocking gates: ${contract.blockingGates.join(", ")}`);
-console.log("TRANSFER NOT AUTHORIZED — NO GITHUB OR GOOGLE CLOUD CHANGE");
+console.log("RECORDED GITHUB TRANSFER COMPLETE; CLOUD CUTOVER PENDING");
+console.log("CLOUD APPLY AND RELEASE RESUMPTION NOT AUTHORIZED — OFFLINE REVIEW ONLY");
