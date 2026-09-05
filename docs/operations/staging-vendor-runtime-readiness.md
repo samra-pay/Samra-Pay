@@ -129,11 +129,15 @@ CROSSMINT_SERVER_API_KEY -> samra-staging-crossmint-server-api-key:<numeric-vers
 
 The reviewed sandbox API origin is
 `https://staging.crossmint.com/api/2025-06-09`. The adapter pins that version,
-uses the documented `X-API-KEY` server header and `x-idempotency-key`, and sends
-only `userId:customer_<opaque-id>` as the owner. It supports explicitly
-configured EVM smart wallets with a server or external-wallet admin signer and
-EVM MPC wallets. It does not choose among those custody models. Response
-address, owner, chain, wallet type, and signer evidence must match exactly.
+uses the documented `X-API-KEY` server header and `x-idempotency-key`, and keeps
+`userId:customer_<opaque-id>` as the owner. Following the customer-control
+decision, it accepts only EVM smart wallets with per-customer email recovery
+resolved by a trusted enrollment dependency. Server, global external-wallet,
+and MPC configurations are rejected. The resolver and client passkey flow are
+not connected. Recovery email transmission requires the consent and privacy
+work specified in [customer wallet control](../architecture/customer-wallet-control.md).
+Response address, owner, chain, wallet type, and recovery identity must match
+exactly; the result remains pending passkey enrollment.
 
 The server key must have only the reviewed create-wallet scope and must never
 appear in web or mobile code. No secret object, secret version, API service
