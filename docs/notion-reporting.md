@@ -26,6 +26,11 @@ is required. The existing GitHub Actions minutes allowance still applies.
    source databases directly, not their broad parent pages; keep private Finance
    outside the scope. The integration can read content within these connected
    databases even though the collector only processes properties and metadata.
+   Keep David as the sole Owner on the fixed **Samra Pay automatic capture** row
+   in Capture health. Each run reads that existing People value to assign new
+   reporting rows and blank source owners. It does not look up users or require
+   user-information access. Missing, multiple, or bot owners stop capture before
+   any write; the failed workflow is then the diagnostic record.
 3. Merge the reviewed reporting PR after required checks pass.
 4. On the existing **Notion ticket sync** workflow, choose main and run with
    `reporting=true`, `apply=false`. This checks every schema, reads all pages and
@@ -78,7 +83,9 @@ is required. The existing GitHub Actions minutes allowance still applies.
   Task relations, Release check and page content are preserved on updates.
   New entries link matching existing tasks without manufacturing another task.
 - New reporting rows belong to David. Blank source Owner/Lead is filled with
-  David; an explicit existing assignment is retained.
+  David, using the sole Owner on the fixed Capture health row; an explicit
+  existing source assignment is retained. The collector preserves Health Owner
+  instead of rewriting its own owner configuration at the final checkpoint.
 
 Notion completion transitions use **first observed** time. A poll cannot guarantee
 that transient states or a created-and-deleted record between polls are captured.

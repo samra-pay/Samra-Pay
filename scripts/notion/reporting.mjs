@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { REPO, OWNER, HEALTH_PAGE, OUTPUTS, SOURCES, METRICS, OUTPUT_SCHEMAS } from './reporting-config.mjs';
+import { REPO, HEALTH_PAGE, OUTPUTS, SOURCES, METRICS, OUTPUT_SCHEMAS } from './reporting-config.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const EVENTS = ['Created', 'Completed', 'Merged', 'Reopened', 'Release recorded', 'Gate cleared'];
@@ -24,6 +24,10 @@ async function httpFailure(response, service, method) {
     try {
       const body = await response.json();
       if (NOTION_ERROR_CODES.has(body?.code)) metadata.code = body.code;
+      if (body?.code === 'object_not_found' && typeof body.message === 'string') {
+        const missing = /^Could not find (user|page|database|data source) with ID\b/i.exec(body.message);
+        if (missing) metadata.missingObject = missing[1].toLowerCase().replace(' ', '_');
+      }
       if (body?.code === 'validation_error' && typeof body.message === 'string') {
         const message = body.message.slice(0, 20000);
         metadata.fields = PROPERTY_NAMES.filter(name => [`.${name}`, `["${name}"]`, `['${name}']`].some(suffix =>
@@ -39,7 +43,7 @@ export function formatReportingError(error) {
   const d = error && (typeof error === 'object' || typeof error === 'function') ? diagnostics.get(error) : null;
   if (!d) return 'Capture failed (phase=unknown; reason=internal).';
   const parts = [`phase=${d.phase ?? 'request'}`, `reason=${d.reason ?? 'internal'}`];
-  for (const key of ['service', 'method', 'status', 'code']) if (d[key] !== undefined) parts.push(`${key}=${d[key]}`);
+  for (const key of ['service', 'method', 'status', 'code', 'missingObject']) if (d[key] !== undefined) parts.push(`${key}=${d[key]}`);
   if (d.fields?.length) parts.push(`fields=${d.fields.join(',')}`);
   if (d.phase === 'health.commit' && d.cursor) parts.push(`cursorChars=${d.cursor.chars}`, `cursorSegments=${d.cursor.segments}`, `cursorMaxSegment=${d.cursor.maxSegment}`);
   return `Capture failed (${parts.join('; ')}).`;
@@ -51,7 +55,14 @@ const selected = p => p?.select?.name ?? p?.status?.name ?? '';
 const dateValue = p => p?.date?.start ?? null;
 const select = name => ({ select: name ? { name } : null });
 const date = start => ({ date: start ? { start } : null });
-const people = () => ({ people: [{ object: 'user', id: OWNER }] });
+const people = id => ({ people: [{ object: 'user', id }] });
+function resolveOwner(health) {
+  const owners = health.properties.Owner?.people;
+  if (!Array.isArray(owners) || owners.length !== 1 || owners[0]?.object !== 'user' || typeof owners[0].id !== 'string' || !UUID.test(owners[0].id) || (owners[0].type !== undefined && owners[0].type !== 'person')) {
+    throw new Error('Capture health must have exactly one person as Owner.');
+  }
+  return owners[0].id;
+}
 export function rich(value, type = 'rich_text') {
   const str = String(value ?? '');
   if (str.length > 180000) throw new Error('Reporting state size limit reached; partition capture before continuing.');
@@ -89,7 +100,7 @@ export function periodFor(value, cadence) {
   }
   return { key: `${cadence}:${start}`, cadence, start, next, end: plusDays(next, -1) };
 }
-function eventFields(event) {
+function eventFields(event, ownerId) {
   const week = periodFor(event.at, 'Week').start;
   const month = periodFor(event.at, 'Month').start.slice(0, 7);
   const quarter = `${month.slice(0, 4)} Q${Math.floor((Number(month.slice(5)) - 1) / 3) + 1}`;
@@ -97,7 +108,7 @@ function eventFields(event) {
     Name: rich(`${event.event}: ${event.name}`.slice(0, 1800), 'title'), 'Event key': rich(event.key), 'Source ID': rich(event.id),
     Source: select(event.kind), Event: select(event.event), 'Occurred at': date(event.at), 'Observed at': date(event.observed),
     'Date basis': select(event.basis), 'Source URL': { url: event.url }, 'Evidence URL': { url: event.evidence || null },
-    'Previous state': rich(event.previous), 'New state': rich(event.state), Owner: people(), Week: rich(week), Month: rich(month), Quarter: rich(quarter),
+    'Previous state': rich(event.previous), 'New state': rich(event.state), Owner: people(ownerId), Week: rich(week), Month: rich(month), Quarter: rich(quarter),
   };
 }
 export function recordState(source, page) {
@@ -295,6 +306,9 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
     phase = 'health.read';
     health = await request('notion', `pages/${HEALTH_PAGE}`);
     if (health.parent?.data_source_id !== OUTPUTS.health || health.archived || health.in_trash) throw new Error('Unexpected capture health page.');
+    phase = 'owner.resolve';
+    const ownerId = resolveOwner(health);
+    phase = 'health.read';
     const previous = await readCursor(request, health);
     const since = dateValue(health.properties['Monitoring since']) ? validTime(dateValue(health.properties['Monitoring since'])) : now;
     const last = dateValue(health.properties['Last success']);
@@ -332,12 +346,15 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
     if (dryRun) return summary;
     phase = 'health.start';
     await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Running'), 'Last attempt': date(now), 'Monitoring since': date(since), 'Run URL': { url: runUrl } } });
-    phase = 'events.write';
     for (const event of newEvents) {
       // A previous ambiguous POST can have succeeded. Requery its stable key.
+      phase = 'events.query';
       const found = await request('notion', `data_sources/${OUTPUTS.activity}/query`, 'POST', { page_size: 2, filter: { property: 'Event key', rich_text: { equals: event.key } } });
       if (!Array.isArray(found.results) || found.has_more || found.results.length > 1) throw new Error('Ambiguous activity key.');
-      if (!found.results.length) await request('notion', 'pages', 'POST', { parent: { type: 'data_source_id', data_source_id: OUTPUTS.activity }, properties: eventFields(event) });
+      if (!found.results.length) {
+        phase = 'events.create';
+        await request('notion', 'pages', 'POST', { parent: { type: 'data_source_id', data_source_id: OUTPUTS.activity }, properties: eventFields(event, ownerId) });
+      }
     }
     phase = 'pulls.write';
     for (const pr of gitPlan.merged) {
@@ -346,7 +363,7 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
       if (!old) {
         const links = records.filter(r => r.source.kind === 'Task' && r.page.properties['GitHub PR']?.url === pr.html_url).map(r => ({ id: r.page.id }));
         if (links.length > 100) throw new Error('Too many linked tasks for one PR.');
-        Object.assign(properties, { Owner: people(), 'Imported at': date(now), 'Release check': select(links.length ? 'See linked task' : 'Not assessed'), Task: { relation: links } });
+        Object.assign(properties, { Owner: people(ownerId), 'Imported at': date(now), 'Release check': select(links.length ? 'See linked task' : 'Not assessed'), Task: { relation: links } });
         await request('notion', 'pages', 'POST', { parent: { type: 'data_source_id', data_source_id: OUTPUTS.merged }, properties });
       } else {
         const updates = changed(old, properties);
@@ -354,13 +371,13 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
       }
     }
     phase = 'owners.write';
-    for (const owner of notionPlan.owners) await request('notion', `pages/${owner.id}`, 'PATCH', { properties: { [owner.property]: people() } });
+    for (const owner of notionPlan.owners) await request('notion', `pages/${owner.id}`, 'PATCH', { properties: { [owner.property]: people(ownerId) } });
     phase = 'periods.write';
     for (const p of periods) {
       const old = periodRows.get(p.key);
       const name = p.cadence === 'Week' ? `Week of ${p.start}` : p.cadence === 'Month' ? p.start.slice(0, 7) : `${p.start.slice(0, 4)} Q${Math.floor((Number(p.start.slice(5, 7)) - 1) / 3) + 1}`;
       const notes = `America/New_York. Capture starts ${since}. ${p.current ? 'Period in progress. ' : ''}${p.coverage === 'Partial' ? 'Partial period or a capture gap; do not compare to a complete period as equivalent coverage. ' : ''}Each metric counts unique source records with that event in this period. Reopening includes withdrawal of a completion or its evidence and is shown separately; reworked records can appear in different periods. PR merges are not deployments.`;
-      const properties = { Name: rich(name, 'title'), 'Period key': rich(p.key), Cadence: select(p.cadence), Start: date(p.start), End: date(p.end), Current: { checkbox: p.current }, Coverage: select(p.coverage), ...Object.fromEntries(Object.entries(p.counts).map(([name, number]) => [name, { number }])), Notes: rich(notes), Owner: people() };
+      const properties = { Name: rich(name, 'title'), 'Period key': rich(p.key), Cadence: select(p.cadence), Start: date(p.start), End: date(p.end), Current: { checkbox: p.current }, Coverage: select(p.coverage), ...Object.fromEntries(Object.entries(p.counts).map(([name, number]) => [name, { number }])), Notes: rich(notes), Owner: people(ownerId) };
       const updates = changed(old, properties);
       if (old && (Object.keys(updates).length || p.current)) await request('notion', `pages/${old.id}`, 'PATCH', { properties: { ...updates, 'Last refreshed': date(now) } });
       else if (!old) await request('notion', 'pages', 'POST', { parent: { type: 'data_source_id', data_source_id: OUTPUTS.periods }, properties: { ...properties, 'Last refreshed': date(now) } });
@@ -372,14 +389,14 @@ export async function report({ githubToken, notionToken, dryRun = true, fetcher 
       await request('notion', `pages/${row.id}`, 'PATCH', { properties: { Current: { checkbox: false } } });
     }
     phase = 'health.commit';
-    await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Healthy'), 'Last success': date(now), Cursor: cursorProperty, Owner: people(), Details: rich(`Captured ${records.length} source records and checked ${pulls.size} PRs. Added ${newEvents.length} events. Notion completion timestamps are first observed; transient changes between checks can be missed.`) } });
+    await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Healthy'), 'Last success': date(now), Cursor: cursorProperty, Details: rich(`Captured ${records.length} source records and checked ${pulls.size} PRs. Added ${newEvents.length} events. Notion completion timestamps are first observed; transient changes between checks can be missed.`) } });
     return summary;
   } catch (error) {
     const failure = error && (typeof error === 'object' || typeof error === 'function') ? error : new Error('Unknown capture failure.');
     diagnostics.set(failure, { ...diagnostics.get(failure), phase, cursor: cursorSummary });
     // Last success and cursor stay unchanged. A disabled or inaccessible writer
     // also becomes visibly stale through the native Notion freshness formula.
-    if (!dryRun) {
+    if (!dryRun && phase !== 'owner.resolve') {
       try { await request('notion', `pages/${HEALTH_PAGE}`, 'PATCH', { properties: { 'Run state': select('Failed'), 'Last attempt': date(now), 'Run URL': { url: runUrl }, Details: rich(`${formatReportingError(failure)} Last success is unchanged. Check the workflow run.`) } }); } catch { /* GitHub failure plus stale timestamp remains the fallback. */ }
     }
     throw failure;

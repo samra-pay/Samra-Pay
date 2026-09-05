@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { report, recordState, planRecords, planPulls, summarizePeriods, periodFor, midnight, makeClient, queryAll, rich, textValue, formatReportingError } from './reporting.mjs';
-import { REPO, OWNER, HEALTH_PAGE, OUTPUTS, SOURCES, OUTPUT_SCHEMAS } from './reporting-config.mjs';
+import { REPO, HEALTH_PAGE, OUTPUTS, SOURCES, OUTPUT_SCHEMAS } from './reporting-config.mjs';
 
 const NOW = '2026-09-05T12:00:00.000Z';
 const LATER = '2026-09-05T12:15:00.000Z';
+const OWNER = '22222222-2222-4222-8222-222222222222';
 const task = SOURCES.find(s => s.kind === 'Task');
 const id = '11111111-1111-4111-8111-111111111111';
 const chosen = name => ({ select: { name } });
@@ -152,9 +153,28 @@ test('unknown throwables and hostile error accessors cannot leak through the for
     assert.equal(formatReportingError(error), 'Capture failed (phase=unknown; reason=internal).');
   }
 });
+test('missing-object diagnostics classify only fixed message prefixes and never reveal IDs', async () => {
+  const secret = 'private-object-value';
+  const cases = [
+    ...['user', 'page', 'database', 'data source'].map(noun => [`Could not find ${noun.toUpperCase()} with ID: ${id}. ${secret}`, noun.replace(' ', '_')]),
+    [`${secret}: Could not find user with ID: ${id}`, undefined],
+    [`Could not find ${secret} with ID: ${id}`, undefined],
+    [`Could not find user with identifier ${id}`, undefined],
+  ];
+  for (const [message, expected] of cases) {
+    const client = makeClient({ githubToken: secret, notionToken: secret, pause: async () => {}, fetcher: async () => ({ ok: false, status: 404, json: async () => ({ code: 'object_not_found', message }) }) });
+    await assert.rejects(client('notion', `pages/${id}`, 'POST', {}), error => {
+      const output = formatReportingError(error);
+      if (expected) assert.ok(output.includes(`missingObject=${expected}`));
+      else assert.equal(output.includes('missingObject='), false);
+      assert.equal(output.includes(id), false); assert.equal(output.includes(secret), false);
+      return true;
+    });
+  }
+});
 
 function fixture() {
-  const health = { id: HEALTH_PAGE, parent: { data_source_id: OUTPUTS.health }, properties: { Cursor: { id: 'cursor', ...rich('') }, 'Last success': { date: null }, 'Monitoring since': { date: null } } };
+  const health = { id: HEALTH_PAGE, parent: { data_source_id: OUTPUTS.health }, properties: { Owner: { people: [{ object: 'user', id: OWNER, type: 'person' }] }, Cursor: { id: 'cursor', ...rich('') }, 'Last success': { date: null }, 'Monitoring since': { date: null } } };
   const dbs = Object.fromEntries([...SOURCES.map(s => s.id), ...Object.values(OUTPUTS)].map(ds => [ds, []]));
   dbs[task.id].push(record());
   const writes = []; let serial = 1; let failPost = false; let pulls = [];
@@ -199,6 +219,40 @@ test('report is completely read-only by default and baselines only on apply', as
   assert.equal(f.dbs[OUTPUTS.activity].length, 0); assert.equal(f.dbs[OUTPUTS.periods].length, 3);
   assert.equal(f.dbs[OUTPUTS.periods].every(row => row.properties.Owner.people[0].id === OWNER), true);
 });
+test('the live Health Owner supplies every default owner and preserves explicit source owners', async () => {
+  const f = fixture(); await run(f, { dryRun: false }); f.writes.length = 0;
+  const canonical = '33333333-3333-4333-8333-333333333333';
+  // Limited user-information capability may return only object and id.
+  f.health.properties.Owner.people = [{ object: 'user', id: canonical }];
+  const blankOwners = SOURCES.map((source, i) => {
+    const page = record(source, 'Ready', LATER);
+    page.id = `77777777-7777-4777-8777-${String(i + 1).padStart(12, '0')}`;
+    page.properties[source.owner] = { people: [] };
+    f.dbs[source.id].push(page);
+    return { source, page };
+  });
+  f.setPulls([pull({ state: 'closed', merged_at: LATER, merge_commit_sha: 'b'.repeat(40) })]);
+  await run(f, { dryRun: false, now: LATER });
+  for (const { source, page } of blankOwners) assert.equal(page.properties[source.owner].people[0].id, canonical);
+  assert.equal(f.dbs[task.id][0].properties.Owner.people[0].id, OWNER);
+  for (const output of [OUTPUTS.activity, OUTPUTS.periods, OUTPUTS.merged]) {
+    assert.ok(f.dbs[output].length > 0);
+    assert.ok(f.dbs[output].every(row => row.properties.Owner.people[0].id === canonical));
+  }
+  assert.ok(f.writes.filter(w => w.path === `pages/${HEALTH_PAGE}`).every(w => !('Owner' in w.body.properties)));
+  assert.equal(f.health.properties.Owner.people[0].id, canonical);
+});
+test('missing, ambiguous or invalid Health owners fail before any write', async () => {
+  const valid = { object: 'user', id: OWNER };
+  for (const owners of [undefined, [], [valid, valid], [{ ...valid, id: 'invalid' }], [{ ...valid, object: 'page' }], [{ ...valid, type: 'bot' }], [{ ...valid, type: 'unknown' }]]) {
+    const f = fixture(); f.health.properties.Owner = { people: owners };
+    await assert.rejects(run(f, { dryRun: false }), error => {
+      assert.match(formatReportingError(error), /phase=owner.resolve; reason=internal/);
+      return true;
+    });
+    assert.equal(f.writes.length, 0);
+  }
+});
 test('a completion is captured once and source manual fields stay intact', async () => {
   const f = fixture(); await run(f, { dryRun: false }); f.writes.length = 0;
   const page = f.dbs[task.id][0]; page.properties['Business status'] = chosen('Done'); page.properties.Blocked = { checkbox: true };
@@ -217,6 +271,27 @@ test('an ambiguous event write is deduplicated on retry and never advances succe
   assert.equal(f.dbs[OUTPUTS.activity].length, 1);
   assert.equal(f.dbs[OUTPUTS.activity][0].properties['Occurred at'].date.start, LATER);
   assert.equal(f.dbs[OUTPUTS.periods][0].properties['Tasks completed'].number, 1);
+});
+test('activity queries and creates have distinct failure phases', async () => {
+  for (const failedPhase of ['events.query', 'events.create']) {
+    const f = fixture(); await run(f, { dryRun: false });
+    f.dbs[task.id][0].properties['Business status'] = chosen('Done');
+    const fetcher = async (url, init) => {
+      const body = init.body ? JSON.parse(init.body) : {};
+      const query = url.endsWith(`data_sources/${OUTPUTS.activity}/query`) && body.filter;
+      const create = url.endsWith('/pages') && body.parent?.data_source_id === OUTPUTS.activity;
+      if ((failedPhase === 'events.query' && query) || (failedPhase === 'events.create' && create)) {
+        return { ok: false, status: 404, json: async () => ({ code: 'object_not_found', message: 'private-response-value' }) };
+      }
+      return f.fetcher(url, init);
+    };
+    await assert.rejects(run(f, { dryRun: false, now: LATER, fetcher }), error => {
+      assert.ok(formatReportingError(error).includes(`phase=${failedPhase}; reason=http; service=notion; method=POST; status=404; code=object_not_found`));
+      assert.equal(textValue(f.health.properties.Details).includes('private-response-value'), false);
+      return true;
+    });
+    assert.equal(f.health.properties['Last success'].date.start, NOW);
+  }
 });
 test('new merged PRs are discovered, linked and owned without asserting release', async () => {
   const f = fixture(); await run(f, { dryRun: false });
