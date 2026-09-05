@@ -1,11 +1,9 @@
 import {
   ArrowRight,
   Eye,
-  Globe2,
   HandHeart,
   HeartHandshake,
   ShieldCheck,
-  Sprout,
   Users,
 } from "lucide-react";
 import {
@@ -33,63 +31,73 @@ const valuesMeta = {
 
 const coreValues = [
   {
-    number: "01",
-    icon: HeartHandshake,
-    title: localized("Family responsibility is real.", "የቤተሰብ ኃላፊነት እውነተኛ ነው።"),
-    body: localized(
-      "Supporting people back home is not an occasional transaction. It is part of how many diaspora families plan, provide, and stay connected.",
-      "ቤት ያሉ ሰዎችን መደገፍ አልፎ አልፎ የሚደረግ ግብይት አይደለም። ብዙ የዲያስፖራ ቤተሰቦች የሚያቅዱበት፣ የሚያቀርቡበትና ግንኙነታቸውን የሚጠብቁበት የሕይወት ክፍል ነው።",
-    ),
-  },
-  {
-    number: "02",
-    icon: Eye,
-    title: localized("Trust must be visible.", "እምነት ሊታይ ይገባል።"),
-    body: localized(
-      "Rates, fees, delivery expectations, product status, and risk should be clear before a person commits—not explained after the fact.",
-      "አንድ ሰው ከማረጋገጡ በፊት የምንዛሬ ተመን፣ ክፍያ፣ የመድረሻ ግምት፣ የምርት ሁኔታና አደጋ ግልጽ ሊሆኑ ይገባል፤ ከግብይቱ በኋላ የሚብራሩ አይደሉም።",
-    ),
-  },
-  {
-    number: "03",
-    icon: Sprout,
-    title: localized(
-      "Progress without unnecessary debt.",
-      "ያለ አስፈላጊ ያልሆነ ዕዳ እድገት።",
-    ),
-    body: localized(
-      "Credit-building tools should reward consistent financial behavior without pushing people toward balances they cannot comfortably repay.",
-      "የክሬዲት ታሪክ ማጠናከሪያ መሳሪያዎች ሰዎችን በቀላሉ መክፈል ወደማይችሉት ዕዳ ሳይገፉ፣ ተከታታይ የገንዘብ ባህሪን ሊያበረታቱ ይገባል።",
-    ),
-  },
-  {
-    number: "04",
-    icon: Globe2,
-    title: localized(
-      "Culture is context, not decoration.",
-      "ባህል አውድ ነው፣ ጌጥ አይደለም።",
-    ),
-    body: localized(
-      "Culture should shape the problem we solve, the language we use, and the details we prioritize—not sit on top of a generic product.",
-      "ባህል የምንፈታውን ችግኝ፣ የምንጠቀመውን ቋንቋና ቅድሚያ የምንሰጣቸውን ዝርዝሮች ሊቀርጽ ይገባል፤ በአጠቃላይ ምርት ላይ የሚጨመር ጌጥ አይደለም።",
-    ),
-  },
-  {
-    number: "05",
-    icon: Users,
-    title: localized("Access should feel human.", "መዳረሻ ሰዋዊ ሊሆን ይገባል።"),
-    body: localized(
-      "Financial language, support, and product steps should make sense to the person using them, across languages, generations, and levels of experience.",
-      "የገንዘብ ቋንቋ፣ ድጋፍና የምርት ደረጃዎች በቋንቋ፣ በትውልድና በልምድ ደረጃ ልዩነት ቢኖርም ለሚጠቀመው ሰው ሊገቡት ይገባል።",
-    ),
-  },
-  {
-    number: "06",
+    id: "stewardship",
+    letter: "S",
     icon: HandHeart,
-    title: localized("Stewardship over shortcuts.", "ከአጭር መንገድ በላይ ኃላፊነት።"),
+    name: localized("Stewardship", "በኃላፊነት መንከባከብ"),
+    title: localized(
+      "You worked hard for it. We respect that.",
+      "ለፍተው ያገኙት ነው። ያንን እናከብራለን።",
+    ),
     body: localized(
-      "People's money and trust require disciplined operations, honest limits, and patience. Growth cannot come ahead of readiness.",
-      "የሰዎች ገንዘብና እምነት የተደራጀ አሠራር፣ ግልጽ ገደቦችና ትዕግስት ይፈልጋሉ። እድገት ከዝግጁነት በፊት ሊመጣ አይችልም።",
+      "Your money has a job to do. Rent. School fees. A little breathing room. Something you’ve been saving toward. We believe financial tools should help you take care of today and plan for what’s next.",
+      "ገንዘብዎ የሚውልበት ብዙ ነገር አለ። የቤት ኪራይ። የትምህርት ክፍያ። ትንሽ እፎይታ። ሲቆጥቡለት የቆዩት አንድ ነገር። የገንዘብ መሳሪያዎች የዛሬውን ኑሮ እንዲያስተዳድሩና ለነገ እንዲያቅዱ ሊረዱዎት ይገባል ብለን እናምናለን።",
+    ),
+  },
+  {
+    id: "access",
+    letter: "A",
+    icon: Eye,
+    name: localized("Access", "ተደራሽነት"),
+    title: localized(
+      "Understand your credit. Know your next move.",
+      "ክሬዲትዎን ይረዱ። ቀጣዩን እርምጃዎን ይወቁ።",
+    ),
+    body: localized(
+      "Helping you build credit in America is a top priority for us. We’re starting with clear, everyday explanations of how credit works—and building tools to help you put that knowledge into action.",
+      "በአሜሪካ የክሬዲት ታሪክዎን እንዲገነቡ መርዳት ከዋና ቅድሚያዎቻችን አንዱ ነው። ክሬዲት እንዴት እንደሚሠራ በቀላልና በግልጽ ቋንቋ ከማብራራት እንጀምራለን። ያወቁትንም በተግባር እንዲያውሉ የሚረዱ መሳሪያዎችን እየገነባን ነው።",
+    ),
+  },
+  {
+    id: "mutual-progress",
+    letter: "M",
+    icon: HeartHandshake,
+    name: localized("Mutual progress", "አብሮ ማደግ"),
+    title: localized(
+      "Your financial goals here. Your family back home. Room for both.",
+      "የገንዘብ ግቦችዎ እዚህ። ቤተሰብዎ እዚያ። ለሁለቱም ቦታ አለ።",
+    ),
+    body: localized(
+      "Save for your next chapter. Show up for the people you love. We’re building Samra Pay to help you make room for both.",
+      "ለቀጣዩ የሕይወትዎ ምዕራፍ ይቆጥቡ። ለሚወዷቸው ሰዎች ይድረሱ። ለሁለቱም ቦታ እንዲኖርዎት ለመርዳት Samra Payን እየገነባን ነው።",
+    ),
+  },
+  {
+    id: "respect",
+    letter: "R",
+    icon: Users,
+    name: localized("Respect", "አክብሮት"),
+    title: localized(
+      "You won’t have to explain why home matters.",
+      "የትውልድ አገርዎ ለምን እንደሚያስፈልግዎት ማስረዳት አይጠበቅብዎትም።",
+    ),
+    body: localized(
+      "The languages you speak, the traditions you keep, and the people you show up for belong in the conversation. We’re here to listen and build with that understanding.",
+      "የሚናገሯቸው ቋንቋዎች፣ የሚጠብቋቸው ወጎችና የሚደግፏቸው ሰዎች የውይይታችን አካል ናቸው። እርስዎን ለማዳመጥና ይህንን ግንዛቤ ይዘን ለመገንባት እዚህ አለን።",
+    ),
+  },
+  {
+    id: "accountability",
+    letter: "A",
+    icon: ShieldCheck,
+    name: localized("Accountability", "ተጠያቂነት"),
+    title: localized(
+      "Building this right. For all of us.",
+      "በትክክል እንገነባለን። ለሁላችንም።",
+    ),
+    body: localized(
+      "Samra is personal to us, and we take that responsibility seriously. That means doing the work, being honest about where we are, and owning what comes next.",
+      "Samra የራሳችን ጉዳይ ነው። ይህንንም ኃላፊነት አጥብቀን እንይዛለን። ይህ ማለት የሚጠበቅብንን ሥራ መሥራት፣ የደረስንበትን ደረጃ በቅንነት መናገርና ለቀጣዩ እርምጃ ኃላፊነት መውሰድ ነው።",
     ),
   },
 ];
@@ -97,29 +105,26 @@ const coreValues = [
 const productPrinciples = [
   {
     icon: Eye,
-    title: localized("Show the full picture first.", "መጀመሪያ ሙሉውን ምስል ያሳዩ።"),
+    title: localized("The details, upfront.", "ዝርዝሩን አስቀድመው ይወቁ።"),
     body: localized(
-      "A person should see the rate, fee, timing, amount received, and relevant limits before confirming.",
-      "አንድ ሰው ከማረጋገጡ በፊት ዋጋውን፣ ክፍያውን፣ ጊዜውን፣ የሚደርሰውን መጠንና አስፈላጊ ገደቦችን ማየት አለበት።",
+      "Clear rates, fees, and timing before you decide.",
+      "ከመወሰንዎ በፊት ግልጽ የምንዛሬ ተመኖች፣ ክፍያዎችና የአገልግሎት ጊዜዎች።",
     ),
   },
   {
-    icon: Globe2,
-    title: localized(
-      "Design for life in two places.",
-      "በሁለት ቦታዎች ለሚኖር ሕይወት ይንደፉ።",
-    ),
+    icon: HandHeart,
+    title: localized("Space for your future.", "ለወደፊትዎ ቦታ።"),
     body: localized(
-      "The experience should connect everyday finances in the U.S. and Canada with real responsibilities in Ethiopia.",
-      "አገልግሎቱ በU.S. እና Canada ያለውን ዕለታዊ የገንዘብ ሕይወት በኢትዮጵያ ካሉ እውነተኛ ኃላፊነቶች ጋር ማገናኘት አለበት።",
+      "Tools designed with your budget, responsibilities, and goals in mind.",
+      "በጀትዎን፣ ኃላፊነቶችዎንና ግቦችዎን ከግምት ውስጥ ያስገቡ መሳሪያዎች።",
     ),
   },
   {
     icon: ShieldCheck,
-    title: localized("Earn trust before scale.", "ከመስፋፋት በፊት እምነትን ያግኙ።"),
+    title: localized("Care at every step.", "በእያንዳንዱ እርምጃ ጥንቃቄ።"),
     body: localized(
-      "Trust grows through careful testing, close listening, and dependable service. Those standards will guide every stage of our launch.",
-      "እምነት በጥንቃቄ በመፈተሽ፣ በቅርብ በማዳመጥና በሚታመን አገልግሎት ያድጋል። እነዚህ መስፈርቶች እያንዳንዱን የምረቃችንን ደረጃ ይመራሉ።",
+      "Thoughtful testing, useful support, and a launch paced by readiness.",
+      "ጥንቃቄ የተሞላበት ሙከራ፣ ጠቃሚ ድጋፍና ዝግጁነታችንን የተከተለ የአገልግሎት ጅማሬ።",
     ),
   },
 ];
@@ -157,8 +162,8 @@ export default function Values() {
               <h1 id="values-title">
                 {text(
                   localized(
-                    "What we believe shapes what we build.",
-                    "የምናምነው የምንገነባውን ይቀርጻል።",
+                    "Life here. Love back home. Values that connect both.",
+                    "ኑሮ እዚህ። ፍቅር በትውልድ አገር። ሁለቱንም የሚያገናኙ እሴቶች።",
                   ),
                 )}
               </h1>
@@ -167,8 +172,8 @@ export default function Values() {
               <p>
                 {text(
                   localized(
-                    "Samra Pay is being built for people whose financial lives cross borders. These values are the standard for deciding what belongs in the product—and what does not.",
-                    "Samra Pay የገንዘብ ሕይወታቸው ድንበር ለሚሻገር ሰዎች እየተገነባ ነው። እነዚህ እሴቶች በምርቱ ውስጥ ምን መኖር እንዳለበትና ምን መኖር እንደሌለበት የምንወስንበት መስፈርት ናቸው።",
+                    "You’re building a future, showing up for family, and making your money work across borders. We’re building Samra Pay with that life in mind. Here’s what guides us.",
+                    "ለወደፊትዎ እየሠሩ፣ ለቤተሰብዎ እየደረሱና ገንዘብዎን በድንበር ተሻጋሪ ኑሮዎ እየተጠቀሙበት ነው። ይህንን ሕይወት ከግምት ውስጥ አስገብተን Samra Payን እየገነባን ነው። የሚመሩን እሴቶች እነዚህ ናቸው።",
                   ),
                 )}
               </p>
@@ -186,58 +191,32 @@ export default function Values() {
         </section>
 
         <section
-          className="values-manifesto"
-          aria-labelledby="values-manifesto-title"
+          className="values-grid-section"
+          aria-label={text(
+            localized("Samra Pay core values", "የSamra Pay ዋና እሴቶች"),
+          )}
         >
-          <div className="coming-container values-manifesto-grid">
-            <div>
-              <p className="section-eyebrow">
-                {text(localized("The standard", "መስፈርታችን"))}
-              </p>
-              <h2 id="values-manifesto-title">
-                {text(
-                  localized(
-                    "Built around responsibility, not just transactions.",
-                    "በግብይት ብቻ ሳይሆን በኃላፊነት ዙሪያ የተገነባ።",
-                  ),
-                )}
-              </h2>
-            </div>
-            <p>
-              {text(
-                localized(
-                  "A product can look polished and still misunderstand the person using it. Our values are meant to keep Samra grounded in the realities, obligations, and ambitions of the community it intends to serve.",
-                  "አንድ ምርት የተዋበ ሊመስል ይችላል፣ ነገር ግን የሚጠቀመውን ሰው ሊሳሳት ይችላል። እሴቶቻችን Samra ሊያገለግል ባሰበው ማህበረሰብ እውነታዎች፣ ግዴታዎችና ምኞቶች ላይ እንዲቆም የሚያደርጉ ናቸው።",
-                ),
-              )}
-            </p>
-          </div>
-        </section>
-
-        <section className="values-trust" aria-labelledby="values-trust-title">
-          <div className="coming-container values-trust-grid">
-            <div className="values-trust-copy">
-              <p className="section-eyebrow">
-                {text(localized("Trust is personal", "እምነት ግላዊ ነው"))}
-              </p>
-              <h2 id="values-trust-title">
-                {text(
-                  localized(
-                    "Built for people. Accountable to people.",
-                    "ለሰዎች የተገነባ። ለሰዎች ተጠያቂ።",
-                  ),
-                )}
-              </h2>
-              <p>
-                {text(
-                  localized(
-                    "Every financial decision carries a person, a family, and a responsibility. Samra should earn trust by listening closely, explaining clearly, and building with the people it intends to serve.",
-                    "እያንዳንዱ የገንዘብ ውሳኔ ከአንድ ሰው፣ ከቤተሰብ እና ከኃላፊነት ጋር የተያያዘ ነው። Samra በቅርብ በማዳመጥ፣ በግልጽ በማብራራት እና ሊያገለግላቸው ከታሰቡ ሰዎች ጋር በመገንባት እምነትን ማግኘት አለበት።",
-                  ),
-                )}
-              </p>
-            </div>
-            <div className="values-trust-portraits" aria-hidden="true">
+          <div className="coming-container values-grid">
+            {coreValues.map((value) => {
+              const Icon = value.icon;
+              return (
+                <article
+                  className="value-card"
+                  key={value.id}
+                  id={`value-${value.id}`}
+                  aria-labelledby={`value-${value.id}-title`}
+                >
+                  <div className="value-card-top">
+                    <span lang="en">{value.letter}</span>
+                    <Icon aria-hidden="true" />
+                  </div>
+                  <h2 id={`value-${value.id}-title`}>{text(value.name)}</h2>
+                  <p className="value-card-tagline">{text(value.title)}</p>
+                  <p>{text(value.body)}</p>
+                </article>
+              );
+            })}
+            <div className="values-portrait-card" aria-hidden="true">
               <figure className="values-trust-portrait is-primary">
                 <OptimizedPicture
                   asset={valuesPortraitWoman}
@@ -270,29 +249,6 @@ export default function Values() {
         </section>
 
         <section
-          className="values-grid-section"
-          aria-label={text(
-            localized("Samra Pay core values", "የSamra Pay ዋና እሴቶች"),
-          )}
-        >
-          <div className="coming-container values-grid">
-            {coreValues.map((value) => {
-              const Icon = value.icon;
-              return (
-                <article className="value-card" key={value.number}>
-                  <div className="value-card-top">
-                    <span>{value.number}</span>
-                    <Icon aria-hidden="true" />
-                  </div>
-                  <h2>{text(value.title)}</h2>
-                  <p>{text(value.body)}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section
           className="values-in-practice"
           aria-labelledby="practice-title"
         >
@@ -304,8 +260,8 @@ export default function Values() {
               <h2 id="practice-title">
                 {text(
                   localized(
-                    "How this should show up in the product.",
-                    "ይህ በምርቱ ውስጥ እንዴት ሊታይ ይገባል።",
+                    "What that means for what we’re building",
+                    "ይህ ለምንገነባው ምን ማለት ነው?",
                   ),
                 )}
               </h2>
@@ -332,12 +288,7 @@ export default function Values() {
                 {text(localized("From belief to product", "ከእምነት ወደ ምርት"))}
               </p>
               <h2 id="values-cta-title">
-                {text(
-                  localized(
-                    "See how the values shape the card portfolio.",
-                    "እሴቶቹ የካርድ ስብስቡን እንዴት እንደሚቀርጹ ይመልከቱ።",
-                  ),
-                )}
+                {text(localized("Get to know what’s next.", "ቀጥሎ የሚመጣውን ይወቁ።"))}
               </h2>
             </div>
             <a className="portfolio-primary-link" href="/features">
