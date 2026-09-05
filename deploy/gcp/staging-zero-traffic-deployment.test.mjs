@@ -394,7 +394,7 @@ test("workflow is manual, main-only, protected, keyless, and consumes prior evid
       workflow.match(
         new RegExp(action.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
       )?.length,
-      action.includes("download-artifact") ? 2 : 1,
+      action.includes("download-artifact") ? 3 : 1,
     );
   }
   assert.match(

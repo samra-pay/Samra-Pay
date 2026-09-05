@@ -17,6 +17,7 @@ const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const INTEGER_PATTERN = /^[1-9][0-9]*$/;
 const GITHUB_REQUEST_TIMEOUT_MS = 15_000;
 const OUTPUT_PREFIX_KINDS = Object.freeze({
+  migration: "staging-migration",
   publication: "staging-image-publication",
   prerequisite: "staging-zero-traffic-deployment",
   zero_traffic: "staging-zero-traffic-deployment",
@@ -31,6 +32,13 @@ const SERVICES = new Set([
 ]);
 
 export const UPSTREAM_ARTIFACT_CONTRACTS = Object.freeze({
+  "staging-migration": Object.freeze({
+    workflowName: "Staging migrations",
+    workflowPath: ".github/workflows/staging-migrations.yml",
+    serviceRequired: false,
+    artifactName: ({ candidateSha, runId, runAttempt }) =>
+      `staging-migration-${candidateSha}-run-${runId}-attempt-${runAttempt}`,
+  }),
   "staging-image-publication": Object.freeze({
     workflowName: "Staging image publication",
     workflowPath: ".github/workflows/staging-image-publication.yml",

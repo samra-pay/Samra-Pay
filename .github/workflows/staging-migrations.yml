@@ -1,0 +1,143 @@
+name: Staging migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Review metadata or execute one bounded staging migration
+        required: true
+        default: review
+        type: choice
+        options: [review, migrate]
+      publication_run_id:
+        description: Successful image-publication run for this exact main SHA
+        required: true
+        type: string
+      publication_run_attempt:
+        description: Exact image-publication attempt
+        required: true
+        default: "1"
+        type: string
+      migration_secret_version:
+        description: Enabled numeric version of samra-staging-migration-database-url
+        required: true
+        type: string
+      expires_at:
+        description: Authorized UTC expiry; at least 650 seconds and at most one hour from execution
+        required: false
+        type: string
+      authorization:
+        description: For migrate only, AUTHORIZED_STAGING_MIGRATION
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: staging-database-mutation
+  cancel-in-progress: false
+
+jobs:
+  migration:
+    if: >-
+      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment: staging-migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SAMRA_PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+      SAMRA_PUBLICATION_RUN_ATTEMPT: ${{ inputs.publication_run_attempt }}
+      SAMRA_MIGRATION_SECRET_VERSION: ${{ inputs.migration_secret_version }}
+      SAMRA_MIGRATION_AUTHORIZATION: ${{ inputs.authorization }}
+      SAMRA_MIGRATION_EXPIRES_AT: ${{ inputs.expires_at }}
+      SAMRA_MIGRATION_MODE: ${{ inputs.mode }}
+    steps:
+      - name: Check out exact main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Initialize runner-local evidence paths
+        run: |
+          printf 'SAMRA_PUBLICATION_MANIFEST=%s\n' "${RUNNER_TEMP}/samra-publication/staging-image-publication.json" >> "${GITHUB_ENV}"
+          printf 'SAMRA_PUBLICATION_HASH=%s\n' "${RUNNER_TEMP}/samra-publication/staging-image-publication.sha256" >> "${GITHUB_ENV}"
+
+      - name: Validate execution boundary before Google authentication
+        run: |
+          node --input-type=module -e '
+            import { validateMigrationControllerEnvironment } from "./deploy/gcp/run-staging-migrations.mjs";
+            validateMigrationControllerEnvironment(process.env, process.env.SAMRA_MIGRATION_MODE);
+          '
+
+      - name: Verify governed publication run and artifact
+        id: upstream
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node deploy/gcp/verify-github-upstream-artifact.mjs \
+            --kind staging-image-publication --candidate-sha "${GITHUB_SHA}" \
+            --run-id "${SAMRA_PUBLICATION_RUN_ID}" --run-attempt "${SAMRA_PUBLICATION_RUN_ATTEMPT}" \
+            --artifact-name "staging-image-publication-${GITHUB_SHA}-run-${SAMRA_PUBLICATION_RUN_ID}-attempt-${SAMRA_PUBLICATION_RUN_ATTEMPT}" \
+            --output-prefix publication
+
+      - name: Download exact immutable publication
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          artifact-ids: ${{ steps.upstream.outputs.publication_artifact_id }}
+          digest-mismatch: error
+          path: ${{ runner.temp }}/samra-publication
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.publication_run_id }}
+
+      - name: Validate downloaded publication before Google authentication
+        run: |
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            import { verifyPublicationManifest } from "./deploy/gcp/record-staging-image-publication.mjs";
+            const e = process.env;
+            const p = await verifyPublicationManifest(e.SAMRA_PUBLICATION_MANIFEST, e.SAMRA_PUBLICATION_HASH);
+            assert(p.candidateSha === e.GITHUB_SHA && p.github?.runId === e.SAMRA_PUBLICATION_RUN_ID && p.github.runAttempt === Number(e.SAMRA_PUBLICATION_RUN_ATTEMPT));
+          '
+
+      - name: Obtain keyless migration controller identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: samra-pay-staging
+          workload_identity_provider: projects/934122615631/locations/global/workloadIdentityPools/samra-migrations-staging/providers/samra-pay-migrations-main
+          service_account: samra-github-migrate-staging@samra-pay-staging.iam.gserviceaccount.com
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: ">= 540.0.0"
+          project_id: samra-pay-staging
+
+      - name: Review private migration prerequisites
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node deploy/gcp/run-staging-migrations.mjs --review
+
+      - name: Execute one governed migration
+        if: inputs.mode == 'migrate'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node deploy/gcp/run-staging-migrations.mjs --migrate
+
+      - name: Preserve completed migration evidence
+        if: inputs.mode == 'migrate' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: staging-migration-${{ github.sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/staging-release/staging-migration.json
+            artifacts/staging-release/staging-migration.sha256
+          if-no-files-found: error
+          retention-days: 365

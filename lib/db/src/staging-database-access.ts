@@ -674,6 +674,16 @@ async function withClient(
   });
   await client.connect();
   try {
+    // Shared with the governed migration runner; connection closure releases
+    // this session lock even when bootstrap/finalization or an audit fails.
+    const lock = await client.query<{ acquired: boolean }>(
+      "SELECT pg_try_advisory_lock($1::bigint) AS acquired",
+      ["783214905126"],
+    );
+    assertCondition(
+      lock.rows[0]?.acquired === true,
+      "Another staging database operation holds the lock",
+    );
     await operation(client);
   } finally {
     await client.end();

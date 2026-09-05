@@ -256,7 +256,7 @@ export function validateStagingZeroTrafficDeployment(
   assert(
     contract.services["samra-api"].directVpcEgressRequired === true &&
       contract.services["samra-api"].executionStatus ===
-        "blocked-no-governed-migration-producer" &&
+        "requires-governed-migration-evidence" &&
       contract.services["samra-customer-web"].executionStatus ===
         "blocked-on-governed-api-zero-traffic-evidence" &&
       contract.services["samra-design-system-preview"].executionStatus ===

@@ -1,4 +1,5 @@
 import test from "node:test";
+import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
@@ -9,6 +10,7 @@ import {
   bootstrapPermanentDatabasePrincipals,
   finalizeRuntimeDatabasePrivileges,
   STAGING_DATABASE_ACCESS,
+  runStagingDatabaseAccessAction,
 } from "./staging-database-access";
 
 const { Client, Pool } = pg;
@@ -127,6 +129,21 @@ test("staging database access isolates permanent identities and runtime privileg
     await migrationAudit.connect();
     try {
       await auditMigrationDatabaseAccess(migrationAudit);
+      await migrationAudit.query("SELECT pg_advisory_lock($1::bigint)", [
+        "783214905126",
+      ]);
+      await assert.rejects(
+        runStagingDatabaseAccessAction("audit-runtime", {
+          DATABASE_URL: payload.runtimeDatabaseUrl,
+        }),
+        /Another staging database operation holds the lock/,
+      );
+      await migrationAudit.query("SELECT pg_advisory_unlock($1::bigint)", [
+        "783214905126",
+      ]);
+      await runStagingDatabaseAccessAction("audit-runtime", {
+        DATABASE_URL: payload.runtimeDatabaseUrl,
+      });
     } finally {
       await migrationAudit.end();
     }

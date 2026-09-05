@@ -27,16 +27,16 @@ test("packet records source restrictions without claiming cloud readiness", () =
   assert.equal(packet.migrations.length, 18);
   assert.equal(
     packet.observedRepositoryControls.apiDeploymentStatus,
-    "blocked-no-governed-migration-producer",
+    "requires-governed-migration-evidence",
   );
   assert.equal(packet.observedRepositoryControls.apiWorkerSetting, "true");
   assert.equal(
     packet.observedRepositoryControls.bootstrapUsesLatestSecretVersion,
-    true,
+    false,
   );
   assert.equal(
     packet.observedRepositoryControls.migrationProducerStatus,
-    "missing-blocking-api-and-dependent-customer-web-deployment",
+    "implemented-execution-and-federation-not-authorized",
   );
   assert.equal(packet.status, "prepared-review-only");
   assert.equal(packet.deploymentAuthorized, false);

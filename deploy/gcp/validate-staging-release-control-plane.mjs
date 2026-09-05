@@ -72,7 +72,7 @@ export function validateStagingReleaseControlPlane(
           ".github/workflows/staging-traffic-control.yml",
         ],
         apiMigrationProducerStatus:
-          "missing-blocking-api-and-dependent-customer-web-deployment",
+          "implemented-execution-and-federation-not-authorized",
       }),
     "Upstream GitHub run and artifact verification boundary drifted",
   );

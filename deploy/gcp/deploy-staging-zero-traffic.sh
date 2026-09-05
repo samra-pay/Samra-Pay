@@ -193,12 +193,17 @@ if [[ "${TARGET_SERVICE}" != "samra-design-system-preview" ]]; then
 fi
 
 if [[ "${TARGET_SERVICE}" == "samra-api" ]]; then
-  node -e '
-    const evidence = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-    if (evidence.status !== "migration-completed" || evidence.candidateSha !== process.argv[2] || evidence.environment !== "staging") {
-      throw new Error("migration prerequisite does not match this staging candidate");
+  # A JSON status string is insufficient: the migration prerequisite must match
+  # its governed GitHub run, publication digest, complete journal and cleanup.
+  SAMRA_GCP_EXPECTED_SHA="${EXPECTED_SHA}" \
+    SAMRA_STAGING_PUBLICATION_MANIFEST="${PUBLICATION_MANIFEST}" \
+    SAMRA_STAGING_PUBLICATION_HASH="${PUBLICATION_HASH}" \
+    SAMRA_STAGING_PREREQUISITE_MANIFEST="${PREREQUISITE_MANIFEST}" \
+    SAMRA_STAGING_PREREQUISITE_HASH="${PREREQUISITE_HASH}" \
+    node "${ROOT_DIR}/deploy/gcp/verify-staging-migration-prerequisite.mjs" || {
+      echo "STOP: migration prerequisite does not match" >&2
+      exit 1
     }
-  ' "${PREREQUISITE_MANIFEST}" "${EXPECTED_SHA}"
   [[ "${SAMRA_STAGING_DATABASE_SECRET_VERSION:-}" =~ ^[1-9][0-9]*$ ]] || { echo "STOP: pinned database secret version is required" >&2; exit 1; }
   [[ "${SAMRA_STAGING_AUTH0_ISSUER_BASE_URL:-}" =~ ^https://[^/]+/?$ ]] || { echo "STOP: approved HTTPS Auth0 issuer is required" >&2; exit 1; }
   [[ "${SAMRA_STAGING_AUTH0_AUDIENCE:-}" =~ ^https:// ]] || { echo "STOP: approved HTTPS Auth0 audience is required" >&2; exit 1; }
