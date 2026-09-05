@@ -195,7 +195,7 @@ export function validateSqlMigrationTarget(instance) {
 
 export function validateCreatedMigrationJob(
   job,
-  { image, secretVersion, candidateSha },
+  { image, secretVersion, candidateSha, expiresAt },
 ) {
   const execution = job.spec?.template?.spec;
   const task = execution?.template?.spec;
@@ -228,7 +228,8 @@ export function validateCreatedMigrationJob(
   );
   const variables = containers[0].env ?? [];
   assert(
-    new Set(variables.map((entry) => entry.name)).size === variables.length,
+    variables.length === 6 &&
+      new Set(variables.map((entry) => entry.name)).size === variables.length,
     "Duplicate migration environment variable",
   );
   const variable = (name) => variables.find((entry) => entry.name === name);
@@ -240,7 +241,11 @@ export function validateCreatedMigrationJob(
   );
   assert(
     variable("SAMRA_CANDIDATE_SHA")?.value === candidateSha &&
-      variable("SAMRA_MIGRATION_SECRET_VERSION")?.value === secretVersion,
+      variable("SAMRA_MIGRATION_SECRET_VERSION")?.value === secretVersion &&
+      variable("NODE_ENV")?.value === "production" &&
+      variable("SAMRA_DEPLOYMENT_ENVIRONMENT")?.value === "staging" &&
+      typeof expiresAt === "string" &&
+      variable("SAMRA_MIGRATION_EXPIRES_AT")?.value === expiresAt,
     "Migration job source binding drifted",
   );
   const annotations = job.spec.template.metadata?.annotations;
@@ -467,6 +472,7 @@ export async function runStagingMigrations({
         image,
         secretVersion: env.SAMRA_MIGRATION_SECRET_VERSION,
         candidateSha: env.GITHUB_SHA,
+        expiresAt: env.SAMRA_MIGRATION_EXPIRES_AT,
       },
     );
     read(
@@ -484,6 +490,7 @@ export async function runStagingMigrations({
         image,
         secretVersion: env.SAMRA_MIGRATION_SECRET_VERSION,
         candidateSha: env.GITHUB_SHA,
+        expiresAt: env.SAMRA_MIGRATION_EXPIRES_AT,
       }) === jobUid && Number(job.status?.executionCount) === 1,
       "Migration job changed or was executed more than once",
     );
@@ -534,6 +541,22 @@ export async function runStagingMigrations({
       }
       await sleep(2000);
     }
+    const cleanupJob = read(
+      "run",
+      "jobs",
+      "describe",
+      M.job,
+      `--region=${M.region}`,
+    );
+    assert(
+      validateCreatedMigrationJob(cleanupJob, {
+        image,
+        secretVersion: env.SAMRA_MIGRATION_SECRET_VERSION,
+        candidateSha: env.GITHUB_SHA,
+        expiresAt: env.SAMRA_MIGRATION_EXPIRES_AT,
+      }) === jobUid && Number(cleanupJob.status?.executionCount) === 1,
+      "Migration job changed before cleanup",
+    );
     cloud("run", "jobs", "delete", M.job, `--region=${M.region}`, "--quiet");
     assert(relevantJobs().length === 0, "Migration cleanup failed");
     created = false;

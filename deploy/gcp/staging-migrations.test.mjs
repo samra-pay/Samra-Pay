@@ -721,6 +721,7 @@ test("controller review performs only metadata reads and refuses drift before jo
 
 test("created job attestation rejects changed image, floating secret and expanded execution", () => {
   const image = publication().imageDigests["samra-migrations"];
+  const expiresAt = "2026-09-05T13:00:00.000Z";
   const container = {
     image,
     command: ["node"],
@@ -733,6 +734,9 @@ test("created job attestation rejects changed image, floating secret and expande
       },
       { name: "SAMRA_CANDIDATE_SHA", value: candidate },
       { name: "SAMRA_MIGRATION_SECRET_VERSION", value: "7" },
+      { name: "NODE_ENV", value: "production" },
+      { name: "SAMRA_DEPLOYMENT_ENVIRONMENT", value: "staging" },
+      { name: "SAMRA_MIGRATION_EXPIRES_AT", value: expiresAt },
     ],
   };
   // Cloud Run v1 Job schema: network annotations belong to ExecutionTemplate.
@@ -763,9 +767,24 @@ test("created job attestation rejects changed image, floating secret and expande
       },
     },
   };
-  const expectedJob = { image, secretVersion: "7", candidateSha: candidate };
+  const expectedJob = {
+    image,
+    secretVersion: "7",
+    candidateSha: candidate,
+    expiresAt,
+  };
   assert.equal(validateCreatedMigrationJob(job, expectedJob), "job-uid");
   for (const mutate of [
+    (j) => {
+      j.spec.template.spec.template.spec.containers[0].env[5].value =
+        "2026-09-05T14:00:00.000Z";
+    },
+    (j) => {
+      j.spec.template.spec.template.spec.containers[0].env.push({
+        name: "NODE_OPTIONS",
+        value: "--eval=bad",
+      });
+    },
     (j) => {
       j.spec.template.spec.taskCount = 2;
     },
