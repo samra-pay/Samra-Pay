@@ -1146,6 +1146,9 @@ importers:
       pg:
         specifier: ^8.22.0
         version: 8.22.0
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.1
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -1156,9 +1159,6 @@ importers:
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.1
 
   lib/launch-updates: {}
 
