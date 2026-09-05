@@ -1,0 +1,487 @@
+{
+  "generatedAt": "2026-09-05T14:04:49.448Z",
+  "status": "passed",
+  "baseRevision": "5bf1659413a8a3918a3fa3b58829d98c1bd47470",
+  "referenceSourceRevision": "eefac625c83d1708c7f97f063f7b1358f9471a25",
+  "branch": "codex/nano-banana-people-assets",
+  "sourceAssetDigest": "a1829493757e3d10aada191136b3c21a50b68e65db361e9a79a2ec79ef0c0f0f",
+  "productionBuildDigest": "be8a07d1576b9155c539f0de53dedc0cc68903db73cc02c35e8aad251d1df686",
+  "sourceAssets": [
+    {
+      "path": "artifacts/samra-pay/scripts/optimize-public-images.mjs",
+      "bytes": 9812,
+      "sha256": "c4765432351d558c3dbfaa90e185d19349020d449626a673b362a6ade68cb3c9"
+    },
+    {
+      "path": "artifacts/samra-pay/src/assets/coming-soon/source/hero-woman-coffee.png",
+      "bytes": 4091950,
+      "sha256": "92e26fcd29d61717cadfe5559e2a1bb6f0ccb03be863499dd0e329d4fa483d52"
+    },
+    {
+      "path": "artifacts/samra-pay/src/assets/coming-soon/source/proof-man-laptop.png",
+      "bytes": 1623339,
+      "sha256": "2d1cd03a5f8fb541e2a9ce1df7ee0b9b8bc38bfa3053151405b34bd474be5c20"
+    },
+    {
+      "path": "artifacts/samra-pay/src/assets/coming-soon/source/values-portrait-elder-v2.jpg",
+      "bytes": 339437,
+      "sha256": "e1c65b3829df6b437d76de546592ac2d1c4c1de243b056284233b98348c65cf0"
+    },
+    {
+      "path": "artifacts/samra-pay/src/assets/coming-soon/source/values-portrait-man-v2.jpg",
+      "bytes": 275601,
+      "sha256": "d975fe127f69a63378813c45c0b9ae7d3b61a008a4d559bcdfc08d5981b47267"
+    },
+    {
+      "path": "artifacts/samra-pay/src/assets/coming-soon/source/values-portrait-woman-v2.jpg",
+      "bytes": 266094,
+      "sha256": "f297dfccc52cfe41a406bf700229f9513ba04e663b1617d892e6eac2791395c5"
+    },
+    {
+      "path": "artifacts/samra-pay/src/assets/coming-soon/source/woman-with-phone-diaspora.jpg",
+      "bytes": 376420,
+      "sha256": "24e384dbea012672ead96a6c20a6a3c064e7e89c7bc765a64f6e61b733dc221e"
+    }
+  ],
+  "checks": [
+    "All six source dimensions, source hashes, master dimensions, master hashes and reference links match the manifest.",
+    "All 26 generated AVIF/WebP derivatives remain inside the unchanged per-image limits.",
+    "Image dimensions/srcsets, layout, loading behavior, build configuration, cache configuration and budget contract are unchanged from the baseline revision.",
+    "Every extracted production asset reference resolves; creative masters, JPEG sources and Runway secret material are absent from the build.",
+    "The six-card local review gallery has valid image, prompt, master and documentation file links."
+  ],
+  "unchanged": [
+    "artifacts/samra-pay/src/assets/coming-soon/images.ts",
+    "artifacts/samra-pay/src/components/optimized-picture.tsx",
+    "artifacts/samra-pay/src/pages/home.tsx",
+    "artifacts/samra-pay/src/pages/blog.tsx",
+    "artifacts/samra-pay/src/pages/values.tsx",
+    "artifacts/samra-pay/src/pages/coming-soon.css",
+    "artifacts/samra-pay/vite.config.ts",
+    "docs/testing/experience-budgets.json",
+    "firebase.json"
+  ],
+  "images": [
+    {
+      "name": "hero-woman-coffee-1200.avif",
+      "bytes": 82676,
+      "maximumBytes": 100000
+    },
+    {
+      "name": "hero-woman-coffee-1200.webp",
+      "bytes": 97734,
+      "maximumBytes": 100000
+    },
+    {
+      "name": "hero-woman-coffee-640.avif",
+      "bytes": 43899,
+      "maximumBytes": 100000
+    },
+    {
+      "name": "hero-woman-coffee-640.webp",
+      "bytes": 50490,
+      "maximumBytes": 100000
+    },
+    {
+      "name": "hero-woman-coffee-960.avif",
+      "bytes": 66403,
+      "maximumBytes": 100000
+    },
+    {
+      "name": "hero-woman-coffee-960.webp",
+      "bytes": 84550,
+      "maximumBytes": 100000
+    },
+    {
+      "name": "proof-man-laptop-1200.avif",
+      "bytes": 31947,
+      "maximumBytes": 60000
+    },
+    {
+      "name": "proof-man-laptop-1200.webp",
+      "bytes": 47084,
+      "maximumBytes": 60000
+    },
+    {
+      "name": "proof-man-laptop-640.avif",
+      "bytes": 17022,
+      "maximumBytes": 60000
+    },
+    {
+      "name": "proof-man-laptop-640.webp",
+      "bytes": 22322,
+      "maximumBytes": 60000
+    },
+    {
+      "name": "proof-man-laptop-960.avif",
+      "bytes": 25663,
+      "maximumBytes": 60000
+    },
+    {
+      "name": "proof-man-laptop-960.webp",
+      "bytes": 35680,
+      "maximumBytes": 60000
+    },
+    {
+      "name": "tibeb-pattern-gold-640.avif",
+      "bytes": 41476,
+      "maximumBytes": 80000
+    },
+    {
+      "name": "tibeb-pattern-gold-640.webp",
+      "bytes": 58946,
+      "maximumBytes": 80000
+    },
+    {
+      "name": "values-portrait-elder-v2-1000.avif",
+      "bytes": 57479,
+      "maximumBytes": 70000
+    },
+    {
+      "name": "values-portrait-elder-v2-1000.webp",
+      "bytes": 61982,
+      "maximumBytes": 70000
+    },
+    {
+      "name": "values-portrait-man-v2-1000.avif",
+      "bytes": 49975,
+      "maximumBytes": 70000
+    },
+    {
+      "name": "values-portrait-man-v2-1000.webp",
+      "bytes": 56356,
+      "maximumBytes": 70000
+    },
+    {
+      "name": "values-portrait-woman-v2-1000.avif",
+      "bytes": 36719,
+      "maximumBytes": 70000
+    },
+    {
+      "name": "values-portrait-woman-v2-1000.webp",
+      "bytes": 43372,
+      "maximumBytes": 70000
+    },
+    {
+      "name": "woman-with-phone-diaspora-1024.avif",
+      "bytes": 63868,
+      "maximumBytes": 90000
+    },
+    {
+      "name": "woman-with-phone-diaspora-1024.webp",
+      "bytes": 75388,
+      "maximumBytes": 90000
+    },
+    {
+      "name": "woman-with-phone-diaspora-640.avif",
+      "bytes": 34345,
+      "maximumBytes": 90000
+    },
+    {
+      "name": "woman-with-phone-diaspora-640.webp",
+      "bytes": 36920,
+      "maximumBytes": 90000
+    },
+    {
+      "name": "woman-with-phone-diaspora-960.avif",
+      "bytes": 57488,
+      "maximumBytes": 90000
+    },
+    {
+      "name": "woman-with-phone-diaspora-960.webp",
+      "bytes": 66148,
+      "maximumBytes": 90000
+    }
+  ],
+  "buildFiles": [
+    {
+      "path": "assets/arrow-left-CdhHHH36.js",
+      "bytes": 172,
+      "sha256": "a938ed233bd7e358e8c20df59c6fdd71b09c2517b5e3a91a50810d4e83e10be5"
+    },
+    {
+      "path": "assets/arrow-right-CmKEYx2h.js",
+      "bytes": 172,
+      "sha256": "a6a5aa6a3f987866f0cb607638bd0d7e6273aaf75c970084d948109291bd9212"
+    },
+    {
+      "path": "assets/blog-Bqj3k_rS.js",
+      "bytes": 9148,
+      "sha256": "6f080d40b08393eb9cec09083505dcd77030930faec0ce9497b2ee9ae18da98d"
+    },
+    {
+      "path": "assets/coming-soon-BbPb5GD4.js",
+      "bytes": 8912,
+      "sha256": "ac8516a1508066c2f4c85c5ff0640150ce1cc128077f6001c19c9e7472892b3f"
+    },
+    {
+      "path": "assets/coming-soon-DDXqLCrP.css",
+      "bytes": 64653,
+      "sha256": "601b657b8a350579dfa711885510e141ea1096f6781dfe0bc57c058446c9b9b9"
+    },
+    {
+      "path": "assets/compass-DT-W0i_J.js",
+      "bytes": 258,
+      "sha256": "03c8b52ae312fc4dc4399d9cbdf7e25561fe8174aaf266c82d82804fb89dc859"
+    },
+    {
+      "path": "assets/ethiopian-airlines-logo-BjNHbf-6.svg",
+      "bytes": 11344,
+      "sha256": "193bc6c756567e72f199762af04b12513d676481b44005c06b050ac2ec91362b"
+    },
+    {
+      "path": "assets/faq-DtTaqK2e.js",
+      "bytes": 5113,
+      "sha256": "bc2263192b33ee8ffca366e76c196b8a0f42c7e1cc2db3e86fdbfdbeb8d67ad5"
+    },
+    {
+      "path": "assets/features-DulgxyHm.js",
+      "bytes": 34169,
+      "sha256": "d4149c8cf93b15130bc9d36de51a70fa54c3d6fab93923859ad684b473c7b057"
+    },
+    {
+      "path": "assets/hero-woman-coffee-1200-DhApH3EK.webp",
+      "bytes": 97734,
+      "sha256": "29fb0c07ccfb22ea774e7d66eba11849fc5a1e563a653fe998b6c51cebb39c7c"
+    },
+    {
+      "path": "assets/hero-woman-coffee-1200-Ikqbh812.avif",
+      "bytes": 82676,
+      "sha256": "9c5ae1fb8c7367121cb51471c33229f4e2de85f4d2441e735d977b31b5d2f7eb"
+    },
+    {
+      "path": "assets/hero-woman-coffee-640-BP_IKGFC.avif",
+      "bytes": 43899,
+      "sha256": "7492fb2be39a93ec54884b8492da09341907f19eeb8cdae58a95972593216434"
+    },
+    {
+      "path": "assets/hero-woman-coffee-640-CEMfwft7.webp",
+      "bytes": 50490,
+      "sha256": "eabce33b86e5c1e3bbac6d144e9ef97dfbab79816dd64f42b61195cce1378fe2"
+    },
+    {
+      "path": "assets/hero-woman-coffee-960-Dfw8IZ10.avif",
+      "bytes": 66403,
+      "sha256": "3be5f6bb4ee1e5b071406380b6b9d8289c2713e5aafd45d57d187b6fc232b81e"
+    },
+    {
+      "path": "assets/hero-woman-coffee-960-o-Os9Gpw.webp",
+      "bytes": 84550,
+      "sha256": "43427c68f61bb0bc78d25cd8a9885c6a792d1ed3fec92f4e9e2864ae4e35cdc3"
+    },
+    {
+      "path": "assets/home-Vs1ZEmFw.js",
+      "bytes": 13204,
+      "sha256": "22311726e41a9bb1649d3f7dd5bf4a0bed8cbd6b811ac95d1c6334ce920f0082"
+    },
+    {
+      "path": "assets/index-Dx85NERB.js",
+      "bytes": 195351,
+      "sha256": "f88b042ce401103bf1b3de13b55a18dffdd69dab4cb84d5f9eb4e681c6c82880"
+    },
+    {
+      "path": "assets/launch-updates-form-sOGqjd3h.js",
+      "bytes": 3769,
+      "sha256": "6254de0db28719b1b112074efea7f7f4990dba8a3714864c9771738006692fcc"
+    },
+    {
+      "path": "assets/lock-keyhole-B1ieDh1R.js",
+      "bytes": 262,
+      "sha256": "32d6feddc4ce45fa82f022b0051d42575b6dea5a1d15eacb14bbb266c33aedff"
+    },
+    {
+      "path": "assets/proof-man-laptop-1200-CBcLNIl7.avif",
+      "bytes": 31947,
+      "sha256": "96dd1af3f824e2ea57fa577b2329ff2e38b117b7b65fb2a61998c0c8e6f1452a"
+    },
+    {
+      "path": "assets/proof-man-laptop-1200-imERO7F1.webp",
+      "bytes": 47084,
+      "sha256": "6c67e26c3419c66b83e63f3863452478b1403c83407d50def62f118579666cd7"
+    },
+    {
+      "path": "assets/proof-man-laptop-640-CMZQvAzD.avif",
+      "bytes": 17022,
+      "sha256": "e0b0ffaa129d62b96546eaca053bf71b0003574d6bd398173e3c623426a33dd3"
+    },
+    {
+      "path": "assets/proof-man-laptop-640-ka4yt_ej.webp",
+      "bytes": 22322,
+      "sha256": "23cc181b8d299ec5f5fdf4a91bca9f0bff24ca33c0e1bf330588a7496f70a1f2"
+    },
+    {
+      "path": "assets/proof-man-laptop-960-05I72rRt.avif",
+      "bytes": 25663,
+      "sha256": "f1061e44bf950ceb7db1c9043f3893edd5c5e30b0f2f4c4000118ec594522fb6"
+    },
+    {
+      "path": "assets/proof-man-laptop-960-COWdneeR.webp",
+      "bytes": 35680,
+      "sha256": "168033180ac424f5ef41cedca612ba0523b40cbdf3bb67cd7c86d0962eb4d6a5"
+    },
+    {
+      "path": "assets/public-customer-entry-BFdFd-Li.css",
+      "bytes": 2288,
+      "sha256": "138c60685fd363f371d5557080cf2580d2a4204b806c3aa51a1c3bd4dbc1d2eb"
+    },
+    {
+      "path": "assets/public-customer-entry-BZ6FcE_X.js",
+      "bytes": 3236,
+      "sha256": "f6d75b051ff0fd5928be67a587136c7983f54177a35629e0e9311c417d00e70d"
+    },
+    {
+      "path": "assets/public-faq-CwpXASmJ.js",
+      "bytes": 17477,
+      "sha256": "39b36705741ad2f0baf8df9292b4712a4b74c52a0bca464d60627d42e71aa501"
+    },
+    {
+      "path": "assets/public-legal-CJOO3XUb.js",
+      "bytes": 14406,
+      "sha256": "866e8f5c4c9927c3e17aa756a840e61ebc0f66e6f0d9f818f163128108166f2d"
+    },
+    {
+      "path": "assets/public-not-found-B0biY8NS.js",
+      "bytes": 1766,
+      "sha256": "170edfda91cdb19ff0b3f3395c96621a5343b8fb7bbda39e0769c4b64accd717"
+    },
+    {
+      "path": "assets/public-page-meta-BreWcM8P.js",
+      "bytes": 3243,
+      "sha256": "435efb17f20de5192a1b93b0845a46e63f09db79095cade535997c6867a4b2f5"
+    },
+    {
+      "path": "assets/public-waitlist-CSv9HYqg.js",
+      "bytes": 638,
+      "sha256": "8abceeea482cc84540fc813f99537553355b5e919499b77cd7716beea9a1fd02"
+    },
+    {
+      "path": "assets/shield-check-waR9WlQq.js",
+      "bytes": 327,
+      "sha256": "dfca03a9f41deda2aaf1b8862d91b82ed0361bb405438b610b760dcc5bd3e08d"
+    },
+    {
+      "path": "assets/tibeb-pattern-gold-640-Ds_BJwrR.avif",
+      "bytes": 41476,
+      "sha256": "c53681a3de43b06585124b3cb5694b4c9c316354ab224e52509af5ac8ffabb10"
+    },
+    {
+      "path": "assets/tibeb-pattern-gold-640-HZ30Psly.webp",
+      "bytes": 58946,
+      "sha256": "38fb94c480d88ef6c85981e0d16b76526ca36817c3741ea45b15383cab28a49f"
+    },
+    {
+      "path": "assets/trending-up-DDYXZ9dt.js",
+      "bytes": 419,
+      "sha256": "ee0643df3b7abe879da77a436e8538317637f16c3b5f04398da60f468fea3c83"
+    },
+    {
+      "path": "assets/values-BaWoZmsM.js",
+      "bytes": 10761,
+      "sha256": "b581531a1a46af84f09c2034c8f6337ff6dcb436edb669b9df59ce032fe46d05"
+    },
+    {
+      "path": "assets/values-portrait-elder-v2-1000-BiAFisz9.avif",
+      "bytes": 57479,
+      "sha256": "58b73547819b3501ee95d1a744bd292b8eba45096be60ab191f67d29f3bd718d"
+    },
+    {
+      "path": "assets/values-portrait-elder-v2-1000-DhixQmtf.webp",
+      "bytes": 61982,
+      "sha256": "7c4919c64ac129db60ef294febbc3679379241ead3a74fe991864438fdac0fa9"
+    },
+    {
+      "path": "assets/values-portrait-man-v2-1000-Cyi5UxxZ.webp",
+      "bytes": 56356,
+      "sha256": "d84bcd65e7451aceef988a90201e6e83d7f2c191766e32ae0c57b89c704ac4aa"
+    },
+    {
+      "path": "assets/values-portrait-man-v2-1000-D6fcjY4q.avif",
+      "bytes": 49975,
+      "sha256": "b7737aff8eba8d81bd6069a629b953c955111c9a7daa325487e1e0b16c3b2398"
+    },
+    {
+      "path": "assets/values-portrait-woman-v2-1000-4O7swTdd.webp",
+      "bytes": 43372,
+      "sha256": "c2671b41e089197874ef1e1924348cf371e9b8d242d124c77c9ad8c60bda5d15"
+    },
+    {
+      "path": "assets/values-portrait-woman-v2-1000-C6L6WoKS.avif",
+      "bytes": 36719,
+      "sha256": "168923342b101e26ba9d2bcdf51a5075f51865a7eb5d912c10bdaa939af5d927"
+    },
+    {
+      "path": "assets/woman-with-phone-diaspora-1024-CUlG6NiO.webp",
+      "bytes": 75388,
+      "sha256": "8f698066e4d15b4bbb30efb751fcd1a63ea187652f910a135723fcc7580f5232"
+    },
+    {
+      "path": "assets/woman-with-phone-diaspora-1024-Del-CMDn.avif",
+      "bytes": 63868,
+      "sha256": "a00464946fefe1a7ce251017b2ebf74c87c4ee2824bb874422f63c59336be091"
+    },
+    {
+      "path": "assets/woman-with-phone-diaspora-640-BPaYwRBO.avif",
+      "bytes": 34345,
+      "sha256": "4b42d4dc845928f7b943c9f92998360d5ccc120ab1ca33683de46cbb5b9819cb"
+    },
+    {
+      "path": "assets/woman-with-phone-diaspora-640-BxJAfP8z.webp",
+      "bytes": 36920,
+      "sha256": "224cd799d955e6e683dd2e17d34060a44c390732959ddbd20e46780897f7b286"
+    },
+    {
+      "path": "assets/woman-with-phone-diaspora-960-DyR64M3j.webp",
+      "bytes": 66148,
+      "sha256": "21a4ce573c996ae64f0f87438139bdf53ce27ef569468a8f960d1ec5124eba54"
+    },
+    {
+      "path": "assets/woman-with-phone-diaspora-960-WcoAoN5j.avif",
+      "bytes": 57488,
+      "sha256": "af843cced0a153efa0e58e5e4a794a9443298ac0f3d7eaed347809c1a614282e"
+    },
+    {
+      "path": "icons/samra-pay-icon-180-286c6cb253.png",
+      "bytes": 1480,
+      "sha256": "286c6cb253088dc4803dba461a987fe7c9a46a7e1c878810c1babe8637fd48ec"
+    },
+    {
+      "path": "icons/samra-pay-icon-192-4e6866a209.png",
+      "bytes": 1648,
+      "sha256": "4e6866a209d1ab4962ff4925cbb87a7f2ee7f842cd39dc78c2b500a3933de5a2"
+    },
+    {
+      "path": "icons/samra-pay-icon-32-50bac690c5.png",
+      "bytes": 306,
+      "sha256": "50bac690c53d4298117f2067b05a2d6f9ff6d25336015c91f6cf3370f5769afc"
+    },
+    {
+      "path": "icons/samra-pay-icon-512-f9d31a8db7.png",
+      "bytes": 5526,
+      "sha256": "f9d31a8db708b852c4c2acddc39c9d1f2ac00dc647fa95952b3a772b7a15a587"
+    },
+    {
+      "path": "index.html",
+      "bytes": 3239,
+      "sha256": "d5fd5be6b5c044bbef79f7516862c30ae9d1eaaf9530e9847cfa7492cf65a0a6"
+    },
+    {
+      "path": "manifest.webmanifest",
+      "bytes": 543,
+      "sha256": "71a0e2faf0db5415c7bc4b072b478ab3b2972ab83bf814cb21c6b1c8574f8a11"
+    },
+    {
+      "path": "og-preview-72ee9bd978.png",
+      "bytes": 25075,
+      "sha256": "72ee9bd978bd56cb3909d076d6ff598fa27d3274a4f8eab30d5d1c3ea7642957"
+    },
+    {
+      "path": "robots.txt",
+      "bytes": 23,
+      "sha256": "16ceb5ee3e0dc13aa9adf31a3ebbe45a1d965b8c2b9f72eaf84e5911e140ed95"
+    }
+  ],
+  "browserVerification": {
+    "status": "blocked",
+    "reason": "The browser URL policy blocked the local review page. Browser screenshots, layout, LCP, CLS, transfer and cache behavior were not verified in this run."
+  }
+}
