@@ -8,9 +8,9 @@ on:
         required: false
         default: https://api.qase.io
       qase_report:
-        description: Report automated acceptance results to Qase
+        description: Report to Qase only when API entitlement is available
         required: false
-        default: "true"
+        default: "false"
       qase_project_code:
         description: Qase project code
         required: false
@@ -91,6 +91,22 @@ jobs:
 
       - name: Typecheck workspace
         run: pnpm run typecheck
+
+      - name: Run vendor contract reports with local fixtures
+        run: |
+          pnpm --filter @workspace/api-server run test:vendor-auth0-token:junit
+          pnpm --filter @workspace/api-server run test:vendor-crossmint-sandbox:junit
+          pnpm --filter @workspace/api-server run test:vendor-customer-wallet:junit
+          pnpm --filter @workspace/api-server run test:vendor-persona:junit
+
+      - name: Preserve vendor contract evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: vendor-contracts-junit
+          path: artifacts/api-server/test-results/vendor-*.xml
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Run workspace tests
         run: pnpm run test
@@ -359,13 +375,15 @@ jobs:
           retention-days: 14
 
   qase-report:
-    name: Qase automated acceptance report
+    name: Qase delivery status (optional)
     needs:
+      - linux-quality
       - postgres-persistence
       - postgres-http
     if: >-
       always() &&
       inputs.qase_report != 'false' &&
+      (inputs.qase_report == 'true' || vars.QASE_REPORT_ENABLED == 'true') &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -377,6 +395,11 @@ jobs:
       QASE_RUN_SOURCE: "${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}"
 
     steps:
+      - name: Check out reporting status helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
       - name: Link a Qase-triggered workflow run
         if: inputs.qase_run_id != ''
         shell: bash
@@ -409,8 +432,13 @@ jobs:
           merge-multiple: true
 
       - name: Validate Qase JUnit payloads
+        id: qase-payloads
         run: |
           for report in \
+            test-results/vendor-auth0-token.xml \
+            test-results/vendor-crossmint-sandbox.xml \
+            test-results/vendor-customer-wallet.xml \
+            test-results/vendor-persona.xml \
             test-results/postgres-persistence.xml \
             test-results/staging-database-access.xml \
             test-results/ledger-journal-assurance.xml \
@@ -474,6 +502,7 @@ jobs:
           path: test-results
 
       - name: Complete Qase run
+        id: qase-complete
         if: >-
           always() &&
           steps.qase-run.outputs.available == 'true' &&
@@ -485,6 +514,25 @@ jobs:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ env.QASE_TESTOPS_PROJECT }}
           id: ${{ steps.qase-run.outputs.id }}
+
+      - name: Record actual Qase delivery outcome
+        if: always()
+        env:
+          QASE_PAYLOAD_OUTCOME: ${{ steps.qase-payloads.outcome }}
+          QASE_RUN_ID: ${{ steps.qase-run.outputs.id }}
+          QASE_UPLOAD_OUTCOME: ${{ steps.qase-upload-acceptance.outcome }}
+          QASE_COMPLETE_OUTCOME: ${{ steps.qase-complete.outcome }}
+          QASE_COMPLETION_REQUIRED: ${{ inputs.qase_run_id == '' || inputs.qase_run_complete != 'false' }}
+        run: node scripts/qase-delivery-status.mjs
+
+      - name: Preserve Qase delivery receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qase-delivery-receipt
+          path: qase-delivery.json
+          if-no-files-found: error
+          retention-days: 30
 
   required-ci:
     name: Required CI
