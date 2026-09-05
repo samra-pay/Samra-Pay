@@ -7,9 +7,11 @@ GitHub Actions usage is subject to the repository's existing minutes allowance.
 
 ## Activation
 
-1. Create an internal Notion integration in the Samrapay workspace with Read
-   content and Update content only. Share only Tasks with it. Do not grant
-   insert-content, comments, or user-information capabilities.
+1. For ticket sync alone, create an internal Notion integration in the Samrapay
+   workspace with Read content and Update content only, and share only Tasks.
+   The optional [progress reporting extension](notion-reporting.md) needs Insert
+   content and its explicitly listed source databases. Neither mode needs
+   comments or user-information capabilities.
 2. Store the integration token as the repository Actions secret `NOTION_TOKEN`.
    Enter it directly in GitHub settings; never paste it into a ticket or chat.
 3. Merge the reviewed integration PR. Add repository variable
@@ -26,6 +28,11 @@ The Tasks data source must contain `GitHub sync` (text), `GitHub PR` (URL),
 Create a ticket before building. Paste the PR URL in GitHub PR and check Development.
 Ticket IDs in PR descriptions are useful references but are not auto-discovered
 by this version. No ticket is created automatically.
+
+The separately enabled reporting extension discovers PRs and records source
+creation/completion events. It reuses this workflow's existing 15-minute schedule.
+It does not create a second engineering task board. Set `reporting=true` on a
+manual run to verify the extension while its schedule flag remains disabled.
 
 - Draft PR: Building. Open PR: Review.
 - Merged PR: Ready to release only with a successful Linux quality gate and no

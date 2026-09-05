@@ -71,6 +71,9 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Test Notion sync and reporting without credentials
+        run: node --test scripts/notion/*.test.mjs
+
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 

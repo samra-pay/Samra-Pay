@@ -5,7 +5,11 @@ on:
   workflow_dispatch:
     inputs:
       apply:
-        description: Update linked Notion tickets (false performs read-only verification)
+        description: Apply enabled Notion updates (false performs read-only verification)
+        type: boolean
+        default: false
+      reporting:
+        description: Include the reporting extension for this manual verification or activation run
         type: boolean
         default: false
 permissions:
@@ -20,17 +24,28 @@ jobs:
   sync:
     if: github.ref == 'refs/heads/main' && vars.NOTION_SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: main
           persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
       - name: Test sync logic without credentials
-        run: node --test scripts/notion/sync.test.mjs
+        run: node --test scripts/notion/*.test.mjs
       - name: Sync linked tickets
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_SYNC_APPLY: ${{ github.event_name == 'schedule' || inputs.apply }}
         run: node scripts/notion/sync.mjs
+      - name: Capture activity and refresh reporting periods
+        if: vars.NOTION_REPORTING_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.reporting)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_SYNC_APPLY: ${{ github.event_name == 'schedule' || inputs.apply }}
+        run: node scripts/notion/reporting.mjs
