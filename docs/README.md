@@ -1,84 +1,81 @@
 # Samra Pay product and engineering documentation
 
-This is the canonical entry point for the current Samra Pay product. It separates
-what is implemented, tested, deployed, and still blocked so historical plans do
-not become present-tense claims.
+This is the canonical capability-status and evidence index. Read
+[AGENTS.md](../AGENTS.md), [local setup](../CONTRIBUTING.md), and
+[engineering authority and decisions](engineering-governance.md) before implementation.
+
+Status review: **2026-09-05**, owner **David Haile**, source baseline
+`5bf1659413a8a3918a3fa3b58829d98c1bd47470`. This review inspected repository
+code and live GitHub metadata/checks. Cloud and provider observations below
+are dated records from the linked runbooks, **not a fresh cloud/vendor audit**.
+Evidence applies only to its recorded scope and SHA; later commits need their
+own checks and release evidence.
 
 ## Alpha north star
 
 Samra Pay's Alpha is a synthetic-first remittance product with a Samra-owned
 customer record, double-entry control ledger, audit history, reconciliation,
-and PostgreSQL database.
-
-| Capability              | Locked Alpha decision                  | Current state                                                                                                                       |
-| ----------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Customer authentication | Auth0                                  | Backend and customer-web integration implemented; live tenant, public app identifiers, and native mobile client not connected       |
-| Identity verification   | Persona                                | Fake and credential-gated sandbox adapters plus signed webhook boundary implemented; sandbox inventory and deployment not connected |
-| Wallet                  | Crossmint-created USDC wallet          | Durable synthetic wallet, consent, mapping, state, and fake-adapter foundation implemented; live wallet creation not connected      |
-| Wallet alternatives     | Cybrid, Rain, or Bridge after Alpha    | Evaluation only; no active integration or migration claim                                                                           |
-| Bank funding            | Unresolved                             | Do not imply Crossmint supports Plaid or bank-funded transactions                                                                   |
-| Ethiopia payout         | Unresolved                             | Synthetic payout only; no live corridor or remitter-of-record claim                                                                 |
-| Financial truth         | Samra control ledger and PostgreSQL    | Durable fake-money implementation and assurance gates exist                                                                         |
-| Cloud                   | Google Cloud                           | Staging foundation and private Cloud SQL exist; Cloud Run deployment is pending                                                     |
-| Mobile distribution     | Firebase in the Google Cloud project   | Project linked; mobile app registration and distribution are pending                                                                |
-| Quality evidence        | GitHub Actions and Qase                | GitHub is merge authority; Qase stores governed automated and manual evidence                                                       |
-| Replit                  | Temporary preview and rollback surface | Not a source of financial, design, database, or deployment truth                                                                    |
+and PostgreSQL database. The accepted repository stack remains Auth0, Persona,
+Crossmint, Google Cloud, GitHub Actions, and Qase. Funding and Ethiopia payout
+providers remain unresolved. Cybrid, Rain, and Bridge are post-Alpha alternatives.
 
 Crossmint, Auth0, and Persona provide bounded capabilities. They do not own the
 Samra customer, authorization decision, balance, transaction state, ledger,
 audit trail, reconciliation result, or provider-migration mapping.
 
-## Current delivery state
+## Capability register
 
-### Implemented and tested in the repository
+“Implemented” means source exists; “tested” needs a result for an exact SHA;
+“deployed” needs a target/revision read-back; “production-approved” needs an
+explicit approval for that scope. None of these states implies another.
 
-- PostgreSQL repositories, migrations, readiness, graceful shutdown, and
-  restart recovery;
-- double-entry journals, holds, reversals, balance projections, reconciliation,
-  audit events, idempotency, and concurrency controls;
-- synthetic remittance state and deterministic failure scenarios;
-- Auth0 token, durable identity-binding, guarded customer-web Universal Login,
-  and memory-only bearer-token bridge, disabled by default;
-- private Cloud Run customer-web-to-API authentication that preserves Auth0
-  authorization and requires a separate Google service identity;
-- durable onboarding, consent, and Persona-style identity-case boundaries;
-- durable synthetic Crossmint-style wallet provisioning, immutable provider
-  mapping, consent, restart, concurrency, failure, and audit boundaries;
-- customer web, Expo mobile, Operations Portal, and governed design system;
-- DS2 public coming-soon web, English/Amharic routes, explicit-consent
-  waitlist API and PostgreSQL records, public-bundle isolation, and a
-  review-only Google Cloud launch contract;
-- fast, daily, weekly, performance, container, and release-candidate gates;
-- Qase traceability and manual evidence contracts.
+| Capability | Implemented source | Deployment / external evidence | Remaining gate |
+| --- | --- | --- | --- |
+| Customer identity | Auth0 backend, web login/signup and native adapter; disabled by default | Tenant/native setup and deployed customer handoff not verified by this review | Exact tenant/client/audience, API, callback and tester inventory; [web activation](operations/web-auth0-entry-activation.md), [native activation](operations/mobile-auth0-native-activation.md) |
+| KYC | Persona fake/sandbox adapter, signed webhook and durable case | No deployed KYC decision path established by the cited evidence | Approved data/support policy and [sandbox activation](operations/persona-sandbox-activation.md) |
+| Wallet | Synthetic wallet plus guarded creation-only customer sandbox adapter and migration 0017 | Sept 4 record proves console wallet and authenticated GET, not deployed Samra provisioning | Private API/database, consent, identity, scoped key and signer/recovery evidence; [connection record](operations/crossmint-sandbox-connection.md), [deployment package](operations/staging-wallet-deployment-package.md) |
+| Financial core | Durable PostgreSQL ledger, holds, remittance, audit, idempotency and reconciliation | Synthetic tests; no real-money runtime evidenced | Funding/payout decisions, operational/security and legal approvals |
+| Cloud foundation | Guarded infrastructure and delivery contracts | Separate staging and production foundations recorded as applied; staging inspection in the Sept 4 wallet record found no Cloud Run API | Fresh resource, DB/TLS/roles, secret metadata, image and migration inventory before execution |
+| Public site | Isolated English/Amharic marketing build | Aug 31 static release recorded as deployed/verified at `32c550321802c4747fa53871fb7b51c7977e9959` | Current public bytes/domain/configuration need fresh release verification; [cloud release record](../deploy/gcp/README.md) |
+| Public waitlist | Controlled Resend Contacts service/Firebase rewrite and disabled-by-default UI; older PostgreSQL waitlist model also remains in source | This review establishes implementation, not collection or inbox delivery | Separate exact-release authorization, privacy and provider/configuration evidence; [launch contract](../deploy/gcp/coming-soon-static-hosting.json) |
+| Mobile distribution | Expo application and native auth boundary | Historical Firebase project linkage; app registration/distribution not verified here | Device/build evidence and native activation |
+| Quality | CI/security, PostgreSQL, resilience, performance, container and immutable release gates | Required CI/security and portability passed for the baseline SHA; see evidence below | Candidate-specific results, governed manual Qase evidence and separate release approval |
+| Merge protection | Required-check contracts and CODEOWNERS | GitHub `main.protected=false`; rulesets API HTTP 403 on Sept 5 | Plan/organization decision and enforced ruleset read-back |
+| Operations | Portal, workforce controls, cases, incident runbooks and synthetic recovery rehearsal | Staffed coverage, live monitoring, cloud restore and service targets not established | [Operational readiness](operations/operational-readiness.md) |
+| Replit | Temporary preview/rollback support | Not code, design, financial, database or production truth | Retire only after governed replacement evidence |
 
-### Verified Google Cloud staging resources
+## Evidence and next verification
 
-- synthetic-only project boundary and least-privilege service accounts;
-- immutable Artifact Registry repository;
-- private VPC, subnet, Private Services Access, and PostgreSQL 16 Cloud SQL;
-- empty `samra_staging` database with backups, point-in-time recovery, and
-  deletion protection;
-- Secret Manager metadata with no database credential version;
-- Firebase project linkage without Firebase Auth, Firestore, Hosting, or a
-  registered mobile app.
-
-### Not yet connected or deployed
-
-- Auth0 tenant applications and live access tokens;
-- Persona account inventory, inquiry template, credentials, deployed signed
-  webhook, PII policy, and sandbox decisions;
-- Crossmint credentials, wallet creation, webhooks, or USDC movement;
-- bank funding and Ethiopia payout rails;
-- database user and connection secret, migrations against Cloud SQL, Cloud Run
-  services, Cloud Run migration job, load balancer, or public application;
-- production project, production waitlist database, public domain, managed TLS,
-  Cloud Armor, DNS cutover, or public waitlist collection;
-- real customer data, production security, production compliance approval, or
-  production provider traffic.
+- **GitHub, checked 2026-09-05:** local and remote `main` matched the baseline.
+  [Required CI](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970338777),
+  [Required security](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970338768),
+  and [container portability](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970338813)
+  passed. Those results do not certify later changes or an immutable release
+  candidate. See [merge enforcement status](operations/repository-merge-controls.md).
+- **Recorded production foundation:** the
+  [cloud runbook](../deploy/gcp/README.md) records production project/billing,
+  keyless identities, registry, private network and PostgreSQL data foundation.
+  Its data post-audit is tied to `7977afc1a550521fefe1ae6df9acb787f75b1ed4`.
+  Secret-version absence and an empty database are historical observations;
+  re-read metadata/schema before relying on them. An applied foundation does
+  not establish customer traffic or financial services.
+- **Recorded staging/provider inspection:** the Sept 4
+  [Crossmint record](operations/crossmint-sandbox-connection.md) distinguishes
+  console wallet/GET, undeployed API, private PostgreSQL, and unresolved TLS.
+  The Sept 5 [migration foundation follow-through](operations/staging-migration-foundation.md)
+  records an access blocker. Neither record authorizes another provider call.
+- **Next backend milestone:** one authenticated, consenting test customer's
+  durable wallet creation and replay/restart evidence. Follow the
+  [private deployment package](operations/staging-wallet-deployment-package.md)
+  and [governed migrations](operations/staging-migrations.md); source availability
+  does not satisfy their cloud, identity, cost or activation gates.
 
 ## Governing documentation
 
 ### Product and platform
+
+- [Engineering authority, decision register, and open gates](engineering-governance.md)
+- [Local development and contribution](../CONTRIBUTING.md)
 
 - [Alpha platform and vendor boundary](architecture/alpha-platform.md)
 - [Architecture foundation](architecture/README.md)
@@ -92,6 +89,8 @@ audit trail, reconciliation result, or provider-migration mapping.
 - [Cloud Run service authentication](architecture/cloud-run-service-authentication.md)
 - [Persona identity case](architecture/customer-identity-persona.md)
 - [Crossmint USDC wallet boundary](architecture/customer-wallet-crossmint.md)
+- [Dated Crossmint sandbox evidence](operations/crossmint-sandbox-connection.md)
+- [Private wallet deployment package](operations/staging-wallet-deployment-package.md)
 
 ### Financial control
 
@@ -110,6 +109,8 @@ audit trail, reconciliation result, or provider-migration mapping.
 - [Persona sandbox activation](operations/persona-sandbox-activation.md)
 - [Staging vendor runtime readiness](operations/staging-vendor-runtime-readiness.md)
 - [Mobile Auth0 native activation](operations/mobile-auth0-native-activation.md)
+- [Web account entry activation](operations/web-auth0-entry-activation.md)
+- [Governed staging migrations](operations/staging-migrations.md)
 
 ### Cloud and delivery
 
@@ -140,12 +141,15 @@ ledger, identity, wallet, operations access, Google Cloud, testing strategy,
 and release evidence.
 
 Detailed PR history and old screenshots are evidence, not governing product
-documentation. When a detailed document conflicts with this page, stop and
-correct the contradiction before building or representing the capability.
+documentation. When a detailed document or observed state conflicts with this page, identify
+the dated evidence and correct the contradiction. Pause only the work that
+depends on an unresolved decision; continue unaffected authorized work.
 
 ## Documentation control
 
-- This page owns present-tense product and platform status.
+- This page owns the capability register and evidence pointers. Update its review
+  date and source baseline when refreshing status; do not silently turn a
+  historical observation into a current claim.
 - Architecture documents own boundaries and invariants; runbooks own execution
   steps; test documents own evidence contracts.
 - A capability is always labeled as proposed, implemented, tested, deployed, or

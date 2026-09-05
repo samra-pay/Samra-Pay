@@ -1,5 +1,13 @@
 # Ownership assignment does not prove independent review. GitHub ruleset
 # enforcement and a qualified non-author reviewer remain separate controls.
+/AGENTS.md @haileleuld87
+/CONTRIBUTING.md @haileleuld87
+/README.md @haileleuld87
+/.env.example @haileleuld87
+/docs/README.md @haileleuld87
+/docs/engineering-governance.md @haileleuld87
+/docs/architecture/ @haileleuld87
+/docs/operations/ @haileleuld87
 /.github/workflows/ @haileleuld87
 /.github/CODEOWNERS @haileleuld87
 /.github/dependabot.yml @haileleuld87

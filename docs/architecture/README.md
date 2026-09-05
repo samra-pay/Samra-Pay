@@ -44,9 +44,14 @@ outbox recovery, audit evidence, and restart-safe retry state.
 
 The Auth0, Persona, and Crossmint decisions do not mean live connections exist.
 Auth0 web/mobile and Persona sandbox foundations are disabled by default. The
-dormant Crossmint sandbox adapter cannot be selected by a runtime. No real
-customer, live wallet, funding rail, Ethiopia payout rail, or production
-deployment is represented.
+older server/external-signer Crossmint adapter remains dormant. A separate
+customer-controlled, creation-only adapter is selectable through the guarded
+`SAMRA_CUSTOMER_WALLET_PROVIDER_MODE=crossmint-sandbox-customer` staging lane.
+It requires Auth0, PostgreSQL, one allowlisted customer, explicit consent,
+and disabled workers/operations. See the
+[wallet boundary](customer-wallet-crossmint.md). Code support and the recorded
+console/provider lookup do not prove a deployed Samra wallet connection.
+Funding, Ethiopia payout, and production financial capability remain blocked.
 
 ## Financial invariants
 
@@ -66,6 +71,7 @@ deployment is represented.
 | --------------------------------------- | -------------------------------------- | ---------- | ------------------------------------------------------------------------ |
 | `SAMRA_BACKEND_MODE`                    | `disabled`, `demo`                     | `disabled` | Enables synthetic application routes                                     |
 | `SAMRA_PROVIDER_MODE`                   | `fake`                                 | `fake`     | Uses deterministic provider adapters                                     |
+| `SAMRA_CUSTOMER_WALLET_PROVIDER_MODE` | `fake`, `crossmint-sandbox-customer` | `fake` | Separate guarded customer wallet adapter; generic provider mode alone does not disable it |
 | `SAMRA_PERSISTENCE_MODE`                | `memory`, `postgres`                   | `memory`   | Selects persistence                                                      |
 | `SAMRA_RUN_WORKER`                      | `false`, `true`                        | `false`    | Runs synthetic workflow and outbox work                                  |
 | `SAMRA_INTERNAL_OPERATIONS_ENABLED`     | `false`, `true`                        | `false`    | Enables controlled operations APIs                                       |
