@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-05T20:44:19.727647+00:00",
+  "status": "existing-trust-repaired-staging-activation-blocked",
+  "sourceSha": "eddc1558392eecf0946e2c6e2c74866c947c833b",
+  "repository": "samra-pay/Samra-Pay",
+  "repositoryId": "1335175962",
+  "ownerId": "320532147",
+  "authorization": "User approved the two grant removals, then authorized continuation of the engineering work on 2026-09-05. Source upload remains a separate pending approval.",
+  "projectGrantRemovals": [
+    {
+      "project": "samra-pay-staging",
+      "role": "roles/iam.serviceAccountTokenCreator",
+      "principal": "serviceAccount:firebase-adminsdk-fbsvc@samra-pay-staging.iam.gserviceaccount.com",
+      "beforeEtag": "BwZaSaX3WFk=",
+      "afterEtag": "BwZawkdmu_A=",
+      "onlyApprovedGrantRemoved": true,
+      "completedAt": "2026-09-05T20:32:09.809519+00:00"
+    },
+    {
+      "project": "samra-pay-production",
+      "role": "roles/iam.serviceAccountTokenCreator",
+      "principal": "serviceAccount:firebase-adminsdk-fbsvc@samra-pay-production.iam.gserviceaccount.com",
+      "beforeEtag": "BwZaX2TcZnE=",
+      "afterEtag": "BwZawkerOqc=",
+      "onlyApprovedGrantRemoved": true,
+      "completedAt": "2026-09-05T20:32:14.317157+00:00"
+    }
+  ],
+  "existingProviderRepairs": [
+    {
+      "boundary": "production-preflight",
+      "project": "samra-pay-production",
+      "provider": "samra-foundation-preflight",
+      "status": "condition-only-change-independently-verified",
+      "beforeSnapshotSha256": "a355c6870b9fc4005d0c143b1e7796d80352e3b9596f6f26a27be67da3bc4ff5",
+      "formerConditionSha256": "987e32f410fae3e44ca1992a03757048fc36cee6b8690c01bae0233be34d6508",
+      "targetConditionSha256": "3c44dab80cc64a83293738f5638d79852c451ec74340f9cd58f0a6a1fbbf3336",
+      "afterSnapshotSha256": "82844522d850939332fb7484bd807576764dccc14ab84daf7ee1ce0dadeffb0d",
+      "completedAt": "2026-09-05T20:34:32.383549+00:00"
+    },
+    {
+      "boundary": "staging-publication",
+      "project": "samra-pay-staging",
+      "provider": "samra-pay-main",
+      "status": "condition-only-change-independently-verified",
+      "beforeSnapshotSha256": "fbb558d0fc3d5c74f5bb46302b81e06994287d7aaf2e1f3176070d25ec85c00c",
+      "formerConditionSha256": "2df385dd5027a46f9eec96ac6f9293ba02729d4c7336167b5549acd509a434eb",
+      "targetConditionSha256": "43d7976322ea65c3e9977d3755b2e4026b2ac780a0d6d1494c060bc078c420ba",
+      "afterSnapshotSha256": "5e85766d0b9ea7fb009733075ecc5b88a6087463365d0b2e11ded224087e0d33",
+      "completedAt": "2026-09-05T20:34:48.929566+00:00"
+    }
+  ],
+  "publisherRoleRepair": {
+    "project": "samra-pay-staging",
+    "role": "samraStagingImagePublisher",
+    "addedPermissions": [
+      "artifactregistry.files.download",
+      "artifactregistry.repositories.downloadArtifacts"
+    ],
+    "permissionCount": 19,
+    "beforeRoleSha256": "3afb7c023e91363dda5a690dda853609cf4629f959f3883e5b50fe9dd1ba05da",
+    "afterRoleSha256": "8b0d45052e61b0dc355f8a5b80c9ceb2a9286493a285e6ef0099f19d29f90746",
+    "projectBindingsUnchanged": true,
+    "completedAt": "2026-09-05T20:36:39.509651+00:00"
+  },
+  "evidenceRetention": {
+    "beforeDays": 90,
+    "days": 365,
+    "maximumAllowedDays": 365,
+    "enterpriseSettingSaved": true,
+    "organizationAndRepositoryInherited": true,
+    "doesNotExtendPriorArtifacts": true
+  },
+  "keylessPreflight": {
+    "workflowRunUrl": "https://github.com/samra-pay/Samra-Pay/actions/runs/33990597344",
+    "runId": "33990597344",
+    "runAttempt": 1,
+    "conclusion": "success",
+    "sourceSha": "eddc1558392eecf0946e2c6e2c74866c947c833b",
+    "artifactId": 9976506123,
+    "artifactDigest": "sha256:c857a4fdd58d1501ed06b78bc5a1122d15d65a48a41fa09084d0d34d2c6447e8",
+    "artifactExpiresAt": "2027-09-05T20:36:06Z",
+    "downloadedDigestAndSourceVerified": true,
+    "mode": "read-only"
+  },
+  "cloudRepairArchiveSha256": "976d2bafcb414f463d6bc010940f1f4705f5a6a2297be5a26aa0895fd5bebf79",
+  "limitations": [
+    "Cloud repair metadata was collected by the authorized operator; it is not the repository same-process capture or a signed cloud attestation.",
+    "Organization deny-policy list was denied and remains unverified; no broader credentials were used.",
+    "Six planned staging controllers remain absent from the successful inventory.",
+    "No staging runtime, provider acceptance, cloud recovery drill, staffed incident coverage, or production readiness is established."
+  ],
+  "releaseResumptionPerformed": false,
+  "deploymentPerformed": false,
+  "providerActivationPerformed": false,
+  "productionReady": false,
+  "runtimePrerequisiteInventory": {
+    "mode": "metadata-only",
+    "evidenceSha256": "797e4a289c7ea0fb8e4edf5168fa122622e25e4aa8c0d413b58dce01473a5647",
+    "staging": {
+      "cloudSqlInstance": "samra-staging-postgres",
+      "state": "RUNNABLE",
+      "publicIpv4Enabled": false,
+      "sslMode": "ALLOW_UNENCRYPTED_AND_ENCRYPTED",
+      "backupsEnabled": true,
+      "retainedBackupCount": 7,
+      "pointInTimeRecoveryEnabled": true,
+      "bootstrapDatabaseSecretEnabledVersions": ["1"],
+      "runtimeDatabaseSecretEnabledVersions": [],
+      "monitoringAlertPolicyCount": 0
+    },
+    "production": {
+      "cloudSqlInstance": "samra-production-postgres",
+      "state": "RUNNABLE",
+      "publicIpv4Enabled": false,
+      "sslMode": "ALLOW_UNENCRYPTED_AND_ENCRYPTED",
+      "backupsEnabled": true,
+      "retainedBackupCount": 14,
+      "pointInTimeRecoveryEnabled": true,
+      "runtimeDatabaseSecretEnabledVersions": [],
+      "migrationDatabaseSecretEnabledVersions": [],
+      "monitoringAlertPolicyCount": 0
+    },
+    "limitations": [
+      "Backup configuration does not establish backup freshness or a successful restore drill.",
+      "Cloud SQL allows unencrypted and encrypted connections at the server setting; actual client transport was not tested.",
+      "Secret payloads and database contents were not read.",
+      "No Auth0, Persona or Crossmint secret resources appeared in these two project inventories; provider-console credentials were not inspected."
+    ]
+  }
+}

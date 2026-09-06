@@ -43,11 +43,7 @@
     "recoveryCodesGeneratedAndViewed": true,
     "recoveryCodesExternalStorageVerified": true,
     "verifiedRecoveryEmailConfigured": true,
-    "teams": [
-      "developers",
-      "platform-admins",
-      "staging-approvers"
-    ],
+    "teams": ["developers", "platform-admins", "staging-approvers"],
     "recoveryCodesExternalStorageEvidence": "user-attestation-2026-09-05"
   },
   "governance": {
@@ -112,9 +108,7 @@
     ]
   },
   "operationalReferences": {
-    "scanRoots": [
-      "."
-    ],
+    "scanRoots": ["."],
     "currentAuthorityFiles": [
       ".github/workflows/production-foundation-preflight.yml",
       ".github/workflows/public-site-preview-publish.yml",
@@ -189,9 +183,12 @@
       "docs/notion-reporting.md",
       "docs/notion-ticket-sync.md",
       "docs/operations/enterprise-transfer-2026-09-05.md",
+      "docs/operations/evidence/2026-09-05-cloud-trust-repair.json",
       "docs/operations/evidence/2026-09-05-main-ruleset.json",
       "docs/operations/evidence/2026-09-05-merge-authority.json",
       "docs/operations/evidence/2026-09-05-transfer-checks.json",
+      "docs/operations/evidence/2026-09-06-staging-controller-foundations.json",
+      "docs/operations/github-authority-cutover-review.md",
       "docs/operations/github-enterprise-control-plane-migration.md",
       "docs/operations/repository-merge-controls.md",
       "docs/operations/staging-migrations.md",
@@ -312,11 +309,7 @@
         "recoveryCodesGeneratedAndViewed": true,
         "recoveryCodesExternalStorageVerified": false,
         "verifiedRecoveryEmailConfigured": true,
-        "teams": [
-          "developers",
-          "platform-admins",
-          "staging-approvers"
-        ]
+        "teams": ["developers", "platform-admins", "staging-approvers"]
       },
       "blockingGates": [
         "paid-enterprise-activation",

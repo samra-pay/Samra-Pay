@@ -292,7 +292,7 @@ fi
 if [[ "${PROVIDER_STATE}" == missing ]]; then
   gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_ID}" \
     --project="${PROJECT_ID}" --location="${LOCATION}" --workload-identity-pool="${POOL_ID}" \
-    --display-name="Samra Pay main image verification" \
+    --display-name="Samra Pay main image verifier" \
     --issuer-uri="https://token.actions.githubusercontent.com" \
     --attribute-mapping="${ATTRIBUTE_MAPPING}" --attribute-condition="${ATTRIBUTE_CONDITION}" --quiet
 fi

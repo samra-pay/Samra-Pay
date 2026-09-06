@@ -23,6 +23,12 @@ function fixture(
   capturedAt = new Date(now).toISOString(),
 ) {
   const b = boundaries.find((b) => b.id === id);
+  const principalSuffix =
+    id === "staging-promotion"
+      ? "attribute.environment/staging-traffic-promotion"
+      : id === "staging-rollback"
+        ? "attribute.environment/staging-traffic-rollback"
+        : `attribute.repository_id/${authority.stableId}`;
   return {
     schemaVersion: 1,
     boundaryId: id,
@@ -72,7 +78,7 @@ function fixture(
         {
           role: "roles/iam.workloadIdentityUser",
           members: [
-            `principalSet://iam.googleapis.com/${poolName(b)}/attribute.repository_id/${authority.stableId}`,
+            `principalSet://iam.googleapis.com/${poolName(b)}/${principalSuffix}`,
           ],
         },
       ],
@@ -81,6 +87,29 @@ function fixture(
   };
 }
 const review = (s) => reviewCutoverSnapshot(s, { now });
+
+test("traffic review requires distinct operation principals in the shared pool", () => {
+  for (const [id, otherEnvironment] of [
+    ["staging-promotion", "staging-traffic-rollback"],
+    ["staging-rollback", "staging-traffic-promotion"],
+  ]) {
+    const correct = fixture(id);
+    assert.equal(review(correct).boundaryId, id);
+    const b = boundaries.find((item) => item.id === id);
+    for (const suffix of [
+      `attribute.environment/${otherEnvironment}`,
+      `attribute.repository_id/${authority.stableId}`,
+      "attribute.environment/*",
+    ]) {
+      const changed = structuredClone(correct);
+      changed.serviceAccountPolicy.bindings[0].members = [
+        `principalSet://iam.googleapis.com/${poolName(b)}/${suffix}`,
+      ];
+      assert.throws(() => review(changed), /exact federation binding/);
+    }
+  }
+});
+
 function updated(s) {
   const out = structuredClone(s),
     b = boundaries.find((b) => b.id === s.boundaryId);

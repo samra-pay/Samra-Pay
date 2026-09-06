@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06T00:48:48.272768+00:00",
+  "sourceSha": "eddc1558392eecf0946e2c6e2c74866c947c833b",
+  "repository": "samra-pay/Samra-Pay",
+  "operator": "me@davidhaile.com",
+  "projectId": "samra-pay-staging",
+  "sourceTransfer": {
+    "sourceSha": "eddc1558392eecf0946e2c6e2c74866c947c833b",
+    "historyCommitCount": 1,
+    "clean": true,
+    "archiveSha256": "8f1421af1efdc4f50e757ee7ca01924a30819034e4de5d8acfa99796877953e6",
+    "node": "v24.19.0"
+  },
+  "trafficFoundation": {
+    "sourceSha": "eddc1558392eecf0946e2c6e2c74866c947c833b",
+    "completedAt": "2026-09-06T00:48:48.272768+00:00",
+    "applyExitCode": 0,
+    "independentAuditExitCode": 0,
+    "exactProjectPolicyAdditionsVerified": true,
+    "trafficChanged": false,
+    "workflowActivated": false,
+    "applyStdoutSha256": "2ef788906bf0194ccf1b6ecf261f60a336365a9edef7725963bb309a4fe78ca1",
+    "auditStdoutSha256": "15cb8d89275dcab8fa8aff92642cb200654747be890957a4d9a32f205139d488"
+  },
+  "privateEvidenceArchiveSha256": "cb3f104bffadf541a6bc442b0c18497f981273e4fb355fcebee79cfb45941751",
+  "zeroTrafficAttempt": {
+    "applyExitCode": 1,
+    "reason": "Google rejected pool display name longer than 32 characters",
+    "projectRegistryAndRuntimeIamPoliciesUnchanged": true,
+    "newIdentityResourcesCreated": false
+  },
+  "remainingPrerequisites": {
+    "migrationSecretResourcePresent": false,
+    "runtimeDatabaseSecretVersionCount": 0,
+    "stagingServiceCount": 0,
+    "revisionProbeDeferredUntilApiExists": true,
+    "operationalReadiness": "blocked"
+  },
+  "provenance": "Operator-collected metadata and existing script audits; not a signed cloud attestation or effective-IAM proof",
+  "productionReady": false
+}

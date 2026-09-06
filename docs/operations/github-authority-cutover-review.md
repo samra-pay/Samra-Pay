@@ -1,8 +1,76 @@
 # Google trust cutover review
 
-Status: offline review tooling prepared; live Google inventory, cloud apply and
-release resumption remain outstanding. The source authority and account recovery
-prerequisites are recorded in [the transfer record](enterprise-transfer-2026-09-05.md).
+Status: the two existing providers were repaired and independently read back on
+September 5, 2026. The keyless production preflight passed on
+`eddc1558392eecf0946e2c6e2c74866c947c833b`. On September 6 at 00:48 UTC, staging
+promotion and rollback identities were applied and independently audited. Four
+planned staging controllers remain absent, and release resumption is outstanding.
+See [the dated repair evidence](evidence/2026-09-05-cloud-trust-repair.json) and
+[the transfer record](enterprise-transfer-2026-09-05.md).
+
+The approved changes removed the two Firebase project-level Token Creator grants,
+updated only the existing providers' repository-owner conditions, and restored the
+staging publisher's two missing source-required read permissions. The final role
+has the governed 19 permissions. Project bindings did not change during that role
+repair. Operator-collected before/after metadata is retained privately outside Git;
+it is not the repository's same-process capture or a signed cloud attestation.
+The organization deny-policy inventory remains unverified after an access denial.
+
+The Enterprise retention ceiling and inherited repository setting now allow 365
+days. [The successful keyless preflight](https://github.com/samra-pay/Samra-Pay/actions/runs/33990597344)
+uploaded an artifact expiring September 5, 2027; its downloaded digest and source
+SHA were verified. These results establish the existing preflight path, not the
+missing staging controllers, provider runtime acceptance, or production readiness.
+
+The same day's metadata inventory found a runnable private Cloud SQL instance in
+each project with backups and PITR enabled. It did not prove backup freshness or a
+restore drill. Both instances report `ALLOW_UNENCRYPTED_AND_ENCRYPTED`; actual
+client transport was not tested and must satisfy the governed TLS boundary before
+runtime activation. Staging's bootstrap database secret has enabled version `1`,
+but its runtime database secret has no versions. Production's runtime and migration
+database secrets also have no versions. Neither project has monitoring alert
+policies. No secret payloads or database contents were read.
+
+## September 6 controller preflight
+
+The explicitly approved current-commit package was checksum-verified in Cloud
+Shell and reconstructed as a clean, one-commit checkout at `eddc155`. Successful
+staging list calls showed ten service accounts, one identity pool, two custom
+roles, no Cloud Run services/jobs and no runtime database secret versions.
+
+The zero-traffic apply stopped when Google rejected the 37-character pool display
+name. Independent before/after project, registry and runtime IAM policies were
+identical; subsequent pool, account and role inventories remained at 1/10/2. The
+API-enable request completed for APIs already observed enabled. No controller,
+provider, job, deployment or traffic change was established by this attempt.
+
+This change shortens that pool and its provider names and the image-verifier
+provider name to satisfy Google's [32-character IAM display-name limit](https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.locations.workloadIdentityPools.providers).
+The regression check covers every shell federation creation command and the
+migration pool name. These source fixes require a new exact-SHA live review and
+apply; synthetic checks do not establish the resulting cloud state.
+
+Migration review stopped at the migration-secret IAM read. A subsequent
+successful secret-resource list confirmed that
+`samra-staging-migration-database-url` is absent. No migration foundation was
+applied.
+The revision-probe review returned a missing service-invoker grant even though
+the successful service inventory was empty. Its apply remains deferred until the
+private `samra-api` service exists; an empty IAM response does not prove service
+existence. The source now requires a successful service describe before any
+revision-probe setup mutation, with a regression test for the missing-service
+case.
+
+The existing traffic setup completed on `eddc155` at 00:48:48 UTC. A separate
+audit passed, and the full project-policy comparison verified only the two
+expected custom-role grants for the distinct promotion and rollback identities.
+Traffic and workflow states remained unchanged. This establishes their IAM
+foundation, not a completed promotion or rollback exercise. Comparing these live
+bindings with the cutover auditor exposed its incorrect repository-wide principal
+assumption for the shared traffic pool. The source now derives each operation
+principal from the validated traffic contract, with rejection tests for swapped,
+repository-wide and wildcard grants. See the
+[dated controller evidence](evidence/2026-09-06-staging-controller-foundations.json).
 
 ## Scope and current inventory
 
@@ -57,8 +125,11 @@ For every observed provider in the selected pool, the tool requires the exact
 former or exact target condition from source, the governed issuer and mapping,
 no custom audience or uploaded issuer key, and no unexpected or duplicate provider.
 The selected controller's entire direct IAM policy must contain only one
-unconditional `roles/iam.workloadIdentityUser` binding to its stable repository-ID
-principal. Additional direct grants fail review, including custom roles.
+unconditional `roles/iam.workloadIdentityUser` binding to its governed principal.
+Dedicated pools use the stable repository-ID principal. The shared traffic pool
+requires the distinct promotion or rollback environment principal from its
+validated contract; the other operation's principal and a repository-wide grant
+are rejected. Additional direct grants fail review, including custom roles.
 
 Project-level Service Account Token Creator, Service Account OpenID Connect
 Identity Token Creator, Workload Identity User and Service Account User grants

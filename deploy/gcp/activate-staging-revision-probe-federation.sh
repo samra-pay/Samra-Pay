@@ -90,6 +90,10 @@ command -v gcloud >/dev/null 2>&1 || { echo "gcloud is required" >&2; exit 1; }
 [[ "$(git -C "${ROOT_DIR}" rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "STOP: source commit does not match the reviewed SHA" >&2; exit 1; }
 [[ -z "$(git -C "${ROOT_DIR}" status --porcelain)" ]] || { echo "STOP: source working tree is not clean" >&2; exit 1; }
 
+# An empty IAM response does not establish that the service exists. Require the
+# actual API before creating identities that need its service-scoped grant.
+gcloud run services describe "${SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" >/dev/null
+
 api_state() {
   local api="$1"
   [[ "$(gcloud services list --enabled --project="${PROJECT_ID}" --filter="config.name=${api}" --format='value(config.name)')" == "${api}" ]] && printf ready || printf missing

@@ -24,7 +24,7 @@ REGION="${SAMRA_GCP_REGION}"
 OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 POOL_ID="samra-zero-traffic-staging"
-POOL_DISPLAY_NAME="Samra staging zero-traffic deployment"
+POOL_DISPLAY_NAME="Samra staging zero-traffic"
 PROVIDER_ID="samra-pay-zero-traffic-main"
 LOCATION="global"
 DEPLOYER_ID="samra-github-deployer-staging"
@@ -273,7 +273,7 @@ if [[ "${PROVIDER_STATE}" == missing ]]; then
   gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_ID}" \
     --project="${PROJECT_ID}" --location="${LOCATION}" \
     --workload-identity-pool="${POOL_ID}" \
-    --display-name="Samra Pay main zero-traffic deployment" \
+    --display-name="Samra Pay main zero-traffic" \
     --issuer-uri="https://token.actions.githubusercontent.com" \
     --attribute-mapping="${ATTRIBUTE_MAPPING}" \
     --attribute-condition="${ATTRIBUTE_CONDITION}" --quiet
