@@ -91,6 +91,8 @@ export function cutoverBoundaries() {
     providerId,
     serviceAccount,
     trust,
+    principalAttribute = "attribute.repository_id",
+    principalValue = authority.repository.stableId,
   ) =>
     out.push({
       id,
@@ -100,6 +102,7 @@ export function cutoverBoundaries() {
       poolId,
       providerId,
       serviceAccount,
+      federationPrincipal: `principalSet://iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/${principalAttribute}/${principalValue}`,
       issuerUri: trust.issuerUri,
       attributeMapping: trust.attributeMapping,
       targetCondition: trust.attributeCondition,
@@ -156,18 +159,20 @@ export function cutoverBoundaries() {
       { ...publication.provider, attributeCondition: condition },
     );
   }
-  for (const [id, providerKey, accountKey, environmentKey] of [
+  for (const [id, providerKey, accountKey, environmentKey, principalPrefix] of [
     [
       "staging-promotion",
       "promotionProviderId",
       "promoterServiceAccountId",
       "promotionEnvironmentCondition",
+      "promotion",
     ],
     [
       "staging-rollback",
       "rollbackProviderId",
       "rollbackServiceAccountId",
       "rollbackEnvironmentCondition",
+      "rollback",
     ],
   ]) {
     const g = traffic.googleCloud;
@@ -182,6 +187,8 @@ export function cutoverBoundaries() {
         ...traffic.provider,
         attributeCondition: `${traffic.provider.commonCondition} && ${traffic.provider[environmentKey]}`,
       },
+      traffic.iam[`${principalPrefix}PrincipalAttribute`],
+      traffic.iam[`${principalPrefix}PrincipalValue`],
     );
   }
   const m = MIGRATION;
@@ -329,12 +336,11 @@ export function reviewCutoverSnapshot(s, { now = Date.now() } = {}) {
     "Project IAM is malformed or grants inherited service-account access; independent IAM remediation required",
   );
   const bindings = s.serviceAccountPolicy.bindings;
-  const principal = `principalSet://iam.googleapis.com/${poolName(b)}/attribute.repository_id/${a.stableId}`;
   assert(
     bindings.length === 1 &&
       bindings[0]?.role === "roles/iam.workloadIdentityUser" &&
       !bindings[0].condition &&
-      canonical(bindings[0].members) === canonical([principal]),
+      canonical(bindings[0].members) === canonical([b.federationPrincipal]),
     "Controller IAM must contain only the exact federation binding",
   );
   const changeNeeded = p.attributeCondition !== b.targetCondition;

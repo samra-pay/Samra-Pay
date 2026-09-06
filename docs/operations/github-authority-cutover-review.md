@@ -65,7 +65,11 @@ The existing traffic setup completed on `eddc155` at 00:48:48 UTC. A separate
 audit passed, and the full project-policy comparison verified only the two
 expected custom-role grants for the distinct promotion and rollback identities.
 Traffic and workflow states remained unchanged. This establishes their IAM
-foundation, not a completed promotion or rollback exercise. See the
+foundation, not a completed promotion or rollback exercise. Comparing these live
+bindings with the cutover auditor exposed its incorrect repository-wide principal
+assumption for the shared traffic pool. The source now derives each operation
+principal from the validated traffic contract, with rejection tests for swapped,
+repository-wide and wildcard grants. See the
 [dated controller evidence](evidence/2026-09-06-staging-controller-foundations.json).
 
 ## Scope and current inventory
@@ -121,8 +125,11 @@ For every observed provider in the selected pool, the tool requires the exact
 former or exact target condition from source, the governed issuer and mapping,
 no custom audience or uploaded issuer key, and no unexpected or duplicate provider.
 The selected controller's entire direct IAM policy must contain only one
-unconditional `roles/iam.workloadIdentityUser` binding to its stable repository-ID
-principal. Additional direct grants fail review, including custom roles.
+unconditional `roles/iam.workloadIdentityUser` binding to its governed principal.
+Dedicated pools use the stable repository-ID principal. The shared traffic pool
+requires the distinct promotion or rollback environment principal from its
+validated contract; the other operation's principal and a repository-wide grant
+are rejected. Additional direct grants fail review, including custom roles.
 
 Project-level Service Account Token Creator, Service Account OpenID Connect
 Identity Token Creator, Workload Identity User and Service Account User grants
