@@ -9,13 +9,13 @@ recoverability of any cloud database.
 
 ## Current state
 
-| Control             | Present in this repository                                                                                                                                    | Not proved or activated                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Telemetry           | Structured process and request logs exist; an OTLP `http/protobuf` target contract defines safe fields and dimensions                                         | No collector, backend, end-to-end trace export, dashboard, retention policy, alert, or notification route               |
-| Incident response   | Severity model, unassigned roles, incident record, postmortem template, and six scenario runbooks                                                             | No roster, on-call rotation, paging, response target, communication channel, or completed exercise                      |
-| Service levels      | Four indicators are named so later targets have an explicit denominator and data owner                                                                        | No production measurements, targets, windows, error budgets, or alert thresholds                                        |
-| Recovery            | A weekly workflow is configured to dump and restore a synthetic disposable PostgreSQL database and compare tables, sequences, triggers, and ledger invariants | No backup-freshness proof, point-in-time recovery proof, cloud restore-to-clone exercise, approved RPO, or approved RTO |
-| Provider resilience | Unknown, degraded, unavailable, and misconfigured states fail closed in the operating contract                                                                | No live health signal, automatic retry policy, provider sandbox exercise, or provider activation                        |
+| Control             | Present in this repository                                                                                                                                                   | Not proved or activated                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Telemetry           | Structured process/request logs omit raw paths and error payloads; an OTLP `http/protobuf` target contract defines safe fields and dimensions                                | No collector, backend, end-to-end trace export, dashboard, retention policy, alert, or notification route          |
+| Incident response   | Severity model, unassigned roles, incident record, postmortem template, and six scenario runbooks                                                                            | No roster, on-call rotation, paging, response target, communication channel, or completed exercise                 |
+| Service levels      | Four indicators are named so later targets have an explicit denominator and data owner                                                                                       | No production measurements, targets, windows, error budgets, or alert thresholds                                   |
+| Recovery            | Synthetic PostgreSQL restore rehearsal; cloud backup freshness observed on September 6 in the [controller evidence](evidence/2026-09-06-staging-controller-foundations.json) | No freshness monitor, point-in-time recovery proof, cloud restore-to-clone exercise, approved RPO, or approved RTO |
+| Provider resilience | Unknown, degraded, unavailable, and misconfigured states fail closed in the operating contract                                                                               | No live health signal, automatic retry policy, provider sandbox exercise, or provider activation                   |
 
 “Configured” is not “executed.” The weekly recovery result exists only when a
 GitHub Actions run produces both the JUnit and JSON artifacts for the exact
@@ -28,6 +28,22 @@ transport contract is OpenTelemetry Protocol over HTTP/protobuf. It keeps the
 application independent of an observability vendor. The backend is `null`,
 export is `disabled-not-authorized`, and no browser telemetry package is
 allowed by this slice.
+
+The API's [HTTP logger](../../artifacts/api-server/src/lib/http-logger.ts)
+records a generated UUID request ID, HTTP method, response status and elapsed
+time. It omits the entire URL/path, query, headers, cookies, network addresses
+and bodies. A path can contain customer identifiers even when its query is
+removed. Client-supplied request/trace headers do not become the log ID; problem
+responses retain the same generated ID as their request log.
+
+[Error serialization](../../artifacts/api-server/src/lib/log-serializers.ts)
+retains only a fixed error type and an allowlisted system error code, falling
+back to `UNCLASSIFIED`. Messages, stacks, causes and arbitrary provider fields
+are excluded. [Synthetic integration tests](../../artifacts/api-server/src/logging.test.ts)
+exercise success, malformed JSON, unknown paths, unavailable routes and error
+payloads. These controls cover the application's request and `err` serializers;
+they do not prove redaction of platform access logs or arbitrary future log
+fields. No trace export or route-level metric follows from this change.
 
 Until a separate implementation and activation are approved:
 
