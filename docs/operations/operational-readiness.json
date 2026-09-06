@@ -7,7 +7,12 @@
     {
       "id": "telemetry",
       "state": "specified-not-connected",
-      "evidencePaths": ["docs/operations/operational-readiness.md"],
+      "evidencePaths": [
+        "docs/operations/operational-readiness.md",
+        "artifacts/api-server/src/lib/http-logger.ts",
+        "artifacts/api-server/src/lib/log-serializers.ts",
+        "artifacts/api-server/src/logging.test.ts"
+      ],
       "blockingConditions": [
         "No collector endpoint, telemetry backend, dashboard, retention policy, alert, or notification route is configured."
       ]
