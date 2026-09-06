@@ -4,7 +4,7 @@
 
 Samra Pay uses GitHub as the source and approval authority, Google Cloud Build
 as the image builder, Artifact Registry as the immutable image store, Cloud Run
-as the future runtime, and Qase as governed test evidence. These systems are
+as the future runtime, and Qase as optional test reporting. These systems are
 connected by exact identifiers. None of them may infer that a build, deployment,
 test, traffic change, or vendor activation authorizes the next stage.
 
@@ -13,8 +13,8 @@ exact-revision probing, combined verification evidence recording,
 exact-revision promotion, rollback, and immutable deployment-history
 controllers are implemented. Both verification workflows remain dormant and
 unauthorized. Exact-image evidence is intentionally non-promotable by itself;
-the final recorder also requires the private exact-revision probe and one shared
-passing Qase run. Federated identities, protected environments, and every Cloud
+the final recorder also requires the private exact-revision probe and accurate
+local reporting metadata. External Qase reporting is optional. Federated identities, protected environments, and every Cloud
 Run mutation remain separately activated and authorized; no service is live.
 The promotion path deliberately cannot perform first-ever activation because a
 release without a prior healthy revision has no proven rollback target.
@@ -57,7 +57,7 @@ traffic workflow is authorized.
 
 | Stage                   | Authority                      | Mutation                                                                             | Required evidence                                                                                                        | Current state                                                                                                                                     |
 | ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, Qase identity, synthetic backup/restore evidence                                        | Implemented; current run evidence still required                                                                                                  |
+| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, local reporting status, synthetic backup/restore evidence                                        | Implemented; current run evidence still required                                                                                                  |
 | Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                         | Exact release lineage, Cloud Build ID, five digests, passing exact-digest vulnerability/secret reports, publication hash | Implemented; not executed from this change                                                                                                        |
 | Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                                     | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof        | Design lane implemented; API blocked pending a governed migration producer and customer web transitively blocked; no lane activated or authorized |
 | Staging verification    | Protected GitHub environment   | Two temporary private jobs: exact-image database suite and exact-revision HTTP probe | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, one Qase run      | Both workflows implemented; federation activation and execution not authorized                                                                    |
@@ -184,10 +184,13 @@ checks. It accepts only three independently hashed inputs:
 - the private exact-revision probe manifest proving service authentication and
   the deployed revision network path through the exact Cloud Run revision.
 
-The recorder rejects a different commit, service, revision, environment, Qase
-run, GitHub workflow identity, image digest, or incomplete check set. Both
-planes must upload their JUnit results to one completed passing Qase run in
-project `SAMP` and environment `google-cloud-staging`. The final record states
+The recorder rejects a different commit, service, revision, environment,
+GitHub workflow identity, image digest, or incomplete check set. Both planes
+retain their JUnit results in GitHub. `report_to_qase` defaults to false; an
+optional upload mirrors both to one run in project `SAMP` and environment
+`google-cloud-staging`. Version 2 combined evidence records actual reporting
+outcomes and upload coverage. Quota or upload failure does not block technical
+verification; inconsistent reporting metadata does. The final record states
 that not every check traversed the deployed revision while proving that every
 required check ran on its defined evidence plane. Neither controller may change
 traffic percentage, public access, ingress, runtime configuration, vendor
@@ -261,7 +264,7 @@ a traffic tag, or a candidate already receiving traffic fails closed.
 Promotion uses `gcloud run services update-traffic --to-revisions` with the
 exact candidate revision and then independently verifies the resulting 100%
 allocation. It records the candidate and controller Git SHAs, immutable image
-digest, input manifest hashes, Qase identity, operator, GitHub run, complete
+digest, input manifest hashes, optional Qase reporting identity, operator, GitHub run, complete
 before/after allocation, and exact rollback target in a hashed manifest. If the
 control path fails after mutation but before that record is complete, it
 attempts a fail-closed automatic rollback to the pre-recorded revision. It then
@@ -414,3 +417,8 @@ Google references:
 - [Deploying a new Cloud Run service or revision](https://cloud.google.com/sdk/gcloud/reference/run/deploy)
 - [Managing Cloud Run traffic by revision](https://cloud.google.com/sdk/gcloud/reference/run/services/update-traffic)
 - [Cloud Run rollouts, rollbacks, and traffic migration](https://cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration)
+
+The [optional reporting decision](../architecture/optional-qase-reporting.md)
+requires fresh version 2 release and combined staging verification evidence.
+It changes reporting eligibility only; execution and traffic authorization
+boundaries remain enforced.

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "workflow": ".github/workflows/release-candidate.yml",
   "manifest": "artifacts/release-candidate/release-evidence-manifest.json",
   "manifestHash": "artifacts/release-candidate/release-evidence-manifest.sha256",
@@ -55,21 +55,6 @@
       "id": "performance",
       "title": "Million-posting materialized balance performance",
       "includeInQase": true
-    },
-    {
-      "id": "qase_create",
-      "title": "Qase release run creation",
-      "includeInQase": false
-    },
-    {
-      "id": "qase_upload",
-      "title": "Qase release gate upload",
-      "includeInQase": false
-    },
-    {
-      "id": "qase_complete",
-      "title": "Qase release run completion",
-      "includeInQase": false
     }
   ],
   "requiredEvidenceFiles": [
@@ -127,6 +112,8 @@
     "The candidate must be an exact 40-character commit contained in GitHub main.",
     "Use disposable PostgreSQL 16 and synthetic fixtures only.",
     "Do not access Replit, deployments, shared databases, real providers, production secrets, customer data, or live rails.",
-    "A failed or missing gate remains failed after evidence upload; manual review cannot override it."
-  ]
+    "A failed or missing gate remains failed after evidence upload; manual review cannot override it.",
+    "Qase reporting is optional; its recorded outcome never overrides an engineering gate or missing evidence."
+  ],
+  "qaseReporting": "optional"
 }

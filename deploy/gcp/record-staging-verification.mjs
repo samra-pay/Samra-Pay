@@ -1,3 +1,7 @@
+import {
+  validateOptionalQaseReporting,
+  qaseReportingFromEnvironment,
+} from "./qase-reporting.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
@@ -69,13 +73,15 @@ function validateQase(qase) {
   assert(
     qase?.project === "SAMP" &&
       qase.environment === "google-cloud-staging" &&
-      qase.status === "passed" &&
-      typeof qase.runId === "string" &&
-      /^\d+$/.test(qase.runId) &&
-      qase.runUrl === `https://app.qase.io/run/SAMP/dashboard/${qase.runId}` &&
-      qase.imageJUnitIncluded === true &&
-      qase.probeJUnitIncluded === true,
-    "Combined Qase staging evidence drifted or is not passing",
+      qase.policy === "optional",
+    "Combined Qase staging reporting identity drifted",
+  );
+  validateOptionalQaseReporting(qase.reporting, qase.runId, qase.runUrl);
+  const uploaded = qase.reporting.outcomes.qase_upload === "success";
+  assert(
+    qase.imageJUnitIncluded === uploaded &&
+      qase.probeJUnitIncluded === uploaded,
+    "Combined Qase staging upload coverage drifted",
   );
   return qase;
 }
@@ -91,7 +97,7 @@ function assertSafeEvidence(manifest) {
 
 function validateIdentity(manifest) {
   assert(
-    manifest.schemaVersion === 1 &&
+    manifest.schemaVersion === 2 &&
       manifest.status === "passed" &&
       manifest.environment === "staging" &&
       manifest.dataClassification === "synthetic-only" &&
@@ -198,7 +204,7 @@ export function buildStagingVerificationManifest(input) {
     "Verification inputs do not describe one exact candidate artifact and revision",
   );
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: "passed",
     environment: "staging",
     dataClassification: "synthetic-only",
@@ -334,6 +340,7 @@ async function main(values) {
     const imageHashPath = required(options, "image_hash");
     const probeManifestPath = required(options, "probe_manifest");
     const probeHashPath = required(options, "probe_hash");
+    const qase = qaseReportingFromEnvironment();
     const manifest = buildStagingVerificationManifest({
       zeroTrafficDeployment: await verifyZeroTrafficDeploymentManifest(
         zeroTrafficManifestPath,
@@ -363,11 +370,10 @@ async function main(values) {
       qase: {
         project: "SAMP",
         environment: "google-cloud-staging",
-        status: "passed",
-        runId: required(options, "qase_run_id"),
-        runUrl: required(options, "qase_run_url"),
-        imageJUnitIncluded: true,
-        probeJUnitIncluded: true,
+        policy: "optional",
+        ...qase,
+        imageJUnitIncluded: qase.reporting.outcomes.qase_upload === "success",
+        probeJUnitIncluded: qase.reporting.outcomes.qase_upload === "success",
       },
       generatedAt: options.generated_at ?? new Date().toISOString(),
     });

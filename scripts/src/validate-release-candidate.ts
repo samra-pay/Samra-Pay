@@ -23,9 +23,13 @@ export function validateReleaseCandidateContract(
   workflow: string,
   governance: QaseGovernance,
 ): void {
-  if (contract.version !== 1 || contract.retentionDays !== 365) {
+  if (
+    contract.version !== 2 ||
+    contract.qaseReporting !== "optional" ||
+    contract.retentionDays !== 365
+  ) {
     throw new Error(
-      "Release evidence contract must use version 1 and 365-day retention.",
+      "Release evidence contract must use version 2, optional Qase reporting, and 365-day retention.",
     );
   }
   if (contract.qaseEnvironment !== "github-ci-postgres") {
@@ -39,10 +43,79 @@ export function validateReleaseCandidateContract(
   );
   assertUnique(contract.requiredEvidenceFiles, "Release evidence paths");
   if (
-    contract.requiredGates.length < 11 ||
+    contract.requiredGates.length !== 10 ||
     contract.requiredEvidenceFiles.length < 25
   ) {
     throw new Error("Release evidence contract is missing required depth.");
+  }
+  const engineeringGates = [
+    "identity",
+    "security",
+    "quality",
+    "commercial",
+    "migrations",
+    "postgres_persistence",
+    "postgres_http",
+    "resilience",
+    "recovery",
+    "performance",
+  ];
+  if (
+    JSON.stringify(contract.requiredGates.map(({ id }) => id)) !==
+      JSON.stringify(engineeringGates) ||
+    !contract.requiredGates.every(
+      ({ includeInQase }) => includeInQase === true,
+    ) ||
+    !contract.requiredEvidenceFiles.includes(
+      "artifacts/release-candidate/qase-run.json",
+    )
+  ) {
+    throw new Error(
+      "Release contract must preserve all ten engineering gates and local reporting evidence.",
+    );
+  }
+  if (
+    !/report_to_qase:[\s\S]*?type: boolean\n        default: false\n        required: false/u.test(
+      workflow,
+    )
+  ) {
+    throw new Error(
+      "Qase reporting must be an explicit, disabled-by-default boolean input.",
+    );
+  }
+  const reportingStep = readWorkflowStep(
+    workflow,
+    "Record Qase release identity",
+  );
+  if (
+    !reportingStep.includes("if: always()") ||
+    !reportingStep.includes(
+      "QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}",
+    ) ||
+    !reportingStep.includes(
+      "QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}",
+    ) ||
+    !reportingStep.includes("release-evidence -- qase-metadata")
+  ) {
+    throw new Error(
+      "Local Qase reporting evidence must always record the selected mode and run identity.",
+    );
+  }
+  for (const id of ["qase_create", "qase_upload", "qase_complete"]) {
+    if (!reportingStep.includes(`"${id}":"\${{ steps.${id}.outcome }}"`)) {
+      throw new Error(
+        `Local Qase reporting evidence must record ${id} outcome.`,
+      );
+    }
+  }
+  for (const name of [
+    "Create Qase release-candidate run",
+    "Upload release gates to Qase",
+    "Complete Qase release-candidate run",
+  ]) {
+    if (!readWorkflowStep(workflow, name).includes("continue-on-error: true")) {
+      throw new Error("External Qase reporting must remain non-blocking.");
+    }
   }
   for (const report of governance.automatedReports) {
     if (
@@ -110,7 +183,7 @@ export function validateReleaseCandidateContract(
     "needs.runtime-image-security.result",
     "pnpm run test:experience-budgets",
     "id: qase_payload",
-    "if: steps.qase_payload.outcome == 'success' && !cancelled()",
+    "if: inputs.report_to_qase && steps.qase_payload.outcome == 'success' && !cancelled()",
     "release-evidence -- manifest",
     "release-evidence -- verify --require-passing",
     `retention-days: ${contract.retentionDays}`,

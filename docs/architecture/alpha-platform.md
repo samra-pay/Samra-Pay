@@ -70,8 +70,12 @@ grant customer capability or post a ledger journal by themselves.
 | Funding | Unresolved provider | Funding intent, idempotency, transaction and ledger state |
 | Ethiopia payout | Unresolved provider | Transfer state, payout instruction, evidence, reconciliation |
 | Balance | Samra ledger only | Journals, postings, holds, projection, reconciliation |
-| Testing evidence | GitHub Actions and Qase | Release decision, exact SHA, evidence retention |
+| Testing evidence | GitHub Actions; optional Qase reporting | Release decision, exact SHA, evidence retention |
 | Runtime and data | Google Cloud | Source, configuration contracts, access policy, database schema |
+
+Automated release and staging evidence follow the
+[optional Qase reporting decision](optional-qase-reporting.md). GitHub retains
+mandatory exact-revision checks and evidence regardless of reporting availability.
 
 ## Integration sequence
 

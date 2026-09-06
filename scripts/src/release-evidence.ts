@@ -15,6 +15,7 @@ export type ReleaseEvidenceContract = Readonly<{
   manifestHash: string;
   retentionDays: number;
   qaseEnvironment: string;
+  qaseReporting: "optional";
   requiredGates: readonly ReleaseGate[];
   requiredEvidenceFiles: readonly string[];
   boundaries: readonly string[];
@@ -43,8 +44,14 @@ type EvidenceFile = Readonly<{
   sha256: string;
 }>;
 
+export type QaseReporting = Readonly<{
+  enabled: boolean;
+  outcomes: Readonly<Record<string, string>>;
+}>;
+
 export type ReleaseEvidenceManifest = Readonly<{
-  schemaVersion: 1;
+  schemaVersion: 2;
+  qaseReporting: QaseReporting;
   releaseId: string;
   candidateSha: string;
   gitTreeSha: string;
@@ -184,11 +191,25 @@ export async function createReleaseEvidenceManifest(
     contract: ReleaseEvidenceContract;
     identity: ReleaseIdentity;
     gateResults: Readonly<Record<string, string>>;
+    qaseReporting: QaseReporting;
     qaseRunId?: string;
     qaseRunUrl?: string;
     generatedAt: string;
   }>,
 ): Promise<ReleaseEvidenceManifest> {
+  if (
+    input.contract.version !== 2 ||
+    input.contract.qaseReporting !== "optional"
+  ) {
+    throw new Error(
+      "Release evidence requires the version 2 optional-reporting contract.",
+    );
+  }
+  validateQaseReporting(
+    input.qaseReporting,
+    input.qaseRunId ?? null,
+    input.qaseRunUrl ?? null,
+  );
   const root = resolve(input.workspaceRoot);
   const gateResults = normalizeGateResults(input.contract, input.gateResults);
   const evidenceFiles: EvidenceFile[] = [];
@@ -226,7 +247,8 @@ export async function createReleaseEvidenceManifest(
     ({ id }) => gateResults[id] === "success",
   );
   return Object.freeze({
-    schemaVersion: 1,
+    schemaVersion: 2,
+    qaseReporting: input.qaseReporting,
     releaseId: input.identity.releaseId,
     candidateSha: input.identity.candidateSha,
     gitTreeSha: input.identity.gitTreeSha,
@@ -278,12 +300,17 @@ export async function verifyManifest(
   }
   const manifest = JSON.parse(serialized) as ReleaseEvidenceManifest;
   if (
-    manifest.schemaVersion !== 1 ||
+    manifest.schemaVersion !== 2 ||
     !SHA_PATTERN.test(manifest.candidateSha) ||
     manifest.releaseId !== `rc-${manifest.candidateSha.slice(0, 12)}`
   ) {
     throw new Error("Release evidence manifest identity is invalid.");
   }
+  validateQaseReporting(
+    manifest.qaseReporting,
+    manifest.qaseRunId,
+    manifest.qaseRunUrl,
+  );
   if (contract) {
     const expectedGates = contract.requiredGates.map(({ id }) => id);
     const actualGates = Object.keys(manifest.gateResults);
@@ -292,6 +319,8 @@ export async function verifyManifest(
       ...manifest.missingEvidenceFiles,
     ];
     if (
+      contract.version !== 2 ||
+      contract.qaseReporting !== "optional" ||
       !haveSameUniqueMembers(actualGates, expectedGates) ||
       !haveSameUniqueMembers(
         recordedEvidence,
@@ -329,7 +358,14 @@ export async function verifyManifest(
       }
     }
   }
-  if (requirePassing && manifest.overallStatus !== "passed") {
+  if (
+    requirePassing &&
+    (manifest.overallStatus !== "passed" ||
+      Object.values(manifest.gateResults).some(
+        (result) => result !== "success",
+      ) ||
+      manifest.missingEvidenceFiles.length > 0)
+  ) {
     const failedGates = Object.entries(manifest.gateResults)
       .filter(([, result]) => result !== "success")
       .map(([gate, result]) => `${gate}=${result}`);
@@ -338,6 +374,44 @@ export async function verifyManifest(
     );
   }
   return manifest;
+}
+
+export function validateQaseReporting(
+  reporting: QaseReporting,
+  runId: string | null,
+  runUrl: string | null,
+): void {
+  const ids = ["qase_create", "qase_upload", "qase_complete"];
+  if (
+    !reporting ||
+    typeof reporting.enabled !== "boolean" ||
+    !haveSameUniqueMembers(Object.keys(reporting.outcomes ?? {}), ids) ||
+    !Object.values(reporting.outcomes).every((value) =>
+      ALLOWED_GATE_RESULTS.has(value),
+    )
+  ) {
+    throw new Error("Qase reporting outcomes are invalid.");
+  }
+  const outcomes = reporting.outcomes;
+  const hasRun = runId !== null;
+  if (
+    (hasRun &&
+      (typeof runId !== "string" ||
+        !/^[1-9][0-9]*$/.test(runId) ||
+        runUrl !== `https://app.qase.io/run/SAMP/dashboard/${runId}`)) ||
+    (hasRun && ["skipped", "missing"].includes(outcomes.qase_create!)) ||
+    (!hasRun && runUrl !== null) ||
+    (!reporting.enabled &&
+      (hasRun || ids.some((id) => outcomes[id] !== "skipped"))) ||
+    // A successful action exit can still have no run ID after a Qase API error.
+    // Preserve the reported outcome; null identity and skipped downstream steps
+    // prevent treating that process exit as proof of external delivery.
+    (!hasRun &&
+      (outcomes.qase_upload !== "skipped" ||
+        outcomes.qase_complete !== "skipped"))
+  ) {
+    throw new Error("Qase reporting identity or outcomes are inconsistent.");
+  }
 }
 
 export async function readContract(

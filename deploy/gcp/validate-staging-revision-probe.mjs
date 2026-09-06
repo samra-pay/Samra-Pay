@@ -166,8 +166,9 @@ export function validateStagingRevisionProbeContract(
       JSON.stringify({
         project: "SAMP",
         environment: "google-cloud-staging",
-        oneCombinedRunRequired: true,
+        oneCombinedRunRequired: false,
         imageAndProbeJUnitRequired: true,
+        reporting: "optional",
       }),
     "Staging revision-probe Qase boundary drifted",
   );

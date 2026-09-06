@@ -448,8 +448,10 @@ authorize promotion. The separate `staging-verification-probe.yml` workflow now
 implements that missing plane. It temporarily enables the private service URL
 and an exact-revision tag without changing traffic, ingress, public IAM, or the
 runtime template; runs one keyless, no-secret VPC-connected job; then restores
-the complete service boundary byte for byte. It combines both JUnit evidence
-sets into one Qase run and records one hashed, promotion-consumable manifest.
+the complete service boundary byte for byte. It retains both JUnit evidence
+sets in GitHub and records one hashed, promotion-consumable manifest. Optional
+Qase reporting defaults to off and records actual outcomes without blocking
+technical verification. See the [reporting decision](../../docs/architecture/optional-qase-reporting.md).
 The probe federation and workflow remain dormant and execution remains
 unauthorized. Review and independently audit each federation boundary before
 its first protected workflow run.

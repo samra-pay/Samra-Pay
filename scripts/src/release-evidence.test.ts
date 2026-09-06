@@ -11,6 +11,7 @@ import {
   splitReleaseEvidenceInvocation,
   verifyManifest,
   writeManifestAndHash,
+  validateQaseReporting,
   type ReleaseEvidenceContract,
 } from "./release-evidence";
 
@@ -31,7 +32,8 @@ const identity = buildReleaseIdentity({
 });
 
 const contract: ReleaseEvidenceContract = {
-  version: 1,
+  version: 2,
+  qaseReporting: "optional",
   workflow: ".github/workflows/release-candidate.yml",
   manifest: "out/manifest.json",
   manifestHash: "out/manifest.sha256",
@@ -43,6 +45,15 @@ const contract: ReleaseEvidenceContract = {
   ],
   requiredEvidenceFiles: ["evidence/one.xml", "evidence/two.json"],
   boundaries: ["synthetic only"],
+};
+
+const disabledReporting = {
+  enabled: false,
+  outcomes: {
+    qase_create: "skipped",
+    qase_upload: "skipped",
+    qase_complete: "skipped",
+  },
 };
 
 describe("release evidence", () => {
@@ -64,6 +75,106 @@ describe("release evidence", () => {
       command: "verify",
       rawArguments: ["--require-passing"],
     });
+  });
+
+  it("records disabled reporting and rejects fabricated external success", () => {
+    expect(() =>
+      validateQaseReporting(disabledReporting, null, null),
+    ).not.toThrow();
+    expect(() =>
+      validateQaseReporting(
+        {
+          ...disabledReporting,
+          outcomes: {
+            ...disabledReporting.outcomes,
+            qase_create: "success",
+          },
+        },
+        null,
+        null,
+      ),
+    ).toThrow(/inconsistent/);
+    expect(() =>
+      validateQaseReporting({ enabled: true, outcomes: {} }, null, null),
+    ).toThrow(/invalid/);
+  });
+
+  it("accepts quota and upload failures only independently of engineering results", async () => {
+    const root = await mkdtemp(join(tmpdir(), "samra-release-reporting-"));
+    await mkdir(join(root, "evidence"), { recursive: true });
+    await writeFile(join(root, "evidence/one.xml"), "<testsuite/>\n");
+    await writeFile(join(root, "evidence/two.json"), "{}\n");
+    for (const qase of [
+      { qaseReporting: disabledReporting },
+      {
+        qaseReporting: {
+          enabled: true,
+          outcomes: {
+            qase_create: "success",
+            qase_upload: "skipped",
+            qase_complete: "skipped",
+          },
+        },
+      },
+      {
+        qaseReporting: {
+          enabled: true,
+          outcomes: {
+            qase_create: "failure",
+            qase_upload: "skipped",
+            qase_complete: "skipped",
+          },
+        },
+      },
+      {
+        qaseReporting: {
+          enabled: true,
+          outcomes: {
+            qase_create: "success",
+            qase_upload: "failure",
+            qase_complete: "failure",
+          },
+        },
+        qaseRunId: "9",
+        qaseRunUrl: "https://app.qase.io/run/SAMP/dashboard/9",
+      },
+    ]) {
+      for (const quality of [
+        "success",
+        "failure",
+        "skipped",
+        "cancelled",
+        "missing",
+      ]) {
+        const manifest = await createReleaseEvidenceManifest({
+          workspaceRoot: root,
+          contract,
+          identity,
+          gateResults: { identity: "success", quality },
+          ...qase,
+          generatedAt: identity.generatedAt,
+        });
+        expect(manifest.overallStatus).toBe(
+          quality === "success" ? "passed" : "failed",
+        );
+        const manifestPath = join(root, "manifest.json");
+        const hashPath = join(root, "manifest.sha256");
+        await writeManifestAndHash(
+          { ...manifest, overallStatus: "passed" },
+          manifestPath,
+          hashPath,
+        );
+        if (quality !== "success") {
+          await expect(
+            verifyManifest(manifestPath, hashPath, true, root, contract),
+          ).rejects.toThrow(/Release candidate failed/);
+        } else {
+          await expect(
+            verifyManifest(manifestPath, hashPath, true, root, contract),
+          ).resolves.toMatchObject({ overallStatus: "passed" });
+        }
+      }
+    }
   });
 
   it("requires an exact full commit SHA", () => {
@@ -95,6 +206,7 @@ describe("release evidence", () => {
       workspaceRoot: root,
       contract,
       identity,
+      qaseReporting: disabledReporting,
       gateResults: { identity: "success", quality: "success" },
       generatedAt: "2026-08-18T00:00:00.000Z",
     });
@@ -106,9 +218,8 @@ describe("release evidence", () => {
       workspaceRoot: root,
       contract,
       identity,
+      qaseReporting: disabledReporting,
       gateResults: { identity: "success", quality: "success" },
-      qaseRunId: "9",
-      qaseRunUrl: "https://qase.test/9",
       generatedAt: "2026-08-18T00:00:00.000Z",
     });
     expect(passed.overallStatus).toBe("passed");
@@ -123,7 +234,8 @@ describe("release evidence", () => {
     const manifestPath = join(root, "manifest.json");
     const hashPath = join(root, "manifest.sha256");
     const manifest = {
-      schemaVersion: 1 as const,
+      schemaVersion: 2 as const,
+      qaseReporting: disabledReporting,
       releaseId: identity.releaseId,
       candidateSha: identity.candidateSha,
       gitTreeSha: identity.gitTreeSha,
@@ -133,8 +245,8 @@ describe("release evidence", () => {
       workflowRunAttempt: 1,
       workflowRunUrl: identity.workflowRunUrl,
       qaseEnvironment: "github-ci-postgres",
-      qaseRunId: "9",
-      qaseRunUrl: "https://qase.test/9",
+      qaseRunId: null,
+      qaseRunUrl: null,
       gateResults: { identity: "success", quality: "success" },
       evidenceFiles: [],
       missingEvidenceFiles: [],
@@ -161,6 +273,7 @@ describe("release evidence", () => {
       workspaceRoot: root,
       contract,
       identity,
+      qaseReporting: disabledReporting,
       gateResults: { identity: "success", quality: "failure" },
       generatedAt: "2026-08-18T00:00:00.000Z",
     });
@@ -187,6 +300,7 @@ describe("release evidence", () => {
       workspaceRoot: root,
       contract,
       identity,
+      qaseReporting: disabledReporting,
       gateResults: { identity: "success", quality: "success" },
       generatedAt: "2026-08-18T00:00:00.000Z",
     });

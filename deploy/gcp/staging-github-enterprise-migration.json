@@ -179,6 +179,7 @@
       "deploy/preview/bundle.mjs",
       "deploy/preview/publish.mjs",
       "docs/README.md",
+      "docs/architecture/optional-qase-reporting.md",
       "docs/engineering-governance.md",
       "docs/notion-reporting.md",
       "docs/notion-ticket-sync.md",
