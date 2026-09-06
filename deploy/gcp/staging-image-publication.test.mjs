@@ -47,12 +47,40 @@ test("requires exact source, staging boundary, immutable registry, and keyless b
     "build identity repository IAM drifted",
     "build identity impersonation IAM drifted",
     "caller must be the reviewed human operator or keyless GitHub publisher",
-    "immutable image tag already exists",
+    "verify-staging-image-absence.mjs",
     "READ-ONLY STAGING IMAGE PUBLICATION REVIEW PASS",
     "REVIEW COMPLETE — NO CLOUD CHANGES",
   ]) {
     assert.ok(controller.includes(evidence), evidence);
   }
+});
+
+test("requires structured registry absence before review success or publication authority", () => {
+  const absence = controller.indexOf(
+    'node "${ROOT_DIR}/deploy/gcp/verify-staging-image-absence.mjs"',
+  );
+  const registry = controller.indexOf("gcloud artifacts repositories describe");
+  const reviewed = controller.indexOf(
+    "READ-ONLY STAGING IMAGE PUBLICATION REVIEW PASS",
+  );
+  const authorized = controller.indexOf(
+    '[[ "${SAMRA_GCP_IMAGE_BUILD_APPLY}" == "${AUTHORIZATION}" ]]',
+  );
+  assert.ok(
+    registry >= 0 &&
+      absence > registry &&
+      reviewed > absence &&
+      authorized > reviewed,
+  );
+  assert.match(
+    controller.slice(absence, reviewed),
+    /--candidate-sha "\$\{EXPECTED_SHA\}"/,
+  );
+  assert.match(
+    controller.slice(absence, reviewed),
+    /--operator "\$\{OPERATOR\}"/,
+  );
+  assert.doesNotMatch(controller, /if gcloud artifacts docker images describe/);
 });
 
 test("places an exact authorization after every read-only preflight", () => {
