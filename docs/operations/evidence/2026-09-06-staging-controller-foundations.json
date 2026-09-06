@@ -38,5 +38,153 @@
     "operationalReadiness": "blocked"
   },
   "provenance": "Operator-collected metadata and existing script audits; not a signed cloud attestation or effective-IAM proof",
-  "productionReady": false
+  "productionReady": false,
+  "postMergeExecution": {
+    "observedAt": "2026-09-06T01:46:30.560521+00:00",
+    "sourceSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+    "sourceTree": "83d8668be8d348aff52eb5cc1900ec2f1146470f",
+    "pullRequest": {
+      "number": 182,
+      "mergedAt": "2026-09-06T01:21:19Z",
+      "url": "https://github.com/samra-pay/Samra-Pay/pull/182",
+      "queueCI": {
+        "conclusion": "success",
+        "headSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+        "status": "completed",
+        "url": "https://github.com/samra-pay/Samra-Pay/actions/runs/34003340509"
+      },
+      "queueSecurity": {
+        "conclusion": "success",
+        "headSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+        "status": "completed",
+        "url": "https://github.com/samra-pay/Samra-Pay/actions/runs/34003340506"
+      }
+    },
+    "sourceTransfer": {
+      "sourceSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+      "sourceTree": "83d8668be8d348aff52eb5cc1900ec2f1146470f",
+      "archiveSha256": "06d9a8ac7a1685968e9e0d4e9a65f3f7952cf36c9f37018bd0bc7436027ae6db",
+      "archiveBytes": 51520,
+      "workingTreeClean": true,
+      "reachableCommitCount": 1,
+      "credentialsTransferred": false
+    },
+    "zeroTrafficFoundation": {
+      "sourceSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+      "operator": "me@davidhaile.com",
+      "project": "samra-pay-staging",
+      "startedAt": "2026-09-06T01:33:18.180105+00:00",
+      "operation": "existing-zero-traffic-federation-script-only",
+      "status": "applied-and-independently-verified",
+      "finishedAt": "2026-09-06T01:35:18.205490+00:00",
+      "applyExitCode": 0,
+      "verifiedAt": "2026-09-06T01:37:06.296554+00:00",
+      "independentAuditExitCode": 0,
+      "controller": "samra-github-deployer-staging@samra-pay-staging.iam.gserviceaccount.com",
+      "projectRegistryRuntimePoliciesOnlyExpectedAdditions": true,
+      "unrelatedInventoryUnchanged": true,
+      "serviceCount": 0,
+      "jobCount": 0,
+      "databaseSecretVersionCount": 0,
+      "userManagedKeyCount": 0,
+      "applyStdoutSha256": "d2dcab6f25e381f24721db700387107446cd09be403f3606e25f2185c982d2b3",
+      "auditStdoutSha256": "addeb4bda8a97c22e6fec45fdaf43e4014d2937588f6f021ff47863d37b2235b",
+      "deploymentPerformed": false,
+      "trafficChanged": false,
+      "secretPayloadAccessed": false
+    },
+    "imageVerifierFoundation": {
+      "sourceSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+      "operator": "me@davidhaile.com",
+      "project": "samra-pay-staging",
+      "startedAt": "2026-09-06T01:42:11.919310+00:00",
+      "operation": "existing-image-verification-federation-script-only",
+      "status": "applied-and-independently-verified",
+      "finishedAt": "2026-09-06T01:44:00.763428+00:00",
+      "applyExitCode": 0,
+      "verifiedAt": "2026-09-06T01:46:30.560521+00:00",
+      "independentAuditExitCode": 0,
+      "controller": "samra-github-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+      "runtime": "samra-verifier-staging@samra-pay-staging.iam.gserviceaccount.com",
+      "projectRegistrySecretPoliciesOnlyExpectedAdditions": true,
+      "runtimeUseAndLogViewScopeVerified": true,
+      "unrelatedInventoryUnchanged": true,
+      "serviceCount": 0,
+      "jobCount": 0,
+      "databaseSecretVersionCount": 0,
+      "userManagedKeyCount": 0,
+      "applyStdoutSha256": "fc4219814fbc856df89db00d7bff6759e212ad9cd450e4a446b375e85740cec3",
+      "auditStdoutSha256": "77d5cc5b9a29e17dd6a6717555860df9a0acb6f4f6849dd44f0a90042d4e1732",
+      "verificationJobExecuted": false,
+      "deploymentPerformed": false,
+      "trafficChanged": false,
+      "secretPayloadAccessed": false
+    },
+    "credentialRefreshFailure": {
+      "observedAt": "2026-09-06T01:32:19.559377+00:00",
+      "sourceSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+      "status": "credential-refresh-failed-in-read-only-preflight",
+      "cloudMutationObserved": false,
+      "completePoliciesAndInventoriesUnchangedAfterSessionRefresh": true,
+      "applyExitCode": null,
+      "exitCodeUnavailableReason": "Wrapper stopped during post-attempt read-back before recording return code",
+      "applyStderrSha256": "6a1c8e68fbbfcc16a2819c3edb2379076372ee3c2939945df92f53494d2a885d"
+    },
+    "backupFreshness": {
+      "schemaVersion": 1,
+      "observedAt": "2026-09-06T01:16:29.479171+00:00",
+      "operator": "me@davidhaile.com",
+      "mode": "read-only-backup-metadata",
+      "projects": [
+        {
+          "project": "samra-pay-staging",
+          "instance": "samra-staging-postgres",
+          "exitCode": 0,
+          "latestSuccessfulEndTime": "2026-09-05T07:20:58.889Z",
+          "latestSuccessfulAgeHours": 17.925
+        },
+        {
+          "project": "samra-pay-production",
+          "instance": "samra-production-postgres",
+          "exitCode": 0,
+          "latestSuccessfulEndTime": "2026-09-05T06:42:13.759Z",
+          "latestSuccessfulAgeHours": 18.571
+        }
+      ],
+      "restoreProof": false
+    },
+    "githubMigrationEnvironment": {
+      "name": "staging-migrations",
+      "id": 21329117903,
+      "completedAt": "2026-09-06T01:05:13.193864+00:00",
+      "allowedBranches": [
+        {
+          "name": "main",
+          "type": "branch"
+        }
+      ],
+      "workflowRemainsDisabled": true,
+      "existingEnvironmentsUnchanged": true,
+      "secretsAdded": false,
+      "independentReviewerRequired": false,
+      "canAdminsBypass": true
+    },
+    "ciReadinessArtifact": {
+      "runId": 34003340509,
+      "artifactId": 9980158539,
+      "archiveSha256": "24ffeff358b766d952ef079e97eebe7bce8e638df5bed03baee47c7c721294e8",
+      "candidateSha": "912ff7d7b91df6f574e5bca46f17bd85ef0238ef",
+      "contractSha256": "e306fae4a4c05f2ef8c2fba7d37dd93902e04334303aa9a43e7b931134ad8d29",
+      "status": "production-blocked",
+      "productionReady": false,
+      "hardStopCount": 10,
+      "archiveDigestAndSourceContractVerified": true
+    },
+    "privateEvidenceArchiveSha256": "f078935322cea5c1e670703c8593566c4d705366a129b74db66c0f08a1b3ff96",
+    "remainingAbsentControllers": [
+      "staging-migrations",
+      "staging-revision-probe"
+    ],
+    "productionReady": false
+  }
 }

@@ -2,9 +2,10 @@
 
 Status: the two existing providers were repaired and independently read back on
 September 5, 2026. The keyless production preflight passed on
-`eddc1558392eecf0946e2c6e2c74866c947c833b`. On September 6 at 00:48 UTC, staging
-promotion and rollback identities were applied and independently audited. Four
-planned staging controllers remain absent, and release resumption is outstanding.
+`eddc1558392eecf0946e2c6e2c74866c947c833b`. On September 6, staging promotion,
+rollback, zero-traffic and image-verifier foundations were applied and independently
+audited. Migration and revision-probe controllers remain absent, and release
+resumption is outstanding.
 See [the dated repair evidence](evidence/2026-09-05-cloud-trust-repair.json) and
 [the transfer record](enterprise-transfer-2026-09-05.md).
 
@@ -22,9 +23,13 @@ uploaded an artifact expiring September 5, 2027; its downloaded digest and sourc
 SHA were verified. These results establish the existing preflight path, not the
 missing staging controllers, provider runtime acceptance, or production readiness.
 
-The same day's metadata inventory found a runnable private Cloud SQL instance in
-each project with backups and PITR enabled. It did not prove backup freshness or a
-restore drill. Both instances report `ALLOW_UNENCRYPTED_AND_ENCRYPTED`; actual
+The September 5 metadata inventory found a runnable private Cloud SQL instance in
+each project with backups and PITR enabled. At 01:16 UTC on September 6, successful
+backup-list reads showed the latest completed staging backup at September 5
+07:20:58 UTC (17.925 hours old) and production backup at 06:42:13 UTC (18.571 hours
+old). This is a dated freshness observation; no freshness monitor or isolated
+restore drill has been proved. Both instances report
+`ALLOW_UNENCRYPTED_AND_ENCRYPTED`; actual
 client transport was not tested and must satisfy the governed TLS boundary before
 runtime activation. Staging's bootstrap database secret has enabled version `1`,
 but its runtime database secret has no versions. Production's runtime and migration
@@ -44,11 +49,13 @@ identical; subsequent pool, account and role inventories remained at 1/10/2. The
 API-enable request completed for APIs already observed enabled. No controller,
 provider, job, deployment or traffic change was established by this attempt.
 
-This change shortens that pool and its provider names and the image-verifier
+[PR #182](https://github.com/samra-pay/Samra-Pay/pull/182) shortened that pool and its provider names and the image-verifier
 provider name to satisfy Google's [32-character IAM display-name limit](https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.locations.workloadIdentityPools.providers).
 The regression check covers every shell federation creation command and the
-migration pool name. These source fixes require a new exact-SHA live review and
-apply; synthetic checks do not establish the resulting cloud state.
+migration pool name. The PR merged through the protected queue at
+`912ff7d7b91df6f574e5bca46f17bd85ef0238ef` with CI and security passing. Its
+340 local Google Cloud tests passed. The live follow-through below used that
+exact merged source; the synthetic checks alone did not establish cloud state.
 
 Migration review stopped at the migration-secret IAM read. A subsequent
 successful secret-resource list confirmed that
@@ -71,6 +78,46 @@ assumption for the shared traffic pool. The source now derives each operation
 principal from the validated traffic contract, with rejection tests for swapped,
 repository-wide and wildcard grants. See the
 [dated controller evidence](evidence/2026-09-06-staging-controller-foundations.json).
+
+## Verified follow-through on merged source
+
+A checksum-verified 51,520-byte source delta reconstructed a clean one-commit
+checkout at `912ff7d`; no credentials or local IAM evidence were transferred.
+An initial retry stopped in read-only preflight when Cloud Shell's delegated
+credential refresh failed. After reconnecting the same authorized account, all
+captured project/registry/runtime policies and resource inventories were unchanged.
+
+The zero-traffic foundation applied at 01:35 UTC and passed a separate audit at
+01:37. The complete policy comparison allowed only its custom project-role grant,
+Artifact Registry reader grant, and service-account use on the three governed
+runtime identities. Its isolated pool contains one reviewed provider, and the
+controller has no user-managed keys.
+
+The image-verifier foundation applied at 01:44 UTC and passed a separate audit at
+01:46. Read-back verified the two distinct keyless identities, exact custom role,
+repository read access, runtime-only database-secret grant, controller use of
+that runtime, and one log view restricted to the verifier job. Existing unrelated
+policies and inventories were unchanged. Neither setup created a service or job,
+read a secret payload, executed verification, or changed traffic. The database
+secret still has zero versions. Raw evidence remained private, and the downloaded
+archive digest matched the Cloud Shell digest.
+
+The missing `staging-migrations` GitHub environment was created at 01:05 UTC and
+independently verified with only the `main` branch policy. Other environments were
+unchanged, and the migration workflow stayed disabled. The existing solo-founder
+model has no required independent reviewer; environment admin bypass is enabled.
+These environment facts must not be described as independent approval enforcement.
+
+The merged CI readiness artifact `9980158539` was downloaded and its archive digest,
+exact SHA and source-contract hash verified. It records `productionReady: false`
+and all ten hard stops. Workspace type checks and production-artifact builds,
+plus all five runtime-image builds/security scans, passed on that merged SHA.
+No separate release-candidate run was dispatched during this follow-through.
+
+Migration setup still needs `samra-staging-migration-database-url` and the governed
+database bootstrap. Revision-probe setup still needs the private `samra-api`
+service. Telemetry export, accepted incident coverage/paging, monitored service
+levels, an isolated cloud restore and provider/runtime acceptance remain blocked.
 
 ## Scope and current inventory
 
