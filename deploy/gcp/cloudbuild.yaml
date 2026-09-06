@@ -35,7 +35,7 @@ steps:
         corepack enable
         pnpm install --frozen-lockfile
         node artifacts/samra-pay-ds/scripts/check-source-boundary.mjs
-        pnpm run test:gcp-platform
+        pnpm run test:gcp-build-source
         pnpm run typecheck
 
   - id: build-api

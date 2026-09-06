@@ -254,9 +254,21 @@ after an explicit apply authorization. No current path automatically:
 
 ## Build contract
 
-`cloudbuild.yaml` runs the platform contract tests and repository typecheck,
-then builds five images. It only builds and publishes images. Deployment is a
-separate approval gate.
+`cloudbuild.yaml` runs `test:gcp-build-source` (build-input and container
+contracts), the design-system source-boundary check, and repository typecheck
+before building five images. These checks run from the filtered upload without
+Git metadata or credentials. The complete `test:gcp-platform` suite remains
+required in CI and the exact-SHA release-candidate quality gate; the publication
+workflow verifies that release evidence before Google authentication.
+
+The full platform suite reads repository workflows and Git provenance that are
+deliberately excluded from the Cloud Build upload. Running that suite inside the
+filtered package fails on missing inputs. The source-package regression test
+evaluates the upload patterns, copies the allowed files, and executes the Cloud
+Build contract command with no Git, gcloud, credentials, or installed workspace
+dependencies available. It also confirms the full upstream gates remain required.
+Cloud Build only builds and publishes images. Deployment is a separate approval
+gate.
 
 GitHub's `Container portability` workflow independently builds the same five
 images from the exact GitHub commit without pushing them. It runs the migration
