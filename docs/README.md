@@ -19,8 +19,10 @@ capability baseline above remains historical. See the
 The source-authority update reconciles contracts, recovery provenance and
 Notion tooling with that organization. The September 5 [trust repair](operations/evidence/2026-09-05-cloud-trust-repair.json)
 verified the two existing providers. The September 6 [controller record](operations/evidence/2026-09-06-staging-controller-foundations.json)
-adds verified promotion/rollback IAM foundations and records the other setup
-blockers. The release freeze remains active pending the remaining cutover and
+adds verified promotion/rollback, zero-traffic and image-verifier IAM foundations,
+the missing migration environment and a dated backup-freshness observation.
+Migration, revision-probe and operational acceptance remain open. The release
+freeze remains active pending the remaining cutover and
 release evidence.
 
 ## Alpha north star
