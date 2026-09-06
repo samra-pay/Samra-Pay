@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -284,6 +290,53 @@ test("Git inventory excludes ignored local data but still covers tracked and new
     assert.deepEqual(findOperationalAuthorityReferences(fixture, contract), [
       "tmp/evidence.json",
     ]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("release evidence does not enter Git authority inventory or hide source", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "samra-authority-release-"));
+  try {
+    execFileSync("git", ["init", "--quiet", fixture]);
+    writeFileSync(
+      join(fixture, ".gitignore"),
+      readFileSync(join(root, ".gitignore")),
+    );
+    // These reports exist before the release workflow's GCP quality tests.
+    const reports = [
+      "artifacts/release-candidate/release-candidate-identity.json",
+      "artifacts/release-candidate/security/trivy-license-policy.json",
+      "artifacts/release-candidate/security/trivy-secrets-misconfiguration.json",
+      "artifacts/release-candidate/security/trivy-vulnerabilities.json",
+    ];
+    const contents = JSON.stringify({
+      repository: contract.repository.activeAuthority.nameWithOwner,
+      previousRepository: contract.repository.previousAuthority.nameWithOwner,
+    });
+    for (const report of reports) {
+      mkdirSync(join(fixture, report, ".."), { recursive: true });
+      writeFileSync(join(fixture, report), contents);
+    }
+    const scans = [
+      findOperationalAuthorityReferences,
+      findFormerAuthorityReferences,
+    ];
+    for (const scan of scans) assert.deepEqual(scan(fixture, contract), []);
+
+    // Only the root evidence directory is ignored, not application source.
+    const source = "artifacts/api-server/src/release-candidate/control.json";
+    mkdirSync(join(fixture, source, ".."), { recursive: true });
+    writeFileSync(join(fixture, source), contents);
+    for (const scan of scans) {
+      assert.deepEqual(scan(fixture, contract), [source]);
+    }
+
+    // A tracked file must stay in scope even under an ignored directory.
+    execFileSync("git", ["-C", fixture, "add", "--force", reports[0]]);
+    for (const scan of scans) {
+      assert.deepEqual(scan(fixture, contract), [source, reports[0]].sort());
+    }
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

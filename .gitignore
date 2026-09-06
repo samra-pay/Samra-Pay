@@ -9,6 +9,9 @@ out-tsc
 .expo-shared
 artifacts/samra-pay/src/assets/coming-soon/generated/
 
+# Generated release evidence is retained in GitHub artifacts, not source Git.
+/artifacts/release-candidate/
+
 # dependencies
 node_modules
 
