@@ -48,6 +48,11 @@ The pinned GitHub Actions artifact action retains the bundle for 365 days. The a
 includes the SHA-derived release ID, workflow run ID, and run attempt, so a
 rerun creates a separate evidence object rather than overwriting the first.
 
+Generated reports under `artifacts/release-candidate/` are ignored by Git so
+the repository-authority inventory does not treat release output as source.
+Tracked files and new source elsewhere remain covered by that inventory.
+The workflow still verifies and uploads the ignored reports as required evidence.
+
 ## Stop conditions
 
 The candidate fails if any required gate, including any of the five parallel
