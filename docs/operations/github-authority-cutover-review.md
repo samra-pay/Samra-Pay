@@ -2,8 +2,9 @@
 
 Status: the two existing providers were repaired and independently read back on
 September 5, 2026. The keyless production preflight passed on
-`eddc1558392eecf0946e2c6e2c74866c947c833b`. Six planned staging controllers remain
-absent from the successful inventory, and release resumption remains outstanding.
+`eddc1558392eecf0946e2c6e2c74866c947c833b`. On September 6 at 00:48 UTC, staging
+promotion and rollback identities were applied and independently audited. Four
+planned staging controllers remain absent, and release resumption is outstanding.
 See [the dated repair evidence](evidence/2026-09-05-cloud-trust-repair.json) and
 [the transfer record](enterprise-transfer-2026-09-05.md).
 
@@ -29,6 +30,43 @@ runtime activation. Staging's bootstrap database secret has enabled version `1`,
 but its runtime database secret has no versions. Production's runtime and migration
 database secrets also have no versions. Neither project has monitoring alert
 policies. No secret payloads or database contents were read.
+
+## September 6 controller preflight
+
+The explicitly approved current-commit package was checksum-verified in Cloud
+Shell and reconstructed as a clean, one-commit checkout at `eddc155`. Successful
+staging list calls showed ten service accounts, one identity pool, two custom
+roles, no Cloud Run services/jobs and no runtime database secret versions.
+
+The zero-traffic apply stopped when Google rejected the 37-character pool display
+name. Independent before/after project, registry and runtime IAM policies were
+identical; subsequent pool, account and role inventories remained at 1/10/2. The
+API-enable request completed for APIs already observed enabled. No controller,
+provider, job, deployment or traffic change was established by this attempt.
+
+This change shortens that pool and its provider names and the image-verifier
+provider name to satisfy Google's [32-character IAM display-name limit](https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.locations.workloadIdentityPools.providers).
+The regression check covers every shell federation creation command and the
+migration pool name. These source fixes require a new exact-SHA live review and
+apply; synthetic checks do not establish the resulting cloud state.
+
+Migration review stopped at the migration-secret IAM read. A subsequent
+successful secret-resource list confirmed that
+`samra-staging-migration-database-url` is absent. No migration foundation was
+applied.
+The revision-probe review returned a missing service-invoker grant even though
+the successful service inventory was empty. Its apply remains deferred until the
+private `samra-api` service exists; an empty IAM response does not prove service
+existence. The source now requires a successful service describe before any
+revision-probe setup mutation, with a regression test for the missing-service
+case.
+
+The existing traffic setup completed on `eddc155` at 00:48:48 UTC. A separate
+audit passed, and the full project-policy comparison verified only the two
+expected custom-role grants for the distinct promotion and rollback identities.
+Traffic and workflow states remained unchanged. This establishes their IAM
+foundation, not a completed promotion or rollback exercise. See the
+[dated controller evidence](evidence/2026-09-06-staging-controller-foundations.json).
 
 ## Scope and current inventory
 

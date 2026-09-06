@@ -187,6 +187,7 @@
       "docs/operations/evidence/2026-09-05-main-ruleset.json",
       "docs/operations/evidence/2026-09-05-merge-authority.json",
       "docs/operations/evidence/2026-09-05-transfer-checks.json",
+      "docs/operations/evidence/2026-09-06-staging-controller-foundations.json",
       "docs/operations/github-authority-cutover-review.md",
       "docs/operations/github-enterprise-control-plane-migration.md",
       "docs/operations/repository-merge-controls.md",
