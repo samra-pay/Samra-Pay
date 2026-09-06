@@ -24,7 +24,7 @@ const PROJECT_ID = "samra-pay-staging";
 const PROJECT_NUMBER = "934122615631";
 const REGION = "us-east4";
 const REPOSITORY = "samra-staging";
-const SOURCE_REPOSITORY = "haileleuld87/Samra-Pay";
+const SOURCE_REPOSITORY = "samra-pay/Samra-Pay";
 const IMAGE_BASE = `${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}`;
 const BUILD_SERVICE_ACCOUNT =
   "samra-cloud-build-staging@samra-pay-staging.iam.gserviceaccount.com";

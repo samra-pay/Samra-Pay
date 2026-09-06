@@ -5,7 +5,7 @@ Owner: David Haile. Decision date: 2026-09-05.
 
 David approved making Qase reporting optional while retaining mandatory GitHub
 engineering checks and immutable release evidence. The trigger was release run
-[33970333654, attempt 1](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970333654):
+[33970333654, attempt 1](https://github.com/samra-pay/Samra-Pay/actions/runs/33970333654):
 all ten engineering gates passed for `c6c67b7d34133c596c6d881610679e4a36dbf4fe`,
 but Qase returned HTTP 403 at its active-run limit. That historical run remains
 failed and cannot certify a later commit.
@@ -28,6 +28,14 @@ The combined staging verification manifest also uses version 2 and records
 those outcomes plus whether both JUnit files were uploaded. A disabled or
 failed report is never described as uploaded or passed. Missing or inconsistent
 local reporting records fail verification.
+
+Reporting outcomes are the GitHub action's observed exit outcomes. On September
+6, the existing create action returned success while Qase rejected the request
+at its active-run limit and produced no run ID. That case retains the successful
+action outcome, null run identity and skipped upload/completion; it cannot claim
+delivery and does not block engineering evidence. A successful action outcome
+alone is not independent proof of provider acceptance. Upload or completion
+without a run identity remains invalid.
 
 The ten release gates, all 49 required evidence files, five runtime image
 scans, backup/restore provenance, SHA/tree/run/attempt binding, file allowlist,

@@ -1,17 +1,18 @@
 {
-  "schemaVersion": 1,
-  "status": "prepared-not-authorized",
-  "observedAt": "2026-08-24",
+  "schemaVersion": 2,
+  "status": "github-transferred-cloud-cutover-pending",
+  "observedAt": "2026-09-05",
   "repository": {
     "name": "Samra-Pay",
     "stableId": "1335175962",
     "defaultBranch": "main",
     "activeAuthority": {
-      "accountType": "user",
-      "ownerLogin": "haileleuld87",
-      "ownerId": "237485986",
-      "nameWithOwner": "haileleuld87/Samra-Pay",
-      "enterpriseBacked": false
+      "accountType": "organization",
+      "ownerLogin": "samra-pay",
+      "ownerId": "320532147",
+      "nameWithOwner": "samra-pay/Samra-Pay",
+      "enterpriseSlug": "samra-pay",
+      "enterpriseBacked": true
     },
     "targetAuthority": {
       "accountType": "organization",
@@ -20,22 +21,30 @@
       "nameWithOwner": "samra-pay/Samra-Pay",
       "enterpriseSlug": "samra-pay",
       "enterpriseBacked": true
+    },
+    "previousAuthority": {
+      "accountType": "user",
+      "ownerLogin": "haileleuld87",
+      "ownerId": "237485986",
+      "nameWithOwner": "haileleuld87/Samra-Pay",
+      "enterpriseBacked": false
     }
   },
   "observedEnterpriseState": {
-    "billingStatus": "trial",
-    "billingInformationConfigured": false,
+    "billingStatus": "paid",
+    "billingInformationConfigured": true,
     "operatingModel": "solo-founder",
     "organizationMemberCount": 1,
     "organizationOwnerCount": 1,
-    "accountRecoveryReadiness": "blocked",
+    "accountRecoveryReadiness": "verified",
     "twoFactorAuthenticationEnabled": true,
     "authenticatorAppConfigured": true,
-    "passkeyOrSecurityKeyConfigured": false,
+    "passkeyOrSecurityKeyConfigured": true,
     "recoveryCodesGeneratedAndViewed": true,
-    "recoveryCodesExternalStorageVerified": false,
+    "recoveryCodesExternalStorageVerified": true,
     "verifiedRecoveryEmailConfigured": true,
-    "teams": ["developers", "platform-admins", "staging-approvers"]
+    "teams": ["developers", "platform-admins", "staging-approvers"],
+    "recoveryCodesExternalStorageEvidence": "user-attestation-2026-09-05"
   },
   "governance": {
     "operatingModel": "solo-founder",
@@ -69,12 +78,13 @@
     "appAccessRequests": "members-only"
   },
   "blockingGates": [
-    "paid-enterprise-activation",
-    "solo-founder-account-recovery-readiness",
-    "pre-transfer-backup-and-freeze-readiness"
+    "google-trust-cutover",
+    "integration-and-retention-review",
+    "exact-sha-release-evidence",
+    "release-resumption-authorization"
   ],
   "transfer": {
-    "authorized": false,
+    "authorized": true,
     "releaseFreezeRequired": true,
     "backupAndInventoryRequired": true,
     "exactMainShaRequired": true,
@@ -84,10 +94,21 @@
     "protectedEnvironmentsMustBeReaudited": true,
     "branchProtectionMustBeReaudited": true,
     "qaseGitHubAppMustBeReconnected": true,
-    "readOnlyReleaseWorkflowMustPassBeforePublication": true
+    "readOnlyReleaseWorkflowMustPassBeforePublication": true,
+    "status": "completed",
+    "reviewedMainSha": "33bbad186e1f44e175aa6e7b910bc67918830d14",
+    "mainRulesetId": 22344977,
+    "releaseFreezeApplied": true,
+    "releaseResumptionAuthorized": false,
+    "evidencePaths": [
+      "docs/operations/enterprise-transfer-2026-09-05.md",
+      "docs/operations/evidence/2026-09-05-merge-authority.json",
+      "docs/operations/evidence/2026-09-05-main-ruleset.json",
+      "docs/operations/evidence/2026-09-05-transfer-checks.json"
+    ]
   },
   "operationalReferences": {
-    "scanRoots": [".github/workflows", "deploy/gcp", "deploy/preview"],
+    "scanRoots": ["."],
     "currentAuthorityFiles": [
       ".github/workflows/production-foundation-preflight.yml",
       ".github/workflows/public-site-preview-publish.yml",
@@ -97,6 +118,7 @@
       ".github/workflows/staging-traffic-control.yml",
       ".github/workflows/staging-verification-probe.yml",
       ".github/workflows/staging-zero-traffic-deployment.yml",
+      "artifacts/api-server/test/weekly-backup-restore.test.ts",
       "deploy/gcp/README.md",
       "deploy/gcp/activate-production-foundation-preflight.sh",
       "deploy/gcp/activate-staging-github-federation.sh",
@@ -110,7 +132,6 @@
       "deploy/gcp/audit-staging-revision-probe-federation.sh",
       "deploy/gcp/audit-staging-traffic-federation.sh",
       "deploy/gcp/audit-staging-zero-traffic-federation.sh",
-      "deploy/gcp/coming-soon-production-foundation.json",
       "deploy/gcp/coming-soon-static-hosting.json",
       "deploy/gcp/github-upstream-artifact.test.mjs",
       "deploy/gcp/production-foundation-preflight.json",
@@ -143,7 +164,6 @@
       "deploy/gcp/staging-verification.test.mjs",
       "deploy/gcp/staging-zero-traffic-deployment.json",
       "deploy/gcp/staging-zero-traffic-deployment.test.mjs",
-      "deploy/gcp/validate-coming-soon-production-foundation.mjs",
       "deploy/gcp/validate-coming-soon-static-hosting.mjs",
       "deploy/gcp/validate-production-foundation-preflight.mjs",
       "deploy/gcp/validate-staging-github-federation.mjs",
@@ -157,13 +177,98 @@
       "deploy/gcp/verify-release-candidate-evidence.mjs",
       "deploy/preview/README.md",
       "deploy/preview/bundle.mjs",
-      "deploy/preview/publish.mjs"
+      "deploy/preview/publish.mjs",
+      "docs/README.md",
+      "docs/architecture/optional-qase-reporting.md",
+      "docs/engineering-governance.md",
+      "docs/notion-reporting.md",
+      "docs/notion-ticket-sync.md",
+      "docs/operations/enterprise-transfer-2026-09-05.md",
+      "docs/operations/evidence/2026-09-05-cloud-trust-repair.json",
+      "docs/operations/evidence/2026-09-05-main-ruleset.json",
+      "docs/operations/evidence/2026-09-05-merge-authority.json",
+      "docs/operations/evidence/2026-09-05-transfer-checks.json",
+      "docs/operations/evidence/2026-09-06-staging-controller-foundations.json",
+      "docs/operations/github-authority-cutover-review.md",
+      "docs/operations/github-enterprise-control-plane-migration.md",
+      "docs/operations/repository-merge-controls.md",
+      "docs/operations/staging-migrations.md",
+      "scripts/notion/reporting-config.mjs",
+      "scripts/notion/sync.mjs",
+      "scripts/notion/sync.test.mjs"
     ],
     "migrationControlFiles": [
       "deploy/gcp/review-staging-github-enterprise-migration.mjs",
       "deploy/gcp/staging-github-enterprise-migration.json",
       "deploy/gcp/staging-github-enterprise-migration.test.mjs",
       "deploy/gcp/validate-staging-github-enterprise-migration.mjs"
+    ],
+    "historicalReferences": [
+      {
+        "path": "deploy/gcp/coming-soon-production-foundation.json",
+        "line": "    \"workflowRunUrl\": \"https://github.com/haileleuld87/Samra-Pay/actions/runs/33334655501\",",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "deploy/gcp/validate-coming-soon-production-foundation.mjs",
+        "line": "        \"https://github.com/haileleuld87/Samra-Pay/actions/runs/33334655501\" &&",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/README.md",
+        "line": "  [Required CI](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970338777),",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/README.md",
+        "line": "  [Required security](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970338768),",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/README.md",
+        "line": "  and [container portability](https://github.com/haileleuld87/Samra-Pay/actions/runs/33970338813)",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/operations/enterprise-transfer-2026-09-05.md",
+        "line": "The private repository moved from `haileleuld87/Samra-Pay` to",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/operations/staging-wallet-deployment-package.md",
+        "line": "The implementation baseline is merged PR [157](https://github.com/haileleuld87/Samra-Pay/pull/157),",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/operations/staging-wallet-deployment-package.md",
+        "line": "PR [156](https://github.com/haileleuld87/Samra-Pay/pull/156) was still draft and",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/testing/backend-assurance-release-readiness.md",
+        "line": "- [Wave 12 pull request](https://github.com/haileleuld87/Samra-Pay/pull/23)",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/testing/backend-assurance-release-readiness.md",
+        "line": "- [Final Wave 12 CI run](https://github.com/haileleuld87/Samra-Pay/actions/runs/32099923188)",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/testing/backend-assurance-release-readiness.md",
+        "line": "- [Final materialized balance performance run](https://github.com/haileleuld87/Samra-Pay/actions/runs/32099923141)",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/testing/ledger-performance-baseline.md",
+        "line": "[GitHub Actions run 32095865154](https://github.com/haileleuld87/Samra-Pay/actions/runs/32095865154).",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      },
+      {
+        "path": "docs/testing/ledger-performance-baseline.md",
+        "line": "[GitHub Actions run 32099638658](https://github.com/haileleuld87/Samra-Pay/actions/runs/32099638658).",
+        "reason": "Dated pre-transfer identity or evidence; original reference preserved."
+      }
     ]
   },
   "cutoverOrder": [
@@ -174,11 +279,51 @@
     "transfer-repository",
     "verify-repository-id-and-new-owner-id",
     "switch-repository-authority-contracts",
-    "reapply-six-google-workload-identity-boundaries",
+    "reapply-inventoried-google-workload-identity-boundaries",
     "enforce-solo-founder-protected-environment-controls",
     "reconnect-qase-github-app",
     "audit-branch-actions-environment-and-cloud-controls",
     "run-read-only-release-workflow",
     "resume-authorized-release-operations"
-  ]
+  ],
+  "history": [
+    {
+      "observedAt": "2026-08-24",
+      "status": "prepared-not-authorized",
+      "repositoryAuthority": {
+        "accountType": "user",
+        "ownerLogin": "haileleuld87",
+        "ownerId": "237485986",
+        "nameWithOwner": "haileleuld87/Samra-Pay",
+        "enterpriseBacked": false
+      },
+      "enterpriseState": {
+        "billingStatus": "trial",
+        "billingInformationConfigured": false,
+        "operatingModel": "solo-founder",
+        "organizationMemberCount": 1,
+        "organizationOwnerCount": 1,
+        "accountRecoveryReadiness": "blocked",
+        "twoFactorAuthenticationEnabled": true,
+        "authenticatorAppConfigured": true,
+        "passkeyOrSecurityKeyConfigured": false,
+        "recoveryCodesGeneratedAndViewed": true,
+        "recoveryCodesExternalStorageVerified": false,
+        "verifiedRecoveryEmailConfigured": true,
+        "teams": ["developers", "platform-admins", "staging-approvers"]
+      },
+      "blockingGates": [
+        "paid-enterprise-activation",
+        "solo-founder-account-recovery-readiness",
+        "pre-transfer-backup-and-freeze-readiness"
+      ],
+      "transferAuthorized": false
+    }
+  ],
+  "cloudTrustCutover": {
+    "status": "pending",
+    "applyAuthorized": false,
+    "liveReadbackVerified": false,
+    "dualOwnerTrustAllowed": false
+  }
 }

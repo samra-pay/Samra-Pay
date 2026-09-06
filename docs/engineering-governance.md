@@ -55,7 +55,7 @@ and the current-state index in the same PR.
 | Alpha uses Auth0, Persona, Crossmint, Google Cloud, GitHub Actions, Qase | Accepted repository decision: [Alpha platform](architecture/alpha-platform.md); funding and Ethiopia payout remain unresolved                                 |
 | Customer-controlled sandbox signing/recovery                             | Recorded choice on 2026-09-04: [Crossmint evidence](operations/crossmint-sandbox-connection.md); complete signer/recovery proof and deployment remain blocked |
 | Public marketing versus authenticated financial surfaces                 | Accepted: [surface boundary](architecture/public-product-surface-boundary.md); activation is separately authorized                                            |
-| Merge enforcement                                                        | Code implemented; GitHub activation blocked: [merge controls](operations/repository-merge-controls.md)                                                        |
+| Merge enforcement                                                        | Enforced after approved Sept 5 transfer to `samra-pay/Samra-Pay`: [transfer evidence](operations/enterprise-transfer-2026-09-05.md)                                |
 
 The [5 September reporting decision](architecture/optional-qase-reporting.md)
 makes Qase optional for release and staging reporting; GitHub engineering gates
@@ -69,7 +69,7 @@ index, not another delivery board.
 
 | Open item                      | Required decision or evidence                                                                                                                                                                             |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub control enforcement     | Select a plan/organization supporting the required private-repository rules; read back enforcement after activation. [Existing migration plan](operations/github-enterprise-control-plane-migration.md)   |
+| Post-transfer release cutover  | Reconcile source authority and Google trust, audit integrations and retention, then collect exact-SHA release evidence before resuming the paused workflows. [Transfer record](operations/enterprise-transfer-2026-09-05.md) |
 | Private first wallet milestone | Current cloud inventory, TLS/server verification, split DB roles, migrations, private API, test identity and bounded authorization. [Deployment package](operations/staging-wallet-deployment-package.md) |
 | Public waitlist activation     | Exact release/configuration, consent/privacy boundary, provider scope, bounded approval and read-back. [Launch runbook](operations/coming-soon-cloud-launch.md)                                           |
 | Funding and Ethiopia payout    | Approved providers and responsibility map before implementing live rails. [Alpha hard stops](architecture/alpha-platform.md)                                                                              |

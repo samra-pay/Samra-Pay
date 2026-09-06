@@ -3,7 +3,7 @@
   "status": "workflow-implemented-execution-not-authorized",
   "environment": "staging",
   "dataClassification": "synthetic-only",
-  "sourceRepository": "haileleuld87/Samra-Pay",
+  "sourceRepository": "samra-pay/Samra-Pay",
   "service": "samra-api",
   "imageRunner": {
     "source": "artifacts/api-server/test/daily-synthetic-journeys.test.ts",

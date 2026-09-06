@@ -26,7 +26,7 @@ export const RELEASE_RECOVERY_EVIDENCE = Object.freeze([
   "artifacts/api-server/test-results/weekly-backup-restore.json",
 ]);
 
-const SOURCE_REPOSITORY = "haileleuld87/Samra-Pay";
+const SOURCE_REPOSITORY = "samra-pay/Samra-Pay";
 const SOURCE_BRANCH = "main";
 const RELEASE_WORKFLOW = ".github/workflows/release-candidate.yml";
 const RELEASE_WORKFLOW_NAME = "Immutable release candidate";

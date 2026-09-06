@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "scope": "github-merge-settings-only",
+  "status": "enforced",
+  "startedAt": "2026-09-05T17:35:14.150Z",
+  "observedAt": "2026-09-05T17:35:16.592Z",
+  "repository": "samra-pay/Samra-Pay",
+  "repositoryId": "1335175962",
+  "ownerId": "320532147",
+  "expectedSha": "33bbad186e1f44e175aa6e7b910bc67918830d14",
+  "branch": "main",
+  "policySha256": "58dde12947d9f74c8f4b51d05cbc642ade0de95064ffad52aa3e84aba05dd6b2",
+  "rulesetIds": [
+    22344977
+  ],
+  "controls": [
+    {
+      "id": "repository-identity",
+      "status": "satisfied"
+    },
+    {
+      "id": "reviewed-main-sha",
+      "status": "satisfied"
+    },
+    {
+      "id": "branch-protected",
+      "status": "satisfied"
+    },
+    {
+      "id": "complete-stable-rules",
+      "status": "satisfied"
+    },
+    {
+      "id": "no-ruleset-bypass",
+      "status": "satisfied"
+    },
+    {
+      "id": "pull-request-required",
+      "status": "satisfied"
+    },
+    {
+      "id": "merge-queue-required",
+      "status": "satisfied"
+    },
+    {
+      "id": "force-push-blocked",
+      "status": "satisfied"
+    },
+    {
+      "id": "deletion-blocked",
+      "status": "satisfied"
+    },
+    {
+      "id": "required-check:Required CI",
+      "status": "satisfied"
+    },
+    {
+      "id": "up-to-date-check:Required CI",
+      "status": "satisfied"
+    },
+    {
+      "id": "required-check:Required security",
+      "status": "satisfied"
+    },
+    {
+      "id": "up-to-date-check:Required security",
+      "status": "satisfied"
+    }
+  ],
+  "observations": [
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay",
+      "result": "read",
+      "sha256": "73c4fb349c83d0ca1ea5d357b2f677eee661efb0134d57ee8fe1999d3e167b45"
+    },
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay/branches/main",
+      "result": "read",
+      "sha256": "fae0287b24d8bafe371fd45986d7a9707ecddeb950f4d0695c6df90eace01291"
+    },
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay/rules/branches/main?per_page=100",
+      "result": "read",
+      "sha256": "157a19cc8098fe251db278094654304e4b8ee188c85e9a58f70aaad32d315ba6"
+    },
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay/rulesets/22344977?includes_parents=true",
+      "result": "read",
+      "sha256": "d0deda19bbbb5782ff626e72a8b4ad9e9be18201278b4f59fa81e72aacf6534e"
+    },
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay/rules/branches/main?per_page=100",
+      "result": "read",
+      "sha256": "157a19cc8098fe251db278094654304e4b8ee188c85e9a58f70aaad32d315ba6"
+    },
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay/branches/main",
+      "result": "read",
+      "sha256": "fae0287b24d8bafe371fd45986d7a9707ecddeb950f4d0695c6df90eace01291"
+    },
+    {
+      "endpoint": "repos/samra-pay/Samra-Pay",
+      "result": "read",
+      "sha256": "f65310a912b2078256b9466780332c546730d136aff286f88ab6f3b024ea5c5b"
+    }
+  ],
+  "limitations": [
+    "Point-in-time metadata evidence; not an atomic snapshot or a future guarantee.",
+    "Does not verify CI results, independent review, deployment, or production readiness.",
+    "Legacy branch protection alone cannot satisfy this ruleset-based contract.",
+    "Missing bypass visibility is unverified, never an empty bypass list."
+  ],
+  "auditorSha256": "1137cb2b1676d7983160a0186db82f02587c5d731386c31a5bfe09d1cff96a35",
+  "targetProvenance": "User-approved transfer, verified with stable repository ID and new organization owner ID; explicit target override because checked-in migration authority still names the former personal owner.",
+  "exactApprovedRulesReadback": true,
+  "githubActionsIntegrationId": 15368,
+  "permanentRulesetId": 22344977
+}

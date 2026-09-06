@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { inspectPublicBuild } from "../../artifacts/samra-pay/scripts/check-public-build.mjs";
 import { evaluateExperienceBudgets } from "../../scripts/src/validate-experience-budgets.ts";
 
-export const REPOSITORY = "haileleuld87/Samra-Pay";
+export const REPOSITORY = "samra-pay/Samra-Pay";
 export const REPOSITORY_ID = 1335175962;
 export const PUBLIC_DIR = "artifacts/samra-pay/dist/public";
 export const MAX_BUNDLE_BYTES = 8_000_000;

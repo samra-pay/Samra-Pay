@@ -43,7 +43,7 @@ concurrency:
 jobs:
   migration:
     if: >-
-      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.repository == 'samra-pay/Samra-Pay' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch'
     environment: staging-migrations

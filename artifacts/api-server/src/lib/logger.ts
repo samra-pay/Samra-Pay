@@ -1,11 +1,13 @@
 import pino from "pino";
+import { serializeOperationalError } from "./log-serializers";
 
 const isProduction = process.env.NODE_ENV === "production";
 const isTest = process.env.NODE_ENV === "test";
 
-export const logger = pino({
+export const loggerOptions = {
   enabled: !isTest,
   level: process.env.LOG_LEVEL ?? "info",
+  serializers: { err: serializeOperationalError },
   redact: [
     "req.headers.authorization",
     "req.headers['x-serverless-authorization']",
@@ -20,4 +22,6 @@ export const logger = pino({
           options: { colorize: true },
         },
       }),
-});
+} satisfies pino.LoggerOptions;
+
+export const logger = pino(loggerOptions);

@@ -110,6 +110,16 @@ describe("release evidence", () => {
         qaseReporting: {
           enabled: true,
           outcomes: {
+            qase_create: "success",
+            qase_upload: "skipped",
+            qase_complete: "skipped",
+          },
+        },
+      },
+      {
+        qaseReporting: {
+          enabled: true,
+          outcomes: {
             qase_create: "failure",
             qase_upload: "skipped",
             qase_complete: "skipped",

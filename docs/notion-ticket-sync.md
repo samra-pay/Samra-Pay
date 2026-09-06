@@ -1,5 +1,18 @@
 # Notion ticket sync
 
+## Transfer freeze — 2026-09-05
+
+The Notion workflow remains disabled after the GitHub transfer. Source now uses
+`samra-pay/Samra-Pay`; this change does not authorize synchronization. Before
+resumption, inventory the existing data source and reconcile historical PR URLs,
+repository-derived event keys and merged-row keys. Verify that the new identity
+neither skips existing tickets nor creates duplicate records. Preserve historical
+records and review a bounded migration before applying any data changes.
+
+Run a read-only access and deduplication review, retain exact-SHA evidence, and
+obtain release-resumption authorization before following the activation steps
+below. See the [cutover sequence](operations/github-enterprise-control-plane-migration.md).
+
 Syncs existing development tickets in the Samrapay Tasks data source from their
 exact GitHub PR URL. Runs every 15 minutes (GitHub schedules may be delayed) and
 on demand. No paid Notion native integration or third-party service is used.

@@ -1,9 +1,9 @@
 import { pathToFileURL } from 'node:url';
 
-export const REPO = 'haileleuld87/Samra-Pay';
+export const REPO = 'samra-pay/Samra-Pay';
 export const SOURCE = '3d114b38-4266-805a-832d-000b268a539e';
 export function prNumber(url) {
-  const match = /^https:\/\/github\.com\/haileleuld87\/Samra-Pay\/pull\/([1-9]\d*)$/.exec(url ?? '');
+  const match = /^https:\/\/github\.com\/samra-pay\/Samra-Pay\/pull\/([1-9]\d*)$/.exec(url ?? '');
   return match ? Number(match[1]) : null;
 }
 export function transition(pr, checks, statuses, current) {

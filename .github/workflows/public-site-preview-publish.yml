@@ -16,7 +16,7 @@ jobs:
   publish:
     if: >-
       vars.SAMRA_PUBLIC_PREVIEWS_ENABLED == 'true' &&
-      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.repository == 'samra-pay/Samra-Pay' &&
       github.ref == 'refs/heads/main' &&
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&

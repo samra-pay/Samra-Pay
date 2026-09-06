@@ -1,7 +1,11 @@
 # Repository merge controls
 
-Status: the code-side controls are implemented. GitHub-side enforcement is
-blocked on the current private-repository plan and is not represented as active.
+Status: GitHub-side enforcement was verified active on **2026-09-05** after
+the approved transfer to private `samra-pay/Samra-Pay`. Repository ruleset
+`22344977` requires PRs, both checks, an up-to-date branch and the merge queue,
+blocks force-push/deletion, and has no bypass. See the
+[dated transfer record](enterprise-transfer-2026-09-05.md) and
+[machine-readable audit](evidence/2026-09-05-merge-authority.json).
 
 ## Required check contract
 
@@ -24,7 +28,7 @@ job-container images, Dockerfile frontends, and deployment base images. The five
 runtime Dockerfiles use reviewed SHA-256 image digests. Dependabot proposes npm,
 Action, and Docker digest updates; it does not bypass the required checks.
 
-## GitHub ruleset to enforce
+## Enforced GitHub ruleset
 
 The `main` ruleset must:
 
@@ -34,10 +38,10 @@ The `main` ruleset must:
 4. block force pushes and branch deletion; and
 5. prevent bypass of the required checks.
 
-The repository currently returns HTTP 403 for both branch-protection and
-ruleset configuration because those controls are unavailable for this private
-repository on its present GitHub plan (initial verification: 2026-09-02).
-Read-only verification on 2026-09-05 again reported `main.protected=false`
+Before the transfer, the repository returned HTTP 403 for branch protection and
+ruleset configuration because those controls were unavailable for this private
+repository on its former GitHub plan (initial verification: 2026-09-02).
+Earlier read-only verification on 2026-09-05 reported `main.protected=false`
 at `5bf1659413a8a3918a3fa3b58829d98c1bd47470`; the rulesets API returned
 HTTP 403 with "Upgrade to GitHub Pro or make this repository public to enable
 this feature." Both required checks passed for that SHA. The workflow files,
@@ -54,21 +58,19 @@ Use the [read-only settings audit](repository-settings-audit.md) to produce
 dated, exact-SHA metadata evidence. Missing or unreadable controls block the
 report; successful workflow validation cannot substitute for this read-back.
 
-After the repository plan supports rulesets, record a read-back of the applied
-`main` ruleset showing the two exact check names, strict/up-to-date enforcement,
-merge queue, force-push protection, deletion protection, and bypass policy.
-Until that read-back exists, describe green-main enforcement as implemented in
-code but not enforced by GitHub.
+The post-transfer read-back verified both exact check names bound to GitHub
+Actions app `15368`, strict/up-to-date enforcement, merge queue, force-push
+protection, deletion protection and an empty bypass list. The temporary
+organization update hold `22344895` was disabled only after that audit passed.
+The permanent ruleset remained effective in the subsequent audit.
 
-Decision owner: David Haile. Use the existing
-[Enterprise migration plan](github-enterprise-control-plane-migration.md) if
-an organization transfer is selected. Do not change visibility, purchase a
-plan, transfer ownership, or reissue cloud federation merely to clear this
-blocker. Those actions require a separate decision and their existing controls.
+Decision owner: David Haile. The approved transfer and protection package is
+complete; the [migration plan](github-enterprise-control-plane-migration.md)
+still governs the remaining source and cloud cutover. The completed GitHub
+approval does not authorize cloud federation changes or release resumption.
 
-The next activation must verify support for the complete contract, including
-merge queue, before changing the plan or repository. Record the resulting
-ruleset ID, review time, exact check contexts, queue and bypass settings, and a
-read-back. Until then, contributors must still use reviewed PRs and verify the
-exact candidate's required checks; this is a working practice, not enforced
-protection.
+Contributors must use reviewed PRs and the enforced merge queue. Re-read current
+settings and exact-candidate checks when they matter to a release decision.
+This settings observation does not prove a completed queue merge, cloud
+federation, deployment or production readiness. Nine release/sync workflows
+remain paused pending source-authority and integration reconciliation.

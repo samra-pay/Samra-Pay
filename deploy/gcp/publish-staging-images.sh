@@ -37,7 +37,7 @@ WORKLOAD_IDENTITY_POOL_ID="samra-github-staging"
 WORKLOAD_IDENTITY_PROVIDER_ID="samra-pay-main"
 WORKLOAD_IDENTITY_LOCATION="global"
 WORKLOAD_IDENTITY_ATTRIBUTE_MAPPING="attribute.environment=assertion.environment,attribute.event_name=assertion.event_name,attribute.ref=assertion.ref,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.workflow=assertion.workflow,attribute.workflow_ref=assertion.workflow_ref,google.subject=assertion.sub"
-WORKLOAD_IDENTITY_ATTRIBUTE_CONDITION="assertion.repository=='haileleuld87/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging image publication' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-image-publication.yml@refs/heads/main' && assertion.environment=='staging-image-publication'"
+WORKLOAD_IDENTITY_ATTRIBUTE_CONDITION="assertion.repository=='samra-pay/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging image publication' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-image-publication.yml@refs/heads/main' && assertion.environment=='staging-image-publication'"
 REQUIRED_VERIFICATION_API="containeranalysis.googleapis.com"
 SOURCE_BUCKET="${PROJECT_ID}_cloudbuild"
 SOURCE_BUCKET_ROLE="roles/storage.objectViewer"
@@ -480,7 +480,7 @@ node "${ROOT_DIR}/deploy/gcp/record-staging-image-publication.mjs" \
   --project-number "${PROJECT_NUMBER}" \
   --region "${REGION}" \
   --repository "${REPOSITORY}" \
-  --source-repository "haileleuld87/Samra-Pay" \
+  --source-repository "samra-pay/Samra-Pay" \
   --cloud-build-id "${BUILD_ID}" \
   --publisher-identity "${OPERATOR}" \
   --build-service-account "${BUILD_SERVICE_ACCOUNT}" \

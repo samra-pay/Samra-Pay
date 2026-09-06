@@ -8,10 +8,10 @@ const EXACT = Object.freeze({
   stagingProjectNumber: "934122615631",
   organizationId: "614833350075",
   region: "us-east4",
-  owner: "haileleuld87",
+  owner: "samra-pay",
   repository: "Samra-Pay",
   repositoryId: "1335175962",
-  repositoryOwnerId: "237485986",
+  repositoryOwnerId: "320532147",
   ref: "refs/heads/main",
   event: "workflow_dispatch",
   workflowName: "Production foundation preflight",
@@ -134,13 +134,13 @@ export function validateProductionFoundationPreflight(
   );
 
   const expectedCondition =
-    "assertion.repository=='haileleuld87/Samra-Pay' && " +
+    "assertion.repository=='samra-pay/Samra-Pay' && " +
     "assertion.repository_id=='1335175962' && " +
-    "assertion.repository_owner_id=='237485986' && " +
+    "assertion.repository_owner_id=='320532147' && " +
     "assertion.ref=='refs/heads/main' && " +
     "assertion.event_name=='workflow_dispatch' && " +
     "assertion.workflow=='Production foundation preflight' && " +
-    "assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main' && " +
+    "assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/production-foundation-preflight.yml@refs/heads/main' && " +
     "assertion.environment=='production-foundation-review'";
   assert(
     provider.displayName === EXACT.providerDisplayName &&

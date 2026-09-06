@@ -44,9 +44,9 @@ export function validateStagingReleaseControlPlane(
   assert(
     JSON.stringify(contract.source) ===
       JSON.stringify({
-        repository: "haileleuld87/Samra-Pay",
+        repository: "samra-pay/Samra-Pay",
         repositoryId: "1335175962",
-        repositoryOwnerId: "237485986",
+        repositoryOwnerId: "320532147",
         branch: "main",
         exactCommitRequired: true,
         releaseCandidateEvidenceRequired: true,

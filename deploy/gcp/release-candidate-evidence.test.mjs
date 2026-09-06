@@ -20,7 +20,7 @@ const gitTreeSha = "b".repeat(40);
 const runId = "32608456303";
 const runAttempt = 2;
 const runUrl =
-  "https://github.com/haileleuld87/Samra-Pay/actions/runs/32608456303";
+  "https://github.com/samra-pay/Samra-Pay/actions/runs/32608456303";
 const generatedAt = "2026-09-02T00:00:00.000Z";
 
 function runMetadata(overrides = {}) {
@@ -35,8 +35,8 @@ function runMetadata(overrides = {}) {
     status: "completed",
     conclusion: "success",
     html_url: runUrl,
-    repository: { full_name: "haileleuld87/Samra-Pay" },
-    head_repository: { full_name: "haileleuld87/Samra-Pay" },
+    repository: { full_name: "samra-pay/Samra-Pay" },
+    head_repository: { full_name: "samra-pay/Samra-Pay" },
     ...overrides,
   };
 }
@@ -49,14 +49,14 @@ function recoveryEvidence(overrides = {}) {
     result: "pass",
     provenance: {
       executor: "github-actions",
-      repository: "haileleuld87/Samra-Pay",
+      repository: "samra-pay/Samra-Pay",
       eventName: "workflow_dispatch",
       candidateSha,
       githubSha: candidateSha,
       workflowRunId: runId,
       workflowRunAttempt: runAttempt,
       workflowRef:
-        "haileleuld87/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/main",
+        "samra-pay/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/main",
     },
     tooling: {
       clientMode: "digest-pinned-container",
@@ -204,7 +204,7 @@ async function createFixture() {
         shortSha: candidateSha.slice(0, 12),
         gitTreeSha,
         parentShas: ["1".repeat(40)],
-        repository: "haileleuld87/Samra-Pay",
+        repository: "samra-pay/Samra-Pay",
         workflowRunId: runId,
         workflowRunAttempt: runAttempt,
         workflowRunUrl: runUrl,
@@ -274,7 +274,7 @@ async function createFixture() {
     candidateSha,
     gitTreeSha,
     parentShas: ["1".repeat(40)],
-    repository: "haileleuld87/Samra-Pay",
+    repository: "samra-pay/Samra-Pay",
     workflowRunId: runId,
     workflowRunAttempt: runAttempt,
     workflowRunUrl: runUrl,
@@ -464,7 +464,7 @@ test("rejects old or weakened recovery evidence even when its hash is updated", 
     (value) => (value.provenance.workflowRunAttempt = 1),
     (value) =>
       (value.provenance.workflowRef =
-        "haileleuld87/Samra-Pay/.github/workflows/backend-resilience.yml@refs/heads/main"),
+        "samra-pay/Samra-Pay/.github/workflows/backend-resilience.yml@refs/heads/main"),
     (value) => (value.tooling.clientMode = "local-path"),
     (value) => (value.tooling.clientImage = "postgres:16"),
     (value) => (value.boundaries.cloudAccess = true),
@@ -565,6 +565,18 @@ function verifyFixture(fixture) {
 
 test("optional Qase failures pass downstream only with all engineering gates and local evidence", async () => {
   for (const qase of [
+    {
+      reporting: {
+        enabled: true,
+        outcomes: {
+          qase_create: "success",
+          qase_upload: "skipped",
+          qase_complete: "skipped",
+        },
+      },
+      runId: null,
+      runUrl: null,
+    },
     {
       reporting: {
         enabled: true,

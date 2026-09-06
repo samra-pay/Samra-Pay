@@ -24,7 +24,7 @@ REGION="${SAMRA_GCP_REGION}"
 OPERATOR="${SAMRA_GCP_OPERATOR_ACCOUNT}"
 EXPECTED_SHA="${SAMRA_GCP_EXPECTED_SHA}"
 POOL_ID="samra-zero-traffic-staging"
-POOL_DISPLAY_NAME="Samra staging zero-traffic deployment"
+POOL_DISPLAY_NAME="Samra staging zero-traffic"
 PROVIDER_ID="samra-pay-zero-traffic-main"
 LOCATION="global"
 DEPLOYER_ID="samra-github-deployer-staging"
@@ -36,13 +36,13 @@ ARTIFACT_ROLE="roles/artifactregistry.reader"
 RUNTIME_ROLE="roles/iam.serviceAccountUser"
 FEDERATION_ROLE="roles/iam.workloadIdentityUser"
 AUTHORIZATION="AUTHORIZED_STAGING_ZERO_TRAFFIC_FEDERATION"
-REPOSITORY="haileleuld87/Samra-Pay"
+REPOSITORY="samra-pay/Samra-Pay"
 REPOSITORY_ID="1335175962"
 POOL_RESOURCE="projects/${PROJECT_NUMBER}/locations/${LOCATION}/workloadIdentityPools/${POOL_ID}"
 PROVIDER_RESOURCE="${POOL_RESOURCE}/providers/${PROVIDER_ID}"
 FEDERATED_MEMBER="principalSet://iam.googleapis.com/${POOL_RESOURCE}/attribute.repository_id/${REPOSITORY_ID}"
 ATTRIBUTE_MAPPING="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.event_name=assertion.event_name,attribute.workflow=assertion.workflow,attribute.workflow_ref=assertion.workflow_ref,attribute.environment=assertion.environment"
-ATTRIBUTE_CONDITION="assertion.repository=='${REPOSITORY}' && assertion.repository_id=='${REPOSITORY_ID}' && assertion.repository_owner_id=='237485986' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging zero-traffic deployment' && assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-zero-traffic-deployment.yml@refs/heads/main' && assertion.environment=='staging-zero-traffic-deployment'"
+ATTRIBUTE_CONDITION="assertion.repository=='${REPOSITORY}' && assertion.repository_id=='${REPOSITORY_ID}' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging zero-traffic deployment' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-zero-traffic-deployment.yml@refs/heads/main' && assertion.environment=='staging-zero-traffic-deployment'"
 CUSTOM_ROLE_PERMISSIONS="artifactregistry.dockerimages.get,artifactregistry.repositories.get,artifactregistry.repositories.getIamPolicy,compute.networks.get,compute.subnetworks.get,iam.roles.get,iam.serviceAccountKeys.list,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.workloadIdentityPoolProviders.get,iam.workloadIdentityPools.get,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,run.operations.get,run.revisions.get,run.revisions.list,run.services.create,run.services.get,run.services.getIamPolicy,run.services.update,secretmanager.secrets.get,secretmanager.versions.get,serviceusage.services.list,serviceusage.services.use"
 RUNTIME_SERVICE_ACCOUNTS=(
   "samra-api-staging@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -273,7 +273,7 @@ if [[ "${PROVIDER_STATE}" == missing ]]; then
   gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_ID}" \
     --project="${PROJECT_ID}" --location="${LOCATION}" \
     --workload-identity-pool="${POOL_ID}" \
-    --display-name="Samra Pay main zero-traffic deployment" \
+    --display-name="Samra Pay main zero-traffic" \
     --issuer-uri="https://token.actions.githubusercontent.com" \
     --attribute-mapping="${ATTRIBUTE_MAPPING}" \
     --attribute-condition="${ATTRIBUTE_CONDITION}" --quiet

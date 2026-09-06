@@ -104,7 +104,7 @@ jobs:
   traffic-control:
     name: Review or apply one exact staging traffic operation
     if: >-
-      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.repository == 'samra-pay/Samra-Pay' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch'
     environment:
@@ -151,7 +151,7 @@ jobs:
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
           [[ -z "$(git status --porcelain)" ]]
-          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REPOSITORY}" == "samra-pay/Samra-Pay" ]]
           [[ "${GITHUB_REF}" == "refs/heads/main" ]]
           [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
           [[ "${SAMRA_STAGING_CANDIDATE_SHA}" =~ ^[0-9a-f]{40}$ ]]

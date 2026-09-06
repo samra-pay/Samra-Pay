@@ -61,7 +61,7 @@ const databaseOperationTimeoutMs = 60_000;
 const maximumDumpBytes = 64 * 1024 * 1024;
 const pinnedPostgresClientImage =
   "postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94";
-const requiredGithubRepository = "haileleuld87/Samra-Pay";
+const requiredGithubRepository = "samra-pay/Samra-Pay";
 const containerEvidenceFolder = "/samra-recovery";
 const requiredTriggers = [
   "audit_events_append_only",
@@ -999,10 +999,10 @@ test("RESILIENCE-WEEKLY-007D recovery provenance is exact in GitHub and explicit
   const candidateSha = "a".repeat(40);
   const environment = {
     GITHUB_ACTIONS: "true",
-    GITHUB_REPOSITORY: "haileleuld87/Samra-Pay",
+    GITHUB_REPOSITORY: "samra-pay/Samra-Pay",
     GITHUB_EVENT_NAME: "workflow_dispatch",
     GITHUB_WORKFLOW_REF:
-      "haileleuld87/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/main",
+      "samra-pay/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/main",
     GITHUB_SHA: candidateSha,
     GITHUB_RUN_ID: "123456",
     GITHUB_RUN_ATTEMPT: "2",
@@ -1012,14 +1012,14 @@ test("RESILIENCE-WEEKLY-007D recovery provenance is exact in GitHub and explicit
     await collectRecoveryProvenance(environment, async () => candidateSha),
     {
       executor: "github-actions",
-      repository: "haileleuld87/Samra-Pay",
+      repository: "samra-pay/Samra-Pay",
       eventName: "workflow_dispatch",
       candidateSha,
       githubSha: candidateSha,
       workflowRunId: "123456",
       workflowRunAttempt: 2,
       workflowRef:
-        "haileleuld87/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/main",
+        "samra-pay/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/main",
     },
   );
   await assert.rejects(
@@ -1039,6 +1039,24 @@ test("RESILIENCE-WEEKLY-007D recovery provenance is exact in GitHub and explicit
       async () => candidateSha,
     ),
   );
+  const migration = JSON.parse(
+    await readFile(
+      join(
+        workspaceRoot,
+        "deploy/gcp/staging-github-enterprise-migration.json",
+      ),
+      "utf8",
+    ),
+  ) as { repository: { previousAuthority: { nameWithOwner: string } } };
+  await assert.rejects(
+    collectRecoveryProvenance(
+      {
+        ...environment,
+        GITHUB_REPOSITORY: migration.repository.previousAuthority.nameWithOwner,
+      },
+      async () => candidateSha,
+    ),
+  );
   await assert.rejects(
     collectRecoveryProvenance(
       { ...environment, GITHUB_EVENT_NAME: "push" },
@@ -1050,7 +1068,7 @@ test("RESILIENCE-WEEKLY-007D recovery provenance is exact in GitHub and explicit
       {
         ...environment,
         GITHUB_WORKFLOW_REF:
-          "haileleuld87/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/feature",
+          "samra-pay/Samra-Pay/.github/workflows/release-candidate.yml@refs/heads/feature",
       },
       async () => candidateSha,
     ),
@@ -1077,7 +1095,7 @@ test("RESILIENCE-WEEKLY-007D recovery provenance is exact in GitHub and explicit
     ...environment,
     GITHUB_EVENT_NAME: "pull_request",
     GITHUB_WORKFLOW_REF:
-      "haileleuld87/Samra-Pay/.github/workflows/backend-resilience.yml@refs/pull/42/merge",
+      "samra-pay/Samra-Pay/.github/workflows/backend-resilience.yml@refs/pull/42/merge",
   };
   assert.equal(
     (

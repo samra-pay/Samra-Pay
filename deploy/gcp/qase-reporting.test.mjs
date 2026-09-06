@@ -20,6 +20,14 @@ test("records disabled, quota-limited, uploaded, and incomplete reporting withou
     {
       enabled: true,
       outcomes: {
+        qase_create: "success",
+        qase_upload: "skipped",
+        qase_complete: "skipped",
+      },
+    },
+    {
+      enabled: true,
+      outcomes: {
         qase_create: "failure",
         qase_upload: "skipped",
         qase_complete: "skipped",
@@ -111,4 +119,31 @@ test("rejects malformed or contradictory reporting metadata", () => {
     }),
     { reporting: disabled, runId: null, runUrl: null },
   );
+});
+
+test("a successful create action without an ID records no delivery and cannot fabricate upload", () => {
+  const outcomes = {
+    qase_create: "success",
+    qase_upload: "skipped",
+    qase_complete: "skipped",
+  };
+  const record = qaseReportingFromEnvironment({
+    QASE_REPORTING_ENABLED: "true",
+    QASE_REPORTING_RESULTS: JSON.stringify(outcomes),
+    QASE_RUN_ID: "",
+  });
+  assert.deepEqual(record, {
+    reporting: { enabled: true, outcomes },
+    runId: null,
+    runUrl: null,
+  });
+  for (const key of ["qase_upload", "qase_complete"]) {
+    assert.throws(() =>
+      validateOptionalQaseReporting(
+        { enabled: true, outcomes: { ...outcomes, [key]: "success" } },
+        null,
+        null,
+      ),
+    );
+  }
 });

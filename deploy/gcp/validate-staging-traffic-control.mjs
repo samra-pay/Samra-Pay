@@ -73,10 +73,10 @@ export function validateStagingTrafficControl(
 
   const github = contract.github;
   assert(
-    github.owner === "haileleuld87" &&
+    github.owner === "samra-pay" &&
       github.repository === "Samra-Pay" &&
       github.repositoryId === "1335175962" &&
-      github.repositoryOwnerId === "237485986" &&
+      github.repositoryOwnerId === "320532147" &&
       github.allowedRef === "refs/heads/main" &&
       github.allowedEvent === "workflow_dispatch" &&
       github.workflowName === "Staging traffic control" &&
@@ -112,15 +112,8 @@ export function validateStagingTrafficControl(
         "assertion.repository_owner_id" &&
       provider.attributeMapping["attribute.environment"] ===
         "assertion.environment" &&
-      provider.commonCondition.includes(
-        "assertion.repository_id=='1335175962'",
-      ) &&
-      provider.commonCondition.includes(
-        "assertion.repository_owner_id=='237485986'",
-      ) &&
-      provider.commonCondition.includes(
-        "assertion.workflow_ref=='haileleuld87/Samra-Pay/.github/workflows/staging-traffic-control.yml@refs/heads/main'",
-      ) &&
+      provider.commonCondition ===
+        "assertion.repository=='samra-pay/Samra-Pay' && assertion.repository_id=='1335175962' && assertion.repository_owner_id=='320532147' && assertion.ref=='refs/heads/main' && assertion.event_name=='workflow_dispatch' && assertion.workflow=='Staging traffic control' && assertion.workflow_ref=='samra-pay/Samra-Pay/.github/workflows/staging-traffic-control.yml@refs/heads/main'" &&
       provider.promotionEnvironmentCondition ===
         "assertion.environment=='staging-traffic-promotion'" &&
       provider.rollbackEnvironmentCondition ===

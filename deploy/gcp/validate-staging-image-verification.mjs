@@ -37,7 +37,7 @@ export function validateStagingImageVerificationContract(
       contract.status === STATUS &&
       contract.environment === "staging" &&
       contract.dataClassification === "synthetic-only" &&
-      contract.sourceRepository === "haileleuld87/Samra-Pay" &&
+      contract.sourceRepository === "samra-pay/Samra-Pay" &&
       contract.service === "samra-api",
     "Staging image verification identity drifted",
   );

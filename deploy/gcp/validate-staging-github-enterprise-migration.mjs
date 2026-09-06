@@ -1,13 +1,20 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  lstatSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const EXACT = Object.freeze({
   repositoryName: "Samra-Pay",
   repositoryId: "1335175962",
-  activeOwnerLogin: "haileleuld87",
-  activeOwnerId: "237485986",
-  activeRepository: "haileleuld87/Samra-Pay",
+  previousOwnerLogin: "haileleuld87",
+  previousOwnerId: "237485986",
+  previousRepository: "haileleuld87/Samra-Pay",
   targetOwnerLogin: "samra-pay",
   targetOwnerId: "320532147",
   targetRepository: "samra-pay/Samra-Pay",
@@ -15,9 +22,29 @@ const EXACT = Object.freeze({
 });
 
 const EXPECTED_BLOCKERS = Object.freeze([
-  "paid-enterprise-activation",
-  "solo-founder-account-recovery-readiness",
-  "pre-transfer-backup-and-freeze-readiness",
+  "google-trust-cutover",
+  "integration-and-retention-review",
+  "exact-sha-release-evidence",
+  "release-resumption-authorization",
+]);
+
+const MIGRATION_CONTROL_FILES = [
+  "deploy/gcp/review-staging-github-enterprise-migration.mjs",
+  "deploy/gcp/staging-github-enterprise-migration.json",
+  "deploy/gcp/staging-github-enterprise-migration.test.mjs",
+  "deploy/gcp/validate-staging-github-enterprise-migration.mjs",
+];
+const GENERATED_DIRECTORIES = new Set([
+  ".git",
+  "node_modules",
+  "dist",
+  "build",
+  ".next",
+  ".turbo",
+  ".cache",
+  "coverage",
+  "test-results",
+  ".expo",
 ]);
 
 const EXPECTED_CUTOVER_ORDER = Object.freeze([
@@ -28,7 +55,7 @@ const EXPECTED_CUTOVER_ORDER = Object.freeze([
   "transfer-repository",
   "verify-repository-id-and-new-owner-id",
   "switch-repository-authority-contracts",
-  "reapply-six-google-workload-identity-boundaries",
+  "reapply-inventoried-google-workload-identity-boundaries",
   "enforce-solo-founder-protected-environment-controls",
   "reconnect-qase-github-app",
   "audit-branch-actions-environment-and-cloud-controls",
@@ -53,53 +80,101 @@ function listFiles(path) {
   if (!existsSync(path)) return [];
   return readdirSync(path, { withFileTypes: true }).flatMap((entry) => {
     const child = join(path, entry.name);
-    if (entry.isDirectory()) return listFiles(child);
+    if (entry.isSymbolicLink()) return [];
+    if (entry.isDirectory())
+      return GENERATED_DIRECTORIES.has(entry.name) ? [] : listFiles(child);
     return statSync(child).isFile() ? [child] : [];
   });
+}
+
+function sourceFiles(root, contract) {
+  const excluded = new Set(
+    contract.operationalReferences.migrationControlFiles,
+  );
+  // Respect Git's source boundary so local credentials and generated evidence
+  // are never read. Tracked files remain covered even if a rule ignores them.
+  const files = existsSync(join(root, ".git"))
+    ? execFileSync(
+        "git",
+        [
+          "-C",
+          root,
+          "ls-files",
+          "--cached",
+          "--others",
+          "--exclude-standard",
+          "-z",
+        ],
+        { encoding: "utf8", timeout: 10_000, maxBuffer: 8 * 1024 * 1024 },
+      )
+        .split("\0")
+        .filter(Boolean)
+        .map((path) => join(root, path))
+    : contract.operationalReferences.scanRoots.flatMap((scanRoot) =>
+        listFiles(join(root, scanRoot)),
+      );
+  return [...new Set(files)]
+    .filter((path) => existsSync(path) && lstatSync(path).isFile())
+    .map((path) => ({ path, relativePath: relative(root, path) }))
+    .filter(({ relativePath }) => !excluded.has(relativePath))
+    .map((file) => ({ ...file, bytes: readFileSync(file.path) }))
+    .filter(({ bytes }) => !bytes.includes(0))
+    .map(({ relativePath, bytes }) => ({
+      relativePath,
+      contents: bytes.toString("utf8"),
+    }));
+}
+
+// Historical evidence is allowed only as an exact, individually recorded line.
+// A new operational reference in the same file is still rejected.
+function currentLines(file, contract) {
+  const historical = new Set(
+    contract.operationalReferences.historicalReferences
+      .filter((entry) => entry.path === file.relativePath)
+      .map((entry) => entry.line),
+  );
+  return file.contents.split(/\r?\n/).filter((line) => !historical.has(line));
 }
 
 export function findOperationalAuthorityReferences(
   root,
   contract = readStagingGithubEnterpriseMigration(),
 ) {
-  const excluded = new Set(
-    contract.operationalReferences.migrationControlFiles,
-  );
   const needles = [
     contract.repository.activeAuthority.nameWithOwner,
     contract.repository.activeAuthority.ownerId,
   ];
-  return contract.operationalReferences.scanRoots
-    .flatMap((scanRoot) => listFiles(join(root, scanRoot)))
-    .map((path) => ({ path, relativePath: relative(root, path) }))
-    .filter(({ relativePath }) => !excluded.has(relativePath))
-    .filter(({ path }) => {
-      const contents = readFileSync(path, "utf8");
-      return needles.some((needle) => contents.includes(needle));
-    })
+  return sourceFiles(root, contract)
+    .filter((file) =>
+      currentLines(file, contract).some((line) =>
+        needles.some((needle) => line.replaceAll("\\/", "/").includes(needle)),
+      ),
+    )
     .map(({ relativePath }) => relativePath)
     .sort();
 }
 
-export function findPrematureTargetAuthorityReferences(
+export function findFormerAuthorityReferences(
   root,
   contract = readStagingGithubEnterpriseMigration(),
 ) {
-  const excluded = new Set(
-    contract.operationalReferences.migrationControlFiles,
-  );
-  const target = contract.repository.targetAuthority;
-  return contract.operationalReferences.scanRoots
-    .flatMap((scanRoot) => listFiles(join(root, scanRoot)))
-    .map((path) => ({ path, relativePath: relative(root, path) }))
-    .filter(({ relativePath }) => !excluded.has(relativePath))
-    .filter(({ path }) => {
-      const contents = readFileSync(path, "utf8");
-      return (
-        contents.includes(target.nameWithOwner) ||
-        contents.includes(target.ownerId)
-      );
-    })
+  return sourceFiles(root, contract)
+    .filter((file) =>
+      currentLines(file, contract).some((line) => {
+        const normalized = line
+          .replaceAll("\\/", "/")
+          .replace(/(?<=\d)_(?=\d)/g, "");
+        return (
+          normalized
+            .toLowerCase()
+            .includes(EXACT.previousRepository.toLowerCase()) ||
+          normalized.includes(EXACT.previousOwnerId) ||
+          /\bowner(?:Login)?["']?\s*[:=]+\s*["']haileleuld87["']/.test(
+            normalized,
+          )
+        );
+      }),
+    )
     .map(({ relativePath }) => relativePath)
     .sort();
 }
@@ -108,10 +183,10 @@ export function validateStagingGithubEnterpriseMigration(
   contract = readStagingGithubEnterpriseMigration(),
   { root } = {},
 ) {
-  assert(contract.schemaVersion === 1, "Unsupported migration schema");
+  assert(contract.schemaVersion === 2, "Unsupported migration schema");
   assert(
-    contract.status === "prepared-not-authorized",
-    "Enterprise migration must remain prepared but unauthorized",
+    contract.status === "github-transferred-cloud-cutover-pending",
+    "GitHub transfer must remain distinct from pending cloud cutover",
   );
   assert(
     /^\d{4}-\d{2}-\d{2}$/.test(contract.observedAt),
@@ -126,15 +201,15 @@ export function validateStagingGithubEnterpriseMigration(
     "Stable repository identity drifted",
   );
   assert(
-    JSON.stringify(repository.activeAuthority) ===
+    JSON.stringify(repository.previousAuthority) ===
       JSON.stringify({
         accountType: "user",
-        ownerLogin: EXACT.activeOwnerLogin,
-        ownerId: EXACT.activeOwnerId,
-        nameWithOwner: EXACT.activeRepository,
+        ownerLogin: EXACT.previousOwnerLogin,
+        ownerId: EXACT.previousOwnerId,
+        nameWithOwner: EXACT.previousRepository,
         enterpriseBacked: false,
       }),
-    "Active personal authority drifted",
+    "Historical personal authority drifted",
   );
   assert(
     JSON.stringify(repository.targetAuthority) ===
@@ -148,23 +223,31 @@ export function validateStagingGithubEnterpriseMigration(
       }),
     "Target Enterprise authority drifted",
   );
+  assert(
+    JSON.stringify(repository.activeAuthority) ===
+      JSON.stringify(repository.targetAuthority),
+    "Active repository must use the verified Enterprise owner",
+  );
 
   assert(
-    contract.observedEnterpriseState.billingStatus === "trial" &&
-      contract.observedEnterpriseState.billingInformationConfigured === false &&
+    contract.observedEnterpriseState.billingStatus === "paid" &&
+      contract.observedEnterpriseState.billingInformationConfigured === true &&
       contract.observedEnterpriseState.operatingModel === "solo-founder" &&
       contract.observedEnterpriseState.organizationMemberCount === 1 &&
       contract.observedEnterpriseState.organizationOwnerCount === 1 &&
-      contract.observedEnterpriseState.accountRecoveryReadiness === "blocked" &&
+      contract.observedEnterpriseState.accountRecoveryReadiness ===
+        "verified" &&
       contract.observedEnterpriseState.twoFactorAuthenticationEnabled ===
         true &&
       contract.observedEnterpriseState.authenticatorAppConfigured === true &&
       contract.observedEnterpriseState.passkeyOrSecurityKeyConfigured ===
-        false &&
+        true &&
       contract.observedEnterpriseState.recoveryCodesGeneratedAndViewed ===
         true &&
       contract.observedEnterpriseState.recoveryCodesExternalStorageVerified ===
-        false &&
+        true &&
+      contract.observedEnterpriseState.recoveryCodesExternalStorageEvidence ===
+        "user-attestation-2026-09-05" &&
       contract.observedEnterpriseState.verifiedRecoveryEmailConfigured ===
         true &&
       JSON.stringify(contract.observedEnterpriseState.teams) ===
@@ -209,7 +292,7 @@ export function validateStagingGithubEnterpriseMigration(
     "Migration blockers drifted",
   );
   assert(
-    transfer.authorized === false &&
+    transfer.authorized === true &&
       transfer.releaseFreezeRequired === true &&
       transfer.backupAndInventoryRequired === true &&
       transfer.exactMainShaRequired === true &&
@@ -223,6 +306,34 @@ export function validateStagingGithubEnterpriseMigration(
     "Transfer safety boundary drifted",
   );
   assert(
+    transfer.status === "completed" &&
+      transfer.reviewedMainSha === "33bbad186e1f44e175aa6e7b910bc67918830d14" &&
+      transfer.mainRulesetId === 22344977 &&
+      transfer.releaseFreezeApplied === true &&
+      transfer.releaseResumptionAuthorized === false,
+    "Completed transfer evidence and release freeze are required",
+  );
+  assert(
+    JSON.stringify(contract.cloudTrustCutover) ===
+      JSON.stringify({
+        status: "pending",
+        applyAuthorized: false,
+        liveReadbackVerified: false,
+        dualOwnerTrustAllowed: false,
+      }),
+    "Cloud trust must remain pending, unapproved and single-owner",
+  );
+  const evidencePaths = [
+    "docs/operations/enterprise-transfer-2026-09-05.md",
+    "docs/operations/evidence/2026-09-05-merge-authority.json",
+    "docs/operations/evidence/2026-09-05-main-ruleset.json",
+    "docs/operations/evidence/2026-09-05-transfer-checks.json",
+  ];
+  assert(
+    JSON.stringify(transfer.evidencePaths) === JSON.stringify(evidencePaths),
+    "Transfer evidence paths drifted",
+  );
+  assert(
     JSON.stringify(contract.cutoverOrder) ===
       JSON.stringify(EXPECTED_CUTOVER_ORDER),
     "Cutover order drifted",
@@ -230,27 +341,77 @@ export function validateStagingGithubEnterpriseMigration(
 
   const currentFiles = contract.operationalReferences.currentAuthorityFiles;
   assert(
-    currentFiles.length === 69 &&
+    currentFiles.length > 0 &&
       new Set(currentFiles).size === currentFiles.length &&
       JSON.stringify([...currentFiles].sort()) === JSON.stringify(currentFiles),
     "Current-authority inventory must be sorted, unique, and complete",
+  );
+  assert(
+    JSON.stringify(contract.operationalReferences.scanRoots) === '["."]' &&
+      JSON.stringify(contract.operationalReferences.migrationControlFiles) ===
+        JSON.stringify(MIGRATION_CONTROL_FILES),
+    "Authority scan must cover the entire source repository",
+  );
+  const historical = contract.operationalReferences.historicalReferences;
+  assert(
+    Array.isArray(historical) &&
+      historical.every(
+        (entry) =>
+          typeof entry.path === "string" &&
+          typeof entry.line === "string" &&
+          !entry.line.includes("\n") &&
+          !entry.line.includes("\r") &&
+          entry.reason?.trim(),
+      ) &&
+      new Set(
+        historical.map((entry) => JSON.stringify([entry.path, entry.line])),
+      ).size === historical.length,
+    "Historical authority references must be explicit and unique",
   );
 
   if (root) {
     assert(
       JSON.stringify(findOperationalAuthorityReferences(root, contract)) ===
         JSON.stringify(currentFiles),
-      "Operational personal-authority inventory drifted",
+      "Operational Enterprise-authority inventory drifted",
     );
     assert(
-      findPrematureTargetAuthorityReferences(root, contract).length === 0,
-      "Target Enterprise authority appeared before transfer authorization",
+      findFormerAuthorityReferences(root, contract).length === 0,
+      "Former personal authority remains in operational source",
+    );
+    const sources = new Map(
+      sourceFiles(root, contract).map((file) => [
+        file.relativePath,
+        file.contents,
+      ]),
+    );
+    assert(
+      historical.every((entry) =>
+        sources.get(entry.path)?.split(/\r?\n/).includes(entry.line),
+      ),
+      "Historical authority exception no longer matches its exact source line",
+    );
+    assert(
+      evidencePaths.every((path) => existsSync(join(root, path))),
+      "Transfer evidence is missing",
+    );
+    const evidence = JSON.parse(
+      readFileSync(join(root, evidencePaths[1]), "utf8"),
+    );
+    assert(
+      evidence.status === "enforced" &&
+        evidence.repository === EXACT.targetRepository &&
+        evidence.repositoryId === EXACT.repositoryId &&
+        evidence.ownerId === EXACT.targetOwnerId &&
+        evidence.expectedSha === transfer.reviewedMainSha &&
+        evidence.permanentRulesetId === transfer.mainRulesetId,
+      "Transfer evidence identity does not match the recorded transfer",
     );
   }
 
   return Object.freeze({
-    schemaVersion: 1,
-    status: "validated-prepared-not-authorized",
+    schemaVersion: 2,
+    status: "validated-github-transferred-cloud-cutover-pending",
     operatingModel: governance.operatingModel,
     activeRepository: repository.activeAuthority.nameWithOwner,
     targetRepository: repository.targetAuthority.nameWithOwner,
@@ -264,7 +425,9 @@ export function validateStagingGithubEnterpriseMigration(
       contract.observedEnterpriseState.passkeyOrSecurityKeyConfigured,
     blockerCount: contract.blockingGates.length,
     currentAuthorityFileCount: currentFiles.length,
-    transferAuthorized: false,
+    transferAuthorized: true,
+    cloudTrustApplyAuthorized: false,
+    releaseResumptionAuthorized: false,
   });
 }
 

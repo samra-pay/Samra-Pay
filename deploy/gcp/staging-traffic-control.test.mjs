@@ -57,7 +57,7 @@ function buildPublication() {
     projectNumber: "934122615631",
     region: "us-east4",
     repository: "samra-staging",
-    sourceRepository: "haileleuld87/Samra-Pay",
+    sourceRepository: "samra-pay/Samra-Pay",
     cloudBuildId: "0ebc07c2-3e97-4d6c-8ff3-1bbf6229db00",
     publisherIdentity:
       "samra-github-staging@samra-pay-staging.iam.gserviceaccount.com",
@@ -167,7 +167,7 @@ function buildProbe() {
       defaultServiceUrlDisabledAfter: true,
     },
     github: {
-      repository: "haileleuld87/Samra-Pay",
+      repository: "samra-pay/Samra-Pay",
       ref: "refs/heads/main",
       eventName: "workflow_dispatch",
       workflow: "Staging verification probe",
@@ -176,7 +176,7 @@ function buildProbe() {
       runId: "32619000001",
       runAttempt: 1,
       runUrl:
-        "https://github.com/haileleuld87/Samra-Pay/actions/runs/32619000001",
+        "https://github.com/samra-pay/Samra-Pay/actions/runs/32619000001",
       actor: "haileleuld87",
     },
     generatedAt: "2026-08-23T00:30:00.000Z",

@@ -23,7 +23,7 @@ import {
   STAGING_VERIFICATION_CHECKS,
 } from "./validate-staging-traffic-control.mjs";
 
-const SOURCE_REPOSITORY = "haileleuld87/Samra-Pay";
+const SOURCE_REPOSITORY = "samra-pay/Samra-Pay";
 const PROJECT_ID = "samra-pay-staging";
 const PROJECT_NUMBER = "934122615631";
 const REGION = "us-east4";

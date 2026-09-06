@@ -7,7 +7,12 @@
     {
       "id": "telemetry",
       "state": "specified-not-connected",
-      "evidencePaths": ["docs/operations/operational-readiness.md"],
+      "evidencePaths": [
+        "docs/operations/operational-readiness.md",
+        "artifacts/api-server/src/lib/http-logger.ts",
+        "artifacts/api-server/src/lib/log-serializers.ts",
+        "artifacts/api-server/src/logging.test.ts"
+      ],
       "blockingConditions": [
         "No collector endpoint, telemetry backend, dashboard, retention policy, alert, or notification route is configured."
       ]
@@ -39,10 +44,11 @@
         "artifacts/api-server/test/weekly-backup-restore.test.ts",
         ".github/workflows/backend-resilience.yml",
         "docs/operations/postgres-recovery-rehearsal.md",
-        "docs/operations/runbooks/database-recovery.md"
+        "docs/operations/runbooks/database-recovery.md",
+        "docs/operations/evidence/2026-09-06-staging-controller-foundations.json"
       ],
       "blockingConditions": [
-        "The repository gate uses disposable local PostgreSQL only; no cloud backup freshness or isolated production restore drill has been proved."
+        "Cloud backup freshness was observed on September 6, 2026, but no isolated cloud restore drill or backup-freshness monitor has been proved. Recovery execution evidence still comes from disposable local PostgreSQL only."
       ]
     },
     {

@@ -403,9 +403,11 @@ export function validateQaseReporting(
     (!hasRun && runUrl !== null) ||
     (!reporting.enabled &&
       (hasRun || ids.some((id) => outcomes[id] !== "skipped"))) ||
+    // A successful action exit can still have no run ID after a Qase API error.
+    // Preserve the reported outcome; null identity and skipped downstream steps
+    // prevent treating that process exit as proof of external delivery.
     (!hasRun &&
-      (outcomes.qase_create === "success" ||
-        outcomes.qase_upload !== "skipped" ||
+      (outcomes.qase_upload !== "skipped" ||
         outcomes.qase_complete !== "skipped"))
   ) {
     throw new Error("Qase reporting identity or outcomes are inconsistent.");

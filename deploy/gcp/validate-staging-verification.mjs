@@ -27,7 +27,7 @@ export function validateStagingVerificationContract(
       contract.status === CONTRACT_STATUS &&
       contract.environment === "staging" &&
       contract.dataClassification === "synthetic-only" &&
-      contract.sourceRepository === "haileleuld87/Samra-Pay",
+      contract.sourceRepository === "samra-pay/Samra-Pay",
     "Staging verification must remain synthetic and non-authorized",
   );
   assert(

@@ -1,131 +1,88 @@
-# GitHub Enterprise Control-Plane Migration
+# GitHub Enterprise control-plane migration
 
-## Decision
+## Current state
 
-Samra Pay source control, CI/CD governance, deployment approvals, and Google
-Cloud workload identity will move from the founder's personal GitHub namespace
-to the Enterprise-backed `samra-pay` organization.
+On 2026-09-05 David approved the GitHub transfer and main protection package.
+The private repository is now `samra-pay/Samra-Pay`, stable repository ID
+`1335175962`, owner ID `320532147`. Permanent main ruleset `22344977` was
+verified active. The [dated execution record](enterprise-transfer-2026-09-05.md)
+contains the transfer, recovery, protection and release-freeze evidence.
 
-The repository transfer is prepared but is not authorized. The current personal
-repository remains the active source of truth until every transfer gate passes.
+Version 2 of the [migration contract](../../deploy/gcp/staging-github-enterprise-migration.json)
+separates completed GitHub transfer from pending Google trust cutover. Source
+contracts, recovery provenance and Notion tooling use the organization identity.
+This is a source change: Google trust has not been applied and release workflows
+have not been resumed.
 
-## Verified starting state
+Paid Enterprise and account recovery were verified before transfer. External
+recovery-code storage is David's attestation; no recovery codes were accessed.
+The 2026-08-24 personal-owner, trial and blocked-recovery snapshot is preserved
+in the contract's `history`. Do not repeat the completed transfer.
 
-- Active repository: `haileleuld87/Samra-Pay`
-- Stable repository ID: `1335175962`
-- Active owner ID: `237485986`
-- Target organization: `samra-pay`
-- Target organization ID: `320532147`
-- Target repository name: `samra-pay/Samra-Pay`
-- Enterprise billing: trial
-- Enterprise billing information: not configured
-- Organization owners: one
-- Independent staging approvers: none
-- Operating model: solo founder
-- Account-recovery readiness: blocked
-- Two-factor authentication: enabled with an authenticator app
-- Passkey or hardware security key: not configured
-- Recovery codes: generated and viewed; external storage not independently
-  verified
-- Verified recovery email: configured
-- Operational files bound to the personal authority: 43
+## Source inventory and regression checks
 
-The organization now uses least-privilege defaults. Members receive no base
-repository or project access, cannot create repositories or Pages sites, and
-cannot perform sensitive repository-administration actions reserved for owners.
-The `developers`, `platform-admins`, and `staging-approvers` teams exist. They
-reserve durable role boundaries for future hires and contractors; they do not
-pretend that an independent human reviewer exists today.
+The earlier 69-file deployment inventory missed recovery and Notion ownership
+checks. The validator scans Git-tracked and non-ignored source files across the
+whole repository. It excludes ignored local data, generated output and binary
+files; tracked files remain covered even when an ignore rule matches them.
+It checks plain and escaped repository names,
+former owner IDs and explicit owner assignments.
 
-## Solo-founder control model
+Four fixed migration-control files retain historical identity constants and
+negative tests. Other historical references require exact individual lines and
+reasons in the contract; an exception never exempts the rest of its file. The
+sorted current-authority inventory must match the scan. Tests cover new source
+roots, wrong owner IDs, historical exceptions and premature release activation.
+Original pre-transfer evidence URLs remain unchanged.
 
-[GitHub recommends at least two organization owners](https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-peoples-access-to-your-organization-with-roles/maintaining-ownership-continuity-for-your-organization)
-because a single owner can become an availability risk. Samra Pay currently has
-one legitimate owner. A placeholder, shared, bot, or nominal owner would
-increase access risk without creating real governance, so a second owner is a
-resilience recommendation for when a qualified person exists, not a migration
-gate.
+## Solo-founder governance
 
-Until then, release safety comes from controls that a solo founder can actually
-operate and prove:
+David is the sole qualified owner. Do not add placeholder owners or claim
+independent review. Main requires pull requests, Required CI, Required security
+and merge queue, with no bypass, force push or deletion. Existing environment
+reviewer settings remain unchanged.
 
-- at least two GitHub authentication methods, including a passkey or hardware
-  security key;
-- recovery codes stored securely outside the daily-use device and a verified
-  recovery email;
-- protected `main`, required automated checks, and no direct release from an
-  unreviewed branch;
-- manual release workflows bound to the exact repository, workflow, branch,
-  event, environment, and full Git SHA;
-- immutable image digests, keyless Google federation, and no `latest` tags;
-- read-only review and tamper-evident evidence before every state-changing
-  release step; and
-- explicit founder authorization for publication, deployment, migration,
-  traffic promotion, and rollback.
+Future release authorization must retain exact SHA and digest, repository and
+owner IDs, ref, event, workflow, environment, secret versions, spend bound,
+cleanup and traffic scope. Source validation and merged code grant no additional
+cloud, provider, database or release authority.
 
-Required environment reviewers and self-review prevention remain disabled while
-there is only one qualified operator. Enabling them now would either create a
-fake control or deadlock releases because
-[GitHub prevents the initiating user from approving when self-review prevention is enabled](https://docs.github.com/en/enterprise-cloud@latest/actions/reference/workflows-and-actions/deployments-and-environments#required-reviewers).
-Add those controls when a second qualified human joins.
+## Remaining cutover sequence
 
-## Hard stop gates
+1. Pass source/federation, recovery, preview and Notion tests, plus candidate CI
+   and security. Review the candidate and merge through the queue. The standard
+   repository-settings auditor now targets the organization without an override.
+2. Inventory every applicable Google provider, pool and service-account binding.
+   The older six-boundary plan is incomplete: include staging migrations and
+   assess proposed preview federation separately before any activation.
+3. Prepare exact single-owner trust patches with repository and owner IDs, ref,
+   event, workflow and environment restrictions intact. Obtain bounded cloud
+   approval, then apply and read back one authorized boundary at a time. Do not
+   introduce wildcard or dual-owner trust.
+4. Audit Actions, environment and integration metadata. Coordinate Qase changes
+   with PR #175. Before Notion resumption, reconcile historical PR URLs, event
+   keys and merged-row keys in the existing data source so the namespace change
+   cannot skip tickets or create duplicates. Do not mutate Notion automatically.
+5. Resolve the configured 365-day release-evidence policy against the observed
+   90-day Actions retention limit without silently shortening the policy. Retain
+   fresh read-only audits and exact-SHA release evidence before requesting
+   bounded release resumption.
 
-Do not transfer the repository until all three gates pass:
+All nine release/sync workflows remain paused. Operational, staging, provider,
+database, customer activation and production traffic gates remain separate.
+Proposed preview infrastructure is not a prerequisite for GitHub governance.
 
-1. GitHub Enterprise billing is activated on a durable paid plan.
-2. Solo-founder account recovery is verified against the requirements above.
-3. The pre-transfer backup, inventory, and release-freeze procedure is ready to
-   run from the exact current `main` commit.
+## Verification commands
 
-Do not add a placeholder, shared account, bot, or service identity to simulate
-ownership continuity or independent review.
+Run from the repository root:
 
-## Controlled cutover sequence
-
-1. Re-run the read-only migration review from the exact current `main` commit.
-2. Record repository settings, Actions permissions, environments, secrets and
-   variables metadata, installed GitHub Apps, webhooks, deploy keys, branch
-   protection, rulesets, and the current Google federation configuration.
-3. Create a recoverable repository backup and verify its object integrity.
-4. Freeze all staging release environments. Do not publish images, deploy
-   revisions, run migrations, promote traffic, or roll back during the cutover.
-5. Transfer the repository to `samra-pay` using GitHub's repository-transfer
-   control.
-6. Verify the repository still has numeric ID `1335175962`, is private, uses
-   `main`, and retains its complete commit, issue, pull-request, release, and
-   settings history.
-7. Change all 43 operational authority references from the personal owner to
-   the organization owner in one reviewed pull request. Do not update historical
-   evidence links solely for cosmetic reasons.
-8. Reapply the five Google Workload Identity provider conditions to the new
-   repository name and organization owner ID. Keep the stable repository-ID,
-   branch, event, workflow-file, workflow-name, and protected-environment
-   restrictions.
-9. Restrict every protected deployment environment to `main` and preserve its
-   exact workflow and authorization gates. Do not configure a required reviewer
-   until a second qualified human can provide genuine separation of duties.
-10. Reconnect and audit the Qase GitHub App, branch protection, rulesets, Actions
-    policy, repository variables, environment variables, and webhooks.
-11. Run every independent read-only GitHub and Google Cloud audit.
-12. Run the read-only staging image-publication workflow. Only after it passes
-    may a separate authorization permit a build or deployment.
-
-## Fail-closed behavior
-
-The current Google trust remains bound to the personal repository name and
-owner ID. Repository transfer therefore blocks cloud token exchange until the
-new organization-bound conditions are explicitly reviewed and applied. This is
-intentional. No dual-owner or wildcard trust window is allowed.
-
-## Read-only verification
-
-Run:
-
-```text
+```sh
 node deploy/gcp/review-staging-github-enterprise-migration.mjs --review
+node --test deploy/gcp/staging-github-enterprise-migration.test.mjs
+pnpm run test:gcp-platform
+node scripts/src/audit-repository-settings.ts --expected-sha <reviewed-main-SHA>
 ```
 
-The review scans the operational control plane, confirms that all personal
-authority references are inventoried, rejects premature organization authority,
-and makes no GitHub or Google Cloud change.
+The first three commands perform offline validation. The final command reads
+live GitHub metadata using the existing authorized session. None applies cloud
+trust, enables workflows, publishes images, migrates a database or moves traffic.

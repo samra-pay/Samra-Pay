@@ -1,10 +1,11 @@
 import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import pinoHttp from "pino-http";
+import type { Logger } from "pino";
 import { createApiRouter } from "./routes";
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from "./config";
 import { logger } from "./lib/logger";
+import { createHttpLogger } from "./lib/http-logger";
 import { problemHandler } from "./lib/problem";
 import { DemoRuntime } from "./domain/demo-runtime";
 import { createConfiguredDemoRuntime } from "./domain/create-demo-runtime";
@@ -16,6 +17,7 @@ export function createApp(
   demoRuntime?: DemoRuntime,
   dependencies: Readonly<{
     customerAccessTokenMiddleware?: RequestHandler;
+    requestLogger?: Logger;
   }> = {},
 ): Express {
   const app: Express = express();
@@ -24,25 +26,7 @@ export function createApp(
       ? (demoRuntime ?? createConfiguredDemoRuntime(config))
       : undefined;
 
-  app.use(
-    pinoHttp({
-      logger,
-      serializers: {
-        req(req) {
-          return {
-            id: req.id,
-            method: req.method,
-            url: req.url?.split("?")[0],
-          };
-        },
-        res(res) {
-          return {
-            statusCode: res.statusCode,
-          };
-        },
-      },
-    }),
-  );
+  app.use(createHttpLogger(dependencies.requestLogger ?? logger));
   app.use(cors());
   app.use(cookieParser());
   app.post(

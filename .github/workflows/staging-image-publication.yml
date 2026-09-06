@@ -52,7 +52,7 @@ jobs:
   publication:
     name: Review or publish immutable staging images
     if: >-
-      github.repository == 'haileleuld87/Samra-Pay' &&
+      github.repository == 'samra-pay/Samra-Pay' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch'
     environment:
@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "${GITHUB_SHA}" ]]
           [[ -z "$(git status --porcelain)" ]]
-          [[ "${GITHUB_REPOSITORY}" == "haileleuld87/Samra-Pay" ]]
+          [[ "${GITHUB_REPOSITORY}" == "samra-pay/Samra-Pay" ]]
           [[ "${GITHUB_REF}" == "refs/heads/main" ]]
           [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]
           [[ "${SAMRA_RELEASE_CANDIDATE_RUN_ID}" =~ ^[1-9][0-9]*$ ]]
