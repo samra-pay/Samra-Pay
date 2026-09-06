@@ -21,15 +21,15 @@ release without a prior healthy revision has no proven rollback target.
 Image publication now fails closed unless one exact successful release-candidate
 run for the same commit proves every contracted gate, including the synthetic
 PostgreSQL backup/restore rehearsal. This lineage is checked before Google
-authentication; the workflows remain unexecuted and do not prove a live staging
-environment.
+authentication. A metadata-only review is distinct from publishing images and
+does not prove a live staging environment.
 
 ## Controlled delivery path
 
 ```mermaid
 flowchart LR
   A[Exact main commit] --> B[GitHub release gates]
-  B --> C[Qase release identity]
+  B --> C[Immutable release evidence and local reporting status]
   B --> R[Synthetic backup and restore evidence]
   C --> D[Protected image publication]
   R --> D
@@ -37,12 +37,15 @@ flowchart LR
   E --> F[Five immutable image digests]
   F --> S[Exact-digest vulnerability and secret gates]
   S --> G[Hashed publication manifest]
+  G -. separate approval .-> M[Governed migration producer]
+  M --> N[Hashed same-release migration artifact]
   G -. separate approval .-> H[Private zero-traffic revisions]
+  N --> H
   H -. separate approval .-> V[Temporary exact-image verifier job]
   V --> P[Hashed non-promotable image evidence]
   H -. separate approval .-> I[Temporary private exact-revision probe]
   I --> Q[Hashed probe evidence]
-  P --> L[One combined Qase run and verification record]
+  P --> L[Combined verification record and local reporting status]
   Q --> L
   L -. protected promotion .-> J[Exact revision receives 100 percent]
   J -. protected rollback .-> K[Recorded prior revision restored]
@@ -51,21 +54,65 @@ flowchart LR
 Solid arrows are implemented evidence flow. Dashed arrows are controlled stages
 that still require activation and explicit execution authority. Both probe
 planes and the tamper-evident recorder are implemented. No verification or
-traffic workflow is authorized.
+traffic workflow is authorized. The migration artifact is required for the API
+lane; customer web also requires that API's deployment evidence. External Qase
+reporting is optional and cannot replace the local evidence contract.
 
 ## Stage authority
 
-| Stage                   | Authority                      | Mutation                                                                             | Required evidence                                                                                                        | Current state                                                                                                                                     |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, local reporting status, synthetic backup/restore evidence                                        | Implemented; current run evidence still required                                                                                                  |
-| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                         | Exact release lineage, Cloud Build ID, five digests, passing exact-digest vulnerability/secret reports, publication hash | Implemented; not executed from this change                                                                                                        |
-| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                                     | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof        | Design lane implemented; API blocked pending a governed migration producer and customer web transitively blocked; no lane activated or authorized |
-| Staging verification    | Protected GitHub environment   | Two temporary private jobs: exact-image database suite and exact-revision HTTP probe | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, one Qase run      | Both workflows implemented; federation activation and execution not authorized                                                                    |
-| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100%       | Hashed deployment and verification evidence, Qase run, exact before/after traffic, rollback target                       | Implemented; not activated or authorized                                                                                                          |
-| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                      | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                          | Implemented; not activated or authorized                                                                                                          |
+| Stage                   | Authority                      | Mutation                                                                             | Required evidence                                                                                                               | Current state                                                                                                                                   |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Release candidate       | GitHub Actions                 | None                                                                                 | Exact `main` SHA, passing gates, local reporting status, synthetic backup/restore evidence                                      | Implemented; current run evidence still required                                                                                                |
+| Image publication       | Protected GitHub environment   | Cloud Build record and five immutable images                                         | Exact release lineage, Cloud Build ID, five digests, passing exact-digest vulnerability/secret reports, publication hash        | Implemented; not executed from this change                                                                                                      |
+| Governed migration      | Protected GitHub environment   | One bounded synthetic migration job and database journal update                      | Same-SHA publication, pinned numeric migration-secret version, expiring authorization, journal and cleanup proof                | Producer implemented; database access, controller activation and successful runtime evidence remain required                                    |
+| Zero-traffic deployment | Protected GitHub environment   | One new private Cloud Run revision at 0% traffic                                     | Approved manifest, same-release prerequisite evidence, configuration hash, revision name, unchanged-traffic proof               | API requires the implemented migration producer's successful artifact; customer web also requires the API artifact; no lane execution is proved |
+| Staging verification    | Protected GitHub environment   | Two temporary private jobs: exact-image database suite and exact-revision HTTP probe | Exact-image synthetic suite, exact revision attestation, private network path, service authentication, local reporting metadata | Both workflows implemented; runtime execution remains separately gated                                                                          |
+| Traffic promotion       | Protected GitHub environment   | Traffic moves from one healthy revision to one exact verified revision at 100%       | Hashed deployment and verification evidence, accurate reporting status, exact before/after traffic, rollback target             | Implemented; not activated or authorized                                                                                                        |
+| Rollback                | Separate protected environment | Traffic returns to the immutable revision recorded by promotion                      | Hashed promotion record, reason, exact before/after traffic, pending post-rollback verification                                 | Implemented; not activated or authorized                                                                                                        |
 
 Building is not deployment. Deployment is not promotion. Passing tests is not
 vendor activation. Each transition requires its own bounded authorization.
+
+## Image absence before publication
+
+After the existing project, immutable repository, identity and IAM checks,
+`verify-staging-image-absence.mjs` requires an authenticated metadata response
+for each of the five full-SHA tags. It uses the reviewed account's short-lived
+credential in memory and only the fixed staging registry's manifest endpoints.
+It never changes IAM, requests broader credentials, follows redirects, retries
+a registry request, or logs credentials or response bodies.
+
+A tag is accepted as absent only on HTTP 404 with one registry error code,
+`MANIFEST_UNKNOWN` or `NAME_UNKNOWN`. HTTP 200 means the immutable tag exists.
+Denied access, failed authentication, timeouts, network failures, redirects,
+other statuses, malformed or oversized error bodies, and ambiguous errors all
+stop the controller before its review-pass marker or publication authorization.
+Successful metadata records contain only the image, status, recognized error
+code and response hash, bound to the exact source and account.
+
+This follows the [OCI manifest and error contract](https://github.com/opencontainers/distribution-spec/blob/main/spec.md)
+and uses the existing [Artifact Registry access-token identity](https://docs.cloud.google.com/artifact-registry/docs/docker/authentication#token).
+The successful repository/IAM checks must precede it: an unknown image name
+alone cannot establish that the target registry exists or prove effective IAM.
+
+The September 6 metadata-only [review run 34061064717](https://github.com/samra-pay/Samra-Pay/actions/runs/34061064717),
+attempt 1, succeeded on `4e679a5dab5adeca74cbc6facb08da988f3db57d` after
+verifying release run `34050251243`, attempt 1. Publication was skipped and the
+workflow was restored to paused. That older controller discarded every image
+lookup error, so its claimed tag absence is not sufficient publication evidence.
+Its job log SHA-256 is `9dc6cbc9d16cb1c46712882b314e6c84b5e514c9dcc10ea81c4bb2324b3f5647`.
+The stricter check requires fresh governed release and review evidence from the
+commit containing it; this implementation does not relabel the historical run
+or authorize a cloud build.
+
+The pull request's first [backend resilience run 34061994277](https://github.com/samra-pay/Samra-Pay/actions/runs/34061994277),
+attempt 1 on `f35cfa63c3734c8fdb694ec12206da1bddbb5dad`, failed the synthetic
+restore rehearsal during cleanup. The installed pool can resolve `end()` before
+its physical client disconnect callbacks complete, letting a forced disposable
+database drop race a closing client. The rehearsal now waits, with a timeout,
+for both pool shutdown and every client removal before proceeding. Its new
+regression reproduces that early return and verifies the corrected wait.
+The failed run remains failed; fresh recovery evidence is required.
 
 ## Immutable publication evidence
 
@@ -153,10 +200,13 @@ manual run and must:
 - fail closed when Auth0 staging configuration or customer-web service
   authentication is incomplete.
 
-The API additionally requires a hashed, same-candidate migration manifest.
-There is no governed migration-producing workflow in this repository yet, so
-the API lane now fails before GitHub artifact download or Google authentication;
-it is blocked, not implemented or ready. Customer web additionally requires the
+The API additionally requires a hashed, same-candidate migration manifest from
+the implemented [governed staging migration workflow](staging-migrations.md).
+Its controller requires a successful same-SHA image publication, enabled numeric
+migration-secret version, private database prerequisites, bounded authorization
+and verified cleanup. A review-only run cannot produce this artifact. The API
+lane remains blocked until this runtime evidence is available. Customer web
+additionally requires the
 API's hashed, same-candidate zero-traffic deployment manifest and exact GitHub
 producer identity. The design-system preview is the only service without a
 runtime-service prerequisite. These gates prevent a later-stage deployment from
@@ -211,8 +261,9 @@ execution-filtered Cloud Logging view. Its cleanup trap deletes the temporary
 job, removes the tag, disables the default URL again, and requires the complete
 service boundary to match its before snapshot byte for byte. Any ambiguity,
 cleanup failure, identity token, or cross-execution log fails closed. The
-workflow then combines both JUnit files into one Qase run and writes the final
-hashed verification record. The implementation and federation controllers are
+workflow combines both JUnit files, optionally mirrors them to one Qase run,
+and writes the final hashed verification record with actual reporting outcomes.
+The implementation and federation controllers are
 complete, but activation and execution remain unauthorized until separately
 reviewed and approved.
 

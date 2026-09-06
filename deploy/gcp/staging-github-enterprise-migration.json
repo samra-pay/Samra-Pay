@@ -193,6 +193,7 @@
       "docs/operations/github-enterprise-control-plane-migration.md",
       "docs/operations/repository-merge-controls.md",
       "docs/operations/staging-migrations.md",
+      "docs/operations/staging-release-control-plane.md",
       "scripts/notion/reporting-config.mjs",
       "scripts/notion/sync.mjs",
       "scripts/notion/sync.test.mjs"

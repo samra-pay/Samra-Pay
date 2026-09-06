@@ -373,14 +373,9 @@ gcloud projects get-iam-policy "${PROJECT_ID}" --format=json | \
     }
   ' "${CLOUD_BUILD_SERVICE_AGENT}"
 
-for name in "${IMAGE_NAMES[@]}"; do
-  image="${IMAGE_BASE}/${name}:${EXPECTED_SHA}"
-  if gcloud artifacts docker images describe "${image}" \
-    --project="${PROJECT_ID}" >/dev/null 2>&1; then
-    echo "STOP: immutable image tag already exists for ${name}" >&2
-    exit 1
-  fi
-done
+node "${ROOT_DIR}/deploy/gcp/verify-staging-image-absence.mjs" \
+  --candidate-sha "${EXPECTED_SHA}" \
+  --operator "${OPERATOR}"
 
 echo "READ-ONLY STAGING IMAGE PUBLICATION REVIEW PASS"
 echo "Source: ${EXPECTED_SHA}"

@@ -83,7 +83,9 @@ test("image publication fails preflight before uploading when source access is n
   const bucketCheck = publish.indexOf(
     'gcloud storage buckets get-iam-policy "gs://${SOURCE_BUCKET}"',
   );
-  const tagCheck = publish.indexOf('for name in "${IMAGE_NAMES[@]}"');
+  const tagCheck = publish.indexOf(
+    'node "${ROOT_DIR}/deploy/gcp/verify-staging-image-absence.mjs"',
+  );
   const buildSubmit = publish.indexOf("gcloud builds submit");
   assert.ok(bucketCheck >= 0);
   assert.ok(bucketCheck < tagCheck);
