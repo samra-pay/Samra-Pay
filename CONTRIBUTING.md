@@ -79,15 +79,16 @@ populate vendor credentials just to make a local preview start.
 
 ## Verification
 
-| Change                      | Existing checks                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Documentation/setup         | Markdown relative links, `git diff --check`, declared versions versus CI, and affected configuration checks  |
-| API schema/client           | `pnpm --filter @workspace/api-spec run codegen:check`                                                        |
-| Package behavior            | `pnpm --filter <package-name> run test` and its typecheck where present                                      |
-| Design tokens/UI            | Design-system `tokens:check`, `test`, `typecheck`, and consumer tests; required visual/manual evidence       |
-| Database/financial behavior | Disposable PostgreSQL persistence and HTTP gates; migration policy and affected ledger suites                |
-| Deployment contracts        | `pnpm run test:gcp-platform`; preview changes also use `node --test deploy/preview/*.test.mjs`               |
-| Governance/workflows        | `pnpm run test:repository-controls`, `test:action-pins`, `test:testing-cadence`, and `test:release-contract` |
+| Change                      | Existing checks                                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Documentation/setup         | Markdown relative links, `git diff --check`, declared versions versus CI, and affected configuration checks       |
+| API schema/client           | `pnpm --filter @workspace/api-spec run codegen:check`                                                             |
+| Package behavior            | `pnpm --filter <package-name> run test` and its typecheck where present                                           |
+| Design tokens/UI            | Design-system `tokens:check`, `test`, `typecheck`, and consumer tests; required visual/manual evidence            |
+| Database/financial behavior | Disposable PostgreSQL persistence and HTTP gates; migration policy and affected ledger suites                     |
+| Deployment contracts        | `pnpm run test:gcp-platform`; preview changes also use `node --test deploy/preview/*.test.mjs`                    |
+| Filtered Cloud Build source | `pnpm run test:gcp-build-source`; the complete deployment suite above remains required in CI and release evidence |
+| Governance/workflows        | `pnpm run test:repository-controls`, `test:action-pins`, `test:testing-cadence`, and `test:release-contract`      |
 
 Standard workspace validation uses:
 
