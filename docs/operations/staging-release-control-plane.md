@@ -105,6 +105,15 @@ The stricter check requires fresh governed release and review evidence from the
 commit containing it; this implementation does not relabel the historical run
 or authorize a cloud build.
 
+The pull request's first [backend resilience run 34061994277](https://github.com/samra-pay/Samra-Pay/actions/runs/34061994277),
+attempt 1 on `f35cfa63c3734c8fdb694ec12206da1bddbb5dad`, failed the synthetic
+restore rehearsal during cleanup. The installed pool can resolve `end()` before
+its physical client disconnect callbacks complete, letting a forced disposable
+database drop race a closing client. The rehearsal now waits, with a timeout,
+for both pool shutdown and every client removal before proceeding. Its new
+regression reproduces that early return and verifies the corrected wait.
+The failed run remains failed; fresh recovery evidence is required.
+
 ## Immutable publication evidence
 
 `publish-staging-images.sh` creates the images and then calls

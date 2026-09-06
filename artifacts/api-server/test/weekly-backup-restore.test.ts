@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
+import { EventEmitter } from "node:events";
 import { createReadStream } from "node:fs";
 import {
   mkdir,
@@ -868,16 +869,77 @@ async function commandVersion(
 }
 
 async function closeConnection(
-  connection: DatabaseConnection | undefined,
+  connection: Pick<DatabaseConnection, "pool"> | undefined,
   cleanupErrors: unknown[],
 ): Promise<void> {
   if (!connection) return;
+  const pool = connection.pool;
+  let remaining = pool.totalCount;
+  let disconnected: () => void = () => undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const physicalDisconnects = new Promise<void>((resolve, reject) => {
+    disconnected = resolve;
+    if (remaining === 0) resolve();
+    else {
+      timeout = setTimeout(() => {
+        reject(
+          new Error(
+            "Timed out waiting for disposable database connections to close.",
+          ),
+        );
+      }, databaseOperationTimeoutMs);
+    }
+  });
+  const onRemove = (): void => {
+    remaining -= 1;
+    if (remaining === 0) disconnected();
+  };
+  // The pool's end promise can resolve before its client end callbacks. Wait
+  // for every physical disconnect so DROP ... FORCE cannot race an idle client.
+  pool.on("remove", onRemove);
   try {
-    await connection.pool.end();
+    await Promise.all([pool.end(), physicalDisconnects]);
   } catch (error) {
     cleanupErrors.push(error);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    pool.off("remove", onRemove);
   }
 }
+
+test("RESILIENCE-WEEKLY-007E cleanup waits for physical disconnects before dropping a disposable database", async () => {
+  let finishDisconnects: () => void = () => undefined;
+  const disconnected = new Promise<void>((resolve) => {
+    finishDisconnects = resolve;
+  });
+  class ClosingPool extends EventEmitter {
+    totalCount = 2;
+    removed = 0;
+    async end(): Promise<void> {
+      // pg-pool 3.14 removes clients from its inventory before their asynchronous
+      // end callbacks emit 'remove'; its end promise can therefore resolve first.
+      this.totalCount = 0;
+      for (const delay of [10, 25]) {
+        setTimeout(() => {
+          this.removed += 1;
+          this.emit("remove", {});
+          if (this.removed === 2) finishDisconnects();
+        }, delay);
+      }
+    }
+  }
+  const pool = new ClosingPool();
+  const cleanupErrors: unknown[] = [];
+  await closeConnection(
+    { pool: pool as unknown as DatabaseConnection["pool"] },
+    cleanupErrors,
+  );
+  const removedBeforeReturn = pool.removed;
+  await disconnected;
+  assert.equal(removedBeforeReturn, 2);
+  assert.deepEqual(cleanupErrors, []);
+  assert.equal(pool.listenerCount("remove"), 0);
+});
 
 test("RESILIENCE-WEEKLY-007A destructive connection guard accepts only exact synthetic profiles", () => {
   const weekly =
