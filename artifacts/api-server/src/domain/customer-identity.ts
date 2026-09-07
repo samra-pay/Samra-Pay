@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { DomainError } from "@workspace/remittance";
 import type {
   CustomerIdentityCaseSnapshot,
   CustomerIdentityCaseStore,
@@ -9,6 +10,14 @@ import type {
 export interface CustomerIdentityProvider {
   readonly provider: "persona";
   readonly environment: "fake" | "sandbox";
+  readonly hostedFlowAvailable?: boolean;
+  createHostedLaunch?(
+    input: Readonly<{
+      identityCaseId: string;
+      providerInquiryRef: string;
+      providerRequestKey: string;
+    }>,
+  ): Promise<Readonly<{ url: string }>>;
   createInquiry(
     input: Readonly<{
       identityCaseId: string;
@@ -69,7 +78,7 @@ export class CustomerIdentityVerificationService {
       prepared.snapshot.state !== "error"
     ) {
       return Object.freeze({
-        snapshot: prepared.snapshot,
+        snapshot: this.withLaunchAction(prepared.snapshot),
         created: false,
       });
     }
@@ -86,7 +95,10 @@ export class CustomerIdentityVerificationService {
         reasonFamily: "identity_provider_unavailable",
       });
       if (failed.state !== "error") {
-        return Object.freeze({ snapshot: failed, created: false });
+        return Object.freeze({
+          snapshot: this.withLaunchAction(failed),
+          created: false,
+        });
       }
       throw new IdentityProviderUnavailableError();
     }
@@ -96,14 +108,82 @@ export class CustomerIdentityVerificationService {
       providerRequestKey: prepared.providerRequestKey,
       providerInquiryRef,
     });
-    return Object.freeze({ snapshot, created: prepared.created });
+    return Object.freeze({
+      snapshot: this.withLaunchAction(snapshot),
+      created: prepared.created,
+    });
   }
 
-  getAuth0IdentityCase(input: {
+  async getAuth0IdentityCase(input: {
     issuer: string;
     subject: string;
   }): Promise<CustomerIdentityCaseSnapshot> {
-    return this.#store.getAuth0IdentityCase(input);
+    return this.withLaunchAction(await this.#store.getAuth0IdentityCase(input));
+  }
+
+  async createAuth0HostedLaunch(input: {
+    issuer: string;
+    subject: string;
+    idempotencyKey: string;
+  }): Promise<
+    Readonly<{ provider: "persona"; environment: "sandbox"; url: string }>
+  > {
+    if (
+      !this.#provider.hostedFlowAvailable ||
+      !this.#provider.createHostedLaunch ||
+      this.#provider.environment !== "sandbox"
+    ) {
+      throw new DomainError(
+        "NOT_FOUND",
+        "Hosted identity verification is unavailable.",
+      );
+    }
+    const target = await this.#store.getAuth0IdentityLaunchTarget(input);
+    let launch: Readonly<{ url: string }>;
+    try {
+      launch = await this.#provider.createHostedLaunch({
+        ...target,
+        providerRequestKey: sha256(
+          JSON.stringify([
+            "identity-launch",
+            target.identityCaseId,
+            input.idempotencyKey,
+          ]),
+        ),
+      });
+    } catch {
+      // A failed session launch does not change durable KYC state or expose provider data.
+      throw new IdentityProviderUnavailableError();
+    }
+    const current = await this.#store.getAuth0IdentityLaunchTarget(input);
+    if (
+      current.identityCaseId !== target.identityCaseId ||
+      current.providerInquiryRef !== target.providerInquiryRef
+    ) {
+      throw new DomainError(
+        "CONFLICT",
+        "Identity verification changed. Refresh before continuing.",
+      );
+    }
+    return Object.freeze({
+      provider: "persona",
+      environment: "sandbox",
+      url: launch.url,
+    });
+  }
+
+  private withLaunchAction(
+    snapshot: CustomerIdentityCaseSnapshot,
+  ): CustomerIdentityCaseSnapshot {
+    if (!this.#provider.hostedFlowAvailable || snapshot.state !== "pending")
+      return snapshot;
+    return Object.freeze({
+      ...snapshot,
+      nextAllowedActions: Object.freeze([
+        ...snapshot.nextAllowedActions,
+        "launch_identity_verification",
+      ]),
+    });
   }
 
   simulateProviderDecision(input: {

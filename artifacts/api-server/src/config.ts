@@ -26,6 +26,7 @@ export type CustomerIdentityProviderConfig =
       environmentId: string;
       webhookSecrets: readonly string[];
       apiVersion: "2025-10-27";
+      hostedFlowOrigin?: string;
     }>;
 
 export type ApiRuntimeConfig = Readonly<{
@@ -241,7 +242,40 @@ function parseCustomerIdentityProvider(
     environmentId,
     webhookSecrets,
     apiVersion: "2025-10-27",
+    ...(environment["PERSONA_HOSTED_FLOW_ORIGIN"]
+      ? {
+          hostedFlowOrigin: parsePersonaHostedFlowOrigin(
+            environment["PERSONA_HOSTED_FLOW_ORIGIN"],
+          ),
+        }
+      : {}),
   });
+}
+
+function parsePersonaHostedFlowOrigin(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(
+      "PERSONA_HOSTED_FLOW_ORIGIN must be an approved HTTPS Persona origin.",
+    );
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash ||
+    !/^(?:[a-z0-9]+(?:-[a-z0-9]+)*\.)?withpersona\.com$/u.test(url.hostname) ||
+    value !== url.origin
+  )
+    throw new Error(
+      "PERSONA_HOSTED_FLOW_ORIGIN must be an approved HTTPS Persona origin.",
+    );
+  return url.origin;
 }
 
 function validatePersonaWebhookSecret(value: string, name: string): string {

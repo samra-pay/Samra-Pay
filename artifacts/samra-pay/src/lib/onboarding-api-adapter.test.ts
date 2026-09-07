@@ -64,6 +64,31 @@ afterEach(() => {
 });
 
 describe("generated onboarding API adapter", () => {
+  it("requests the caller's hosted inquiry without caching or sending client identity", async () => {
+    const launch = {
+      provider: "persona",
+      environment: "sandbox",
+      url: "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123",
+    };
+    const fetchMock = vi.fn(async () => jsonResponse(launch, 200));
+    vi.stubGlobal("fetch", fetchMock);
+    const result =
+      await new GeneratedSamraOnboardingSource().createIdentityHostedLaunch(
+        "launch-command-001",
+      );
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/v1/onboarding/identity/launch");
+    expect(init.method).toBe("POST");
+    expect(init.cache).toBe("no-store");
+    expect(init.signal).toBeDefined();
+    expect(init.body).toBeUndefined();
+    expect(new Headers(init.headers).get("idempotency-key")).toBe(
+      "launch-command-001",
+    );
+    expect(result).toEqual(launch);
+    expect(Object.isFrozen(result)).toBe(true);
+  });
+
   it("sends command idempotency and returns immutable normalized state", async () => {
     const fetchMock = vi.fn(async () => jsonResponse(onboarding, 201));
     vi.stubGlobal("fetch", fetchMock);

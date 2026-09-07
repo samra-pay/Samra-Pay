@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import test from "node:test";
 import type { RequestHandler } from "express";
 import { UnauthorizedError } from "express-oauth2-jwt-bearer";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import {
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   ALPHA_WALLET_PROVISIONING_DISCLOSURE,
@@ -1565,6 +1565,344 @@ test("alpha HTTP admission survives restart, rejects other accounts, and keeps a
     );
   } finally {
     await Promise.all(running.map(stopServer));
+    await pool.end();
+    if (originalDatabaseUrl === undefined) delete process.env["DATABASE_URL"];
+    else process.env["DATABASE_URL"] = originalDatabaseUrl;
+  }
+});
+
+test("Persona hosted HTTP handoff preserves account binding, KYC authority and privacy through retries and restart", async () => {
+  const originalDatabaseUrl = process.env["DATABASE_URL"];
+  const originalFetch = globalThis.fetch;
+  process.env["DATABASE_URL"] = connectionString;
+  const { pool } = createDatabase({ connectionString });
+  const issuer = `https://${randomUUID()}.persona-http.samra.test/`;
+  const subjects = ["auth0|hosted-customer-one", "auth0|hosted-customer-two"];
+  const environmentId = "env_SyntheticHosted123";
+  const inquiries = new Map<string, string>();
+  const running: RunningServer[] = [];
+  let providerStatus = 200;
+  let beforeLaunch: (() => Promise<void>) | undefined;
+  let createCalls = 0;
+  let launchCalls = 0;
+  const config: ApiRuntimeConfig = {
+    ...postgresConfig,
+    releaseProfile: "alpha-release-1",
+    devControlsEnabled: false,
+    internalOperationsEnabled: false,
+    customerAuth: {
+      mode: "auth0",
+      issuerBaseUrl: issuer,
+      audience: "https://api.samra.test",
+      tokenSigningAlgorithm: "RS256",
+    },
+    customerIdentityProvider: {
+      mode: "persona-sandbox",
+      apiKey: "synthetic_persona_api_key_123456789",
+      inquiryTemplateId: "itmpl_SyntheticHosted123",
+      environmentId,
+      webhookSecrets: ["synthetic_persona_webhook_secret_123456789"],
+      apiVersion: "2025-10-27",
+      hostedFlowOrigin: "https://inquiry.withpersona.com",
+    },
+  };
+  const authenticate: RequestHandler = (req, _res, next) => {
+    const token = req.header("authorization");
+    if (!token) return next(new UnauthorizedError());
+    req.auth = {
+      header: { alg: "RS256" },
+      token,
+      payload: {
+        iss: issuer,
+        sub: token.slice("Bearer ".length),
+        aud: "https://api.samra.test",
+        exp: Math.floor(Date.now() / 1000) + 300,
+      },
+    };
+    next();
+  };
+  const headersFor = (subject = subjects[0]!) => ({
+    authorization: `Bearer ${subject}`,
+    "Idempotency-Key": "hosted-http-command-001",
+  });
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.hostname === "127.0.0.1") return originalFetch(input, init);
+    assert.equal(url.origin, "https://api.withpersona.com"); // No live provider calls.
+    if (url.pathname === "/api/v1/inquiries") {
+      createCalls++;
+      const caseId = JSON.parse(String(init?.body)).data.attributes[
+        "reference-id"
+      ] as string;
+      const inquiry = `inq_SyntheticHosted${createCalls}`;
+      inquiries.set(inquiry, caseId);
+      return Response.json(
+        { data: { type: "inquiry", id: inquiry } },
+        { status: 201 },
+      );
+    }
+    assert.match(
+      url.pathname,
+      /^\/api\/v1\/inquiries\/inq_SyntheticHosted[12]\/generate-one-time-link$/,
+    );
+    launchCalls++;
+    const inquiry = url.pathname.split("/")[4]!;
+    await beforeLaunch?.();
+    if (providerStatus !== 200)
+      return new Response("private-provider-payload", {
+        status: providerStatus,
+      });
+    return Response.json(
+      {
+        data: {
+          type: "inquiry",
+          id: inquiry,
+          attributes: {
+            "reference-id": inquiries.get(inquiry),
+            status: "pending",
+          },
+        },
+        meta: {
+          "one-time-link": `https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK${inquiry}`,
+        },
+      },
+      { headers: { "Persona-Environment-Id": environmentId } },
+    );
+  };
+  try {
+    await pool.query(
+      "UPDATE samra_core.alpha_release_controls SET admission_limit = 5",
+    );
+    for (const subject of subjects) {
+      await pool.query(
+        "INSERT INTO samra_core.alpha_invitations (issuer, subject, expires_at) VALUES ($1, $2, now() + interval '1 hour')",
+        [issuer, subject],
+      );
+    }
+    let server = await startServer(config, {
+      customerAccessTokenMiddleware: authenticate,
+    });
+    running.push(server);
+    const caseIds: string[] = [];
+    for (const subject of subjects) {
+      const headers = headersFor(subject);
+      objectBody(
+        await apiRequest(server.origin, "/api/v1/onboarding", {
+          method: "POST",
+          headers,
+        }),
+        201,
+      );
+      objectBody(
+        await apiRequest(server.origin, "/api/v1/onboarding/consents", {
+          method: "POST",
+          headers,
+          body: {
+            bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+            locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+            decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+              (document) => ({
+                consentType: document.consentType,
+                documentVersion: document.documentVersion,
+                decision: "accepted",
+              }),
+            ),
+          },
+        }),
+        200,
+      );
+      const identity = objectBody(
+        await apiRequest(server.origin, "/api/v1/onboarding/identity", {
+          method: "POST",
+          headers,
+        }),
+        201,
+      );
+      caseIds.push(String(identity["identityCaseId"]));
+      assert.ok(
+        (identity["nextAllowedActions"] as string[]).includes(
+          "launch_identity_verification",
+        ),
+      );
+    }
+    const launchPath = "/api/v1/onboarding/identity/launch";
+    const launch = (subject = subjects[0]!) =>
+      apiRequest(server.origin, launchPath, {
+        method: "POST",
+        headers: headersFor(subject),
+      });
+    assert.equal(
+      (await apiRequest(server.origin, launchPath, { method: "POST" })).status,
+      401,
+    );
+    assert.equal((await launch("auth0|uninvited")).status, 403);
+    assert.equal(
+      (
+        await apiRequest(server.origin, launchPath, {
+          method: "POST",
+          headers: { authorization: headersFor().authorization },
+        })
+      ).status,
+      422,
+    );
+    for (const body of [
+      { identityCaseId: caseIds[1] },
+      { inquiryId: "inq_SyntheticHosted2" },
+      { status: "approved" },
+      { customerId: "another-customer" },
+    ]) {
+      assert.equal(
+        (
+          await apiRequest(server.origin, launchPath, {
+            method: "POST",
+            headers: headersFor(),
+            body,
+          })
+        ).status,
+        422,
+      );
+    }
+    assert.equal(
+      (
+        await apiRequest(server.origin, `${launchPath}?status=approved`, {
+          method: "POST",
+          headers: headersFor(),
+        })
+      ).status,
+      422,
+    );
+    assert.equal(launchCalls, 0);
+    const first = await originalFetch(`${server.origin}${launchPath}`, {
+      method: "POST",
+      headers: headersFor(),
+    });
+    assert.equal(first.status, 200);
+    assert.match(first.headers.get("cache-control") ?? "", /no-store/);
+    assert.match(first.headers.get("vary") ?? "", /Authorization/);
+    assert.equal(first.headers.get("referrer-policy"), "no-referrer");
+    const firstBody = (await first.json()) as JsonObject;
+    assert.match(
+      String(firstBody["url"]),
+      /SYNTHETICHOSTEDLINKinq_SyntheticHosted1$/,
+    );
+    assert.deepEqual(objectBody(await launch(), 200), firstBody);
+    assert.match(
+      String(objectBody(await launch(subjects[1]), 200)["url"]),
+      /SYNTHETICHOSTEDLINKinq_SyntheticHosted2$/,
+    );
+    for (const status of [429, 500]) {
+      providerStatus = status;
+      const failed = objectBody(await launch(), 503);
+      assert.doesNotMatch(
+        JSON.stringify(failed),
+        /private-provider-payload|SYNTHETICHOSTEDLINK/,
+      );
+      assert.equal(
+        objectBody(
+          await apiRequest(server.origin, "/api/v1/onboarding/identity", {
+            headers: headersFor(),
+          }),
+          200,
+        )["state"],
+        "pending",
+      );
+    }
+    providerStatus = 200;
+    await stopServer(server);
+    running.pop();
+    server = await startServer(config, {
+      customerAccessTokenMiddleware: authenticate,
+    });
+    running.push(server);
+    assert.deepEqual(objectBody(await launch(), 200), firstBody);
+    assert.equal(createCalls, 2); // Launch/retry/restart never create another inquiry.
+    beforeLaunch = async () => {
+      await pool.query(
+        "UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2",
+        [issuer, subjects[0]],
+      );
+    };
+    const revoked = objectBody(await launch(), 403);
+    assert.doesNotMatch(JSON.stringify(revoked), /SYNTHETICHOSTEDLINK/);
+    beforeLaunch = undefined;
+    await pool.query(
+      "UPDATE samra_core.alpha_invitations SET revoked_at = NULL WHERE issuer = $1 AND subject = $2",
+      [issuer, subjects[0]],
+    );
+    const decide = async (
+      index: number,
+      decision: "review" | "approved" | "declined",
+    ) => {
+      const body = {
+        data: {
+          type: "event",
+          id: `evt_${randomUUID().replaceAll("-", "")}`,
+          attributes: {
+            name:
+              decision === "review"
+                ? "inquiry.marked-for-review"
+                : `inquiry.${decision}`,
+            payload: {
+              data: {
+                type: "inquiry",
+                id: `inq_SyntheticHosted${index + 1}`,
+                attributes: {
+                  "reference-id": caseIds[index],
+                  status: decision === "review" ? "needs_review" : decision,
+                },
+              },
+            },
+          },
+        },
+      };
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signature = createHmac(
+        "sha256",
+        "synthetic_persona_webhook_secret_123456789",
+      )
+        .update(`${timestamp}.${JSON.stringify(body)}`)
+        .digest("hex");
+      const response = await apiRequest(
+        server.origin,
+        "/api/v1/provider-events/persona",
+        {
+          method: "POST",
+          headers: { "Persona-Signature": `t=${timestamp},v1=${signature}` },
+          body,
+        },
+      );
+      objectBody(response, 200);
+    };
+    // Only authenticated provider events update durable outcomes.
+    await decide(0, "review");
+    assert.equal((await launch()).status, 409);
+    await decide(0, "approved");
+    assert.equal((await launch()).status, 409);
+    await decide(1, "declined");
+    assert.equal((await launch(subjects[1])).status, 409);
+    for (const [index, state] of ["approved", "declined"].entries()) {
+      assert.equal(
+        objectBody(
+          await apiRequest(server.origin, "/api/v1/onboarding/identity", {
+            headers: headersFor(subjects[index]),
+          }),
+          200,
+        )["state"],
+        state,
+      );
+    }
+    const rows = await pool.query(
+      "SELECT row_to_json(c) AS record FROM samra_core.customer_identity_cases c WHERE external_ref = ANY($1::text[])",
+      [caseIds],
+    );
+    assert.equal(rows.rowCount, 2);
+    assert.doesNotMatch(
+      JSON.stringify(rows.rows),
+      /SYNTHETICHOSTEDLINK|one-time-link|private-provider-payload/,
+    );
+  } finally {
+    await Promise.all(running.map(stopServer));
+    globalThis.fetch = originalFetch;
     await pool.end();
     if (originalDatabaseUrl === undefined) delete process.env["DATABASE_URL"];
     else process.env["DATABASE_URL"] = originalDatabaseUrl;

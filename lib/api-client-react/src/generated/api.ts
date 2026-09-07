@@ -34,6 +34,7 @@ import type {
   CustomerAcquisitionLinkReceipt,
   CustomerFunnelReport,
   CustomerIdentityCase,
+  CustomerIdentityHostedLaunch,
   CustomerIdentityProviderEventResult,
   CustomerOnboarding,
   CustomerWallet,
@@ -1122,6 +1123,114 @@ export function useGetCustomerIdentityCase<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getCreateCustomerIdentityHostedLaunchUrl = () => {
+  return `/api/v1/onboarding/identity/launch`;
+};
+
+/**
+ * Requires an admitted account and a pending, durably bound inquiry. Returns a sensitive one-time hosted link with no-store headers. Persona limits each newly issued link to 300 seconds; retrying an old key may return an already-used or expired link. Create a fresh command for a new explicit launch. Never persist, log, cache, or attach the link to telemetry. This operation neither creates an inquiry nor changes KYC state.
+ * @summary Open the authenticated customer's existing Persona sandbox inquiry
+ */
+export const createCustomerIdentityHostedLaunch = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerIdentityHostedLaunch> => {
+  return customFetch<CustomerIdentityHostedLaunch>(
+    getCreateCustomerIdentityHostedLaunchUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCreateCustomerIdentityHostedLaunchMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCustomerIdentityHostedLaunch>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCustomerIdentityHostedLaunch>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["createCustomerIdentityHostedLaunch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCustomerIdentityHostedLaunch>>,
+    void
+  > = () => {
+    return createCustomerIdentityHostedLaunch(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCustomerIdentityHostedLaunchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCustomerIdentityHostedLaunch>>
+>;
+
+export type CreateCustomerIdentityHostedLaunchMutationError = ErrorType<
+  | UnauthorizedProblemResponse
+  | ForbiddenProblemResponse
+  | NotFoundProblemResponse
+  | ConflictProblemResponse
+  | ValidationProblemResponse
+  | UnavailableResponse
+>;
+
+/**
+ * @summary Open the authenticated customer's existing Persona sandbox inquiry
+ */
+export const useCreateCustomerIdentityHostedLaunch = <
+  TError = ErrorType<
+    | UnauthorizedProblemResponse
+    | ForbiddenProblemResponse
+    | NotFoundProblemResponse
+    | ConflictProblemResponse
+    | ValidationProblemResponse
+    | UnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCustomerIdentityHostedLaunch>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCustomerIdentityHostedLaunch>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getCreateCustomerIdentityHostedLaunchMutationOptions(options),
+  );
+};
 
 export const getStartCustomerWalletProvisioningUrl = () => {
   return `/api/v1/onboarding/wallet`;

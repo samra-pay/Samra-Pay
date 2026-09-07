@@ -21,6 +21,8 @@ export class PersonaSandboxAdapter implements CustomerIdentityProvider {
   readonly provider = "persona" as const;
   readonly environment = "sandbox" as const;
   readonly clientEnvironmentId: string;
+  readonly hostedFlowAvailable: boolean;
+  readonly #hostedFlowOrigin: string | undefined;
   readonly #apiKey: string;
   readonly #inquiryTemplateId: string;
   readonly #apiVersion: string;
@@ -37,6 +39,8 @@ export class PersonaSandboxAdapter implements CustomerIdentityProvider {
     this.#inquiryTemplateId = config.inquiryTemplateId;
     this.clientEnvironmentId = config.environmentId;
     this.#apiVersion = config.apiVersion;
+    this.#hostedFlowOrigin = config.hostedFlowOrigin;
+    this.hostedFlowAvailable = config.hostedFlowOrigin !== undefined;
     this.#fetch = dependencies.fetch ?? fetch;
   }
 
@@ -78,6 +82,100 @@ export class PersonaSandboxAdapter implements CustomerIdentityProvider {
     const body: unknown = await response.json();
     const providerInquiryRef = extractPersonaInquiryReference(body);
     return Object.freeze({ providerInquiryRef });
+  }
+
+  async createHostedLaunch(input: {
+    identityCaseId: string;
+    providerInquiryRef: string;
+    providerRequestKey: string;
+  }): Promise<Readonly<{ url: string }>> {
+    assertIdentityCaseReference(input.identityCaseId);
+    if (
+      !this.#hostedFlowOrigin ||
+      !/^inq_[A-Za-z0-9]{8,}$/u.test(input.providerInquiryRef) ||
+      !/^[0-9a-f]{64}$/u.test(input.providerRequestKey)
+    ) {
+      throw new Error("Persona hosted verification is unavailable.");
+    }
+    const endpoint = new URL(
+      `/api/v1/inquiries/${input.providerInquiryRef}/generate-one-time-link`,
+      PERSONA_API_ORIGIN,
+    );
+    // Ask for only the binding and state; never request identity-document fields.
+    endpoint.searchParams.set("fields[inquiry]", "reference-id,status");
+    const response = await this.#fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${this.#apiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": input.providerRequestKey,
+        "Persona-Version": this.#apiVersion,
+        "Key-Inflection": "kebab",
+      },
+      body: JSON.stringify({ meta: { "expires-in-seconds": 300 } }),
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (
+      !response.ok ||
+      response.headers.get("Persona-Environment-Id") !==
+        this.clientEnvironmentId
+    ) {
+      throw new Error("Persona hosted verification is unavailable.");
+    }
+    const root = asRecord(await readBoundedLaunchResponse(response));
+    const data = asRecord(root?.["data"]);
+    const attributes = asRecord(data?.["attributes"]);
+    const meta = asRecord(root?.["meta"]);
+    if (
+      data?.["type"] !== "inquiry" ||
+      data["id"] !== input.providerInquiryRef ||
+      attributes?.["reference-id"] !== input.identityCaseId ||
+      !["created", "pending"].includes(String(attributes?.["status"]))
+    ) {
+      throw new Error("Persona hosted verification is unavailable.");
+    }
+    const value = meta?.["one-time-link"];
+    if (typeof value !== "string" || value.length > 2048) {
+      throw new Error("Persona hosted verification is unavailable.");
+    }
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.origin !== this.#hostedFlowOrigin ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      url.pathname !== "/verify" ||
+      [...url.searchParams.keys()].join(",") !== "code" ||
+      !/^[A-Za-z0-9_-]{8,512}$/u.test(url.searchParams.get("code") ?? "")
+    ) {
+      throw new Error("Persona hosted verification is unavailable.");
+    }
+    return Object.freeze({ url: url.href });
+  }
+}
+
+async function readBoundedLaunchResponse(response: Response): Promise<unknown> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("Persona hosted verification is unavailable.");
+  let size = 0;
+  const chunks: Uint8Array[] = [];
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 65_536) {
+        await reader.cancel();
+        throw new Error("Persona hosted verification is unavailable.");
+      }
+      chunks.push(value);
+    }
+    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+  } finally {
+    reader.releaseLock();
   }
 }
 

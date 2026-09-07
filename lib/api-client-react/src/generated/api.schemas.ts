@@ -220,6 +220,27 @@ export const CustomerIdentityProviderEventDisposition = {
   conflict: "conflict",
 } as const;
 
+export type CustomerIdentityHostedLaunchProvider =
+  (typeof CustomerIdentityHostedLaunchProvider)[keyof typeof CustomerIdentityHostedLaunchProvider];
+
+export const CustomerIdentityHostedLaunchProvider = {
+  persona: "persona",
+} as const;
+
+export type CustomerIdentityHostedLaunchEnvironment =
+  (typeof CustomerIdentityHostedLaunchEnvironment)[keyof typeof CustomerIdentityHostedLaunchEnvironment];
+
+export const CustomerIdentityHostedLaunchEnvironment = {
+  sandbox: "sandbox",
+} as const;
+
+export interface CustomerIdentityHostedLaunch {
+  provider: CustomerIdentityHostedLaunchProvider;
+  environment: CustomerIdentityHostedLaunchEnvironment;
+  /** @maxLength 2048 */
+  url: string;
+}
+
 export type CustomerIdentityCaseProvider =
   (typeof CustomerIdentityCaseProvider)[keyof typeof CustomerIdentityCaseProvider];
 

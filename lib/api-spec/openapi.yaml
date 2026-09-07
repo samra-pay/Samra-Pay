@@ -307,6 +307,36 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /v1/onboarding/identity/launch:
+    post:
+      operationId: createCustomerIdentityHostedLaunch
+      tags: [onboarding]
+      summary: Open the authenticated customer's existing Persona sandbox inquiry
+      description: Requires an admitted account and a pending, durably bound inquiry. Returns a sensitive one-time hosted link with no-store headers. Persona limits each newly issued link to 300 seconds; retrying an old key may return an already-used or expired link. Create a fresh command for a new explicit launch. Never persist, log, cache, or attach the link to telemetry. This operation neither creates an inquiry nor changes KYC state.
+      security:
+        - CustomerBearer: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Transient Persona hosted launch link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerIdentityHostedLaunch"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
   /v1/onboarding/wallet:
     post:
       operationId: startCustomerWalletProvisioning
@@ -1631,6 +1661,22 @@ components:
     CustomerIdentityProviderEventDisposition:
       type: string
       enum: [applied, ignored_stale, conflict]
+
+    CustomerIdentityHostedLaunch:
+      type: object
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+          enum: [persona]
+        environment:
+          type: string
+          enum: [sandbox]
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+      required: [provider, environment, url]
 
     CustomerIdentityCase:
       type: object

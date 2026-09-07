@@ -43,6 +43,7 @@ import {
 import { Link, useLocation } from "wouter";
 
 import { SamraLogo } from "@/components/samra-logo";
+import { PersonaHostedVerification } from "@/components/persona-hosted-verification";
 import { consumePostLoginRedirect } from "@/lib/remittance-handoff";
 
 const IDENTITY_STATES = new Set([
@@ -269,6 +270,23 @@ export default function CustomerOnboardingPage() {
             Case {identityCase.identityCaseId.slice(-8)} · version{" "}
             {identityCase.version}
           </StatusPanel>
+          {journey.stage === "identity_pending" &&
+          runtime.mode === "api" &&
+          identityCase.nextAllowedActions.includes(
+            "launch_identity_verification",
+          ) &&
+          runtime.source.createIdentityHostedLaunch ? (
+            <PersonaHostedVerification
+              key={identityCase.identityCaseId}
+              source={runtime.source}
+              onReturn={() => {
+                void Promise.all([
+                  onboardingQuery.refetch(),
+                  identityQuery.refetch(),
+                ]);
+              }}
+            />
+          ) : null}
           {runtime.demoControls ? (
             <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
@@ -481,6 +499,7 @@ export default function CustomerOnboardingPage() {
     onboardingQuery,
     runtime.demoControls,
     runtime.mode,
+    runtime.source,
     setLocation,
     startIdentity,
     startOnboarding,
