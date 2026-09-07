@@ -385,6 +385,10 @@ jobs:
           pnpm run test:testing-cadence
           pnpm run test:release-contract
           pnpm run typecheck
+          pnpm --filter @workspace/api-server run test:vendor-auth0-token:junit
+          pnpm --filter @workspace/api-server run test:vendor-crossmint-sandbox:junit
+          pnpm --filter @workspace/api-server run test:vendor-customer-wallet:junit
+          pnpm --filter @workspace/api-server run test:vendor-persona:junit
           pnpm run test
           pnpm run test:gcp-platform
           pnpm -r --filter "!@workspace/samra-pay-commercial" --if-present run build
@@ -587,6 +591,10 @@ jobs:
             artifacts/release-candidate/security/runtime-images/migrations-identity.json
             artifacts/release-candidate/security/runtime-images/migrations-vulnerabilities.json
             artifacts/release-candidate/security/runtime-images/migrations-secrets.json
+            artifacts/api-server/test-results/vendor-auth0-token.xml
+            artifacts/api-server/test-results/vendor-crossmint-sandbox.xml
+            artifacts/api-server/test-results/vendor-customer-wallet.xml
+            artifacts/api-server/test-results/vendor-persona.xml
             artifacts/api-server/test-results/postgres-persistence.xml
             artifacts/api-server/test-results/staging-database-access.xml
             artifacts/api-server/test-results/postgres-http.xml

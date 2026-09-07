@@ -106,7 +106,11 @@
     "artifacts/api-server/test-results/weekly-backup-restore.xml",
     "artifacts/api-server/test-results/weekly-backup-restore.json",
     "artifacts/api-server/test-results/ledger-performance-characterization.xml",
-    "artifacts/api-server/test-results/ledger-performance-characterization.json"
+    "artifacts/api-server/test-results/ledger-performance-characterization.json",
+    "artifacts/api-server/test-results/vendor-auth0-token.xml",
+    "artifacts/api-server/test-results/vendor-crossmint-sandbox.xml",
+    "artifacts/api-server/test-results/vendor-customer-wallet.xml",
+    "artifacts/api-server/test-results/vendor-persona.xml"
   ],
   "boundaries": [
     "The candidate must be an exact 40-character commit contained in GitHub main.",

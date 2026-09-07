@@ -35,7 +35,7 @@
   ],
   "environments": [
     {
-      "title": "GitHub CI — Disposable PostgreSQL",
+      "title": "GitHub CI \u2014 Disposable PostgreSQL",
       "slug": "github-ci-postgres",
       "purpose": "Automated acceptance against isolated PostgreSQL 16 with synthetic data"
     },
@@ -48,10 +48,10 @@
   "configurations": {
     "Validation Surface": [
       "PostgreSQL API",
-      "Operations Portal — Chrome Desktop",
-      "Customer Web — Chrome Desktop",
-      "Mobile — iOS",
-      "Mobile — Android"
+      "Operations Portal \u2014 Chrome Desktop",
+      "Customer Web \u2014 Chrome Desktop",
+      "Mobile \u2014 iOS",
+      "Mobile \u2014 Android"
     ],
     "Workforce Role": [
       "Administrator",
@@ -69,25 +69,25 @@
     },
     {
       "id": 2,
-      "title": "P0 — Critical Financial Controls",
+      "title": "P0 \u2014 Critical Financial Controls",
       "caseCount": 22,
       "use": "Required for any ledger, money, idempotency, refund, reversal, or reconciliation change"
     },
     {
       "id": 3,
-      "title": "P1 — Operations Portal Smoke",
+      "title": "P1 \u2014 Operations Portal Smoke",
       "caseCount": 18,
       "use": "Required for workforce, portal, case-management, audit, or reconciliation UI changes"
     },
     {
       "id": 4,
-      "title": "P2 — Full Backend Regression",
+      "title": "P2 \u2014 Full Backend Regression",
       "caseCount": 89,
       "use": "Required before a release candidate or broad platform cutover"
     },
     {
       "id": 5,
-      "title": "P1 — Customer Web & Mobile Smoke",
+      "title": "P1 \u2014 Customer Web & Mobile Smoke",
       "caseCount": 15,
       "use": "Required for customer web, mobile, portable API configuration, recovery, or cross-surface changes"
     }
@@ -96,7 +96,7 @@
     {
       "path": "docs/testing/qase-portable-client-smoke.csv",
       "caseCount": 15,
-      "targetPlan": "P1 — Customer Web & Mobile Smoke",
+      "targetPlan": "P1 \u2014 Customer Web & Mobile Smoke",
       "qaseCaseRange": "SAMP-101 through SAMP-115",
       "status": "imported",
       "tags": ["portable-client", "manual", "smoke"]
@@ -187,6 +187,26 @@
       "id": "ledger-materialized",
       "source": "artifacts/api-server/test/ledger-materialized-balances.test.ts",
       "report": "ledger-materialized-balances.xml"
+    },
+    {
+      "id": "vendor-auth0-token",
+      "source": "artifacts/api-server/src/auth0-token-boundary.test.ts",
+      "report": "vendor-auth0-token.xml"
+    },
+    {
+      "id": "vendor-crossmint-sandbox",
+      "source": "artifacts/api-server/src/crossmint-customer-sandbox.test.ts",
+      "report": "vendor-crossmint-sandbox.xml"
+    },
+    {
+      "id": "vendor-customer-wallet",
+      "source": "artifacts/api-server/src/customer-wallet.test.ts",
+      "report": "vendor-customer-wallet.xml"
+    },
+    {
+      "id": "vendor-persona",
+      "source": "artifacts/api-server/src/persona.test.ts",
+      "report": "vendor-persona.xml"
     }
   ]
 }

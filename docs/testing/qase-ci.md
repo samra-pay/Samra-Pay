@@ -170,7 +170,7 @@ for the same reason.
 - The two GitHub test jobs remain authoritative for pass or fail. A Qase API
   outage is non-blocking for ordinary GitHub-triggered CI, but Qase-triggered runs
   fail if their reporting contract fails.
-- All 17 JUnit payloads must contain a non-empty standard test suite before a
+- All 21 JUnit payloads must contain a non-empty standard test suite before a
   Qase run is updated. GitHub validates every file, then sends the directory in
   one Qase upload action. A run is completed only after that governed batch
   succeeds.
@@ -238,3 +238,40 @@ they do not mark manual cases complete.
 Create a replacement Qase API token, update the GitHub Actions secret named
 `QASE_API_TOKEN`, verify one automated run, and then revoke the previous token.
 Never store the token in source code, workflow YAML, logs, or test fixtures.
+
+
+## Vendor contracts and API entitlement (2026-09-05)
+
+The optional CI, weekly resilience and ledger-performance Qase jobs are now **opt-in**. Set repository variable
+`QASE_REPORT_ENABLED=true` only after API entitlement is confirmed, or use
+CI manual dispatch with `qase_report=true`. Explicit `qase_report=false` skips CI reporting.
+Weekly/performance reporting requires the repository variable even on manual dispatch.
+No token, plan, or vendor configuration is changed by this revision.
+
+CI run 33947575186 / job 101256523210 returned HTTP 403:
+“Business plan subscription is required to use API.” Its previous successful
+job conclusion meant errors were tolerated, not that a Qase run was stored.
+This is a subscription boundary, not a test failure or evidence of a bad token.
+
+GitHub stores the following local-fixture reports in `vendor-contracts-junit`
+for 30 days, attached to the exact workflow commit, run, and attempt:
+
+- `vendor-auth0-token.xml`: real token middleware with loopback discovery/JWKS.
+- `vendor-crossmint-sandbox.xml`: staging adapter with simulated HTTP responses.
+- `vendor-customer-wallet.xml`: wallet orchestration with simulated provider/store.
+- `vendor-persona.xml`: Persona request/webhook validation with synthetic fixtures.
+
+When explicitly enabled, Qase receives those reports with the existing reports.
+The final delivery step records `qase-delivery.json` and fails the optional job
+unless payload validation, run identity, upload, and required completion succeed.
+The receipt reports action outcomes; it does not claim independent API read-back.
+`Required CI` retains its existing code/test dependencies and does not depend on
+Qase. Fork pull requests still receive no Qase credentials.
+
+The release-candidate workflow also retains these four vendor reports. Its Qase
+certification requirement remains a release constraint while API access is
+unavailable. This change does not waive that gate or certify a release.
+
+See [vendor acceptance](vendor-integration-acceptance.md) for evidence mapping,
+remaining connected tests, and the draft CSV. Imported cases and executed cases
+must be recorded separately; this revision creates no live Qase records.

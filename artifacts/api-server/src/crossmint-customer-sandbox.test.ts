@@ -183,3 +183,60 @@ test("runtime sandbox mode is opt-in, staging-only, authenticated, persistent, a
   ])
     assert.throws(() => loadApiRuntimeConfig({ ...environment, ...override }));
 });
+
+test("Crossmint transient failures preserve the exact request identity on caller retry", async () => {
+  for (const status of [408, 429, 500, 503]) {
+    const requests: RequestInit[] = [];
+    const adapter = new CrossmintCustomerSandboxAdapter(config, {
+      fetch: async (_url, init) => {
+        requests.push(init!);
+        return requests.length === 1
+          ? new Response("upstream failure", { status })
+          : Response.json(response(), { status: 201 });
+      },
+    });
+    await assert.rejects(
+      adapter.createWallet(input),
+      /sandbox wallet creation failed/,
+    );
+    assert.equal(
+      requests.length,
+      1,
+      "the adapter must not issue uncontrolled automatic retries",
+    );
+    const result = await adapter.createWallet(input);
+    assert.equal(result.providerWalletRef, `evm:${address.toLowerCase()}`);
+    assert.equal(requests.length, 2);
+    assert.equal(requests[0]!.body, requests[1]!.body);
+    assert.equal(
+      new Headers(requests[0]!.headers).get("x-idempotency-key"),
+      input.providerRequestKey,
+    );
+    assert.equal(
+      new Headers(requests[1]!.headers).get("x-idempotency-key"),
+      input.providerRequestKey,
+    );
+  }
+});
+
+test("Crossmint ambiguous timeout can be retried without changing owner or request key", async () => {
+  const requests: RequestInit[] = [];
+  const adapter = new CrossmintCustomerSandboxAdapter(config, {
+    fetch: async (_url, init) => {
+      requests.push(init!);
+      if (requests.length === 1)
+        throw new DOMException("response lost after creation", "TimeoutError");
+      return Response.json(response());
+    },
+  });
+  await assert.rejects(
+    adapter.createWallet(input),
+    /sandbox wallet creation failed/,
+  );
+  await adapter.createWallet(input);
+  assert.equal(requests[0]!.body, requests[1]!.body);
+  assert.equal(
+    new Headers(requests[1]!.headers).get("x-idempotency-key"),
+    input.providerRequestKey,
+  );
+});

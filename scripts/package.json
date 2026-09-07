@@ -16,7 +16,7 @@
     "validate-operational-readiness": "tsx ./src/validate-operational-readiness.ts",
     "validate-experience-budgets": "tsx ./src/validate-experience-budgets.ts",
     "release-evidence": "tsx ./src/release-evidence-cli.ts",
-    "test": "vitest run --config vitest.config.ts",
+    "test": "vitest run --config vitest.config.ts && node --test qase-delivery-status.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
