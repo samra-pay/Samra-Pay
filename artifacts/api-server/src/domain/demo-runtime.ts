@@ -146,6 +146,8 @@ class InMemoryReconciliationStore implements ReconciliationStore {
   }
 }
 
+import type { AlphaAccessStore } from "@workspace/db";
+
 export type DemoRuntimeDependencies = Readonly<{
   repository?: RemittanceRepository;
   ledger?: DemoBalanceLedger;
@@ -158,6 +160,7 @@ export type DemoRuntimeDependencies = Readonly<{
   operationsStore?: PostgresOperationsStore;
   workforceAuthStore?: PostgresWorkforceAuthStore;
   operationsCaseStore?: PostgresOperationsCaseStore;
+  customerAlphaAccessStore?: AlphaAccessStore;
   customerOnboardingStore?: CustomerOnboardingStore;
   customerIdentityVerificationService?: CustomerIdentityVerificationService;
   personaWebhookService?: PersonaWebhookService;
@@ -185,6 +188,7 @@ export class DemoRuntime {
   readonly operationsStore?: PostgresOperationsStore;
   readonly workforceAuthStore?: PostgresWorkforceAuthStore;
   readonly operationsCaseStore?: PostgresOperationsCaseStore;
+  readonly customerAlphaAccessStore?: AlphaAccessStore;
   readonly customerOnboardingStore?: CustomerOnboardingStore;
   readonly customerIdentityVerificationService?: CustomerIdentityVerificationService;
   readonly personaWebhookService?: PersonaWebhookService;
@@ -217,6 +221,7 @@ export class DemoRuntime {
     this.#unitOfWork = dependencies.unitOfWork;
     this.workforceAuthStore = dependencies.workforceAuthStore;
     this.operationsCaseStore = dependencies.operationsCaseStore;
+    this.customerAlphaAccessStore = dependencies.customerAlphaAccessStore;
     this.customerOnboardingStore = dependencies.customerOnboardingStore;
     this.customerIdentityVerificationService =
       dependencies.customerIdentityVerificationService;

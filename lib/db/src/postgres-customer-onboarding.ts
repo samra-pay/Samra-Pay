@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import type { PostgresAlphaAccessStore } from "./postgres-alpha-access";
 import { DomainError } from "@workspace/remittance";
 import {
   normalizeAuth0Issuer,
@@ -141,7 +142,10 @@ type ConsentDecisionInput = Readonly<{
 export class PostgresCustomerOnboardingStore {
   readonly #context: PostgresPersistenceContext;
 
-  constructor(context: PostgresPersistenceContext) {
+  constructor(
+    context: PostgresPersistenceContext,
+    private readonly alphaAccess?: PostgresAlphaAccessStore,
+  ) {
     this.#context = context;
   }
 
@@ -215,6 +219,11 @@ export class PostgresCustomerOnboardingStore {
       }
 
       assertIdentityAccess(identity);
+      await this.alphaAccess?.admitAuth0Customer({
+        issuer,
+        subject,
+        customerId: identity.customer_id,
+      });
       const existing = await selectOnboarding(
         this.#context,
         identity.customer_id,
@@ -227,10 +236,11 @@ export class PostgresCustomerOnboardingStore {
         });
       }
 
-      const initialState: CustomerOnboardingState = createdCustomer
+      const requiresConsent = createdCustomer || this.alphaAccess !== undefined;
+      const initialState: CustomerOnboardingState = requiresConsent
         ? "consent_pending"
         : "activated";
-      const latestCompletedStep = createdCustomer
+      const latestCompletedStep = requiresConsent
         ? "authenticated"
         : "activated";
       const inserted = await this.#context.query().query<OnboardingRow>(
@@ -256,7 +266,7 @@ export class PostgresCustomerOnboardingStore {
         [
           onboarding.id,
           initialState,
-          createdCustomer ? "authenticated" : "legacy_active_customer",
+          requiresConsent ? "authenticated" : "legacy_active_customer",
           `start:${commandKey}`,
         ],
       );

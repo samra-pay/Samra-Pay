@@ -10,6 +10,16 @@ and incident responders must be named and accept their duties before activation;
 the current six incident roles remain unassigned. Do not claim independent review
 or continuous coverage from a single available operator.
 
+## Active product sequence
+
+The 2026-09-06 [Alpha Release 1 scope](../architecture/alpha-release-1.md)
+governs delivery priority: admission and account isolation, managed identity/KYC,
+customer-controlled wallet creation, one-user production proof, then 5 → 25 →
+100 invited users. Scope telemetry, paging and recovery work to that service.
+Use existing GitHub/GCP capabilities. Extend custom release tooling only for a
+demonstrated blocker. Funding and payout activation are a later release; existing
+security, migration, financial invariants and readiness checks remain required.
+
 ## Evidence required for each pillar
 
 | Pillar              | Next implementation and decision                                                                                                                                                                          | Required acceptance evidence                                                                                                                                                                                                                                                                                                                                            |

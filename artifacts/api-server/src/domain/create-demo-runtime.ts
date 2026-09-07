@@ -7,6 +7,7 @@ import {
   PostgresOperationsCaseStore,
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
+  PostgresAlphaAccessStore,
   PostgresCustomerIdentityCaseStore,
   PostgresCustomerFunnelStore,
   PostgresCustomerWalletStore,
@@ -41,7 +42,14 @@ export function createConfiguredDemoRuntime(
   const connection = createDatabase();
   const context = new PostgresPersistenceContext(connection.pool);
   const customerIdentityStore = new PostgresCustomerIdentityStore(context);
-  const customerOnboardingStore = new PostgresCustomerOnboardingStore(context);
+  const customerAlphaAccessStore =
+    config.releaseProfile === "alpha-release-1"
+      ? new PostgresAlphaAccessStore(context)
+      : undefined;
+  const customerOnboardingStore = new PostgresCustomerOnboardingStore(
+    context,
+    customerAlphaAccessStore,
+  );
   const customerIdentityCaseStore = new PostgresCustomerIdentityCaseStore(
     context,
   );
@@ -69,6 +77,7 @@ export function createConfiguredDemoRuntime(
       ? new PersonaSandboxAdapter(config.customerIdentityProvider)
       : new DeterministicFakePersonaAdapter();
   return new DemoRuntime({
+    customerAlphaAccessStore,
     repository: new PostgresRemittanceRepository(context),
     ledger: new PostgresLedgerControl(context),
     unitOfWork: context,
@@ -116,6 +125,7 @@ export function createConfiguredDemoRuntime(
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
     readiness: () =>
       assertPostgresRuntimeReady(connection.pool, {
+        alphaReleaseAdmission: config.releaseProfile === "alpha-release-1",
         customerControlledSandboxWallets:
           walletConfig.mode === "crossmint-sandbox-customer",
       }),

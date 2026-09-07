@@ -51,7 +51,7 @@ const report = () => ({
   execution,
   secretVersion: "7",
   catalog,
-  before: history.slice(0, 17),
+  before: history.slice(0, -1),
   after: history,
   appliedCount: 1,
   database: "samra_staging",
@@ -122,7 +122,7 @@ function manifest() {
 }
 
 test("migration history must match the full ordered source prefix, including hashes", () => {
-  assert.equal(history.length, 18);
+  assert.equal(history.length, 19);
   assert.deepEqual(verifyHistory([], catalog), []);
   for (const changed of [
     rows.slice(1),
@@ -132,11 +132,11 @@ test("migration history must match the full ordered source prefix, including has
     [{ ...rows[0], created_at: "NaN" }],
   ])
     assert.throws(() => verifyHistory(changed, catalog));
-  assert.throws(() => verifyHistory(rows.slice(0, 17), catalog, true));
+  assert.throws(() => verifyHistory(rows.slice(0, -1), catalog, true));
 });
 
 function clientFixture({
-  before = rows.slice(0, 17),
+  before = rows.slice(0, -1),
   after = rows,
   acquired = true,
   identity = {},
@@ -220,7 +220,7 @@ test("a migration failure releases the lock; a missing post-migration row cannot
   assert.match(client.calls.at(-1), /pg_advisory_unlock/);
   await assert.rejects(
     executeStagingMigration({
-      client: clientFixture({ after: rows.slice(0, 17) }),
+      client: clientFixture({ after: rows.slice(0, -1) }),
       migrate: async () => {},
     }),
   );
@@ -341,7 +341,7 @@ test("report validation rejects wrong source, execution, secret, role, journal a
     { databaseUser: "postgres" },
     { encrypted: false },
     { appliedCount: 2 },
-    { after: history.slice(0, 17) },
+    { after: history.slice(0, -1) },
     { before: history.slice(1) },
     { catalog: [] },
   ])

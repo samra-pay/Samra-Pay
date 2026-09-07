@@ -8,6 +8,9 @@ import {
   PostgresOperationsStore,
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
+  PostgresAlphaAccessStore,
+  AlphaAccessDeniedError,
+  AlphaAdmissionRequiredError,
   PostgresCustomerIdentityCaseStore,
   PostgresCustomerFunnelStore,
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
@@ -1982,3 +1985,174 @@ async function advanceUntil(
   assert.equal(transfer.state, expected);
   return transfer;
 }
+
+test("alpha admission is atomic, identity-bound, revocable, restart-safe and capped at 100 lifetime customers", async () => {
+  const first = createRuntime();
+  const second = createRuntime();
+  const pool = first.connection.pool;
+  const access = new PostgresAlphaAccessStore(first.context);
+  const onboarding = new PostgresCustomerOnboardingStore(first.context, access);
+  const restarted = new PostgresCustomerOnboardingStore(
+    second.context,
+    new PostgresAlphaAccessStore(second.context),
+  );
+  const issuer = `https://${randomUUID()}.alpha.samra.test/`;
+  const input = (subject: string) => ({
+    issuer,
+    subject,
+    idempotencyKey: `alpha-start-${subject}`,
+  });
+  const invite = async (subject: string, expired = false) => {
+    await pool.query(
+      `INSERT INTO samra_core.alpha_invitations (issuer, subject, expires_at)
+      VALUES ($1, $2, now() + $3::interval)`,
+      [issuer, subject, expired ? "-1 hour" : "1 hour"],
+    );
+  };
+  const limit = async (n: number) => {
+    await pool.query(
+      `UPDATE samra_core.alpha_release_controls SET admission_limit = $1`,
+      [n],
+    );
+  };
+  const count = async () =>
+    Number(
+      (
+        await pool.query(
+          `SELECT count(*) AS count FROM samra_core.alpha_admissions`,
+        )
+      ).rows[0].count,
+    );
+  const denied = async (subject: string) => {
+    const before = await onboardingPersistenceCounts(pool);
+    await assert.rejects(
+      onboarding.startAuth0Onboarding(input(subject)),
+      AlphaAccessDeniedError,
+    );
+    assert.deepEqual(await onboardingPersistenceCounts(pool), before);
+  };
+  assert.equal(await count(), 0);
+  await denied("auth0|uninvited");
+  await invite("auth0|first");
+  await denied("auth0|first"); // migration starts closed
+  await limit(1);
+  await invite("auth0|expired", true);
+  await denied("auth0|expired");
+  await invite("auth0|revoked");
+  await pool.query(
+    `UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2`,
+    [issuer, "auth0|revoked"],
+  );
+  await denied("auth0|revoked");
+  await assert.rejects(
+    access.assertAuth0Access(input("auth0|first")),
+    AlphaAdmissionRequiredError,
+  );
+  await assert.rejects(
+    onboarding.startAuth0Onboarding({
+      ...input("auth0|first"),
+      issuer: "https://wrong-tenant.samra.test/",
+    }),
+    AlphaAccessDeniedError,
+  );
+
+  // A failed outer unit of work must release both the customer and admission slot.
+  const beforeFailure = await onboardingPersistenceCounts(pool);
+  await assert.rejects(
+    first.context.run(async () => {
+      await onboarding.startAuth0Onboarding(input("auth0|first"));
+      throw new Error("controlled alpha transaction failure");
+    }),
+    /controlled alpha transaction failure/,
+  );
+  assert.deepEqual(await onboardingPersistenceCounts(pool), beforeFailure);
+  assert.equal(await count(), 0);
+
+  const starts = await Promise.all([
+    onboarding.startAuth0Onboarding(input("auth0|first")),
+    restarted.startAuth0Onboarding({
+      ...input("auth0|first"),
+      idempotencyKey: "different-retry-key",
+    }),
+  ]);
+  assert.deepEqual(starts.map((r) => r.created).sort(), [false, true]);
+  assert.equal(starts[0]!.snapshot.customerId, starts[1]!.snapshot.customerId);
+  assert.equal(starts[0]!.snapshot.state, "consent_pending");
+  assert.equal(await count(), 1);
+  await access.assertAuth0Access(input("auth0|first"));
+  await pool.query(
+    `UPDATE samra_core.alpha_invitations SET expires_at = now() - interval '1 hour' WHERE issuer = $1 AND subject = $2`,
+    [issuer, "auth0|first"],
+  );
+  await limit(0); // pause new admission, preserve returning users
+  assert.equal(
+    (await restarted.startAuth0Onboarding(input("auth0|first"))).snapshot
+      .customerId,
+    starts[0]!.snapshot.customerId,
+  );
+  await access.assertAuth0Access(input("auth0|first"));
+
+  // Competing instances reach each cohort exactly; revocation cannot recycle a slot.
+  for (const [target, expectedNew] of [
+    [5, 4],
+    [25, 20],
+    [100, 75],
+  ]) {
+    await limit(target!);
+    const subjects = Array.from(
+      { length: expectedNew! + 2 },
+      (_, i) => `auth0|batch-${target}-${i}`,
+    );
+    await Promise.all(subjects.map((subject) => invite(subject)));
+    const results = await Promise.allSettled(
+      subjects.map((subject, i) =>
+        (i % 2 === 0 ? onboarding : restarted).startAuth0Onboarding(
+          input(subject),
+        ),
+      ),
+    );
+    assert.equal(
+      results.filter((r) => r.status === "fulfilled").length,
+      expectedNew,
+    );
+    for (const r of results)
+      if (r.status === "rejected")
+        assert.ok(r.reason instanceof AlphaAccessDeniedError);
+    assert.equal(await count(), target);
+  }
+  await pool.query(
+    `UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2`,
+    [issuer, "auth0|first"],
+  );
+  await assert.rejects(
+    access.assertAuth0Access(input("auth0|first")),
+    AlphaAccessDeniedError,
+  );
+  await denied("auth0|first");
+  await invite("auth0|one-too-many");
+  await denied("auth0|one-too-many");
+  assert.equal(await count(), 100);
+  await assert.rejects(limit(101), /check constraint/);
+  await assert.rejects(
+    pool.query(
+      `UPDATE samra_core.alpha_admissions SET slot = slot WHERE slot = 1`,
+    ),
+    /immutable/,
+  );
+  await assert.rejects(
+    pool.query(`DELETE FROM samra_core.alpha_admissions WHERE slot = 1`),
+    /immutable/,
+  );
+  await assert.rejects(
+    pool.query(
+      `UPDATE samra_core.alpha_invitations SET subject = 'auth0|replacement' WHERE issuer = $1 AND subject = $2`,
+      [issuer, "auth0|first"],
+    ),
+    /immutable/,
+  );
+  const audit = await pool.query(
+    `SELECT metadata FROM samra_core.audit_events WHERE action = 'alpha_customer_admitted'`,
+  );
+  assert.equal(audit.rowCount, 100);
+  assert.doesNotMatch(JSON.stringify(audit.rows), /auth0|subject|issuer|email/);
+});

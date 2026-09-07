@@ -51,6 +51,7 @@ and the current-state index in the same PR.
 
 | Decision                                                                 | Status / governing record                                                                                                                                     |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Invite-only Alpha Release 1 | Accepted 2026-09-06 in the main task: [scope and sequence](architecture/alpha-release-1.md); 100-user cap, customer-controlled wallets, deposits/transfers unavailable |
 | Samra owns customer, financial state, ledger, and audit                  | Accepted: [architecture invariants](architecture/README.md)                                                                                                   |
 | Alpha uses Auth0, Persona, Crossmint, Google Cloud, GitHub Actions, Qase | Accepted repository decision: [Alpha platform](architecture/alpha-platform.md); funding and Ethiopia payout remain unresolved                                 |
 | Customer-controlled sandbox signing/recovery                             | Recorded choice on 2026-09-04: [Crossmint evidence](operations/crossmint-sandbox-connection.md); complete signer/recovery proof and deployment remain blocked |

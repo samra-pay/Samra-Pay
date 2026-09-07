@@ -24,7 +24,7 @@ const build = (readCommittedFile = read) =>
 test("packet records source restrictions without claiming cloud readiness", () => {
   const packet = build();
   assert.equal(packet.candidateSha, candidateSha);
-  assert.equal(packet.migrations.length, 18);
+  assert.equal(packet.migrations.length, 19);
   assert.equal(
     packet.observedRepositoryControls.apiDeploymentStatus,
     "requires-governed-migration-evidence",
@@ -59,7 +59,7 @@ test("source and migration hashes change when committed migration bytes change",
   const after = build(
     (path) =>
       read(path) +
-      (path.endsWith("0017_customer_controlled_sandbox_wallets.sql")
+      (path.endsWith("0018_alpha_release_admission.sql")
         ? "\n-- reviewed amendment\n"
         : ""),
   );
@@ -79,14 +79,13 @@ test("rejects missing, empty, reordered and path-traversing migrations", () => {
   assert.throws(
     () =>
       build((path) =>
-        path.endsWith("0017_customer_controlled_sandbox_wallets.sql")
-          ? ""
-          : read(path),
+        path.endsWith("0018_alpha_release_admission.sql") ? "" : read(path),
       ),
     /empty/,
   );
   for (const change of [
-    (journal) => journal.entries.pop(),
+    // Removing the required wallet migration must still fail as later migrations are added.
+    (journal) => journal.entries.splice(17),
     (journal) => {
       journal.entries[0].tag = "../../outside";
     },

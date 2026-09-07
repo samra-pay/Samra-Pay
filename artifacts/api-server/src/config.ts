@@ -29,6 +29,7 @@ export type CustomerIdentityProviderConfig =
     }>;
 
 export type ApiRuntimeConfig = Readonly<{
+  releaseProfile?: "demo" | "alpha-release-1";
   backendMode: BackendMode;
   providerMode: ProviderMode;
   persistenceMode?: PersistenceMode;
@@ -44,12 +45,19 @@ export type ApiRuntimeConfig = Readonly<{
 export function loadApiRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): ApiRuntimeConfig {
+  const releaseProfile = environment["SAMRA_RELEASE_PROFILE"] ?? "demo";
+  if (releaseProfile !== "demo" && releaseProfile !== "alpha-release-1") {
+    throw new Error(
+      "SAMRA_RELEASE_PROFILE supports only demo or alpha-release-1.",
+    );
+  }
   const backendMode = parseBackendMode(environment["SAMRA_BACKEND_MODE"]);
   const providerMode = parseProviderMode(environment["SAMRA_PROVIDER_MODE"]);
   const persistenceMode = parsePersistenceMode(
     environment["SAMRA_PERSISTENCE_MODE"],
   );
   const devControlsEnabled =
+    releaseProfile !== "alpha-release-1" &&
     backendMode === "demo" &&
     providerMode === "fake" &&
     environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"] !==
@@ -72,12 +80,25 @@ export function loadApiRuntimeConfig(
     backendMode,
     persistenceMode,
   );
+  if (
+    releaseProfile === "alpha-release-1" &&
+    (backendMode !== "demo" ||
+      customerAuth.mode !== "auth0" ||
+      persistenceMode !== "postgres" ||
+      parseBoolean(environment["SAMRA_RUN_WORKER"], false) ||
+      operationsRequested)
+  ) {
+    throw new Error(
+      "Alpha Release 1 requires Auth0, PostgreSQL, and disabled workers and operations controls.",
+    );
+  }
   const customerIdentityProvider = parseCustomerIdentityProvider(
     environment,
     customerAuth,
     persistenceMode,
   );
   return Object.freeze({
+    releaseProfile,
     backendMode,
     providerMode,
     persistenceMode,
