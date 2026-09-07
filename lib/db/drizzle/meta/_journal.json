@@ -134,6 +134,13 @@
       "when": 1788732000000,
       "tag": "0018_alpha_release_admission",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788804000000,
+      "tag": "0019_personal_funding_reservation",
+      "breakpoints": true
     }
   ]
 }

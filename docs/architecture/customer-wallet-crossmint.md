@@ -17,6 +17,12 @@ Samra Pay owns the customer-to-wallet relationship and all financial product
 state. Crossmint owns only the provider capability confirmed in its executed
 commercial and technical terms.
 
+The [personal funding pilot](personal-funding-pilot.md), authorized for
+implementation on 2026-09-07, is a separate one-account scope. It does not relax
+the wallet gates below, create a production wallet, or invent a Persona approval.
+Its order reservation requires an independently verified wallet-control record;
+production passkey enrollment, recovery and mapping remain launch blockers.
+
 ## Samra-owned model
 
 One `customer_wallet` record represents the product wallet independent of a

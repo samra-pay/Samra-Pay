@@ -9,6 +9,8 @@ import {
   PostgresCustomerIdentityStore,
   PostgresCustomerOnboardingStore,
   PostgresAlphaAccessStore,
+  PostgresPersonalFundingStore,
+  PersonalFundingUnavailableError,
   AlphaAccessDeniedError,
   AlphaAdmissionRequiredError,
   PostgresCustomerIdentityCaseStore,
@@ -30,6 +32,190 @@ if (!connectionString) {
 }
 
 const connections: ReturnType<typeof createDatabase>[] = [];
+
+test("personal funding reserves one bounded, account-owned purchase across processes and restarts", async () => {
+  const first = createRuntime();
+  const second = createRuntime();
+  const store = new PostgresPersonalFundingStore(first.context);
+  const otherStore = new PostgresPersonalFundingStore(second.context);
+  const identity = {
+    issuer: `https://${randomUUID()}.pilot.invalid/`,
+    subject: "auth0|synthetic-personal-pilot",
+  };
+  const onboarding = await new PostgresCustomerOnboardingStore(
+    first.context,
+  ).startAuth0Onboarding({
+    ...identity,
+    idempotencyKey: "personal-pilot-onboarding",
+  });
+  const customer = (
+    await first.connection.pool.query<{ id: string }>(
+      "SELECT id FROM samra_core.customers WHERE external_ref = $1",
+      [onboarding.snapshot.customerId],
+    )
+  ).rows[0]!.id;
+  const command = {
+    ...identity,
+    idempotencyKey: "personal-pilot-purchase",
+    amountMinor: "1500",
+    environment: "staging" as const,
+  };
+  const address = `0x${"1".repeat(40)}`;
+  async function authorize(expired = false, revoked = false) {
+    await first.context.query().query(
+      `INSERT INTO samra_core.personal_funding_authorizations
+       (pilot_id, customer_id, environment, wallet_address, provider_wallet_ref, max_amount_minor,
+        evidence_digest, expires_at, revoked_at, created_at)
+       VALUES ('personal-funding-pilot', $1, 'staging', $2, $3, 2000, $4,
+         now() + ($5 * interval '1 hour'), CASE WHEN $6 THEN now() ELSE NULL END, now() - interval '2 hours')`,
+      [
+        customer,
+        address,
+        `evm:${address}`,
+        "a".repeat(64),
+        expired ? -1 : 1,
+        revoked,
+      ],
+    );
+  }
+  async function rollbackCase(operation: () => Promise<void>) {
+    const rollback = new Error("controlled personal funding test rollback");
+    await assert.rejects(
+      first.context.run(async () => {
+        await operation();
+        throw rollback;
+      }),
+      (error) => error === rollback,
+    );
+  }
+  await assert.rejects(store.reserve(command), PersonalFundingUnavailableError);
+  for (const mode of ["expired", "revoked"] as const) {
+    await rollbackCase(async () => {
+      await authorize(mode === "expired", mode === "revoked");
+      await assert.rejects(
+        store.reserve(command),
+        PersonalFundingUnavailableError,
+      );
+    });
+  }
+  await rollbackCase(async () => {
+    await authorize();
+    const reserved = await store.reserve(command);
+    await store.recordOutcome({
+      orderId: reserved.snapshot.orderId,
+      outcome: { state: "provider_unknown" },
+    });
+    const replay = await store.reserve(command);
+    assert.equal(replay.dispatch, false);
+    assert.equal(replay.snapshot.state, "provider_unknown");
+  });
+  assert.equal(
+    (
+      await first.connection.pool.query(
+        "SELECT * FROM samra_core.personal_funding_orders",
+      )
+    ).rowCount,
+    0,
+  );
+  await authorize();
+  for (const change of [
+    { subject: "auth0|someone-else" },
+    { issuer: "https://other.pilot.invalid/" },
+    { amountMinor: "2001" },
+    { environment: "production" as const },
+  ]) {
+    await assert.rejects(
+      store.reserve({ ...command, ...change }),
+      PersonalFundingUnavailableError,
+    );
+  }
+  for (const amountMinor of [
+    "0",
+    "-1",
+    "1.00",
+    "01",
+    "1e3",
+    "9007199254740993000",
+  ]) {
+    await assert.rejects(store.reserve({ ...command, amountMinor }));
+  }
+  const journalsBefore = (
+    await first.connection.pool.query(
+      "SELECT count(*) FROM samra_core.ledger_journals",
+    )
+  ).rows;
+  const attempts = await Promise.all(
+    Array.from({ length: 10 }, (_, index) =>
+      (index % 2 ? store : otherStore).reserve(command),
+    ),
+  );
+  assert.equal(attempts.filter((item) => item.dispatch).length, 1);
+  assert.equal(new Set(attempts.map((item) => item.snapshot.orderId)).size, 1);
+  assert.equal(attempts[0]!.target.walletAddress, address);
+  const restarted = new PostgresPersonalFundingStore(createRuntime().context);
+  assert.equal((await restarted.reserve(command)).dispatch, false);
+  for (const change of [
+    { idempotencyKey: "different-pilot-key" },
+    { amountMinor: "1400" },
+  ]) {
+    await assert.rejects(restarted.reserve({ ...command, ...change }));
+  }
+  const providerOrderRef = randomUUID();
+  await store.recordOutcome({
+    orderId: attempts[0]!.snapshot.orderId,
+    outcome: { state: "checkout_created", providerOrderRef },
+  });
+  const resumed = (await restarted.get(identity))!;
+  assert.equal(resumed.providerOrderRef, providerOrderRef);
+  assert.equal(resumed.state, "checkout_created");
+  assert.equal(resumed.fundingConfirmed, false);
+  await assert.rejects(
+    store.recordOutcome({
+      orderId: resumed.orderId,
+      outcome: { state: "provider_unknown" },
+    }),
+  );
+  await assert.rejects(
+    restarted.get({ ...identity, subject: "auth0|other-customer" }),
+    PersonalFundingUnavailableError,
+  );
+  for (const statement of [
+    "UPDATE samra_core.personal_funding_authorizations SET max_amount_minor = 1900",
+    "UPDATE samra_core.personal_funding_authorizations SET wallet_address = '0x2222222222222222222222222222222222222222'",
+    "DELETE FROM samra_core.personal_funding_authorizations",
+    "UPDATE samra_core.personal_funding_orders SET amount_minor = 1400",
+    "UPDATE samra_core.personal_funding_orders SET provider_order_ref = gen_random_uuid()",
+    "DELETE FROM samra_core.personal_funding_orders",
+    "UPDATE samra_core.personal_funding_events SET state = 'reserved'",
+    "DELETE FROM samra_core.personal_funding_events",
+  ])
+    await assert.rejects(first.connection.pool.query(statement));
+  const evidence = await first.connection.pool.query(
+    "SELECT * FROM samra_core.personal_funding_events ORDER BY occurred_at",
+  );
+  assert.equal(evidence.rowCount, 2);
+  assert.equal(JSON.stringify(evidence.rows).includes(identity.subject), false);
+  assert.equal(
+    JSON.stringify(evidence.rows).includes(command.idempotencyKey),
+    false,
+  );
+  assert.deepEqual(
+    (
+      await first.connection.pool.query(
+        "SELECT count(*) FROM samra_core.ledger_journals",
+      )
+    ).rows,
+    journalsBefore,
+  );
+  await first.connection.pool.query(
+    "UPDATE samra_core.customer_auth_identities SET state = 'revoked', revoked_at = now() WHERE customer_id = $1",
+    [customer],
+  );
+  await assert.rejects(
+    restarted.get(identity),
+    PersonalFundingUnavailableError,
+  );
+});
 
 function createRuntime() {
   const connection = createDatabase({ connectionString });

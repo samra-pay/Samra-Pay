@@ -302,7 +302,7 @@ export async function finalizeRuntimeDatabasePrivileges(
             JOIN pg_namespace n ON n.oid = c.relnamespace
             JOIN pg_attribute a ON a.attrelid = c.oid
            WHERE n.nspname = 'samra_core'
-             AND c.relname IN ('alpha_release_controls', 'alpha_invitations', 'alpha_admissions')
+             AND c.relname IN ('alpha_release_controls', 'alpha_invitations', 'alpha_admissions', 'personal_funding_authorizations')
              AND a.attnum > 0 AND NOT a.attisdropped
            GROUP BY c.relname
         LOOP
@@ -322,6 +322,9 @@ export async function finalizeRuntimeDatabasePrivileges(
       -- cannot change: the release CHECK and invitation identity trigger enforce it.
       GRANT UPDATE (release_id) ON samra_core.alpha_release_controls TO samra_runtime;
       GRANT UPDATE (id) ON samra_core.alpha_invitations TO samra_runtime;
+      REVOKE ALL PRIVILEGES ON samra_core.personal_funding_authorizations FROM samra_runtime;
+      GRANT SELECT ON samra_core.personal_funding_authorizations TO samra_runtime;
+      GRANT UPDATE (pilot_id) ON samra_core.personal_funding_authorizations TO samra_runtime;
 
       REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA samra_core FROM PUBLIC;
       REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA samra_core FROM samra_runtime;
@@ -571,7 +574,7 @@ export async function auditMigrationDatabaseAccess(
       JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
      WHERE namespace.nspname = 'samra_core'
        AND relation.relkind IN ('r', 'p', 'v', 'm')
-       AND relation.relname NOT IN ('alpha_release_controls', 'alpha_invitations', 'alpha_admissions')
+       AND relation.relname NOT IN ('alpha_release_controls', 'alpha_invitations', 'alpha_admissions', 'personal_funding_authorizations')
        AND NOT (
          has_table_privilege('samra_runtime', relation.oid, 'SELECT')
          AND has_table_privilege('samra_runtime', relation.oid, 'INSERT')
@@ -639,9 +642,10 @@ async function auditAlphaRuntimePrivileges(client: Queryable): Promise<void> {
     WITH expected(relation_name, insert_allowed, lock_column) AS (
       VALUES ('alpha_release_controls', false, 'release_id'),
              ('alpha_invitations', false, 'id'),
-             ('alpha_admissions', true, NULL)
+             ('alpha_admissions', true, NULL),
+             ('personal_funding_authorizations', false, 'pilot_id')
     ), principals(name) AS (VALUES ('samra_runtime'), ('samra_runtime_staging'))
-    SELECT count(*) = 6 AND bool_and(
+    SELECT count(*) = 8 AND bool_and(
       has_table_privilege(p.name, c.oid, 'SELECT')
       AND has_table_privilege(p.name, c.oid, 'INSERT') = e.insert_allowed
       AND NOT has_table_privilege(p.name, c.oid, 'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
@@ -716,6 +720,10 @@ export async function auditRuntimeDatabaseAccess(
     "UPDATE samra_core.alpha_invitations SET issuer = 'https://audit.invalid/', subject = 'synthetic' WHERE false",
     "UPDATE samra_core.alpha_admissions SET slot = 1 WHERE false",
     "DELETE FROM samra_core.alpha_admissions WHERE false",
+    "INSERT INTO samra_core.personal_funding_authorizations (pilot_id) SELECT 'personal-funding-pilot' WHERE false",
+    "UPDATE samra_core.personal_funding_authorizations SET max_amount_minor = 100000 WHERE false",
+    "UPDATE samra_core.personal_funding_authorizations SET customer_id = customer_id, wallet_address = wallet_address, revoked_at = NULL WHERE false",
+    "DELETE FROM samra_core.personal_funding_authorizations WHERE false",
   ]) {
     await expectPrivilegeDenied(client, statement);
   }
