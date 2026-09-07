@@ -48,15 +48,15 @@ const legalContent: Record<
       {
         title: localized("What this website stores", "ይህ ድረ ገጽ የሚያከማቸው"),
         body: localized(
-          "The language switch stores your English or Amharic preference in your browser. Analytics preferences are stored separately. If you ask for updates, we collect only the email address you enter. This website does not request identity documents, account credentials, bank details, or payment information.",
-          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ያስቀምጣል። የትንታኔ ምርጫዎች በተለየ ይቀመጣሉ። መረጃ እንዲደርስዎ ከጠየቁ ያስገቡትን የኢሜይል አድራሻ ብቻ እንሰበስባለን። ይህ ድረ ገጽ የማንነት ሰነዶችን፣ የአካውንት ማስረጃዎችን፣ የባንክ ዝርዝሮችን ወይም የክፍያ መረጃን አይጠይቅም።",
+          "The language switch stores your English or Amharic preference in your browser. Analytics preferences are stored separately. If you ask for updates, we collect your email address and, if you choose to provide them, your first name and mobile number. This website does not request identity documents, account credentials, bank details, or payment information.",
+          "የቋንቋ መቀየሪያው የእንግሊዝኛ ወይም የአማርኛ ምርጫዎን በአሳሽዎ ያስቀምጣል። የትንታኔ ምርጫዎች በተለየ ይቀመጣሉ። መረጃ እንዲደርስዎ ከጠየቁ የኢሜይል አድራሻዎን እና በፈቃድዎ ካስገቡ ስምዎንና የሞባይል ቁጥርዎን እንሰበስባለን። ይህ ድረ ገጽ የማንነት ሰነዶችን፣ የአካውንት ማስረጃዎችን፣ የባንክ ዝርዝሮችን ወይም የክፍያ መረጃን አይጠይቅም።",
         ),
       },
       {
         title: localized("Email updates", "የኢሜይል መረጃ"),
         body: localized(
-          "Email updates require a separate, voluntary choice. When you submit the form, your address is sent to Resend, our email provider, and added to the Samra Pay pre-launch list for product and availability updates. We keep it until you unsubscribe or ask us to delete it. Each marketing email will include an unsubscribe option; Resend may retain a suppression record so we honor that choice. Email signup does not create a Samra Pay account or application.",
-          "የኢሜይል መረጃ የተለየ የፈቃደኝነት ምርጫ ይፈልጋል። ቅጹን ሲልኩ አድራሻዎ ወደ የኢሜይል አቅራቢያችን Resend ይላካል እና ለምርትና ለአቅርቦት መረጃ ወደ Samra Pay የቅድመ ማስጀመሪያ ዝርዝር ይጨመራል። ምዝገባዎን እስኪያቋርጡ ወይም እንድናጥፈው እስኪጠይቁ ድረስ እናስቀምጠዋለን። እያንዳንዱ የግብይት ኢሜይል ምዝገባ ማቋረጫ ይኖረዋል፤ Resend ምርጫዎን ለማክበር የማገጃ መዝገብ ሊያቆይ ይችላል። የኢሜይል ምዝገባ የSamra Pay አካውንት ወይም ማመልከቻ አይፈጥርም።",
+          "Email updates require a separate, voluntary choice. When you submit the form, your address and any optional name or mobile number are sent to Resend, our email provider, and added to the Samra Pay pre-launch list for product and availability updates. We keep it until you unsubscribe or ask us to delete it. Each marketing email will include an unsubscribe option; Resend may retain a suppression record so we honor that choice. Providing a mobile number does not authorize text messages. Email signup does not create a Samra Pay account or application.",
+          "የኢሜይል መረጃ የተለየ የፈቃደኝነት ምርጫ ይፈልጋል። ቅጹን ሲልኩ አድራሻዎ እና በፈቃድዎ ያስገቡት ስም ወይም የሞባይል ቁጥር ወደ የኢሜይል አቅራቢያችን Resend ይላካሉ እና ለምርትና ለአቅርቦት መረጃ ወደ Samra Pay የቅድመ ማስጀመሪያ ዝርዝር ይጨመራል። ምዝገባዎን እስኪያቋርጡ ወይም እንድናጥፈው እስኪጠይቁ ድረስ እናስቀምጠዋለን። እያንዳንዱ የግብይት ኢሜይል ምዝገባ ማቋረጫ ይኖረዋል፤ Resend ምርጫዎን ለማክበር የማገጃ መዝገብ ሊያቆይ ይችላል። የኢሜይል ምዝገባ የSamra Pay አካውንት ወይም ማመልከቻ አይፈጥርም።",
         ),
       },
       {

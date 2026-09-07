@@ -172,3 +172,59 @@ describe("launch updates waitlist", () => {
     );
   });
 });
+
+it("submits an optional name and normalized phone and clears them after success", async () => {
+  fetchSpy.mockResolvedValueOnce(
+    Response.json(
+      { accepted: true, acceptedAt: "2026-09-05T12:00:00Z" },
+      { status: 202 },
+    ),
+  );
+  await render();
+  const name = host.querySelector<HTMLInputElement>('input[name="firstName"]')!;
+  const phone = host.querySelector<HTMLInputElement>('input[type="tel"]')!;
+  expect(name.required).toBe(false);
+  expect(phone.required).toBe(false);
+  expect(host.querySelector(`label[for="${phone.id}"]`)).not.toBeNull();
+  await enter(name, "  David  ");
+  await enter(phone, "(202) 555-0123");
+  await enter(email(), "reader@example.com");
+  await act(async () => consent().click());
+  await submit();
+  await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(fetchSpy.mock.calls[0][1].body)).toMatchObject({
+    firstName: "David",
+    phoneNumber: "+12025550123",
+  });
+  await act(async () =>
+    host.querySelector<HTMLButtonElement>('button[type="button"]')!.click(),
+  );
+  expect(
+    host.querySelector<HTMLInputElement>('input[name="firstName"]')!.value,
+  ).toBe("");
+  expect(host.querySelector<HTMLInputElement>('input[type="tel"]')!.value).toBe(
+    "",
+  );
+});
+
+it("rejects malformed phone without submitting and keeps entered values on failure", async () => {
+  await render();
+  const phone = host.querySelector<HTMLInputElement>('input[type="tel"]')!;
+  await enter(email(), "reader@example.com");
+  await enter(phone, "123");
+  await act(async () => consent().click());
+  await submit();
+  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(phone.getAttribute("aria-invalid")).toBe("true");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+    "country code",
+  );
+  fetchSpy.mockResolvedValueOnce(new Response(null, { status: 503 }));
+  await enter(phone, "2025550123");
+  await submit();
+  await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+  expect(phone.value).toBe("2025550123");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+    "try again",
+  );
+});

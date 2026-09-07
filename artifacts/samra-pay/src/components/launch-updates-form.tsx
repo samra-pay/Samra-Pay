@@ -1,14 +1,23 @@
 import { useId, useState, type FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
+import {
+  normalizeWaitlistPhone,
+  type PhoneCountry,
+} from "@/lib/waitlist-phone";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 
 export function LaunchUpdatesForm() {
   const { language, text } = usePublicLanguage();
   const fieldId = useId();
   const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState<PhoneCountry>("US");
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
-  const [error, setError] = useState<"email" | "consent" | null>(null);
+  const [error, setError] = useState<
+    "email" | "consent" | "phone" | "name" | null
+  >(null);
   const [serviceError, setServiceError] = useState(false);
   const [status, setStatus] = useState<"idle" | "submitting" | "accepted">(
     "idle",
@@ -22,6 +31,15 @@ export function LaunchUpdatesForm() {
       setError("email");
       return;
     }
+    if (firstName.length > 100 || /[\p{Cc}\p{Cf}]/u.test(firstName)) {
+      setError("name");
+      return;
+    }
+    const normalizedPhone = normalizeWaitlistPhone(phoneNumber, phoneCountry);
+    if (normalizedPhone === null) {
+      setError("phone");
+      return;
+    }
     if (!consent) {
       setError("consent");
       return;
@@ -33,10 +51,14 @@ export function LaunchUpdatesForm() {
       const { subscribePublicWaitlist } = await import("@/lib/public-waitlist");
       await subscribePublicWaitlist({
         email: address,
+        firstName,
+        phoneNumber: normalizedPhone,
         locale: language,
         website,
       });
       setEmail("");
+      setFirstName("");
+      setPhoneNumber("");
       setConsent(false);
       setWebsite("");
       setStatus("accepted");
@@ -77,6 +99,95 @@ export function LaunchUpdatesForm() {
           noValidate
           aria-describedby={`${fieldId}-notice`}
         >
+          <div className="launch-updates-profile">
+            <label
+              className="launch-updates-label"
+              htmlFor={`${fieldId}-first-name`}
+            >
+              {text(localized("First name (optional)", "ስም (አማራጭ)"))}
+            </label>
+            <input
+              id={`${fieldId}-first-name`}
+              name="firstName"
+              type="text"
+              autoComplete="given-name"
+              maxLength={100}
+              disabled={status === "submitting"}
+              value={firstName}
+              onChange={(event) => {
+                setFirstName(event.target.value);
+                setError(null);
+                setServiceError(false);
+              }}
+              aria-invalid={error === "name" || undefined}
+              aria-describedby={
+                error === "name" ? `${fieldId}-error` : undefined
+              }
+            />
+            <label
+              className="launch-updates-label"
+              htmlFor={`${fieldId}-phone`}
+            >
+              {text(
+                localized("Mobile number (optional)", "የሞባይል ስልክ ቁጥር (አማራጭ)"),
+              )}
+            </label>
+            <div className="launch-updates-phone-row">
+              <select
+                aria-label={text(
+                  localized("Phone country code", "የስልክ አገር ኮድ"),
+                )}
+                value={phoneCountry}
+                disabled={status === "submitting"}
+                onChange={(event) => {
+                  setPhoneCountry(event.target.value as PhoneCountry);
+                  setError(null);
+                }}
+              >
+                <option value="US">
+                  {text(localized("US / Canada (+1)", "አሜሪካ / ካናዳ (+1)"))}
+                </option>
+                <option value="ET">
+                  {text(localized("Ethiopia (+251)", "ኢትዮጵያ (+251)"))}
+                </option>
+                <option value="international">
+                  {text(localized("Other country", "ሌላ አገር"))}
+                </option>
+              </select>
+              <input
+                id={`${fieldId}-phone`}
+                name="phoneNumber"
+                type="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                maxLength={32}
+                placeholder={
+                  phoneCountry === "US"
+                    ? "202 555 0123"
+                    : phoneCountry === "ET"
+                      ? "091 123 4567"
+                      : "+44 7700 900123"
+                }
+                disabled={status === "submitting"}
+                value={phoneNumber}
+                onChange={(event) => {
+                  setPhoneNumber(event.target.value);
+                  setError(null);
+                  setServiceError(false);
+                }}
+                aria-invalid={error === "phone" || undefined}
+                aria-describedby={`${fieldId}-phone-help${error === "phone" ? ` ${fieldId}-error` : ""}`}
+              />
+            </div>
+            <p className="launch-updates-notice" id={`${fieldId}-phone-help`}>
+              {text(
+                localized(
+                  "For other countries, include + and the country code. Adding a number does not opt you into text messages.",
+                  "ለሌሎች አገሮች + እና የአገር ኮዱን ያካትቱ። ቁጥር ማስገባት የጽሑፍ መልዕክቶችን ለመቀበል ፈቃድ መስጠት አይደለም።",
+                ),
+              )}
+            </p>
+          </div>
           <label className="launch-updates-label" htmlFor={`${fieldId}-email`}>
             {text(localized("Email address", "የኢሜይል አድራሻ"))}
           </label>
@@ -156,12 +267,22 @@ export function LaunchUpdatesForm() {
               id={`${fieldId}-error`}
             >
               {text(
-                error === "email"
-                  ? localized("Enter a valid email.", "ትክክለኛ ኢሜይል ያስገቡ።")
-                  : localized(
-                      "Email consent is required.",
-                      "የኢሜይል ፈቃድ ያስፈልጋል።",
-                    ),
+                error === "name"
+                  ? localized(
+                      "Enter a name of up to 100 characters.",
+                      "እስከ 100 ፊደላት ያለው ስም ያስገቡ።",
+                    )
+                  : error === "phone"
+                    ? localized(
+                        "Check the mobile number and country code.",
+                        "የሞባይል ቁጥሩን እና የአገር ኮዱን ያረጋግጡ።",
+                      )
+                    : error === "email"
+                      ? localized("Enter a valid email.", "ትክክለኛ ኢሜይል ያስገቡ።")
+                      : localized(
+                          "Email consent is required.",
+                          "የኢሜይል ፈቃድ ያስፈልጋል።",
+                        ),
               )}
             </p>
           )}
