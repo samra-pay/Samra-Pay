@@ -17,6 +17,37 @@ export type PersonalFundingTarget = Readonly<{
   walletAddress: string;
   providerWalletRef: string;
 }>;
+export const PERSONAL_FUNDING_PAYMENT_STATUSES = [
+  "unknown",
+  "requires-quote",
+  "requires-email",
+  "requires-recipient-verification",
+  "requires-kyc",
+  "manual-kyc",
+  "failed-kyc",
+  "awaiting-payment",
+  "in-progress",
+  "completed",
+] as const;
+export const PERSONAL_FUNDING_DELIVERY_STATUSES = [
+  "not-reported",
+  "unknown",
+  "awaiting-payment",
+  "in-progress",
+  "failed",
+  "completed",
+] as const;
+export type PersonalFundingProviderStatus = Readonly<{
+  paymentStatus: (typeof PERSONAL_FUNDING_PAYMENT_STATUSES)[number];
+  deliveryStatus: (typeof PERSONAL_FUNDING_DELIVERY_STATUSES)[number];
+}>;
+export type PersonalFundingProgress = PersonalFundingProviderStatus &
+  Readonly<{
+    requestedAt: string;
+    observedAt: string;
+    // Absence of a KYC prompt is not a durable Samra verification approval.
+    kycStatus: "required" | "pending" | "rejected" | "not-reported";
+  }>;
 export type PersonalFundingSnapshot = Readonly<{
   orderId: string;
   amountMinor: string;
@@ -25,6 +56,7 @@ export type PersonalFundingSnapshot = Readonly<{
   environment: "staging" | "production";
   providerOrderRef: string | null;
   createdAt: string;
+  progress: PersonalFundingProgress | null;
   // Order creation is never evidence of KYC approval, settlement or a balance.
   fundingConfirmed: false;
 }>;
@@ -55,6 +87,12 @@ type OrderRow = {
   state: PersonalFundingState;
   provider_order_ref: string | null;
   created_at: Date;
+};
+type ObservationRow = {
+  payment_status: PersonalFundingProviderStatus["paymentStatus"];
+  delivery_status: PersonalFundingProviderStatus["deliveryStatus"];
+  requested_at: Date;
+  observed_at: Date;
 };
 
 /** Internal command boundary. No HTTP route or production runtime enables it yet. */
@@ -127,7 +165,67 @@ export class PostgresPersonalFundingStore {
     return this.context.run(async () => {
       const authorization = await this.authorization(normalizeIdentity(input));
       const order = await this.order();
-      return order ? snapshot(order, authorization) : null;
+      if (!order) return null;
+      const observation = (
+        await this.context.query().query<ObservationRow>(
+          `SELECT payment_status, delivery_status, requested_at, observed_at
+         FROM samra_core.personal_funding_observations WHERE order_id = $1
+         ORDER BY requested_at DESC, observed_at DESC, id DESC LIMIT 1`,
+          [order.id],
+        )
+      ).rows[0];
+      return snapshot(order, authorization, observation);
+    });
+  }
+
+  async recordProviderStatus(
+    input: PersonalFundingIdentity & {
+      orderId: string;
+      providerOrderRef: string;
+      environment: "staging" | "production";
+      requestedAt: string;
+      status: PersonalFundingProviderStatus;
+    },
+  ): Promise<void> {
+    const requestedAt = new Date(input.requestedAt);
+    if (
+      !uuid(input.orderId) ||
+      !uuid(input.providerOrderRef) ||
+      !Number.isFinite(requestedAt.getTime()) ||
+      requestedAt.toISOString() !== input.requestedAt ||
+      !(PERSONAL_FUNDING_PAYMENT_STATUSES as readonly string[]).includes(
+        input.status.paymentStatus,
+      ) ||
+      !(PERSONAL_FUNDING_DELIVERY_STATUSES as readonly string[]).includes(
+        input.status.deliveryStatus,
+      )
+    ) {
+      throw new DomainError("INVALID_ARGUMENT", "Invalid funding observation.");
+    }
+    await this.context.run(async () => {
+      // Recheck identity after the bounded GET; revocation during it blocks persistence.
+      const authorization = await this.authorization(normalizeIdentity(input));
+      const order = await this.order();
+      if (
+        authorization.environment !== input.environment ||
+        order?.id !== input.orderId ||
+        order.state !== "checkout_created" ||
+        order.provider_order_ref !== input.providerOrderRef
+      ) {
+        throw new PersonalFundingUnavailableError();
+      }
+      await this.context.query().query(
+        `INSERT INTO samra_core.personal_funding_observations
+         (order_id, provider_order_ref, payment_status, delivery_status, requested_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          order.id,
+          order.provider_order_ref,
+          input.status.paymentStatus,
+          input.status.deliveryStatus,
+          requestedAt,
+        ],
+      );
     });
   }
 
@@ -229,6 +327,7 @@ function uuid(value: string): boolean {
 function snapshot(
   order: OrderRow,
   authorization: AuthorizationRow,
+  observation?: ObservationRow,
 ): PersonalFundingSnapshot {
   return Object.freeze({
     orderId: order.id,
@@ -238,6 +337,22 @@ function snapshot(
     environment: authorization.environment,
     providerOrderRef: order.provider_order_ref,
     createdAt: order.created_at.toISOString(),
+    progress: observation
+      ? Object.freeze({
+          paymentStatus: observation.payment_status,
+          deliveryStatus: observation.delivery_status,
+          requestedAt: observation.requested_at.toISOString(),
+          observedAt: observation.observed_at.toISOString(),
+          kycStatus:
+            observation.payment_status === "requires-kyc"
+              ? "required"
+              : observation.payment_status === "manual-kyc"
+                ? "pending"
+                : observation.payment_status === "failed-kyc"
+                  ? "rejected"
+                  : "not-reported",
+        })
+      : null,
     fundingConfirmed: false,
   });
 }

@@ -40,7 +40,7 @@ This changes delivery priority, not the historical evidence or readiness gates.
 On 2026-09-07, David authorized implementation of a private Auth0 + Crossmint
 hosted-KYC/wallet/debit-card pilot for himself, using his own U.S. debit card with
 a USD 20 total ceiling including fees. The [pilot decision and blockers](architecture/personal-funding-pilot.md)
-record the first internal order-reservation slice, unverified production access,
+record internal order reservation and durable progress reads, unverified production access,
 checkout mutation risk, wallet-control work and remaining end-to-end acceptance.
 It has no runtime or customer-route activation. Persona remains paused. Funding
 for the 100-user alpha remains unavailable.

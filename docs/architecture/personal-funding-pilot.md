@@ -7,29 +7,37 @@ Owner and support owner: David Haile. Decision date: 2026-09-07.
 David approved moving forward with a private personal pilot using existing Auth0,
 a customer-controlled Crossmint wallet, and Crossmint-hosted KYC and debit-card
 funding. He specified his own debit card, the United States, and a maximum total
-authorization of **USD 20**, including fees. The U.S. state remains to be confirmed.
+authorization of **USD 20**, including fees. His state of residence for KYC remains
+to be confirmed. Crossmint explicitly lists all U.S. states for noncustodial wallets;
+its card-onramp coverage must be confirmed separately. No state exclusion has been
+verified for this pilot.
 Persona activation is paused because his incorporation document is unavailable.
 This is not approval for a public funding release or for funding the 100-user alpha.
 
-This change implements the **internal order-reservation and creation boundary**.
+This change implements the **internal order-reservation, creation and progress boundary**.
 It is not registered in `createConfiguredDemoRuntime`, selectable through
 environment variables, or exposed through an HTTP route. The migration seeds no
 pilot authorization, wallet or order. No provider, customer or cloud mutation was
 performed while implementing it. Production remains blocked.
+
+No treasury wallet is needed for this flow: Crossmint delivers the purchased USDC
+directly to David's customer-controlled wallet. A Samra company treasury for its own
+capital or future settlement liquidity is a separate future decision. The pilot
+does not receive customer funds into a company wallet or add server signing.
 
 The existing alpha routes, Persona requirement, wallet configurations and financial
 route restrictions are unchanged. No fake Persona approval is used for the pilot.
 
 ## Reuse and remaining implementation
 
-| Area      | Reuse                                                                   | Remaining work before personal acceptance                                                                                                               |
-| --------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign-in   | Auth0 registration/login/logout/recovery and isolated sessions, PR #191 | Verify private deployed origin, exact client/audience/callbacks, invite and returning-account behavior                                                  |
-| Account   | Samra customer UUID and immutable issuer/subject binding                | Resolve the one real pilot account through authenticated onboarding; no email-based linking                                                             |
-| Wallet UI | Read-only dashboard in merged PR #192                                   | Attach the private pilot flow after its production wallet and checkout gates pass                                                                       |
-| Wallet    | Existing provider boundary and customer-control requirements            | Customer passkey enrollment, recovery/exit proof, production provisioning with durable ownership and no duplicate wallet on restart                     |
-| Funding   | New PostgreSQL reservation and Crossmint order adapter                  | Quote/destination integrity, hosted checkout, resumable checkout credentials, provider status persistence and independent onchain delivery verification |
-| KYC       | Crossmint-hosted onramp verification                                    | Durable purpose-scoped pending/rejected/verified evidence; no inferred global Samra approval                                                            |
+| Area      | Reuse                                                                      | Remaining work before personal acceptance                                                                                           |
+| --------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in   | Auth0 registration/login/logout/recovery and isolated sessions, PR #191    | Verify private deployed origin, exact client/audience/callbacks, invite and returning-account behavior                              |
+| Account   | Samra customer UUID and immutable issuer/subject binding                   | Resolve the one real pilot account through authenticated onboarding; no email-based linking                                         |
+| Wallet UI | Read-only dashboard in merged PR #192                                      | Attach the private pilot flow after its production wallet and checkout gates pass                                                   |
+| Wallet    | Existing provider boundary and customer-control requirements               | Customer passkey enrollment, recovery/exit proof, production provisioning with durable ownership and no duplicate wallet on restart |
+| Funding   | PostgreSQL reservation, Crossmint order adapter and durable progress reads | Quote/destination integrity, hosted checkout, resumable checkout credentials and independent onchain delivery verification          |
+| KYC       | Crossmint-hosted onramp verification                                       | Durable purpose-scoped pending/rejected/verified evidence; no inferred global Samra approval                                        |
 
 Base native USDC is the proposed narrow network for the adapter. Its presence in
 code does not establish provider availability or approve the network for a live
@@ -79,6 +87,25 @@ or browser receives that token in this slice. `checkout_created` proves only an
 order reference. `fundingConfirmed` remains false; no ledger posting, balance,
 wallet activation, Persona decision or successful-KYC assertion is written.
 
+`PersonalFundingStatusService` retrieves only the provider order already bound to
+the authenticated account. It performs one bounded server-side GET with `orders.read`,
+then rechecks account ownership before recording an append-only observation under
+migration 0020. It cannot create, change or pay for an order. The provider environment
+and returned order reference must match. Only allowlisted payment/delivery statuses
+are retained; KYC preparation, personal fields, raw errors and checkout tokens are
+discarded. Unknown status strings normalize to `unknown`. Missing/malformed order
+shapes fail closed. The reviewed GET API page currently contains an unrelated license
+example; the parser follows the documented onramp response in the Swift quickstart,
+which still needs staging contract verification before activation.
+
+Returning to the same account reads dated progress from PostgreSQL. A response from
+an older request cannot replace the latest request's observation. A provider outage
+retains that evidence and returns `providerRead: unavailable`, never fresh success.
+`requires-kyc`, `manual-kyc` and `failed-kyc` map to required, pending and rejected
+for this purchase. Later payment states do not manufacture a Samra KYC approval.
+Even `payment: completed` plus `delivery: completed` leaves `fundingConfirmed: false`:
+independent token-delivery proof remains separate. No observation posts to the ledger.
+
 Expiry or pilot revocation prevents a new reservation. The still-active customer
 may read their existing receipt for support; authentication revocation or account
 suspension blocks all reads. Revocation does not undo an order already dispatched.
@@ -89,6 +116,11 @@ Observed 2026-09-07: the production Crossmint **Samra Pay** project exists, its
 overview prompts for the first API key, and General settings select Crossmint-hosted
 KYC. These observations do not establish production onramp approval. No settings
 were changed during that read-only inspection.
+
+Refreshed production console inspection on 2026-09-07 confirms no server-side or
+client-side keys. The create-key form offers `orders.create` and `orders.read`;
+selectable scopes are not evidence of onramp activation. The form was closed without
+creating a key. No production credential version is available to record.
 
 Before a live pilot:
 
@@ -113,8 +145,8 @@ Before a live pilot:
    checkout encryption key to explicit Secret Manager versions. No values or
    receipt email belong in source, logs or test evidence. Finish approved
    disclosure, retention, alerts and David's incident/support contact.
-5. Complete the private route/checkout wiring, persisted onramp decision/order
-   status and independent token-delivery read-back. Preserve migration/readiness
+5. Complete the private route/checkout wiring, provider-verified onramp decisions,
+   staging status-contract tests and independent token-delivery read-back. Preserve migration/readiness
    checks. No new release orchestration is needed.
 
 ## Vendor replacement
@@ -139,6 +171,9 @@ Local/CI checks cover one account, 20-dollar reservation cap, expiry/revocation,
 atomic rollback, two-pool concurrency, restart, changed commands, immutable mapping
 and history, runtime privilege denial, ambiguous provider outcomes, fixed requests,
 payload bounds and secret redaction. They use synthetic records and mocked HTTP.
+Progress tests additionally cover pending/rejected KYC, wrong orders/accounts,
+out-of-order reads, immutable observations, provider outages and refusal to turn
+provider delivery status into a funded balance.
 The new persistence case is part of the existing Required CI PostgreSQL suite.
 
 Live acceptance remains: David signs in, completes hosted KYC, creates/returns to
@@ -162,3 +197,7 @@ Alpha Release 1. A merged PR is neither a live pilot nor a live alpha.
 - [Device signer defaults](https://docs.crossmint.com/wallets/guides/signers/device-signer)
 - [Persona data import](https://docs.crossmint.com/onramp/guides/import-user-kyc-data)
 - [Native USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)
+- [Direct wallet delivery](https://www.crossmint.com/products/onramps)
+- [Wallet versus onramp geographic coverage](https://help.crossmint.com/articles/5047173710-what-countries-do-you-support)
+- [Onramp response and backend polling](https://docs.crossmint.com/onramp/quickstarts/swift)
+- [Provider status meanings](https://docs.crossmint.com/payments/headless/guides/status-codes)

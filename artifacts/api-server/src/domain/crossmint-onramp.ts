@@ -1,4 +1,12 @@
-import type { PersonalFundingProvider } from "./personal-funding";
+import {
+  PERSONAL_FUNDING_PAYMENT_STATUSES,
+  PERSONAL_FUNDING_DELIVERY_STATUSES,
+  type PersonalFundingProviderStatus,
+} from "@workspace/db";
+import type {
+  PersonalFundingProvider,
+  PersonalFundingStatusProvider,
+} from "./personal-funding";
 
 const endpoints = Object.freeze({
   staging: "https://staging.crossmint.com/api/2022-06-09/orders",
@@ -20,7 +28,9 @@ export class CrossmintOnrampUnavailableError extends Error {
 }
 
 /** Server-side order creation only. No token transfers, wallet creation or signing. */
-export class CrossmintOnrampAdapter implements PersonalFundingProvider {
+export class CrossmintOnrampAdapter
+  implements PersonalFundingProvider, PersonalFundingStatusProvider
+{
   readonly environment: "staging" | "production";
   readonly #apiKey: string;
   readonly #receiptEmail: string;
@@ -93,24 +103,7 @@ export class CrossmintOnrampAdapter implements PersonalFundingProvider {
           ],
         }),
       });
-      if (
-        response.status !== 201 ||
-        !/^application\/json(?:\s*;|$)/iu.test(
-          response.headers.get("content-type") ?? "",
-        ) ||
-        !response.body
-      ) {
-        await response.body?.cancel();
-        throw new CrossmintOnrampUnavailableError();
-      }
-      const chunks: Uint8Array[] = [];
-      let size = 0;
-      for await (const chunk of response.body) {
-        size += chunk.length;
-        if (size > 64 * 1024) throw new CrossmintOnrampUnavailableError();
-        chunks.push(chunk);
-      }
-      const value = object(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      const value = await boundedJson(response, 201);
       const order = object(value?.["order"]);
       const providerOrderRef = order?.["orderId"];
       const clientSecret = value?.["clientSecret"];
@@ -132,6 +125,83 @@ export class CrossmintOnrampAdapter implements PersonalFundingProvider {
       throw new CrossmintOnrampUnavailableError();
     }
   }
+
+  async readOrder(
+    providerOrderRef: string,
+  ): Promise<PersonalFundingProviderStatus> {
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+        providerOrderRef,
+      )
+    )
+      throw new CrossmintOnrampUnavailableError();
+    try {
+      const response = await this.#fetch(
+        `${endpoints[this.environment]}/${providerOrderRef}`,
+        {
+          method: "GET",
+          redirect: "error",
+          signal: AbortSignal.timeout(4_000),
+          headers: { Accept: "application/json", "X-API-KEY": this.#apiKey },
+        },
+      );
+      const value = await boundedJson(response, 200);
+      const order = object(value?.["order"]);
+      const payment = object(order?.["payment"]);
+      const items = order?.["lineItems"];
+      if (
+        order?.["orderId"] !== providerOrderRef ||
+        !payment ||
+        typeof payment["status"] !== "string" ||
+        !Array.isArray(items) ||
+        items.length !== 1
+      )
+        throw new CrossmintOnrampUnavailableError();
+      const item = object(items[0]);
+      if (!item) throw new CrossmintOnrampUnavailableError();
+      const delivery = object(item["delivery"]);
+      const paymentStatus = (
+        PERSONAL_FUNDING_PAYMENT_STATUSES as readonly unknown[]
+      ).includes(payment["status"])
+        ? (payment["status"] as PersonalFundingProviderStatus["paymentStatus"])
+        : "unknown";
+      const deliveryStatus =
+        item["delivery"] === undefined
+          ? "not-reported"
+          : (PERSONAL_FUNDING_DELIVERY_STATUSES as readonly unknown[]).includes(
+                delivery?.["status"],
+              )
+            ? (delivery![
+                "status"
+              ] as PersonalFundingProviderStatus["deliveryStatus"])
+            : "unknown";
+      // Never return preparation/KYC details, receipt email, secrets or provider errors.
+      // These statuses report provider progress, not independent token delivery.
+      return Object.freeze({ paymentStatus, deliveryStatus });
+    } catch {
+      throw new CrossmintOnrampUnavailableError();
+    }
+  }
+}
+async function boundedJson(response: Response, expectedStatus: number) {
+  if (
+    response.status !== expectedStatus ||
+    !/^application\/json(?:\s*;|$)/iu.test(
+      response.headers.get("content-type") ?? "",
+    ) ||
+    !response.body
+  ) {
+    await response.body?.cancel();
+    throw new CrossmintOnrampUnavailableError();
+  }
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for await (const chunk of response.body) {
+    size += chunk.length;
+    if (size > 64 * 1024) throw new CrossmintOnrampUnavailableError();
+    chunks.push(chunk);
+  }
+  return object(JSON.parse(Buffer.concat(chunks).toString("utf8")));
 }
 function object(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)

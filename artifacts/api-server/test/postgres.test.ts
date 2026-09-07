@@ -169,6 +169,58 @@ test("personal funding reserves one bounded, account-owned purchase across proce
   assert.equal(resumed.providerOrderRef, providerOrderRef);
   assert.equal(resumed.state, "checkout_created");
   assert.equal(resumed.fundingConfirmed, false);
+  assert.equal(resumed.progress, null);
+  const observation = {
+    ...identity,
+    orderId: resumed.orderId,
+    providerOrderRef,
+    environment: "staging" as const,
+    requestedAt: new Date(Date.now() - 3000).toISOString(),
+    status: {
+      paymentStatus: "manual-kyc" as const,
+      deliveryStatus: "not-reported" as const,
+    },
+  };
+  await store.recordProviderStatus(observation);
+  assert.equal((await restarted.get(identity))!.progress!.kycStatus, "pending");
+  await store.recordProviderStatus({
+    ...observation,
+    requestedAt: new Date(Date.now() - 2000).toISOString(),
+    status: { paymentStatus: "failed-kyc", deliveryStatus: "not-reported" },
+  });
+  assert.equal(
+    (await restarted.get(identity))!.progress!.kycStatus,
+    "rejected",
+  );
+  await store.recordProviderStatus({
+    ...observation,
+    requestedAt: new Date().toISOString(),
+    status: { paymentStatus: "completed", deliveryStatus: "completed" },
+  });
+  // A slower response from a request started earlier remains history, not latest status.
+  await otherStore.recordProviderStatus(observation);
+  const progress = (await restarted.get(identity))!;
+  assert.equal(progress.progress!.paymentStatus, "completed");
+  assert.equal(progress.progress!.kycStatus, "not-reported");
+  assert.equal(progress.fundingConfirmed, false);
+  for (const change of [
+    { subject: "auth0|someone-else" },
+    { environment: "production" as const },
+    { orderId: randomUUID() },
+    { providerOrderRef: randomUUID() },
+    { requestedAt: "2100-01-01T00:00:00.000Z" },
+    {
+      status: {
+        paymentStatus: "unrecognized-sensitive-text",
+        deliveryStatus: "completed",
+      },
+    },
+  ])
+    await assert.rejects(
+      store.recordProviderStatus({ ...observation, ...change } as Parameters<
+        typeof store.recordProviderStatus
+      >[0]),
+    );
   await assert.rejects(
     store.recordOutcome({
       orderId: resumed.orderId,
@@ -188,6 +240,8 @@ test("personal funding reserves one bounded, account-owned purchase across proce
     "DELETE FROM samra_core.personal_funding_orders",
     "UPDATE samra_core.personal_funding_events SET state = 'reserved'",
     "DELETE FROM samra_core.personal_funding_events",
+    "UPDATE samra_core.personal_funding_observations SET payment_status = 'completed'",
+    "DELETE FROM samra_core.personal_funding_observations",
   ])
     await assert.rejects(first.connection.pool.query(statement));
   const evidence = await first.connection.pool.query(
@@ -197,6 +251,18 @@ test("personal funding reserves one bounded, account-owned purchase across proce
   assert.equal(JSON.stringify(evidence.rows).includes(identity.subject), false);
   assert.equal(
     JSON.stringify(evidence.rows).includes(command.idempotencyKey),
+    false,
+  );
+  const observations = await first.connection.pool.query(
+    "SELECT * FROM samra_core.personal_funding_observations",
+  );
+  assert.equal(observations.rowCount, 4);
+  assert.equal(
+    JSON.stringify(observations.rows).includes(identity.subject),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(observations.rows).includes("unrecognized-sensitive-text"),
     false,
   );
   assert.deepEqual(
@@ -213,6 +279,10 @@ test("personal funding reserves one bounded, account-owned purchase across proce
   );
   await assert.rejects(
     restarted.get(identity),
+    PersonalFundingUnavailableError,
+  );
+  await assert.rejects(
+    store.recordProviderStatus(observation),
     PersonalFundingUnavailableError,
   );
 });

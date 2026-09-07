@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   check,
+  index,
   text,
   timestamp,
   unique,
@@ -122,6 +123,42 @@ export const personalFundingEvents = samraCore.table(
     check(
       "personal_funding_events_state_check",
       sql`${table.state} IN ('reserved', 'provider_unknown', 'checkout_created')`,
+    ),
+  ],
+);
+
+export const personalFundingObservations = samraCore.table(
+  "personal_funding_observations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => personalFundingOrders.id, { onDelete: "restrict" }),
+    providerOrderRef: uuid("provider_order_ref").notNull(),
+    paymentStatus: text("payment_status").notNull(),
+    deliveryStatus: text("delivery_status").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+  },
+  (table) => [
+    index("personal_funding_observations_order_time").on(
+      table.orderId,
+      table.requestedAt.desc(),
+      table.observedAt.desc(),
+    ),
+    check(
+      "personal_funding_observations_payment_status_check",
+      sql`${table.paymentStatus} IN ('unknown', 'requires-quote', 'requires-email', 'requires-recipient-verification', 'requires-kyc', 'manual-kyc', 'failed-kyc', 'awaiting-payment', 'in-progress', 'completed')`,
+    ),
+    check(
+      "personal_funding_observations_delivery_status_check",
+      sql`${table.deliveryStatus} IN ('not-reported', 'unknown', 'awaiting-payment', 'in-progress', 'failed', 'completed')`,
+    ),
+    check(
+      "personal_funding_observations_check",
+      sql`${table.requestedAt} <= ${table.observedAt} + interval '5 seconds'`,
     ),
   ],
 );

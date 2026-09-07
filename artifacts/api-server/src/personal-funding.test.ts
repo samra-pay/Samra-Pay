@@ -10,6 +10,7 @@ import {
 } from "./domain/crossmint-onramp";
 import {
   PersonalFundingService,
+  PersonalFundingStatusService,
   type PersonalFundingProvider,
 } from "./domain/personal-funding";
 
@@ -205,6 +206,7 @@ function storeFixture() {
         environment: "staging",
         providerOrderRef: null,
         createdAt: new Date(0).toISOString(),
+        progress: null,
         fundingConfirmed: false,
       };
       return { snapshot, target, dispatch };
@@ -289,4 +291,195 @@ test("a failed persistence commit withholds the checkout token and blocks redisp
     null,
   );
   assert.equal(requests, 1);
+});
+
+test("order polling binds the saved reference and returns only normalized KYC/payment/delivery progress", async () => {
+  for (const paymentStatus of [
+    "requires-kyc",
+    "manual-kyc",
+    "failed-kyc",
+    "awaiting-payment",
+    "in-progress",
+    "completed",
+  ]) {
+    const adapter = new CrossmintOnrampAdapter(config, {
+      fetch: async (url, init) => {
+        assert.equal(
+          url,
+          `https://staging.crossmint.com/api/2022-06-09/orders/${providerOrderRef}`,
+        );
+        assert.equal(init!.method, "GET");
+        assert.equal(init!.body, undefined);
+        assert.equal(init!.redirect, "error");
+        assert.ok(init!.signal);
+        assert.equal(
+          new Headers(init!.headers).get("X-API-KEY"),
+          config.apiKey,
+        );
+        return Response.json({
+          clientSecret: secret,
+          order: {
+            orderId: providerOrderRef,
+            payment: {
+              status: paymentStatus,
+              preparation: { kyc: { sensitive: "discard-this" } },
+            },
+            lineItems: [
+              { delivery: { status: "completed", sensitive: "discard-this" } },
+            ],
+            receiptEmail: config.receiptEmail,
+          },
+        });
+      },
+    });
+    assert.deepEqual(await adapter.readOrder(providerOrderRef), {
+      paymentStatus,
+      deliveryStatus: "completed",
+    });
+  }
+  const unknown = new CrossmintOnrampAdapter(config, {
+    fetch: async () =>
+      Response.json({
+        order: {
+          orderId: providerOrderRef,
+          payment: { status: "unrecognized-sensitive-value" },
+          lineItems: [{ delivery: { status: "unrecognized-sensitive-value" } }],
+        },
+      }),
+  });
+  assert.deepEqual(await unknown.readOrder(providerOrderRef), {
+    paymentStatus: "unknown",
+    deliveryStatus: "unknown",
+  });
+});
+
+test("status reads reject another order, unsupported payloads and provider failure without retrying", async () => {
+  for (const response of [
+    () =>
+      Response.json({
+        order: {
+          orderId: "aaaaaaaa-2222-4333-8444-555555555555",
+          payment: { status: "completed" },
+          lineItems: [{}],
+        },
+      }),
+    () =>
+      Response.json({
+        order: {
+          orderId: providerOrderRef,
+          payment: { status: "completed" },
+          lineItems: [{}, {}],
+        },
+      }),
+    () => Response.json({ id: "155", terms: {} }), // Known inconsistent GET documentation example must fail closed.
+    () => Response.json({ order: { orderId: providerOrderRef, payment: {} } }),
+    () => Response.json({ sensitive: "x".repeat(65_536) }),
+    () => new Response(config.apiKey + secret, { status: 503 }),
+  ]) {
+    let calls = 0;
+    const adapter = new CrossmintOnrampAdapter(config, {
+      fetch: async () => {
+        calls++;
+        return response();
+      },
+    });
+    await assert.rejects(adapter.readOrder(providerOrderRef), (error) => {
+      assert.ok(error instanceof CrossmintOnrampUnavailableError);
+      assert.ok(
+        !String(error).includes(config.apiKey) &&
+          !String(error).includes(secret),
+      );
+      return true;
+    });
+    assert.equal(calls, 1);
+    await assert.rejects(
+      adapter.readOrder("../another-order"),
+      CrossmintOnrampUnavailableError,
+    );
+    assert.equal(calls, 1);
+  }
+});
+
+test("returning funding progress cannot create or pay for another order and distinguishes unavailable reads", async () => {
+  const { store } = storeFixture();
+  const observations: unknown[] = [];
+  const statusStore = {
+    get: store.get,
+    async recordProviderStatus(input: unknown) {
+      observations.push(input);
+    },
+  };
+  let calls = 0;
+  let fail = false;
+  const provider = {
+    environment: "staging" as const,
+    async readOrder(ref: string) {
+      calls++;
+      assert.equal(ref, providerOrderRef);
+      if (fail) throw new Error(secret);
+      return {
+        paymentStatus: "completed" as const,
+        deliveryStatus: "completed" as const,
+      };
+    },
+  };
+  const service = new PersonalFundingStatusService(statusStore, provider);
+  assert.equal((await service.refresh(command)).providerRead, "not-requested");
+  const reservation = await store.reserve({
+    ...command,
+    environment: "staging",
+  });
+  assert.equal((await service.refresh(command)).providerRead, "not-requested");
+  assert.equal(calls, 0);
+  await store.recordOutcome({
+    orderId: reservation.snapshot.orderId,
+    outcome: { state: "checkout_created", providerOrderRef },
+  });
+  const refreshed = await service.refresh(command);
+  assert.equal(refreshed.providerRead, "updated");
+  assert.equal(refreshed.snapshot!.fundingConfirmed, false);
+  assert.equal(observations.length, 1);
+  assert.equal(JSON.stringify(observations).includes(secret), false);
+  fail = true;
+  assert.equal((await service.refresh(command)).providerRead, "unavailable");
+  assert.equal(observations.length, 1);
+  await assert.rejects(
+    new PersonalFundingStatusService(statusStore, {
+      ...provider,
+      environment: "production",
+    }).refresh(command),
+  );
+  assert.equal(calls, 2);
+  await assert.rejects(
+    new PersonalFundingStatusService(
+      {
+        ...statusStore,
+        get: async () => {
+          throw new Error("Account denied");
+        },
+      },
+      provider,
+    ).refresh(command),
+  );
+  assert.equal(calls, 2);
+  await new PersonalFundingStatusService(
+    {
+      ...statusStore,
+      recordProviderStatus: async () => {
+        throw new Error("revoked during read");
+      },
+    },
+    {
+      ...provider,
+      readOrder: async () => ({
+        paymentStatus: "manual-kyc",
+        deliveryStatus: "not-reported",
+      }),
+    },
+  )
+    .refresh(command)
+    .then(
+      () => assert.fail("revocation must not return a successful refresh"),
+      (error: Error) => assert.match(error.message, /revoked during read/),
+    );
 });

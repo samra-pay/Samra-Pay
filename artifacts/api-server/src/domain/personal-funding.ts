@@ -3,7 +3,10 @@ import type {
   PersonalFundingSnapshot,
   PersonalFundingStore,
   PersonalFundingTarget,
+  PersonalFundingProviderStatus,
+  PostgresPersonalFundingStore,
 } from "@workspace/db";
+import { PersonalFundingUnavailableError } from "@workspace/db";
 
 export interface PersonalFundingProvider {
   readonly environment: "staging" | "production";
@@ -13,6 +16,59 @@ export interface PersonalFundingProvider {
       clientSecret: string;
     }>
   >;
+}
+
+export interface PersonalFundingStatusProvider {
+  readonly environment: "staging" | "production";
+  readOrder(providerOrderRef: string): Promise<PersonalFundingProviderStatus>;
+}
+
+/** Reads the stored attempt only. It cannot create, update or pay for an order. */
+export class PersonalFundingStatusService {
+  constructor(
+    private readonly store: Pick<
+      PostgresPersonalFundingStore,
+      "get" | "recordProviderStatus"
+    >,
+    private readonly provider: PersonalFundingStatusProvider,
+  ) {}
+
+  async refresh(identity: PersonalFundingIdentity): Promise<
+    Readonly<{
+      snapshot: PersonalFundingSnapshot | null;
+      providerRead: "not-requested" | "updated" | "unavailable";
+    }>
+  > {
+    const snapshot = await this.store.get(identity);
+    if (!snapshot) return { snapshot, providerRead: "not-requested" };
+    if (snapshot.environment !== this.provider.environment)
+      throw new PersonalFundingUnavailableError();
+    if (snapshot.state !== "checkout_created" || !snapshot.providerOrderRef)
+      return { snapshot, providerRead: "not-requested" };
+    const requestedAt = new Date().toISOString();
+    let status: PersonalFundingProviderStatus;
+    try {
+      status = await this.provider.readOrder(snapshot.providerOrderRef);
+    } catch {
+      // Retain the last dated observation, with a distinct failed-read result.
+      return {
+        snapshot: await this.store.get(identity),
+        providerRead: "unavailable",
+      };
+    }
+    await this.store.recordProviderStatus({
+      ...identity,
+      orderId: snapshot.orderId,
+      providerOrderRef: snapshot.providerOrderRef,
+      environment: this.provider.environment,
+      requestedAt,
+      status,
+    });
+    return {
+      snapshot: await this.store.get(identity),
+      providerRead: "updated",
+    };
+  }
 }
 
 /** Internal only until checkout mutation and production activation gates are closed. */
