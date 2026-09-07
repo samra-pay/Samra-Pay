@@ -4,11 +4,17 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
   type ReactElement,
 } from "react";
 import type { Auth0Client } from "@auth0/auth0-spa-js";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { useLocation } from "wouter";
@@ -96,9 +102,40 @@ function Auth0SessionBridge({
   const [client, setClient] = useState<Auth0Client | null>(null);
   const [status, setStatus] = useState<CustomerAuthStatus>("loading");
   const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const sessionGeneration = useRef(0);
+  const [sessionCache, setSessionCache] = useState(() => ({
+    generation: 0,
+    client: new QueryClient({
+      defaultOptions: queryClient.getDefaultOptions(),
+    }),
+  }));
+  const sessionCacheRef = useRef(sessionCache);
+  const clearSession = useCallback(
+    (renewCache = true) => {
+      sessionGeneration.current += 1;
+      setAuthTokenGetter(null);
+      sessionCacheRef.current.client.clear();
+      if (renewCache) {
+        // An already-dispatched mutation may still complete its onSuccess.
+        // Give the new session a different cache so late writes stay isolated.
+        const cache = {
+          generation: sessionGeneration.current,
+          client: new QueryClient({
+            defaultOptions: queryClient.getDefaultOptions(),
+          }),
+        };
+        sessionCacheRef.current = cache;
+        setSessionCache(cache);
+      }
+    },
+    [queryClient],
+  );
 
   useEffect(() => {
     let active = true;
+    clearSession();
+    const generation = sessionGeneration.current;
 
     const initialize = async () => {
       let auth0: Auth0Client | null = null;
@@ -115,6 +152,7 @@ function Auth0SessionBridge({
           cacheLocation: "memory",
           useRefreshTokens: false,
         });
+        if (!active) return;
 
         let returnTo: unknown;
         if (hasAuth0RedirectParameters(window.location.search)) {
@@ -130,7 +168,9 @@ function Auth0SessionBridge({
               returnTo ?? withApplicationPath(config.applicationUri, "/login"),
               config.applicationUri,
             );
-            window.history.replaceState({}, document.title, safeReturnTo);
+            if (active) {
+              window.history.replaceState({}, document.title, safeReturnTo);
+            }
           }
         }
 
@@ -139,7 +179,11 @@ function Auth0SessionBridge({
 
         setAuthTokenGetter(
           authenticated
-            ? createAccessTokenGetter(auth0, config.audience)
+            ? createAccessTokenGetter(
+                auth0,
+                config.audience,
+                () => active && generation === sessionGeneration.current,
+              )
             : null,
         );
         setClient(auth0);
@@ -150,8 +194,8 @@ function Auth0SessionBridge({
           window.dispatchEvent(new PopStateEvent("popstate"));
         }
       } catch (cause) {
-        setAuthTokenGetter(null);
         if (!active) return;
+        clearSession();
         setClient(auth0);
         setError(cause instanceof Error ? cause : new Error(String(cause)));
         setStatus("error");
@@ -162,12 +206,13 @@ function Auth0SessionBridge({
     void initialize();
     return () => {
       active = false;
-      setAuthTokenGetter(null);
+      clearSession(false);
     };
-  }, [config]);
+  }, [clearSession, config]);
 
   const signIn = useCallback(
     async (intent: CustomerEntryIntent = "login") => {
+      clearSession();
       if (!client) {
         setError(new Error("Auth0 is not ready for sign-in"));
         setStatus("error");
@@ -185,17 +230,17 @@ function Auth0SessionBridge({
         setStatus("error");
       }
     },
-    [client, config.applicationUri, config.audience],
+    [clearSession, client, config.applicationUri, config.audience],
   );
 
   const signOut = useCallback(async () => {
+    clearSession();
     if (!client) {
       setError(new Error("Auth0 is not ready for sign-out"));
       setStatus("error");
       return;
     }
 
-    setAuthTokenGetter(null);
     setError(null);
     setStatus("loading");
     try {
@@ -206,7 +251,7 @@ function Auth0SessionBridge({
       setError(cause instanceof Error ? cause : new Error(String(cause)));
       setStatus("error");
     }
-  }, [client, config.applicationUri]);
+  }, [clearSession, client, config.applicationUri]);
 
   const value = useMemo<CustomerAuthSession>(
     () => ({ status, error, signIn, signOut }),
@@ -215,7 +260,12 @@ function Auth0SessionBridge({
 
   return (
     <CustomerAuthContext.Provider value={value}>
-      {children}
+      <QueryClientProvider
+        key={sessionCache.generation}
+        client={sessionCache.client}
+      >
+        {children}
+      </QueryClientProvider>
     </CustomerAuthContext.Provider>
   );
 }
@@ -223,11 +273,14 @@ function Auth0SessionBridge({
 function createAccessTokenGetter(
   client: Auth0Client,
   audience: string,
+  isSessionActive: () => boolean,
 ): () => Promise<string> {
   return async () => {
+    if (!isSessionActive()) throw new Error("Customer session has ended");
     const token = await client.getTokenSilently({
       authorizationParams: { audience },
     });
+    if (!isSessionActive()) throw new Error("Customer session has ended");
     if (
       typeof token !== "string" ||
       token.length === 0 ||

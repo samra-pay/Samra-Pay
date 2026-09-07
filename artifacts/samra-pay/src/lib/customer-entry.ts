@@ -1,7 +1,7 @@
 import type { RedirectLoginOptions } from "@auth0/auth0-spa-js";
 import { withApplicationPath } from "./auth0-config";
 
-export type CustomerEntryIntent = "login" | "signup";
+export type CustomerEntryIntent = "login" | "signup" | "recovery";
 
 export function customerLoginOptions(
   intent: CustomerEntryIntent,
@@ -14,6 +14,9 @@ export function customerLoginOptions(
       audience,
       redirect_uri: applicationUri,
       ...(intent === "signup" ? { screen_hint: "signup" } : {}),
+      // A UI hint to show Universal Login's managed "Forgot password?" flow.
+      // This is not proof of reauthentication or authorization for recovery.
+      ...(intent === "recovery" ? { prompt: "login" } : {}),
     },
   };
 }
