@@ -288,8 +288,40 @@ export async function finalizeRuntimeDatabasePrivileges(
       GRANT USAGE ON SCHEMA samra_core TO samra_runtime;
 
       REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA samra_core FROM PUBLIC;
-      REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA samra_core FROM samra_runtime;
+      REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA samra_core FROM samra_runtime, samra_runtime_staging;
       GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA samra_core TO samra_runtime;
+
+      -- Table-level REVOKE does not clear column ACLs left by an earlier grant.
+      DO $samra$
+      DECLARE
+        relation record;
+      BEGIN
+        FOR relation IN
+          SELECT c.relname, string_agg(quote_ident(a.attname), ', ' ORDER BY a.attnum) AS columns
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            JOIN pg_attribute a ON a.attrelid = c.oid
+           WHERE n.nspname = 'samra_core'
+             AND c.relname IN ('alpha_release_controls', 'alpha_invitations', 'alpha_admissions')
+             AND a.attnum > 0 AND NOT a.attisdropped
+           GROUP BY c.relname
+        LOOP
+          EXECUTE format(
+            'REVOKE ALL PRIVILEGES (%s) ON TABLE samra_core.%I FROM PUBLIC, samra_runtime, samra_runtime_staging',
+            relation.columns, relation.relname
+          );
+        END LOOP;
+      END
+      $samra$;
+
+      REVOKE ALL PRIVILEGES ON samra_core.alpha_release_controls, samra_core.alpha_invitations,
+        samra_core.alpha_admissions FROM samra_runtime;
+      GRANT SELECT ON samra_core.alpha_release_controls, samra_core.alpha_invitations TO samra_runtime;
+      GRANT SELECT, INSERT ON samra_core.alpha_admissions TO samra_runtime;
+      -- PostgreSQL row locks require UPDATE on at least one column. These keys
+      -- cannot change: the release CHECK and invitation identity trigger enforce it.
+      GRANT UPDATE (release_id) ON samra_core.alpha_release_controls TO samra_runtime;
+      GRANT UPDATE (id) ON samra_core.alpha_invitations TO samra_runtime;
 
       REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA samra_core FROM PUBLIC;
       REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA samra_core FROM samra_runtime;
@@ -299,7 +331,7 @@ export async function finalizeRuntimeDatabasePrivileges(
       ALTER DEFAULT PRIVILEGES FOR ROLE samra_migrations_staging IN SCHEMA samra_core
         REVOKE ALL PRIVILEGES ON TABLES FROM PUBLIC;
       ALTER DEFAULT PRIVILEGES FOR ROLE samra_migrations_staging IN SCHEMA samra_core
-        GRANT SELECT, INSERT, UPDATE ON TABLES TO samra_runtime;
+        REVOKE ALL PRIVILEGES ON TABLES FROM samra_runtime, samra_runtime_staging;
       ALTER DEFAULT PRIVILEGES FOR ROLE samra_migrations_staging IN SCHEMA samra_core
         REVOKE ALL PRIVILEGES ON SEQUENCES FROM PUBLIC;
       ALTER DEFAULT PRIVILEGES FOR ROLE samra_migrations_staging IN SCHEMA samra_core
@@ -487,7 +519,10 @@ export async function auditMigrationDatabaseAccess(
         ('ledger_journals'),
         ('remittance_transfers'),
         ('reconciliation_exceptions'),
-        ('customer_onboardings')
+        ('customer_onboardings'),
+        ('alpha_release_controls'),
+        ('alpha_invitations'),
+        ('alpha_admissions')
       ) AS required(name)
      WHERE to_regclass(format('samra_core.%I', required.name)) IS NULL
   `);
@@ -536,6 +571,7 @@ export async function auditMigrationDatabaseAccess(
       JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
      WHERE namespace.nspname = 'samra_core'
        AND relation.relkind IN ('r', 'p', 'v', 'm')
+       AND relation.relname NOT IN ('alpha_release_controls', 'alpha_invitations', 'alpha_admissions')
        AND NOT (
          has_table_privilege('samra_runtime', relation.oid, 'SELECT')
          AND has_table_privilege('samra_runtime', relation.oid, 'INSERT')
@@ -547,6 +583,7 @@ export async function auditMigrationDatabaseAccess(
     grants.rows[0]?.invalid_count === "0",
     "Runtime table grants drifted",
   );
+  await auditAlphaRuntimePrivileges(client);
 
   const executableOrSequencePrivileges = await client.query<{
     invalid_count: string;
@@ -581,19 +618,55 @@ export async function auditMigrationDatabaseAccess(
       "CREATE TABLE samra_core.samra_access_default_privilege_probe (id uuid PRIMARY KEY)",
     );
     const futureGrant = await client.query<{ valid: boolean }>(`
-      SELECT has_table_privilege('samra_runtime', 'samra_core.samra_access_default_privilege_probe', 'SELECT')
-         AND has_table_privilege('samra_runtime', 'samra_core.samra_access_default_privilege_probe', 'INSERT')
-         AND has_table_privilege('samra_runtime', 'samra_core.samra_access_default_privilege_probe', 'UPDATE')
-         AND NOT has_table_privilege('samra_runtime', 'samra_core.samra_access_default_privilege_probe', 'DELETE')
+      SELECT NOT EXISTS (
+        SELECT 1 FROM (VALUES ('samra_runtime'), ('samra_runtime_staging')) AS principal(name)
+         WHERE has_table_privilege(principal.name, 'samra_core.samra_access_default_privilege_probe',
+           'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+      )
          AS valid
     `);
     assertCondition(
       futureGrant.rows[0]?.valid === true,
-      "Future-object runtime grants drifted",
+      "Future objects must deny runtime access until reviewed grant finalization",
     );
   } finally {
     await client.query("ROLLBACK");
   }
+}
+
+async function auditAlphaRuntimePrivileges(client: Queryable): Promise<void> {
+  const grants = await client.query<{ valid: boolean }>(`
+    WITH expected(relation_name, insert_allowed, lock_column) AS (
+      VALUES ('alpha_release_controls', false, 'release_id'),
+             ('alpha_invitations', false, 'id'),
+             ('alpha_admissions', true, NULL)
+    ), principals(name) AS (VALUES ('samra_runtime'), ('samra_runtime_staging'))
+    SELECT count(*) = 6 AND bool_and(
+      has_table_privilege(p.name, c.oid, 'SELECT')
+      AND has_table_privilege(p.name, c.oid, 'INSERT') = e.insert_allowed
+      AND NOT has_table_privilege(p.name, c.oid, 'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+      AND NOT has_table_privilege(p.name, c.oid, 'SELECT WITH GRANT OPTION,INSERT WITH GRANT OPTION')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_attribute a
+         WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+           AND (
+             has_column_privilege(p.name, c.oid, a.attnum, 'UPDATE')
+               <> coalesce(a.attname = e.lock_column, false)
+             OR has_column_privilege(p.name, c.oid, a.attnum, 'INSERT') <> e.insert_allowed
+             OR has_column_privilege(p.name, c.oid, a.attnum,
+               'REFERENCES,SELECT WITH GRANT OPTION,INSERT WITH GRANT OPTION,UPDATE WITH GRANT OPTION')
+           )
+      )
+    ) AS valid
+      FROM expected e
+      JOIN pg_namespace n ON n.nspname = 'samra_core'
+      JOIN pg_class c ON c.relnamespace = n.oid AND c.relname = e.relation_name
+      CROSS JOIN principals p
+  `);
+  assertCondition(
+    grants.rows[0]?.valid === true,
+    "Alpha runtime invitation, cohort, or admission privileges drifted",
+  );
 }
 
 async function expectPrivilegeDenied(
@@ -622,6 +695,30 @@ export async function auditRuntimeDatabaseAccess(
     identity.rows[0]?.current_user === STAGING_DATABASE_ACCESS.runtimeUser,
     "Runtime audit used the wrong database identity",
   );
+  await auditAlphaRuntimePrivileges(client);
+
+  await client.query("BEGIN");
+  try {
+    await client.query(
+      "SELECT admission_limit FROM samra_core.alpha_release_controls WHERE release_id = 'alpha-release-1' FOR UPDATE",
+    );
+    await client.query(
+      "SELECT id FROM samra_core.alpha_invitations WHERE false FOR UPDATE",
+    );
+  } finally {
+    await client.query("ROLLBACK");
+  }
+  for (const statement of [
+    "INSERT INTO samra_core.alpha_invitations (issuer, subject, expires_at) SELECT 'https://audit.invalid/', 'synthetic', now() WHERE false",
+    "UPDATE samra_core.alpha_release_controls SET admission_limit = 100 WHERE false",
+    "INSERT INTO samra_core.alpha_release_controls (release_id) SELECT 'alpha-release-1' WHERE false",
+    "UPDATE samra_core.alpha_invitations SET expires_at = now(), revoked_at = NULL WHERE false",
+    "UPDATE samra_core.alpha_invitations SET issuer = 'https://audit.invalid/', subject = 'synthetic' WHERE false",
+    "UPDATE samra_core.alpha_admissions SET slot = 1 WHERE false",
+    "DELETE FROM samra_core.alpha_admissions WHERE false",
+  ]) {
+    await expectPrivilegeDenied(client, statement);
+  }
 
   await client.query("SELECT 1 FROM samra_core.audit_events LIMIT 1");
   await client.query("BEGIN");

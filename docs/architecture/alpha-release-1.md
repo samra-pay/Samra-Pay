@@ -2,7 +2,9 @@
 
 Decision owner: David Haile. Product scope accepted in the main task on
 2026-09-06. Baseline inspected: `samra-pay/Samra-Pay` main
-`1b8d8ed8cee340b61ff604b5127a7aba74169d8c`. Implementation has started;
+`1b8d8ed8cee340b61ff604b5127a7aba74169d8c`. Admission implementation merged in
+[#188](https://github.com/samra-pay/Samra-Pay/pull/188), main
+`854d490499110c90716ea46f4f790ad67f10bd2d`;
 **production activation and the live alpha remain blocked**.
 
 Alpha support owner: **David Haile**, explicitly accepted in the main task on
@@ -34,8 +36,8 @@ not evidence of a live production alpha.
 | Identity | Auth0 JWT issuer/audience/RS256 validation, Samra identity mapping, web/mobile session and onboarding clients, Universal Login handoff | Configure managed invitations and recovery; verify exact production tenant/application/connection, callback/logout/origin and API audience; adapt customer entry/error copy to invited access |
 | KYC | Durable case, signed/deduplicated webhook events, terminal-state handling, bounded sandbox adapter | Production adapter/configuration, approved template and consent, customer-facing managed Persona inquiry/resume flow; persist outcomes before wallet eligibility |
 | Wallet | Samra wallet/mapping uniqueness, durable provider request key, conflict restriction, bounded creation failures and restart/retry handling | Approved production chain/configuration and Crossmint owner authentication; customer passkey/recovery enrollment and proof; production consent and durable mapping migration; keep creation and any signing authority separate |
-| Admission | Existing Auth0 onboarding transaction and account restrictions | This PR adds durable identity-bound invitations, atomic cohort admission and a lifetime 100-customer cap; production operator provisioning and restricted DB grants remain activation work |
-| Release boundary | Existing API router and configured worker controls | This PR adds an opt-in account/onboarding-only API profile and disables workers, operations and developer decision controls |
+| Admission | Merged #188: durable identity-bound invitations, atomic admission and lifetime 100-customer cap | Restricted staging grants and real-role tests are implemented in the follow-up; applying/auditing grants and production operator provisioning remain activation work |
+| Release boundary | Merged #188: opt-in account/onboarding-only API profile; workers, operations and developer controls disabled | Verify the deployed API and customer UI expose only Release 1 capabilities |
 | Delivery/operations | GitHub CI/security/merge queue, PostgreSQL gates, GCP runtime and migration foundations, existing readiness validator | Use existing deployment/migration paths and exact-SHA evidence; connect managed telemetry, alerts, support paging and restore/rollback proof for the actual customer service |
 
 Open PRs inspected on 2026-09-06: [#156](https://github.com/samra-pay/Samra-Pay/pull/156)
@@ -46,7 +48,7 @@ Neither is a prerequisite for the admission code here. Other open product PRs
 cover public imagery/waitlist or test reporting. Reuse their relevant work when
 needed; do not stack unrelated PRs or merge dependency upgrades for this scope.
 
-## Admission implementation in this PR
+## Admission implementation
 
 `SAMRA_RELEASE_PROFILE=alpha-release-1` requires Auth0 and PostgreSQL, disables
 workers, operations and developer controls, and exposes only `/me` and the
@@ -87,8 +89,16 @@ existing users. Apply through the existing migration producer with admission
 closed. Provision invitations through bounded operator access, never customer
 HTTP. Record operator changes with sanitized audit evidence. Review runtime
 grants so it can consume admission without granting invitations or raising the
-limit; the existing broad staging table grants need a scoped adjustment and
-real-role tests before activation. An older unrestricted demo image is not an
+limit. The staging grant finalizer now restricts invitations and cohort controls
+to reads plus updates on their immutable ID columns, which PostgreSQL requires
+for the existing row locks. Constraints reject changes to those IDs. Admissions
+permit SELECT/INSERT only. Runtime cannot change eligibility, expiry, revocation,
+the cap or admission history. Audits check both the group role and login,
+including direct/column grants, and future tables deny runtime access until
+reviewed grant finalization. Disposable real-role tests cover denied writes,
+concurrent admission, operator-lock exclusion, rollback, restart, revocation and
+permission-drift detection. These are implementation checks; cloud/production
+grants still require application and read-back. An older unrestricted demo image is not an
 acceptable production rollback target. Roll back to the prior approved gated
 image or disable customer traffic; retain admission history and wallet mappings.
 
@@ -114,7 +124,7 @@ do not ask for credentials in chat.
 
 ## Acceptance and delivery sequence
 
-1. **Review this admission PR.** Run existing API/unit, migration-policy,
+1. **Admission foundation merged in #188; review the runtime-grant follow-up.** Run existing API/unit, migration-policy,
    PostgreSQL persistence and HTTP gates. New tests cover closed/uninvited/
    expired/revoked eligibility, forged account claims, competing instances,
    rollback, changed retry keys, restart, cohort limits, lifetime cap, immutable
@@ -143,7 +153,8 @@ do not ask for credentials in chat.
    mark unconfigured alerts as working. Any failed criterion holds the batch;
    pause admission and reconcile outstanding commands before resuming.
 
-The immediate delivery unit is this reviewable PR and its evidence. The next
+The admission foundation is merged; the current delivery unit restricts runtime
+database authority and records the accepted support owner. The next
 milestone is the one-user production proof; there is no promised launch date
 until provider, data and operational blockers have owners and evidence. Keep
 the existing CI/readiness gates and release traceability. Add release-framework

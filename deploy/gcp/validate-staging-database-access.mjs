@@ -99,9 +99,19 @@ export function validateStagingDatabaseAccess(
     JSON.stringify(privileges.runtime.schemas) !== JSON.stringify(["USAGE"]) ||
     JSON.stringify(privileges.runtime.tables) !==
       JSON.stringify(["SELECT", "INSERT", "UPDATE"]) ||
+    JSON.stringify(privileges.runtime.tableOverrides) !==
+      JSON.stringify({
+        alpha_release_controls: {
+          tables: ["SELECT"],
+          updateColumns: ["release_id"],
+        },
+        alpha_invitations: { tables: ["SELECT"], updateColumns: ["id"] },
+        alpha_admissions: { tables: ["SELECT", "INSERT"], updateColumns: [] },
+      }) ||
     JSON.stringify(privileges.runtime.sequences) !== JSON.stringify([]) ||
     JSON.stringify(privileges.runtime.functions) !== JSON.stringify([]) ||
-    privileges.runtime.futureObjectsCoveredByOwnerDefaultPrivileges !== true ||
+    privileges.runtime.futureObjectsCoveredByOwnerDefaultPrivileges !== false ||
+    privileges.runtime.futureObjectsRequireReviewedGrants !== true ||
     JSON.stringify(privileges.migrations.database) !==
       JSON.stringify(["CONNECT", "CREATE"]) ||
     JSON.stringify(privileges.migrations.ownsSchemas) !==
