@@ -428,6 +428,9 @@ export default function CustomerOnboardingPage() {
       return (
         <div className="space-y-4">
           <WalletSummary wallet={wallet} />
+          <Button asChild className="min-h-11 w-full">
+            <Link href="/wallet">View your wallet</Link>
+          </Button>
           {runtime.mode === "mock" ? (
             <Button
               type="button"

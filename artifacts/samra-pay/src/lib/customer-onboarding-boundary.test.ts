@@ -16,7 +16,9 @@ const sharedJourneySource = read(
 describe("web customer-onboarding trust boundary", () => {
   it("does not collect a local email or password and delegates API sign-in to Auth0", () => {
     expect(loginSource).not.toMatch(/<input|type=["']password["']/);
-    expect(loginSource).toContain('await auth.signIn(signup ? "signup" : "login")');
+    expect(loginSource).toContain(
+      'await auth.signIn(signup ? "signup" : "login")',
+    );
     expect(loginSource).toContain("Create account");
     expect(loginSource).not.toMatch(/localStorage|sessionStorage|indexedDB/);
     expect(authSource).toContain("createAuth0Client");
@@ -90,7 +92,9 @@ describe("web customer-onboarding trust boundary", () => {
 
   it("uses link semantics without nesting a button inside an anchor", () => {
     expect(onboardingSource).toContain("<Button asChild");
-    expect(onboardingSource).not.toMatch(/<Link[^>]*>[\s\S]{0,120}<Button/);
+    expect(onboardingSource).not.toMatch(
+      /<Link\b[^>]*>(?:(?!<\/Link>)[\s\S])*<Button\b/,
+    );
   });
 });
 
