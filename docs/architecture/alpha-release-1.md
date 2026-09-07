@@ -34,7 +34,7 @@ not evidence of a live production alpha.
 | Area | Reuse from current main | Work required for this milestone |
 | --- | --- | --- |
 | Identity | Auth0 JWT issuer/audience/RS256 validation, Samra identity mapping, web/mobile session and onboarding clients, Universal Login handoff | Configure managed invitations and recovery; verify exact production tenant/application/connection, callback/logout/origin and API audience; adapt customer entry/error copy to invited access |
-| KYC | Durable case, signed/deduplicated webhook events, terminal-state handling, bounded sandbox adapter | Production adapter/configuration, approved template and consent, customer-facing managed Persona inquiry/resume flow; persist outcomes before wallet eligibility |
+| KYC | Durable case, signed/deduplicated webhook events, terminal-state handling, bounded sandbox adapter; gated hosted web handoff to the existing pending inquiry | Provider acceptance of one-time launch/expiry and expired-inquiry resume; production adapter/configuration, approved template and consent; persist outcomes before wallet eligibility |
 | Wallet | Samra wallet/mapping uniqueness, durable provider request key, conflict restriction, bounded creation failures and restart/retry handling | Approved production chain/configuration and Crossmint owner authentication; customer passkey/recovery enrollment and proof; production consent and durable mapping migration; keep creation and any signing authority separate |
 | Admission | Merged #188: durable identity-bound invitations, atomic admission and lifetime 100-customer cap | Restricted staging grants and real-role tests are implemented in the follow-up; applying/auditing grants and production operator provisioning remain activation work |
 | Release boundary | Merged #188: opt-in account/onboarding-only API profile; workers, operations and developer controls disabled | Verify the deployed API and customer UI expose only Release 1 capabilities |
@@ -129,8 +129,10 @@ do not ask for credentials in chat.
    expired/revoked eligibility, forged account claims, competing instances,
    rollback, changed retry keys, restart, cohort limits, lifetime cap, immutable
    history, account suspension and blocked money/developer/operations routes.
-2. **Complete the connected customer journey.** In one dependent implementation
-   PR where practical, finish production provider modes, managed KYC launch,
+2. **Complete the connected customer journey.** The managed KYC web handoff
+   now has sandbox-only code and synthetic HTTP/browser coverage; it is
+   disabled until the reviewed hosted origin and provider gate are satisfied.
+   In dependent implementation PRs only where necessary, finish production provider modes,
    customer-controlled wallet enrollment, legal response contracts and the
    customer completion screen. Reuse existing sandbox and synthetic tests.
    Sandbox success is prerequisite evidence, not production acceptance.
@@ -153,8 +155,11 @@ do not ask for credentials in chat.
    mark unconfigured alerts as working. Any failed criterion holds the batch;
    pause admission and reconcile outstanding commands before resuming.
 
-The admission foundation is merged; the current delivery unit restricts runtime
-database authority and records the accepted support owner. The next
+The admission foundation (#188), restricted runtime database authority and
+accepted support owner (#189) are merged. The next reviewable slice connects
+the existing Persona inquiry to a gated hosted web handoff. Customer-controlled
+wallet enrollment and the exact production provider/data configuration remain
+implementation and acceptance work. The next
 milestone is the one-user production proof; there is no promised launch date
 until provider, data and operational blockers have owners and evidence. Keep
 the existing CI/readiness gates and release traceability. Add release-framework

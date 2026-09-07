@@ -2,9 +2,11 @@
 
 Status: Persona is the locked Alpha KYC vendor. The Samra case model,
 deterministic fake adapter, credential-gated Persona sandbox adapter, and signed
-webhook boundary are implemented and tested. Sandbox mode is disabled by
-default. No Persona account, template, credential, customer PII, browser flow,
-or deployed webhook is connected.
+webhook boundary are implemented and tested. A web handoff to the existing
+inquiry's hosted flow is implemented behind explicit sandbox configuration.
+Sandbox mode and hosted launch are disabled by default. This code change
+provides no evidence of a connected provider account, credential, deployed
+webhook, real KYC outcome, or production activation.
 
 ## Decision
 
@@ -76,6 +78,7 @@ be selected without Auth0 customer mode and PostgreSQL persistence.
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `POST /api/v1/onboarding/identity`                               | Create or safely resume the identity case and selected provider inquiry |
 | `GET /api/v1/onboarding/identity`                                | Resume normalized customer-facing identity state                        |
+| `POST /api/v1/onboarding/identity/launch`                         | Issue an ephemeral hosted link for the caller's existing pending inquiry |
 | `POST /api/v1/provider-events/persona`                           | Verify and normalize a Persona sandbox decision webhook                 |
 | `POST /api/v1/dev/onboarding/identity/{identityCaseId}/decision` | Apply deterministic fake provider evidence in non-production demo mode  |
 
@@ -83,6 +86,44 @@ Customer endpoints require a validated Auth0 access token. Start requires an
 `Idempotency-Key` and is allowed only from durable
 `identity_in_progress`. The development decision endpoint is not mounted in
 production-style mode.
+
+### Hosted web handoff
+
+With `persona-sandbox` and an explicitly reviewed
+`PERSONA_HOSTED_FLOW_ORIGIN`, pending cases advertise
+`launch_identity_verification`. Launch requires an Auth0 token and an
+`Idempotency-Key`. It accepts no customer, case, inquiry, return URL, or
+decision from the browser. The server resolves the existing inquiry from
+the caller's durable identity and rechecks account, case and alpha invitation
+access after Persona responds. Launch never creates another inquiry or
+changes the KYC outcome.
+
+The adapter calls Persona's versioned
+`generate-one-time-link` endpoint with `meta.expires-in-seconds: 300`,
+sparse inquiry fields, a hashed case-bound idempotency key, a ten-second
+timeout, a 64 KiB response limit and no redirects. It verifies the exact
+configured environment response header, inquiry, Samra reference and pending
+provider state. The returned HTTPS origin must exactly match the configured
+Persona origin; only `/verify?code=...` is accepted. The five-minute lifetime
+is supported by the [2025-10-27 official API specification](https://github.com/persona-id/persona-openapi/blob/main/2025-10-27/openapi-bundled.json).
+
+The response is private and `no-store`. Its bearer link is never persisted
+to PostgreSQL, audit, telemetry, browser storage or a React Query cache.
+The shared client uses the generated request function directly; do not use
+a cached mutation hook for this capability. The web screen retains the
+link only in component memory, clears it on use/return/unmount or after four
+minutes, and opens it with no referrer in a separate tab. Each explicit
+prepare action uses a fresh key. Replaying an old key may return an already
+used or expired link; it does not extend that link's lifetime.
+
+Returning to Samra refreshes the saved onboarding and case. Browser focus,
+query parameters and provider completion screens cannot grant approval.
+Signed webhook evidence remains the only provider decision authority.
+Pending/review/declined outcomes continue to block wallet eligibility.
+Provider launch errors leave the saved case unchanged and return a generic
+retry message. Expired-inquiry resume, custom hosted domains and native
+handoff are not implemented by this web slice; their provider acceptance
+remains separate from code tests.
 
 The Persona webhook does not use a customer or workforce token. It is mounted
 before JSON parsing so its HMAC is calculated against the exact raw request

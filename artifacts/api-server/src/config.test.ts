@@ -94,6 +94,30 @@ test("Persona sandbox mode fails closed on incomplete, production, or unsafe tru
       }),
     /production mode is not implemented/,
   );
+  const configured = loadApiRuntimeConfig({
+    ...base,
+    PERSONA_HOSTED_FLOW_ORIGIN: "https://inquiry.withpersona.com",
+  });
+  assert.equal(
+    configured.customerIdentityProvider?.mode === "persona-sandbox" &&
+      configured.customerIdentityProvider.hostedFlowOrigin,
+    "https://inquiry.withpersona.com",
+  );
+  for (const origin of [
+    "https://evil.test",
+    "https://withpersona.com.evil.test",
+    "http://inquiry.withpersona.com",
+    "https://inquiry.withpersona.com/verify",
+    "https://user@inquiry.withpersona.com",
+    "https://inquiry.withpersona.com:8443",
+    "https://inquiry.withpersona.com?redirect=bad",
+    "https://inquiry.withpersona.com#fragment",
+  ])
+    assert.throws(
+      () =>
+        loadApiRuntimeConfig({ ...base, PERSONA_HOSTED_FLOW_ORIGIN: origin }),
+      /PERSONA_HOSTED_FLOW_ORIGIN/,
+    );
 });
 
 test("Auth0 customer mode is explicit, PostgreSQL-backed, and locked to an exact RS256 issuer and audience", () => {

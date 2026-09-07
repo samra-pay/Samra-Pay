@@ -18,6 +18,8 @@ import {
   CreateWorkforceSessionResponse,
   CreateBeneficiaryBody,
   CreateBeneficiaryResponse,
+  CreateCustomerIdentityHostedLaunchHeader,
+  CreateCustomerIdentityHostedLaunchResponse,
   CreateRemittanceQuoteBody,
   CreateRemittanceQuoteResponse,
   CreateRemittanceTransferBody,
@@ -254,6 +256,7 @@ export function createV1Router(
       "POST /onboarding/consents",
       "GET /onboarding/identity",
       "POST /onboarding/identity",
+      "POST /onboarding/identity/launch",
       "GET /onboarding/wallet",
       "POST /onboarding/wallet",
     ]);
@@ -449,6 +452,46 @@ export function createV1Router(
               await identityVerification.getAuth0IdentityCase(identity),
             ),
           );
+        } catch (error) {
+          throw translateIdentityVerificationError(error);
+        }
+      }),
+    );
+
+    router.post(
+      "/onboarding/identity/launch",
+      asyncRoute(async (req, res) => {
+        res.set({
+          "Cache-Control": "no-store, private",
+          Pragma: "no-cache",
+          "Referrer-Policy": "no-referrer",
+          Vary: "Authorization",
+        });
+        const identity = verifiedAuth0Identity(req, auth0Config);
+        const header = parseSchema(CreateCustomerIdentityHostedLaunchHeader, {
+          "Idempotency-Key": req.header("Idempotency-Key"),
+        });
+        if (
+          Object.keys(req.query).length > 0 ||
+          (req.body !== undefined &&
+            (req.body === null ||
+              typeof req.body !== "object" ||
+              Array.isArray(req.body) ||
+              Object.keys(req.body).length > 0))
+        ) {
+          throw new DomainError(
+            "INVALID_ARGUMENT",
+            "Identity launch does not accept customer or provider parameters.",
+          );
+        }
+        try {
+          const launch = await identityVerification.createAuth0HostedLaunch({
+            ...identity,
+            idempotencyKey: header["Idempotency-Key"],
+          });
+          // An invitation may have been revoked while the provider was responding.
+          await runtime.customerAlphaAccessStore?.assertAuth0Access(identity);
+          res.json(CreateCustomerIdentityHostedLaunchResponse.parse(launch));
         } catch (error) {
           throw translateIdentityVerificationError(error);
         }

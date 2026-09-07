@@ -40,10 +40,96 @@ function storeWith(
     attachProviderInquiry: notUsed,
     recordProviderStartFailure: notUsed,
     getAuth0IdentityCase: notUsed,
+    getAuth0IdentityLaunchTarget: notUsed,
     recordProviderEvent: notUsed,
     ...overrides,
   };
 }
+
+test("hosted launch rechecks the authenticated target and never persists a launch failure as KYC evidence", async () => {
+  const input = {
+    issuer: "https://tenant.example.test/",
+    subject: "auth0|test",
+    idempotencyKey: "launch-command-001",
+  };
+  const target = {
+    identityCaseId: snapshot("pending").identityCaseId,
+    providerInquiryRef: "inq_12345678",
+  };
+  let reads = 0;
+  let captured: unknown;
+  const store = storeWith({
+    async getAuth0IdentityLaunchTarget(identity) {
+      assert.equal(identity.issuer, input.issuer);
+      assert.equal(identity.subject, input.subject);
+      reads += 1;
+      return target;
+    },
+  });
+  const provider: CustomerIdentityProvider = {
+    provider: "persona",
+    environment: "sandbox",
+    hostedFlowAvailable: true,
+    async createInquiry() {
+      throw new Error("must not create a second inquiry");
+    },
+    async createHostedLaunch(value) {
+      captured = value;
+      return {
+        url: "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123",
+      };
+    },
+  };
+  const service = new CustomerIdentityVerificationService({ store, provider });
+  const result = await service.createAuth0HostedLaunch(input);
+  assert.equal(reads, 2);
+  assert.equal(result.environment, "sandbox");
+  assert.equal(
+    (captured as typeof target).providerInquiryRef,
+    target.providerInquiryRef,
+  );
+  assert.doesNotMatch(
+    JSON.stringify(captured),
+    /auth0\|test|launch-command-001/,
+  );
+
+  const restricted = new CustomerIdentityVerificationService({
+    provider,
+    store: storeWith({
+      async getAuth0IdentityLaunchTarget() {
+        if (++reads === 4)
+          throw new Error("customer restricted during provider request");
+        return target;
+      },
+    }),
+  });
+  await assert.rejects(
+    restricted.createAuth0HostedLaunch(input),
+    /customer restricted/,
+  );
+  const failed = new CustomerIdentityVerificationService({
+    store,
+    provider: {
+      ...provider,
+      async createHostedLaunch() {
+        throw new Error("private provider payload and code");
+      },
+    },
+  });
+  await assert.rejects(
+    failed.createAuth0HostedLaunch(input),
+    (error: unknown) =>
+      error instanceof IdentityProviderUnavailableError &&
+      !error.message.includes("private"),
+  );
+  await assert.rejects(
+    new CustomerIdentityVerificationService({
+      store,
+      provider: new DeterministicFakePersonaAdapter(),
+    }).createAuth0HostedLaunch(input),
+    /Hosted identity verification is unavailable/,
+  );
+});
 
 test("fake Persona inquiry references are stable without receiving customer PII", async () => {
   const provider = new DeterministicFakePersonaAdapter();

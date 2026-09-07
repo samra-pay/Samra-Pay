@@ -44,9 +44,40 @@ and grant access only to the staging API runtime service account:
 | `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | `persona-sandbox`                                                    |
 | `PERSONA_INQUIRY_TEMPLATE_ID`           | approved non-secret template ID                                      |
 | `PERSONA_ENVIRONMENT_ID`                | approved non-secret environment ID                                   |
+| `PERSONA_HOSTED_FLOW_ORIGIN`           | exact reviewed HTTPS Persona origin; unset disables hosted launch    |
 
 Do not add secrets to GitHub, Firebase, web/mobile bundles, build arguments,
 container layers, logs, test reports, Qase, screenshots, or support tickets.
+
+## Hosted web verification gate
+
+The implemented launch flow is sandbox-only. Before enabling it, read back
+the exact hosted origin (for example `https://inquiry.withpersona.com`),
+template/environment/version and credential permission for generating
+one-time inquiry links. Confirm the exact API response supplies
+`Persona-Environment-Id`; missing or mismatched metadata fails closed.
+The configured origin must be an HTTPS `withpersona.com` host without a
+path, port, credentials, query or fragment. Custom domains require separate
+review and implementation.
+
+For a bounded synthetic tester, record the candidate SHA/digest, runtime
+identity, exact Secret Manager versions, authorization expiry, request
+limit and cleanup owner. Inspect the link privately; never copy its code
+or URL into evidence. The API requests a five-minute one-time link for the
+already-bound inquiry. Validate first use, reuse and expiry against the
+provider; mock tests cannot prove Persona's enforcement. Use a fresh
+explicit launch after a consumed/expired link. A fully expired inquiry may
+need a provider resume operation; automatic expired-inquiry resume is not
+implemented and must not be worked around by creating another identity case.
+
+Accept only when an invited account can open its own inquiry, return to
+unchanged pending state, and then observe a signed webhook's durable outcome.
+Repeat after logout/login and server restart. Attempt another account's
+identifiers, forged completion parameters, revoked access during a launch,
+and provider 429/5xx. Confirm generic failures, unchanged KYC state,
+no duplicate inquiry and no URL/token in application logs or stored records.
+Production KYC, consent, data policy and per-user wallet enrollment remain
+separate activation blockers.
 
 ## Activation sequence
 
@@ -68,8 +99,11 @@ container layers, logs, test reports, Qase, screenshots, or support tickets.
 
 ## Rollback
 
-Set `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE=fake` on a new staging revision,
-route traffic back, revoke the active Persona API key and webhook secret if
+Clear `PERSONA_HOSTED_FLOW_ORIGIN` to disable hosted launch while preserving
+the existing inquiry and authenticated webhook reconciliation. Pause alpha
+admission or return to the prior approved gated revision as appropriate.
+Do not replace real inquiry mappings with fake provider state. Revoke the
+active Persona API key and webhook secret if
 compromise is suspected, and preserve normalized Samra event evidence. Never
 delete or rewrite identity transitions to make rollback appear clean.
 

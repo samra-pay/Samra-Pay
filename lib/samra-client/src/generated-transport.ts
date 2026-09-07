@@ -4,6 +4,7 @@ import {
   cancelRemittanceTransfer,
   createRemittanceQuote,
   createRemittanceTransfer,
+  createCustomerIdentityHostedLaunch,
   getCustomerIdentityCase,
   getCustomerOnboarding,
   getCustomerWallet,
@@ -22,6 +23,7 @@ import {
 } from "@workspace/api-client-react";
 
 import type { CustomerAcquisitionTransport } from "./acquisition";
+import { parseCustomerIdentityHostedLaunch } from "./onboarding";
 import type {
   ActivityQuery,
   CreateQuoteInput,
@@ -166,6 +168,17 @@ export class GeneratedSamraOnboardingSource
     return freezeIdentityCaseSnapshot(
       await startCustomerIdentityVerification({
         headers: idempotencyHeaders(idempotencyKey),
+      }),
+    );
+  }
+
+  async createIdentityHostedLaunch(idempotencyKey: string) {
+    // Deliberately bypass the query/mutation cache for this transient capability.
+    return parseCustomerIdentityHostedLaunch(
+      await createCustomerIdentityHostedLaunch({
+        headers: idempotencyHeaders(idempotencyKey),
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
       }),
     );
   }

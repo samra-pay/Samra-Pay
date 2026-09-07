@@ -61,6 +61,7 @@ function unusedIdentityVerificationService(): CustomerIdentityVerificationServic
     attachProviderInquiry: notUsed,
     recordProviderStartFailure: notUsed,
     getAuth0IdentityCase: notUsed,
+    getAuth0IdentityLaunchTarget: notUsed,
     recordProviderEvent: notUsed,
   };
   return new CustomerIdentityVerificationService({

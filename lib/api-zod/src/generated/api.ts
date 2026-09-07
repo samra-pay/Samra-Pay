@@ -471,6 +471,28 @@ export const GetCustomerIdentityCaseResponse = zod.object({
 });
 
 /**
+ * Requires an admitted account and a pending, durably bound inquiry. Returns a sensitive one-time hosted link with no-store headers. Persona limits each newly issued link to 300 seconds; retrying an old key may return an already-used or expired link. Create a fresh command for a new explicit launch. Never persist, log, cache, or attach the link to telemetry. This operation neither creates an inquiry nor changes KYC state.
+ * @summary Open the authenticated customer's existing Persona sandbox inquiry
+ */
+export const createCustomerIdentityHostedLaunchHeaderIdempotencyKeyMin = 8;
+export const createCustomerIdentityHostedLaunchHeaderIdempotencyKeyMax = 128;
+
+export const CreateCustomerIdentityHostedLaunchHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(createCustomerIdentityHostedLaunchHeaderIdempotencyKeyMin)
+    .max(createCustomerIdentityHostedLaunchHeaderIdempotencyKeyMax),
+});
+
+export const createCustomerIdentityHostedLaunchResponseUrlMax = 2048;
+
+export const CreateCustomerIdentityHostedLaunchResponse = zod.object({
+  provider: zod.enum(["persona"]),
+  environment: zod.enum(["sandbox"]),
+  url: zod.string().url().max(createCustomerIdentityHostedLaunchResponseUrlMax),
+});
+
+/**
  * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
  * @summary Create or resume the Samra-owned customer wallet record
  */

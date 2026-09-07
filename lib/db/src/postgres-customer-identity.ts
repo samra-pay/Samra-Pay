@@ -361,6 +361,40 @@ export class PostgresCustomerIdentityCaseStore {
     return mapIdentityCase(identityCase);
   }
 
+  /** Server-only target; never include this mapping in normalized case responses. */
+  async getAuth0IdentityLaunchTarget(input: {
+    issuer: string;
+    subject: string;
+  }): Promise<
+    Readonly<{ identityCaseId: string; providerInquiryRef: string }>
+  > {
+    const identity = await selectIdentityContext(
+      this.#context,
+      normalizeAuth0Issuer(input.issuer),
+      normalizeAuth0Subject(input.subject),
+      false,
+    );
+    if (!identity) throw new CustomerOnboardingNotFoundError();
+    assertIdentityAccess(identity);
+    const identityCase = await selectCaseByOnboarding(
+      this.#context,
+      identity.onboarding_id,
+      false,
+    );
+    if (!identityCase) throw new CustomerIdentityCaseNotFoundError();
+    if (
+      identity.onboarding_state !== "identity_in_progress" ||
+      identityCase.state !== "pending" ||
+      !identityCase.provider_inquiry_ref
+    ) {
+      throw invalidIdentityTransition();
+    }
+    return Object.freeze({
+      identityCaseId: identityCase.external_ref,
+      providerInquiryRef: identityCase.provider_inquiry_ref,
+    });
+  }
+
   async recordProviderEvent(input: {
     identityCaseId: string;
     providerInquiryRef?: string;
@@ -542,6 +576,7 @@ export type CustomerIdentityCaseStore = Pick<
   | "attachProviderInquiry"
   | "recordProviderStartFailure"
   | "getAuth0IdentityCase"
+  | "getAuth0IdentityLaunchTarget"
   | "recordProviderEvent"
 >;
 

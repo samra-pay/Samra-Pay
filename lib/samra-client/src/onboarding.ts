@@ -153,7 +153,55 @@ export function getCustomerConsentPresentation(
   return presentations[consentType];
 }
 
+export type CustomerIdentityHostedLaunch = Readonly<{
+  provider: "persona";
+  environment: "sandbox";
+  url: string;
+}>;
+
+/** Launch URLs are bearer capabilities: validate, use transiently, never persist. */
+export function parseCustomerIdentityHostedLaunch(
+  value: unknown,
+): CustomerIdentityHostedLaunch {
+  const invalid = () =>
+    new Error("Unable to open verification. Please try again.");
+  if (!value || typeof value !== "object") throw invalid();
+  const record = value as Record<string, unknown>;
+  if (
+    record.provider !== "persona" ||
+    record.environment !== "sandbox" ||
+    typeof record.url !== "string" ||
+    record.url.length > 2048
+  )
+    throw invalid();
+  let url: URL;
+  try {
+    url = new URL(record.url);
+  } catch {
+    throw invalid();
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.hash ||
+    !/^(?:[a-z0-9]+(?:-[a-z0-9]+)*\.)?withpersona\.com$/u.test(url.hostname) ||
+    url.pathname !== "/verify" ||
+    !/^code=[A-Za-z0-9_-]{8,512}$/u.test(url.searchParams.toString())
+  )
+    throw invalid();
+  return Object.freeze({
+    provider: "persona",
+    environment: "sandbox",
+    url: url.href,
+  });
+}
+
 export interface SamraOnboardingSource {
+  createIdentityHostedLaunch?(
+    idempotencyKey: string,
+  ): Promise<CustomerIdentityHostedLaunch>;
   getOnboarding(): Promise<CustomerOnboardingSnapshot | null>;
   startOnboarding(idempotencyKey: string): Promise<CustomerOnboardingSnapshot>;
   submitConsentBundle(

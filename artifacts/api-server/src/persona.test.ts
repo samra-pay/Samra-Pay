@@ -78,9 +78,154 @@ function storeWith(
     attachProviderInquiry: notUsed,
     recordProviderStartFailure: notUsed,
     getAuth0IdentityCase: notUsed,
+    getAuth0IdentityLaunchTarget: notUsed,
     recordProviderEvent: notUsed,
     ...overrides,
   };
+}
+
+test("Persona hosted launch binds the existing inquiry and sandbox environment and bounds the link lifetime", async () => {
+  let observedUrl: URL | undefined;
+  let observedInit: RequestInit | undefined;
+  const adapter = new PersonaSandboxAdapter(
+    {
+      ...personaConfig(),
+      hostedFlowOrigin: "https://inquiry.withpersona.com",
+    },
+    {
+      fetch: async (url, init) => {
+        observedUrl = new URL(String(url));
+        observedInit = init;
+        return hostedResponse();
+      },
+    },
+  );
+  const result = await adapter.createHostedLaunch({
+    identityCaseId: IDENTITY_CASE_ID,
+    providerInquiryRef: PROVIDER_INQUIRY_REF,
+    providerRequestKey: "a".repeat(64),
+  });
+  assert.deepEqual(result, {
+    url: "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123",
+  });
+  assert.equal(observedUrl?.origin, "https://api.withpersona.com");
+  assert.equal(
+    observedUrl?.pathname,
+    `/api/v1/inquiries/${PROVIDER_INQUIRY_REF}/generate-one-time-link`,
+  );
+  assert.equal(
+    observedUrl?.searchParams.get("fields[inquiry]"),
+    "reference-id,status",
+  );
+  assert.deepEqual(JSON.parse(String(observedInit?.body)), {
+    meta: { "expires-in-seconds": 300 },
+  });
+  assert.equal(observedInit?.redirect, "error");
+  assert.ok(observedInit?.signal);
+  assert.equal(
+    new Headers(observedInit?.headers).get("Idempotency-Key"),
+    "a".repeat(64),
+  );
+  assert.equal(
+    new Headers(observedInit?.headers).get("Persona-Version"),
+    "2025-10-27",
+  );
+});
+
+test("Persona hosted launch rejects wrong bindings, unsafe URLs, provider failure and oversized responses", async () => {
+  const responses: (() => Response)[] = [
+    () => hostedResponse({ environment: "env_wrongenvironment" }),
+    () => hostedResponse({ reference: "identity_case_wrong" }),
+    () => hostedResponse({ inquiry: "inq_differentcustomer" }),
+    () => hostedResponse({ state: "approved" }),
+    () => hostedResponse({ state: "completed" }),
+    () => hostedResponse({ status: 429 }),
+    () => hostedResponse({ status: 500 }),
+    () =>
+      new Response("not json", {
+        headers: { "Persona-Environment-Id": personaConfig().environmentId },
+      }),
+    () => hostedResponse({ extra: "x".repeat(70_000) }),
+    ...[
+      "https://evil.test/verify?code=SYNTHETICHOSTEDLINK123",
+      "https://inquiry.withpersona.com.evil.test/verify?code=SYNTHETICHOSTEDLINK123",
+      "http://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123",
+      "https://user@inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123",
+      "https://inquiry.withpersona.com/other?code=SYNTHETICHOSTEDLINK123",
+      "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123&redirect-uri=https://evil.test",
+      "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123&code=duplicate",
+      "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123#fragment",
+      "javascript:alert(1)",
+    ].map((url) => () => hostedResponse({ url })),
+  ];
+  for (const response of responses) {
+    const adapter = new PersonaSandboxAdapter(
+      {
+        ...personaConfig(),
+        hostedFlowOrigin: "https://inquiry.withpersona.com",
+      },
+      { fetch: async () => response() },
+    );
+    await assert.rejects(
+      adapter.createHostedLaunch({
+        identityCaseId: IDENTITY_CASE_ID,
+        providerInquiryRef: PROVIDER_INQUIRY_REF,
+        providerRequestKey: "a".repeat(64),
+      }),
+    );
+  }
+  const disabled = new PersonaSandboxAdapter(personaConfig(), {
+    fetch: async () => {
+      throw new Error("must not call provider");
+    },
+  });
+  assert.equal(disabled.hostedFlowAvailable, false);
+  await assert.rejects(
+    disabled.createHostedLaunch({
+      identityCaseId: IDENTITY_CASE_ID,
+      providerInquiryRef: PROVIDER_INQUIRY_REF,
+      providerRequestKey: "a".repeat(64),
+    }),
+    /hosted verification is unavailable/,
+  );
+});
+
+function hostedResponse(
+  overrides: {
+    url?: string;
+    reference?: string;
+    inquiry?: string;
+    state?: string;
+    environment?: string;
+    status?: number;
+    extra?: string;
+  } = {},
+): Response {
+  return new Response(
+    JSON.stringify({
+      data: {
+        type: "inquiry",
+        id: overrides.inquiry ?? PROVIDER_INQUIRY_REF,
+        attributes: {
+          "reference-id": overrides.reference ?? IDENTITY_CASE_ID,
+          status: overrides.state ?? "pending",
+        },
+      },
+      meta: {
+        "one-time-link":
+          overrides.url ??
+          "https://inquiry.withpersona.com/verify?code=SYNTHETICHOSTEDLINK123",
+      },
+      extra: overrides.extra,
+    }),
+    {
+      status: overrides.status ?? 200,
+      headers: {
+        "Persona-Environment-Id":
+          overrides.environment ?? personaConfig().environmentId,
+      },
+    },
+  );
 }
 
 test("Persona sandbox inquiry creation is idempotent and sends only opaque Samra references", async () => {
