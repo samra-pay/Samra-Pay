@@ -14,3 +14,4 @@ export * from "./customer-acquisition";
 export * from "./customer-wallet";
 export * from "./marketing";
 export * from "./alpha-access";
+export * from "./personal-funding";

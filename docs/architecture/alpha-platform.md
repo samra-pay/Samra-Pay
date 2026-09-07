@@ -9,6 +9,12 @@ architecture below remains an invariant and future scope; it is not the Release
 1 feature list. Use the linked implementation scope for the active sequence,
 configuration blockers and staged acceptance.
 
+The separately authorized [personal funding pilot](personal-funding-pilot.md)
+uses Auth0 and Crossmint-hosted onramp KYC for David only, with a USD 20 all-in
+ceiling. The first internal reservation/adapter slice is dormant; wallet,
+checkout, production approval and delivery verification are incomplete.
+It does not change the Alpha Release 1 feature list.
+
 ## Decision
 
 The Alpha vendor stack is Auth0 for customer authentication, Persona for KYC,
@@ -55,6 +61,7 @@ flowchart TB
   adapters -. KYC case .-> persona[Persona]
   adapters -. USDC wallet .-> crossmint[Crossmint]
   adapters -. later replacement evaluation .-> alternatives[Cybrid / Rain / Bridge]
+  api -. dormant personal pilot .-> personal[Crossmint hosted onramp KYC and card funding]
   transfer -. unresolved .-> funding[Funding rail]
   transfer -. unresolved .-> payout[Ethiopia payout rail]
 
