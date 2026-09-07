@@ -79,9 +79,18 @@ test("gives runtime data access without database administration", () => {
     database: ["CONNECT"],
     schemas: ["USAGE"],
     tables: ["SELECT", "INSERT", "UPDATE"],
+    tableOverrides: {
+      alpha_release_controls: {
+        tables: ["SELECT"],
+        updateColumns: ["release_id"],
+      },
+      alpha_invitations: { tables: ["SELECT"], updateColumns: ["id"] },
+      alpha_admissions: { tables: ["SELECT", "INSERT"], updateColumns: [] },
+    },
     sequences: [],
     functions: [],
-    futureObjectsCoveredByOwnerDefaultPrivileges: true,
+    futureObjectsCoveredByOwnerDefaultPrivileges: false,
+    futureObjectsRequireReviewedGrants: true,
   });
   assert.deepEqual(contract.databasePrivileges.migrations, {
     database: ["CONNECT", "CREATE"],
@@ -161,6 +170,35 @@ test("rejects privilege, secret, pool, and cleanup drift", () => {
   );
 });
 
+test("rejects alpha eligibility write access and automatic future-table grants", () => {
+  for (const mutate of [
+    (runtime) => {
+      runtime.tableOverrides.alpha_invitations.tables.push("INSERT");
+    },
+    (runtime) => {
+      runtime.tableOverrides.alpha_release_controls.updateColumns.push(
+        "admission_limit",
+      );
+    },
+    (runtime) => {
+      runtime.tableOverrides.alpha_admissions.tables.push("UPDATE");
+    },
+    (runtime) => {
+      runtime.futureObjectsCoveredByOwnerDefaultPrivileges = true;
+    },
+    (runtime) => {
+      runtime.futureObjectsRequireReviewedGrants = false;
+    },
+  ]) {
+    const copy = structuredClone(contract);
+    mutate(copy.databasePrivileges.runtime);
+    assert.throws(
+      () => validateStagingDatabaseAccess(copy),
+      /Reviewed database grants changed/,
+    );
+  }
+});
+
 test("separates plan, live review, fresh apply, and controlled resume", () => {
   assert.match(activate, /--plan\|--review\|--apply\|--resume/);
   assert.match(activate, /AUTHORIZED_STAGING_DATABASE_ACCESS/);
@@ -194,10 +232,7 @@ test("makes encrypted private-IP libpq TLS semantics explicit", () => {
     (activate.match(/sslmode=require&uselibpqcompat=true/g) ?? []).length,
     3,
   );
-  assert.match(
-    runner,
-    /parsed\.searchParams\.set\("uselibpqcompat", "true"\)/,
-  );
+  assert.match(runner, /parsed\.searchParams\.set\("uselibpqcompat", "true"\)/);
   assert.match(activate, /recoverable bootstrap URL has an invalid TLS policy/);
 });
 

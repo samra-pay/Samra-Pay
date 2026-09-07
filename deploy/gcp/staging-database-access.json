@@ -71,9 +71,21 @@
       "database": ["CONNECT"],
       "schemas": ["USAGE"],
       "tables": ["SELECT", "INSERT", "UPDATE"],
+      "tableOverrides": {
+        "alpha_release_controls": {
+          "tables": ["SELECT"],
+          "updateColumns": ["release_id"]
+        },
+        "alpha_invitations": { "tables": ["SELECT"], "updateColumns": ["id"] },
+        "alpha_admissions": {
+          "tables": ["SELECT", "INSERT"],
+          "updateColumns": []
+        }
+      },
       "sequences": [],
       "functions": [],
-      "futureObjectsCoveredByOwnerDefaultPrivileges": true
+      "futureObjectsCoveredByOwnerDefaultPrivileges": false,
+      "futureObjectsRequireReviewedGrants": true
     },
     "migrations": {
       "database": ["CONNECT", "CREATE"],
@@ -112,7 +124,7 @@
     "create permanent non-superuser roles and login users",
     "create separate runtime and migration secret versions",
     "run the reviewed forward-only migration job to idempotent completion with the migration credential",
-    "apply and verify current-object and future-object runtime grants",
+    "apply and verify current-object grants with alpha eligibility and cohort controls restricted; future objects deny runtime access until reviewed grants",
     "delete the bootstrap database user, secret version, secret metadata, and bootstrap job",
     "prove runtime DML succeeds and runtime DDL and role creation fail",
     "independently audit roles, grants, schemas, secret consumers, and bootstrap cleanup",

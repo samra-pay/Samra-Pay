@@ -694,6 +694,19 @@ roles, databases, or schemas and cannot own either Samra schema. The migration
 login is not accepted for runtime traffic and owns `samra_core` and
 `samra_migrations` only after the reviewed migration sequence.
 
+Alpha Release 1 eligibility and cohort controls are operator-owned. The runtime
+can read invitations/limits and insert immutable admissions; it cannot provision
+invitations, change expiry/revocation, raise the limit or alter admission history.
+`UPDATE (release_id)` on controls and `UPDATE (id)` on invitations allow the
+existing admission row locks, as required by [PostgreSQL](https://www.postgresql.org/docs/16/sql-select.html).
+The release-ID constraint and invitation-identity trigger prevent changes to
+those keys. Both the runtime group and login are audited, including column ACLs.
+The finalizer clears stale table/column grants before applying these restrictions
+atomically. Future tables receive no runtime grants by default: after a reviewed
+migration, rerun grant finalization and both access audits before using its new
+objects. This is required even when upgrading an existing database that has the
+older all-table grants. These source changes do not apply cloud grants.
+
 The only elevated database bootstrap principal is temporary. Acceptance
 requires deletion of its database user, secret version, Secret Manager metadata,
 and private bootstrap job. Both permanent Samra users must be non-superusers and

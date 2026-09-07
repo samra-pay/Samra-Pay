@@ -10,6 +10,12 @@ and incident responders must be named and accept their duties before activation;
 the current six incident roles remain unassigned. Do not claim independent review
 or continuous coverage from a single available operator.
 
+David Haile explicitly accepted **Alpha Release 1 support ownership** in the
+main task on 2026-09-06. The [alpha scope](../architecture/alpha-release-1.md)
+records this assignment. Staffed hours, backup coverage, paging setup and a
+successful alert drill remain pending; the incident-role roster below is not
+approved by this support assignment alone.
+
 ## Active product sequence
 
 The 2026-09-06 [Alpha Release 1 scope](../architecture/alpha-release-1.md)
