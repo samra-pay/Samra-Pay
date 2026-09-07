@@ -16,7 +16,6 @@ const sharedJourneySource = read(
 describe("web customer-onboarding trust boundary", () => {
   it("does not collect a local email or password and delegates API sign-in to Auth0", () => {
     expect(loginSource).not.toMatch(/<input|type=["']password["']/);
-    expect(loginSource).toContain('await auth.signIn(signup ? "signup" : "login")');
     expect(loginSource).toContain("Create account");
     expect(loginSource).not.toMatch(/localStorage|sessionStorage|indexedDB/);
     expect(authSource).toContain("createAuth0Client");

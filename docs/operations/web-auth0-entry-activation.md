@@ -21,6 +21,11 @@ activate an API, or create real customers.
   callback must not be intercepted by the public homepage loader.
 - Signup requests Auth0 Universal Login with `screen_hint=signup`; login uses
   the default login experience. Both return through `/session`.
+- Connected login explains invitation eligibility and provides a password
+  recovery entry. It requests `prompt=login` so the customer can select
+  Auth0's hosted Forgot password flow. This parameter is a UI hint, not a
+  security proof of reauthentication. Google users recover with Google.
+  No password, email, reset ticket or provider error detail is collected here.
 - `/session` reads the current customer from Samra. A successful server
   response permits dashboard navigation; the documented unbound-identity or
   onboarding-required responses lead to onboarding. Restricted customers,
@@ -30,6 +35,80 @@ activate an API, or create real customers.
   signup opens synthetic onboarding, with an explicit demo disclosure.
 - Public analytics excludes `/login` and `/signup`. OAuth callback parameters
   are removed by the SDK bridge; callback failure returns to `/login`.
+- Logout clears customer queries and mutation results before the redirect,
+  discards late query results and retires pending token lookups. The same
+  cleanup applies when beginning a sign-in handoff or ending the auth bridge.
+  Each session has its own query client, so an already-dispatched mutation's
+  late callback cannot populate a subsequent session's cache.
+  A failed provider redirect leaves a closed local session and generic retry
+  state. It is not evidence of provider-session or already-issued JWT revocation.
+
+## Auth0-first read-back — 2026-09-07
+
+Baseline: main `ece64330ec8d28c60eee006b5eee8af0a5ca1509` (#189).
+Read-only Auth0 dashboard inspection; no provider settings changed, users
+created, emails sent, secret revealed or customer runtime activated.
+Persona production activation is paused at David's request pending his
+incorporation document. Approved KYC remains required for production wallets.
+
+| Setting | Observed development configuration |
+| --- | --- |
+| Tenant / issuer | Development; `https://dev-40h1kaj5488jqctu.us.auth0.com/` |
+| Web application | Samra One - Web - Development; Single Page Application; public client ID `1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0` |
+| Application login URI, callbacks, logout URLs, web origins, CORS origins | Empty |
+| API identifier / signing | `https://api.samrapay.com/development`; RS256 |
+| Web API access | Per-app authorization; a user-delegated grant exists, with zero defined API permissions. Samra still authorizes every account request |
+| API token lifetime / offline access | 86,400 seconds; offline access disabled. Browser code requests no refresh token |
+| Web connections | Username-Password-Authentication and google-oauth2 enabled |
+| Database connection | Disable Sign Ups is off; improved brute-force protection is on. Auth0 registration alone grants no Samra admission |
+| Recovery delivery | Use my own email provider is off; no configured custom delivery provider or inbox acceptance proof |
+| Tenant MFA | Never; all listed factors disabled. Action-based enforcement and verified-email policy remain unverified |
+
+Sources: [web application](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/applications/1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0/settings),
+[API](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/apis/6a9b52e5261b4bde124b13fb/settings),
+[email provider](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/templates/provider)
+and [MFA](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/security/mfa).
+These are configuration observations, not evidence of a successful login.
+The audience is an identifier and does not prove an API is deployed at that URL.
+The staging Cloud Run inventory could not be refreshed in this session because
+Google required interactive reauthentication. No current deployment/URL claim
+is inferred from the older cloud records.
+
+### Remaining setup and acceptance
+
+1. Select the reviewed customer runtime and exact base URL, API revision and
+   isolated database. Register only that customer's exact callback/logout URI
+   and web origin in the development SPA for non-production acceptance.
+   Configure its public domain/client ID/audience and the API's matching issuer
+   and audience. A SPA needs no client secret. Do not reuse the development
+   tenant as production by relabelling an environment.
+2. Use the existing managed invitation flow and Samra's restricted operator
+   path to bind eligibility to the exact issuer/subject; keep admission at
+   zero until the designated test is ready, then one. Public Auth0 signup and
+   switching between password and Google do not grant admission. Never link
+   accounts by matching emails or expose an invitation-management HTTP route.
+3. Connect reviewed email delivery and verify signup/email-verification policy,
+   password reset inbox receipt, expired/used link rejection and the post-reset
+   return route. The customer enters their own password with Auth0; retain no
+   link, credentials or message content in evidence. Confirm the same subject
+   resolves to the same Samra account after reset and restart.
+4. Prove login, callback cancellation, logout and later login with the actual
+   tenant and exact build. In a second isolated browser context, prove missing,
+   wrong-audience, expired and other-account credentials cannot read account
+   data. Deny uninvited/revoked identities. Simulate Auth0/API failure without
+   a mock fallback, and verify no prior account is shown after logout failure.
+5. Before production, record the dedicated production inventory, MFA and
+   verified-email enforcement, API-token lifetime/revocation policy, and
+   delivered/acknowledged support alerts with David Haile. The development
+   default 24-hour token lifetime is not an accepted production decision.
+   No 5 → 25 → 100 rollout until the complete KYC/wallet milestone is proven.
+
+Automated checks cover the actual login/signup/recovery UI-to-SDK handoff,
+callback cleanup, logout cache removal, late token rejection, stale
+initialization, late mutation cache isolation and generic provider failures.
+They use synthetic fixtures and
+do not establish delivery, real token issuance or live customer acceptance.
+Use the existing CI and readiness validator; keep production readiness blocked.
 
 ## Activation inventory
 
@@ -60,4 +139,6 @@ public artifact through the existing release process. Revert the customer
 build using the recorded prior revision. Never restore access by bypassing
 Auth0 or Samra authorization checks.
 
-Reference: [Auth0 Universal Login experience](https://auth0.com/docs/authenticate/login/auth0-universal-login/universal-login-vs-classic-login/universal-experience).
+References: [Auth0 Universal Login experience](https://auth0.com/docs/authenticate/login/auth0-universal-login/universal-login-vs-classic-login/universal-experience),
+[managed password change](https://auth0.com/docs/authenticate/database-connections/password-change)
+and [reauthentication parameter limits](https://auth0.com/docs/authenticate/login/max-age-reauthentication).

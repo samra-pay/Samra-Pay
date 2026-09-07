@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { Button } from "@workspace/samra-pay-ds/components/ui/button";
 import { CustomerEntryPanel } from "@/components/customer-entry-panel";
 import { consumePostLoginRedirect } from "@/lib/remittance-handoff";
 import { useSamraDataMode } from "@/lib/samra-runtime";
 import { useCustomerAuth } from "@/lib/customer-auth";
+import type { CustomerEntryIntent } from "@/lib/customer-entry";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 
 export default function Login({ signup = false }: { signup?: boolean }) {
@@ -26,10 +28,14 @@ export default function Login({ signup = false }: { signup?: boolean }) {
       setLocation(signup ? "/onboarding" : consumePostLoginRedirect());
       return;
     }
+    await startSignIn(signup ? "signup" : "login");
+  };
+
+  const startSignIn = async (intent: CustomerEntryIntent) => {
     setIsLoading(true);
     setSignInFailed(false);
     try {
-      await auth.signIn(signup ? "signup" : "login");
+      await auth.signIn(intent);
     } catch {
       setSignInFailed(true);
     } finally {
@@ -50,6 +56,16 @@ export default function Login({ signup = false }: { signup?: boolean }) {
               localized(
                 "This is a synthetic walkthrough. No real account is created and no credentials are collected.",
                 "ይህ የሙከራ ጉዞ ነው። እውነተኛ መለያ አይፈጠርም፣ የመግቢያ መረጃም አይሰበሰብም።",
+              ),
+            )}
+          </p>
+        ) : null}
+        {mode === "api" ? (
+          <p className="customer-entry-note">
+            {text(
+              localized(
+                "Access is by invitation. Use the same sign-in method each time to return to your account.",
+                "መግባት የሚቻለው በግብዣ ብቻ ነው። ወደ መለያዎ ለመመለስ ሁልጊዜ ተመሳሳይ የመግቢያ ዘዴ ይጠቀሙ።",
               ),
             )}
           </p>
@@ -94,6 +110,32 @@ export default function Login({ signup = false }: { signup?: boolean }) {
               ),
             )}
           </p>
+        ) : null}
+        {mode === "api" && !signup ? (
+          <>
+            <Button
+              type="button"
+              variant="link"
+              className="customer-entry-recovery w-full"
+              disabled={
+                isLoading ||
+                auth.status === "loading" ||
+                auth.status === "authenticated"
+              }
+              aria-describedby="customer-recovery-help"
+              onClick={() => void startSignIn("recovery")}
+            >
+              {text(localized("Forgot your password?", "የይለፍ ቃልዎን ረሱ?"))}
+            </Button>
+            <p id="customer-recovery-help" className="customer-entry-note">
+              {text(
+                localized(
+                  "On the secure sign-in page, choose Forgot password. If you use Google, recover access with Google.",
+                  "በደህንነቱ የተጠበቀ መግቢያ ገጽ ላይ የይለፍ ቃል መርሳትን ይምረጡ። በGoogle የሚገቡ ከሆነ፣ መግቢያዎን በGoogle ያስመልሱ።",
+                ),
+              )}
+            </p>
+          </>
         ) : null}
       </form>
     </CustomerEntryPanel>
