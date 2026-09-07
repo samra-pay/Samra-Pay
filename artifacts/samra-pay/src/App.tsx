@@ -40,6 +40,7 @@ import { useSamraCustomerAcquisition } from "@workspace/samra-client/react";
 const queryClient = new QueryClient();
 const CustomerOnboardingPage = lazy(() => import("@/pages/onboarding"));
 const CustomerWalletPage = lazy(() => import("@/pages/wallet"));
+const CustomerAccountPage = lazy(() => import("@/pages/account"));
 
 function DashboardRouter() {
   const params = useParams();
@@ -101,6 +102,19 @@ function Router() {
         <Route path="/session">
           <CustomerAuthGuard>
             <CustomerSession />
+          </CustomerAuthGuard>
+        </Route>
+        <Route path="/account">
+          <CustomerAuthGuard>
+            <RoutedErrorBoundary>
+              <Suspense
+                fallback={
+                  <OnboardingRouteFallback label="Loading your account…" />
+                }
+              >
+                <CustomerAccountPage />
+              </Suspense>
+            </RoutedErrorBoundary>
           </CustomerAuthGuard>
         </Route>
         <Route path="/onboarding">

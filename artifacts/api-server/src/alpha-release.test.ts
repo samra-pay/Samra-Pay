@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { loadApiRuntimeConfig } from "./config";
 import { createApp } from "./app";
@@ -13,6 +14,52 @@ const environment = {
   AUTH0_ISSUER_BASE_URL: "https://alpha.samra.test/",
   AUTH0_AUDIENCE: "https://api.samra.test",
 };
+
+test("the actual staging deployment selects invite-only access with no financial worker", () => {
+  const contract = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../deploy/gcp/staging-runtime-contract.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const controller = readFileSync(
+    new URL(
+      "../../../deploy/gcp/deploy-staging-zero-traffic.sh",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const assignment = controller.match(
+    /--set-env-vars="([^"]*SAMRA_CUSTOMER_AUTH_MODE=auth0[^"]*)"/u,
+  );
+  assert.ok(assignment, "Missing API deployment environment");
+  const deployedEnvironment = Object.fromEntries(
+    assignment[1]!.split(",").map((entry) => {
+      const separator = entry.indexOf("=");
+      return [entry.slice(0, separator), entry.slice(separator + 1)];
+    }),
+  );
+  for (const candidate of [
+    contract.services["samra-api"].environment,
+    deployedEnvironment,
+  ]) {
+    const config = loadApiRuntimeConfig({
+      ...candidate,
+      AUTH0_ISSUER_BASE_URL: environment.AUTH0_ISSUER_BASE_URL,
+      AUTH0_AUDIENCE: environment.AUTH0_AUDIENCE,
+    });
+    assert.equal(config.releaseProfile, "alpha-release-1");
+    assert.equal(config.persistenceMode, "postgres");
+    assert.equal(config.runWorker, false);
+    assert.equal(config.devControlsEnabled, false);
+    assert.equal(config.internalOperationsEnabled, false);
+    assert.deepEqual(config.customerIdentityProvider, { mode: "fake" });
+    assert.deepEqual(config.customerWalletProvider, { mode: "fake" });
+  }
+});
 
 test("alpha profile disables developer decisions and cannot run financial workers or operations", () => {
   const config = loadApiRuntimeConfig(environment);
