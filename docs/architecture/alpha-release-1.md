@@ -5,6 +5,11 @@ Decision owner: David Haile. Product scope accepted in the main task on
 `1b8d8ed8cee340b61ff604b5127a7aba74169d8c`. Implementation has started;
 **production activation and the live alpha remain blocked**.
 
+Alpha support owner: **David Haile**, explicitly accepted in the main task on
+2026-09-06. This resolves support ownership. Coverage hours, backup coverage,
+paging destination and successful alert-delivery/acknowledgement evidence remain
+pending before rollout; this assignment does not establish a staffed rotation.
+
 ## Release outcome and boundaries
 
 Up to 100 invited users can register, sign in, complete KYC, and create a
@@ -96,7 +101,7 @@ image or disable customer traffic; retain admission history and wallet mappings.
 | Persona | Production project/environment, approved `PERSONA_INQUIRY_TEMPLATE_ID` and `PERSONA_ENVIRONMENT_ID`, API version, least-privilege `PERSONA_API_KEY`, current/rotating `PERSONA_WEBHOOK_SECRET` exact Secret Manager versions, callback URL, inquiry/session launch mechanism and authenticated webhook read-back. Current consent and response labels are non-production; no production KYC data may enter CI |
 | Crossmint | Production project, chain/network and wallet configuration version, creation-only credential scope and exact secret version, allowed application origins, per-user owner authentication, customer passkey enrollment and customer-controlled recovery evidence. Current `CROSSMINT_SANDBOX_CUSTOMER_ID`/`CROSSMINT_SANDBOX_RECOVERY_EMAIL` are single-tester staging configuration, not a multi-user production design |
 | GCP/database | Exact runtime identity/revision/image digest and production database secret version, TLS/private connectivity, migrated schema, runtime/operator privilege tests and bounded operator invitation provisioning. The dated 2026-09-06 16:27 UTC read-only record found no staging service/jobs and no version for `samra-staging-database-url`; this is historical metadata, not a current provider-console audit |
-| Operations/data | Named support/paging owner and exercised alert route; approved production consent, privacy/retention/deletion/access policy; measured service indicators and provider-failure alerts; isolated cloud restore and rollback proof. `docs/operations/operational-readiness.json` remains blocked |
+| Operations/data | Support owner David Haile confirmed; coverage, paging configuration and exercised alert route remain pending; approved production consent, privacy/retention/deletion/access policy; measured service indicators and provider-failure alerts; isolated cloud restore and rollback proof. `docs/operations/operational-readiness.json` remains blocked |
 
 The current GitHub metadata read-back found only `NOTION_SYNC_ENABLED` among
 repository variable names and no variables in `staging-zero-traffic-deployment`
@@ -130,8 +135,8 @@ do not ask for credentials in chat.
    passkey/recovery configuration and absence of server/delegated signers.
    Deposits and transfers remain unavailable in API and UI.
 5. **Roll out 5 → 25 → 100.** Before each increase, record the current count,
-   exact release, previous-cohort acceptance, working alert delivery and named
-   support owner. Proposed launch thresholds: zero unauthorized access or
+   exact release, previous-cohort acceptance, working alert delivery and
+   support-owner availability (David Haile). Proposed launch thresholds: zero unauthorized access or
    duplicate wallet mappings; page immediately on either, and on sustained
    onboarding/provider failures. Approve measured availability/latency and
    pending-KYC age targets before admitting users; do not invent coverage or
