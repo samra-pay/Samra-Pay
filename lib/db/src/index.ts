@@ -96,3 +96,4 @@ export * from "./postgres-customer-identity";
 export * from "./postgres-customer-funnel";
 export * from "./postgres-customer-wallet";
 export * from "./postgres-marketing-waitlist";
+export * from "./postgres-alpha-access";

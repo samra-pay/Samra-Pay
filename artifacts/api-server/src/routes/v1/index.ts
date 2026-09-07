@@ -103,6 +103,8 @@ import { DomainError, parseMinor } from "@workspace/remittance";
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import {
+  AlphaAccessDeniedError,
+  AlphaAdmissionRequiredError,
   CustomerIdentityCaseNotFoundError,
   CustomerWalletNotFoundError,
   WorkforceAuthenticationError,
@@ -232,6 +234,42 @@ export function createV1Router(
 ): Router {
   const router = Router();
 
+  if (config.releaseProfile === "alpha-release-1") {
+    if (
+      config.customerAuth.mode !== "auth0" ||
+      !runtime.customerAlphaAccessStore ||
+      config.runWorker ||
+      config.devControlsEnabled ||
+      config.internalOperationsEnabled
+    ) {
+      throw new Error(
+        "Alpha Release 1 requires durable admission and disabled financial controls.",
+      );
+    }
+    // Explicit surface: newly added routes cannot silently introduce a money capability.
+    const allowed = new Set([
+      "GET /me",
+      "GET /onboarding",
+      "POST /onboarding",
+      "POST /onboarding/consents",
+      "GET /onboarding/identity",
+      "POST /onboarding/identity",
+      "GET /onboarding/wallet",
+      "POST /onboarding/wallet",
+    ]);
+    router.use((req, _res, next) => {
+      const path = req.path.toLowerCase().replace(/\/$/u, "");
+      next(
+        allowed.has(`${req.method} ${path}`)
+          ? undefined
+          : new DomainError(
+              "NOT_FOUND",
+              "This capability is unavailable in Alpha Release 1.",
+            ),
+      );
+    });
+  }
+
   router.post(
     "/waitlist/subscriptions",
     asyncRoute(async (req, res) => {
@@ -324,6 +362,21 @@ export function createV1Router(
         }
       }),
     );
+
+    if (config.releaseProfile === "alpha-release-1") {
+      router.use(
+        asyncRoute(async (req, _res, next) => {
+          try {
+            await runtime.customerAlphaAccessStore!.assertAuth0Access(
+              verifiedAuth0Identity(req, auth0Config),
+            );
+            next();
+          } catch (error) {
+            throw translateOnboardingAccessError(error);
+          }
+        }),
+      );
+    }
 
     router.get(
       "/onboarding",
@@ -1434,6 +1487,12 @@ function verifiedAuth0Identity(
 }
 
 function translateOnboardingAccessError(error: unknown): unknown {
+  if (error instanceof AlphaAccessDeniedError) {
+    return new CustomerAccessRestrictedError();
+  }
+  if (error instanceof AlphaAdmissionRequiredError) {
+    return new CustomerIdentityUnboundError();
+  }
   if (error instanceof CustomerOnboardingNotFoundError) {
     return new CustomerIdentityUnboundError();
   }

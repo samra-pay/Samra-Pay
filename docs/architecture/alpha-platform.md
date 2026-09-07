@@ -1,5 +1,14 @@
 # Alpha platform and vendor boundary
 
+## Current delivery milestone
+
+[Alpha Release 1](alpha-release-1.md), accepted 2026-09-06, is invite-only
+registration, login, KYC and a customer-controlled production wallet for up to
+100 users. Deposits and transfers remain unavailable. The broader financial
+architecture below remains an invariant and future scope; it is not the Release
+1 feature list. Use the linked implementation scope for the active sequence,
+configuration blockers and staged acceptance.
+
 ## Decision
 
 The Alpha vendor stack is Auth0 for customer authentication, Persona for KYC,

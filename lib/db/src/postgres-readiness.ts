@@ -33,19 +33,49 @@ type ReadinessQueryable = Pick<pg.Pool, "query">;
  */
 export async function assertPostgresRuntimeReady(
   pool: ReadinessQueryable,
-  options: Readonly<{ customerControlledSandboxWallets?: boolean }> = {},
+  options: Readonly<{
+    customerControlledSandboxWallets?: boolean;
+    alphaReleaseAdmission?: boolean;
+  }> = {},
 ): Promise<void> {
   const result = await pool.query<{ relation_name: string }>(
     `SELECT relation_name
        FROM unnest($1::text[]) AS required(relation_name)
       WHERE to_regclass(relation_name) IS NULL
       ORDER BY relation_name`,
-    [REQUIRED_RUNTIME_RELATIONS],
+    [
+      [
+        ...REQUIRED_RUNTIME_RELATIONS,
+        ...(options.alphaReleaseAdmission
+          ? [
+              "samra_core.alpha_release_controls",
+              "samra_core.alpha_invitations",
+              "samra_core.alpha_admissions",
+            ]
+          : []),
+      ],
+    ],
   );
   if (result.rows.length > 0) {
     throw new Error(
       `PostgreSQL schema is not ready; ${result.rows.length} required relation(s) are missing.`,
     );
+  }
+  if (options.alphaReleaseAdmission) {
+    const guards = await pool.query<{ ready: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM samra_core.alpha_release_controls
+                       WHERE release_id = 'alpha-release-1') AND
+         EXISTS (SELECT 1 FROM pg_trigger
+                  WHERE tgrelid = 'samra_core.alpha_admissions'::regclass
+                    AND tgname = 'alpha_admission_immutability_guard'
+                    AND tgenabled = 'O' AND NOT tgisinternal) AND
+         EXISTS (SELECT 1 FROM pg_trigger
+                  WHERE tgrelid = 'samra_core.alpha_invitations'::regclass
+                    AND tgname = 'alpha_invitation_identity_guard'
+                    AND tgenabled = 'O' AND NOT tgisinternal) AS ready`,
+    );
+    if (guards.rows[0]?.ready !== true)
+      throw new Error("PostgreSQL alpha admission migration is not ready.");
   }
   if (options.customerControlledSandboxWallets) {
     const guards = await pool.query<{ ready: boolean }>(

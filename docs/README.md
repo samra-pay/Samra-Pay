@@ -25,7 +25,17 @@ Migration, revision-probe and operational acceptance remain open. The release
 freeze remains active pending the remaining cutover and
 release evidence.
 
-## Alpha north star
+## Active milestone: Alpha Release 1
+
+On 2026-09-06, David narrowed the next product milestone to **up to 100 invited
+users completing Auth0 login, Persona KYC and a production customer-controlled
+wallet**, with the same account/wallet after returning. Deposits and transfers
+remain unavailable. The [implementation scope and active delivery sequence](architecture/alpha-release-1.md)
+records reuse, the first admission-code changes, exact production blockers and
+one-user proof followed by 5 → 25 → 100 rollout. Production is still blocked.
+This changes delivery priority, not the historical evidence or readiness gates.
+
+## Broader Alpha architecture
 
 Samra Pay's Alpha is a synthetic-first remittance product with a Samra-owned
 customer record, double-entry control ledger, audit history, reconciliation,
@@ -78,7 +88,7 @@ explicit approval for that scope. None of these states implies another.
   console wallet/GET, undeployed API, private PostgreSQL, and unresolved TLS.
   The Sept 5 [migration foundation follow-through](operations/staging-migration-foundation.md)
   records an access blocker. Neither record authorizes another provider call.
-- **Next backend milestone:** one authenticated, consenting test customer's
+- **Supporting sandbox milestone:** one authenticated, consenting test customer's
   durable wallet creation and replay/restart evidence. Follow the
   [private deployment package](operations/staging-wallet-deployment-package.md)
   and [governed migrations](operations/staging-migrations.md); source availability
