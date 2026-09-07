@@ -12,6 +12,22 @@ Alpha support owner: **David Haile**, explicitly accepted in the main task on
 paging destination and successful alert-delivery/acknowledgement evidence remain
 pending before rollout; this assignment does not establish a staffed rotation.
 
+## Current execution priority — 2026-09-07
+
+David paused Persona production activation while the incorporation document
+needed for submission is unavailable. Continue Auth0 registration, invitation
+eligibility, login/logout, managed password recovery and account isolation first.
+Keep the existing Persona implementation in
+[#190](https://github.com/samra-pay/Samra-Pay/pull/190); do not replace it or
+bypass KYC. Production wallet creation remains gated on approved KYC, and
+deposits/transfers remain unavailable. Auth0 account access alone is not the
+Release 1 acceptance milestone.
+
+The [web Auth0 activation record](../operations/web-auth0-entry-activation.md#auth0-first-read-back--2026-09-07)
+contains the current development-tenant inventory, session fixes and exact
+remaining acceptance work. Reuse the existing applications and managed provider
+flows. No new release framework is required for this slice.
+
 ## Release outcome and boundaries
 
 Up to 100 invited users can register, sign in, complete KYC, and create a
@@ -153,9 +169,9 @@ do not ask for credentials in chat.
    mark unconfigured alerts as working. Any failed criterion holds the batch;
    pause admission and reconcile outstanding commands before resuming.
 
-The admission foundation is merged; the current delivery unit restricts runtime
-database authority and records the accepted support owner. The next
-milestone is the one-user production proof; there is no promised launch date
+The admission foundation and runtime database restrictions are merged in
+#188 and #189. The current delivery unit is Auth0 account access; the release
+milestone remains the one-user production proof. There is no promised launch date
 until provider, data and operational blockers have owners and evidence. Keep
 the existing CI/readiness gates and release traceability. Add release-framework
 code only to resolve a demonstrated blocker to this customer journey.

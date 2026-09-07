@@ -2,8 +2,10 @@
 
 Status: Auth0 is the locked Alpha customer-authentication vendor. The durable
 backend, customer-web, and native-mobile boundaries are implemented and
-disabled by default. No live tenant, application, credential, customer token,
-or custom native build is connected.
+disabled by default. Development tenant/application registrations exist; the
+2026-09-07 [web activation read-back](../operations/web-auth0-entry-activation.md#auth0-first-read-back--2026-09-07)
+found the web callback/logout/origin lists empty. A connected customer runtime,
+live account journey and custom native build remain unverified.
 
 ## Decision
 
@@ -31,7 +33,7 @@ This foundation delivers:
 - tests for configuration, route enforcement, spoof resistance, binding concurrency, idempotency, conflict, and audit redaction.
 
 It does not create or configure an Auth0 tenant, enable production traffic,
-provision real customers, ingest Auth0 logs, implement account recovery,
+provision real customers, ingest Auth0 logs, implement compromised-account recovery,
 create or distribute a custom native build, connect mobile Auth0 to a client,
 connect live Persona or Crossmint, change Replit, or store real customer data.
 The wider Alpha sequence is governed by
@@ -82,6 +84,21 @@ renders. The SDK uses Authorization Code with PKCE, a memory-only cache, and a
 fresh access-token lookup per API request. Samra code does not persist access,
 refresh, or ID tokens in local storage, session storage, IndexedDB, URLs,
 analytics, or application state.
+
+The customer web login page links to Auth0-managed password recovery through
+Universal Login. Samra does not collect a password, generate a reset ticket or
+change an identity binding. A password reset must return to the same Auth0
+subject and Samra account. Social-provider recovery stays with that provider;
+matching email addresses never authorize account linking.
+
+Web session start, sign-in handoff, logout and teardown clear the customer
+query/mutation cache. Pending token lookups from an ended session are rejected,
+including when provider logout fails. Obsolete initialization errors cannot
+clear a newer session. A separate query client per session prevents late
+mutation callbacks from writing into a subsequent session's cache.
+These local controls do not revoke an already issued
+API token or undo a request already accepted by the server; server identity
+revocation and customer restrictions remain authoritative.
 
 Create a separate Auth0 **Single Page Application** for the customer web. Its
 Allowed Callback URL and Allowed Logout URL must exactly equal the deployed

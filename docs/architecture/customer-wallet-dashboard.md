@@ -9,8 +9,10 @@ The authenticated customer build has a read-only `/wallet` route, linked from
 wallet-ready onboarding. It adapts the dashboard, wallet-details and activity
 composition from Crossmint's fintech starter at
 `742d12bbad5d74b68bc7564e474ad4853bb347f3` into Samra's React/Vite application
-and shared design system. The upstream MIT notice ships at
-`/licenses/crossmint-fintech-starter.txt`.
+and shared design system. The upstream MIT notice ships in the customer build
+at `/licenses/crossmint-fintech-starter.txt`. It is emitted from
+`artifacts/samra-pay/licenses/` only for that build; the isolated public
+marketing preview retains its existing asset allowlist.
 
 Auth0 remains the sign-in boundary. On each page entry or refresh the page
 checks Samra onboarding before retrieving the caller's normalized wallet.

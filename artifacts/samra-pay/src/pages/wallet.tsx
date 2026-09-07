@@ -1,5 +1,5 @@
 // Dashboard composition adapted from Crossmint's fintech starter.
-// See public/licenses/crossmint-fintech-starter.txt for provenance and license.
+// See licenses/crossmint-fintech-starter.txt for provenance and license.
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSamraOnboardingRuntime } from "@workspace/samra-client/react";
