@@ -124,9 +124,11 @@ Web and mobile now use the shared Samra onboarding source to:
   enabled.
 
 The clients never import generated operation names, persist wallet state, or
-receive provider wallet references. API-mode wallet readiness returns to the
-non-financial product surface. Only explicit mock mode can continue into the
-synthetic dashboard.
+receive provider wallet references. API-mode wallet readiness can open the
+[read-only wallet dashboard](customer-wallet-dashboard.md), showing the
+normalized record and any supplied public address. Balance and wallet activity
+remain unavailable because the current contract does not supply them. Only
+explicit mock mode can continue into the synthetic financial dashboard.
 
 ## Events and accounting
 

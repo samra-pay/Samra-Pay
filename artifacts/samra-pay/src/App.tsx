@@ -39,6 +39,7 @@ import { useSamraCustomerAcquisition } from "@workspace/samra-client/react";
 
 const queryClient = new QueryClient();
 const CustomerOnboardingPage = lazy(() => import("@/pages/onboarding"));
+const CustomerWalletPage = lazy(() => import("@/pages/wallet"));
 
 function DashboardRouter() {
   const params = useParams();
@@ -112,6 +113,20 @@ function Router() {
           </CustomerAuthGuard>
         </Route>
 
+        <Route path="/wallet">
+          <CustomerAuthGuard>
+            <RoutedErrorBoundary>
+              <Suspense
+                fallback={
+                  <OnboardingRouteFallback label="Loading your wallet…" />
+                }
+              >
+                <CustomerWalletPage />
+              </Suspense>
+            </RoutedErrorBoundary>
+          </CustomerAuthGuard>
+        </Route>
+
         {/* Dashboard Routes - simplified for demo */}
         <Route path="/dashboard">
           <CustomerAuthGuard>
@@ -171,11 +186,15 @@ function isPublicMarketingRoute(location: string): boolean {
   );
 }
 
-function OnboardingRouteFallback() {
+function OnboardingRouteFallback({
+  label = "Loading secure onboarding…",
+}: {
+  label?: string;
+}) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <p role="status" className="text-sm text-muted-foreground">
-        Loading secure onboarding…
+        {label}
       </p>
     </main>
   );

@@ -113,6 +113,7 @@ explicit approval for that scope. None of these states implies another.
 - [Cloud Run service authentication](architecture/cloud-run-service-authentication.md)
 - [Persona identity case](architecture/customer-identity-persona.md)
 - [Crossmint USDC wallet boundary](architecture/customer-wallet-crossmint.md)
+- [Read-only customer wallet dashboard](architecture/customer-wallet-dashboard.md)
 - [Dated Crossmint sandbox evidence](operations/crossmint-sandbox-connection.md)
 - [Private wallet deployment package](operations/staging-wallet-deployment-package.md)
 

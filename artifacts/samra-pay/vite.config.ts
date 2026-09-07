@@ -1,4 +1,4 @@
-import { unlink } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 import path from "path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -22,6 +22,22 @@ if (webSurface !== "public" && webSurface !== "legacy") {
 
 const legacyEntryPlugin = {
   name: "samra-web-surface-entry",
+  async generateBundle() {
+    if (webSurface !== "legacy") return;
+    // This notice belongs to the customer wallet composition. Do not copy
+    // customer-only artifacts into the isolated public marketing bundle.
+    this.emitFile({
+      type: "asset",
+      fileName: "licenses/crossmint-fintech-starter.txt",
+      source: await readFile(
+        path.resolve(
+          import.meta.dirname,
+          "licenses/crossmint-fintech-starter.txt",
+        ),
+        "utf8",
+      ),
+    });
+  },
   transformIndexHtml: {
     order: "pre" as const,
     handler(html: string) {

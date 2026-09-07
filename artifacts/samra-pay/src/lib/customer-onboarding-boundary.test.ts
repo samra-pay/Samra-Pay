@@ -89,7 +89,9 @@ describe("web customer-onboarding trust boundary", () => {
 
   it("uses link semantics without nesting a button inside an anchor", () => {
     expect(onboardingSource).toContain("<Button asChild");
-    expect(onboardingSource).not.toMatch(/<Link[^>]*>[\s\S]{0,120}<Button/);
+    expect(onboardingSource).not.toMatch(
+      /<Link\b[^>]*>(?:(?!<\/Link>)[\s\S])*<Button\b/,
+    );
   });
 });
 
