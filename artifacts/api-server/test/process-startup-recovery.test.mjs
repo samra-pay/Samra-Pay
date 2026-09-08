@@ -6,16 +6,19 @@ import test from "node:test";
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
-test("compiled API serves probes and drains cleanly on SIGTERM", async () => {
+test("compiled disabled API serves probes without a database and drains cleanly on SIGTERM", async () => {
   let running;
   try {
-    running = await startApi({ persistenceMode: "memory" });
+    running = await startApi({ backendMode: "disabled" });
     assert.deepEqual(await getJson(running.origin, "/api/healthz"), {
       status: "ok",
     });
     assert.deepEqual(await getJson(running.origin, "/api/readyz"), {
       status: "ready",
     });
+    const financial = await fetch(`${running.origin}/api/v1/accounts`);
+    assert.equal(financial.status, 503);
+    await financial.arrayBuffer();
     await stopApi(running);
     running = undefined;
   } finally {
@@ -143,7 +146,7 @@ async function availablePort() {
   return port;
 }
 
-async function startApi({ persistenceMode = "postgres" } = {}) {
+async function startApi({ backendMode = "demo" } = {}) {
   const port = await availablePort();
   const logs = [];
   const child = spawn(
@@ -153,14 +156,12 @@ async function startApi({ persistenceMode = "postgres" } = {}) {
       cwd: new URL("..", import.meta.url),
       env: {
         ...process.env,
-        ...(persistenceMode === "postgres"
-          ? { DATABASE_URL: connectionString }
-          : {}),
+        DATABASE_URL: backendMode === "demo" ? connectionString : undefined,
         NODE_ENV: "production",
         PORT: String(port),
-        SAMRA_BACKEND_MODE: "demo",
+        SAMRA_BACKEND_MODE: backendMode,
         SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
-        SAMRA_PERSISTENCE_MODE: persistenceMode,
+        SAMRA_PERSISTENCE_MODE: "postgres",
         SAMRA_PROVIDER_MODE: "fake",
         SAMRA_RUN_WORKER: "false",
       },
