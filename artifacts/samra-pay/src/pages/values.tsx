@@ -162,8 +162,8 @@ export default function Values() {
               <h1 id="values-title">
                 {text(
                   localized(
-                    "Life here. Love back home. Values that connect both.",
-                    "ኑሮ እዚህ። ፍቅር በትውልድ አገር። ሁለቱንም የሚያገናኙ እሴቶች።",
+                    "Life lived here. Family back home. Samra connecting both",
+                    "ኑሮ እዚህ። ቤተሰብ በትውልድ አገር። ሳምራ ሁለቱንም ያገናኛል።",
                   ),
                 )}
               </h1>
