@@ -256,3 +256,32 @@ Stop before live enablement if any of these are unresolved:
 - no privacy and retention decision for Auth0 and Persona evidence;
 - any route accepts a client-provided customer ID as authorization;
 - any token or Auth0 secret appears in Git, logs, screenshots, analytics, or shared documents.
+
+## API network boundary
+
+`SAMRA_ALLOWED_ORIGINS` is a comma-separated list of canonical bare HTTPS
+origins (for example `https://app.example.test,https://ops.example.test:8443`).
+Do not include a trailing slash, credentials, path, query or fragment. Empty or
+unset denies browser requests carrying an Origin; there is no wildcard or
+reflection fallback. Alpha Release 1 refuses startup without at least one
+origin. An allowed origin receives CORS headers and preflight handling; unknown
+origins receive 403 before cookies, webhook parsing or application writes.
+Origin-less native/server requests retain their existing route authentication.
+CORS is not authentication and cannot prevent arbitrary non-browser traffic.
+
+`SAMRA_TRUSTED_PROXIES` defaults to disabled (empty or `false`), including local
+and test runs. Set only reviewed proxy IPs or bounded CIDRs, comma separated.
+Blanket trust, hop counts, host aliases and `/0` are rejected. Before any Cloud
+Run release, verify the actual ingress chain, which proxies overwrite forwarded
+headers, and the rightmost untrusted address returned by Express. No Cloud Run
+hop count or proxy range is assumed here; deployment configuration and ingress
+changes remain separately authorized work. IP addresses are not added to logs.
+
+Helmet runs immediately after the HTTP logger with HSTS, nosniff, frame denial
+and no-referrer; CSP is disabled for the JSON API. The public POST routes have
+independent IP backstops: waitlist subscriptions allow 10 requests per 15 minutes,
+and acquisition events allow 60 per minute. Rejected/invalid requests count;
+429 responses include Retry-After and a problem response. The default store is
+in-process and counts **per instance**, so it does not bound aggregate volume
+under Cloud Run autoscaling or survive restarts. No global limiter or Persona
+webhook limiter is applied. Shared/edge limiting and Cloud Armor are out of scope.
