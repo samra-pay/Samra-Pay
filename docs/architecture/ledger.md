@@ -5,6 +5,14 @@ wallet decision is Crossmint USDC, but the custody, token-versus-USD accounting,
 funding, and payout structure must be approved before this chart is promoted to
 live financial accounting.
 
+## Runtime authority
+
+Enabled API/demo runtimes use the existing PostgreSQL ledger composition.
+`@workspace/ledger` exposes types and errors; its in-memory repository is an
+explicit test fixture only. `DemoLedgerAdapter` has no default repository and
+cannot seed an implicit runtime ledger. See the [persistence boundary](../backend-persistence.md)
+for startup and fixture rules. This does not authorize live financial accounting.
+
 ## Model
 
 The ledger is double-entry, append-only and single-currency per journal.

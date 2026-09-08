@@ -150,7 +150,7 @@ import type { AlphaAccessStore } from "@workspace/db";
 
 export type DemoRuntimeDependencies = Readonly<{
   repository?: RemittanceRepository;
-  ledger?: DemoBalanceLedger;
+  ledger: DemoBalanceLedger;
   unitOfWork?: RemittanceUnitOfWork;
   reconciliationStore?: ReconciliationStore;
   beneficiaryStore?: BeneficiaryStore;
@@ -207,7 +207,7 @@ export class DemoRuntime {
   #closePromise?: Promise<void>;
   #reconciliationSequence = 0;
 
-  constructor(dependencies: DemoRuntimeDependencies = {}) {
+  constructor(dependencies: DemoRuntimeDependencies) {
     this.actorResolver =
       dependencies.actorResolver ?? new SeededActorResolver();
     this.beneficiaryActorResolver =
@@ -216,8 +216,8 @@ export class DemoRuntime {
       dependencies.customerAuthenticationMode ?? "seeded-demo";
     this.repository =
       dependencies.repository ?? new InMemoryRemittanceRepository();
-    this.ledger = (dependencies.ledger ??
-      new DemoLedgerAdapter()) as DemoLedgerAdapter;
+    if (!dependencies.ledger) throw new Error("An explicit ledger is required.");
+    this.ledger = dependencies.ledger as DemoLedgerAdapter;
     this.#unitOfWork = dependencies.unitOfWork;
     this.workforceAuthStore = dependencies.workforceAuthStore;
     this.operationsCaseStore = dependencies.operationsCaseStore;

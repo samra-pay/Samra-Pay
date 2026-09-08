@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import test, { type TestContext } from "node:test";
 import { createApp } from "./app";
 import { loadApiRuntimeConfig } from "./config";
-import { DemoRuntime } from "./domain/demo-runtime";
+import { TestDemoRuntime } from "../test/fixtures/demo-runtime";
 
 async function listen(t: TestContext, server: Server) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -131,7 +131,7 @@ test("public write limits are separate per route and instance, with no global or
   const makeApp = () =>
     createApp(
       loadApiRuntimeConfig({ NODE_ENV: "test", SAMRA_BACKEND_MODE: "demo" }),
-      new DemoRuntime({
+      new TestDemoRuntime({
         customerFunnelStore: {
           recordEvent: unexpectedWrite,
           bindAuth0Session: unexpectedWrite,

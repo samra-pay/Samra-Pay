@@ -1,8 +1,8 @@
+import { TestDemoRuntime } from "../test/fixtures/demo-runtime";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { loadApiRuntimeConfig } from "./config";
 import { createApp } from "./app";
-import { DemoRuntime } from "./domain/demo-runtime";
 
 const environment = {
   NODE_ENV: "test",
@@ -38,7 +38,7 @@ test("alpha profile disables developer decisions and cannot run financial worker
 
 test("alpha router fails closed when durable access is not wired", () => {
   assert.throws(
-    () => createApp(loadApiRuntimeConfig(environment), new DemoRuntime()),
+    () => createApp(loadApiRuntimeConfig(environment), new TestDemoRuntime()),
     /requires durable admission/,
   );
 });

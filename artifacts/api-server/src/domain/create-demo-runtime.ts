@@ -36,8 +36,10 @@ import {
 export function createConfiguredDemoRuntime(
   config: ApiRuntimeConfig,
 ): DemoRuntime {
-  if ((config.persistenceMode ?? "memory") === "memory") {
-    return new DemoRuntime();
+  if (config.persistenceMode !== "postgres") {
+    throw new Error(
+      "The demo backend requires SAMRA_PERSISTENCE_MODE=postgres. Use SAMRA_BACKEND_MODE=disabled for health endpoints without a database.",
+    );
   }
   const connection = createDatabase();
   const context = new PostgresPersistenceContext(connection.pool);

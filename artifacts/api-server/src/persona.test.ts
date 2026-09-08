@@ -1,3 +1,4 @@
+import { TestDemoRuntime } from "../test/fixtures/demo-runtime";
 import assert from "node:assert/strict";
 import { createHash, createHmac } from "node:crypto";
 import type { Server } from "node:http";
@@ -12,7 +13,6 @@ import type {
   ApiRuntimeConfig,
   CustomerIdentityProviderConfig,
 } from "./config";
-import { DemoRuntime } from "./domain/demo-runtime";
 import {
   PersonaSandboxAdapter,
   PersonaWebhookAuthenticationError,
@@ -262,7 +262,7 @@ test("Persona webhook HTTP boundary needs no customer token, stores digest-only 
     webhookSecrets: [CURRENT_SECRET, PREVIOUS_SECRET],
     clock: () => NOW_MILLISECONDS,
   });
-  const runtime = new DemoRuntime({ personaWebhookService: service });
+  const runtime = new TestDemoRuntime({ personaWebhookService: service });
   const rawBody = decisionEvent("inquiry.approved", "approved");
   const signature = signatureHeader(rawBody, CURRENT_SECRET, NOW_SECONDS);
 
@@ -319,7 +319,7 @@ test("Persona webhook HTTP boundary needs no customer token, stores digest-only 
 
 test("Persona webhook route is indistinguishable from a missing route when disabled", async () => {
   const rawBody = decisionEvent("inquiry.approved", "approved");
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const response = await rawRequest(
       origin,
       rawBody,
@@ -390,7 +390,7 @@ async function rawRequest(
 
 async function withServer(
   config: ApiRuntimeConfig,
-  runtime: DemoRuntime,
+  runtime: TestDemoRuntime,
   run: (origin: string) => Promise<void>,
 ): Promise<void> {
   const app = createApp(config, runtime);
