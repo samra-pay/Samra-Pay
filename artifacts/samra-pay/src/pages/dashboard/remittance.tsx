@@ -162,8 +162,8 @@ function todayLabel(): string {
 }
 
 const INITIAL_TRANSFERS: Transfer[] = [
-  { id: 1, recipient: "Abebe Bekele", location: "Addis Ababa, ET", date: "Jun 12, 2024", usd: 500, etb: 90000, status: "Completed", deliveryMethod: "bank", bankId: "cbe", accountNumber: "10000123456789" },
-  { id: 2, recipient: "Tigist Haile",  location: "Hawassa, ET",     date: "May 28, 2024", usd: 300, etb: 54000, status: "Completed", deliveryMethod: "bank", bankId: "awash", accountNumber: "20000987654321" },
+  { id: 1, recipient: "Abebe Bekele", location: "Addis Ababa, ET", date: "Jun 12, 2024", usd: 500, etb: 90000, status: "Completed", deliveryMethod: "bank" },
+  { id: 2, recipient: "Tigist Haile",  location: "Hawassa, ET",     date: "May 28, 2024", usd: 300, etb: 54000, status: "Completed", deliveryMethod: "bank" },
 ];
 
 const DEMO_BALANCE_INITIAL = 4250;
@@ -216,22 +216,8 @@ export function DashboardRemittance() {
   const [savedRecipientId, setSavedRecipientId]   = useState<number | null>(null);
 
   // ── Address book (separate from immutable transfer history) ─────────────────
-  const [addressBook, setAddressBook] = useState<AddressBookEntry[]>(() =>
-    loadTransfers(INITIAL_TRANSFERS).reduce<AddressBookEntry[]>((acc, t) => {
-      if (!acc.some(e => e.name === t.recipient))
-        acc.push({
-          id: t.id,
-          name: t.recipient,
-          location: t.location,
-          deliveryMethod: t.deliveryMethod,
-          bankId: t.bankId,
-          accountNumber: t.accountNumber,
-          walletId: t.walletId,
-          phoneNumber: t.phoneNumber,
-        });
-      return acc;
-    }, []),
-  );
+  // Delivery details are available only while this page remains mounted.
+  const [addressBook, setAddressBook] = useState<AddressBookEntry[]>([]);
 
   // ── Address book: inline edit state (tracked by ID, not name) ──────────────
   const [editingId, setEditingId]         = useState<number | null>(null);
@@ -244,7 +230,7 @@ export function DashboardRemittance() {
   // Demo balance (deducted on confirm when paying from balance)
   const [demoBalance, setDemoBalance] = useState<number>(DEMO_BALANCE_INITIAL);
 
-  // Transfer history — persisted to localStorage so saved recipients survive page refresh
+  // Transfer history persists display fields only; delivery details remain in memory
   const [transfers, setTransfers] = useState<Transfer[]>(() =>
     loadTransfers(INITIAL_TRANSFERS),
   );
@@ -284,11 +270,7 @@ export function DashboardRemittance() {
       usd: parsedUsdAmount,
       etb: recipientEtb,
       status: "Completed",
-      // persist delivery details so the form can be pre-filled on re-use
       deliveryMethod,
-      ...(deliveryMethod === "bank"
-        ? { bankId, accountNumber }
-        : { walletId, phoneNumber }),
     };
     setTransfers(prev => [newTransfer, ...prev]);
     // Add to address book only if this name isn't already saved
@@ -301,10 +283,9 @@ export function DashboardRemittance() {
             name: trimmedName,
             location: newTransfer.location,
             deliveryMethod: newTransfer.deliveryMethod,
-            bankId: newTransfer.bankId,
-            accountNumber: newTransfer.accountNumber,
-            walletId: newTransfer.walletId,
-            phoneNumber: newTransfer.phoneNumber,
+            ...(deliveryMethod === "bank"
+              ? { bankId, accountNumber }
+              : { walletId, phoneNumber }),
           }, ...prev],
     );
     if (paymentMethod === "balance") {
