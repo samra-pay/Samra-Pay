@@ -76,6 +76,11 @@ const forbiddenCredentialContent = [
 ];
 
 const allowedNetworkOrigins = new Set([
+  // Verified public social profiles linked from the footer.
+  "https://www.facebook.com",
+  "https://www.instagram.com",
+  "https://www.youtube.com",
+  "https://x.com",
   "http://sodipodi.sourceforge.net",
   "http://www.inkscape.org",
   "http://www.w3.org",

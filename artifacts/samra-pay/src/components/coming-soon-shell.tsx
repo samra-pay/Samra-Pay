@@ -11,12 +11,12 @@ const publicNavigation = [
 ];
 
 const socialLinks = [
-  { label: "Facebook", href: import.meta.env.VITE_SAMRA_SOCIAL_FACEBOOK_URL },
-  { label: "Instagram", href: import.meta.env.VITE_SAMRA_SOCIAL_INSTAGRAM_URL },
+  { label: "Facebook", href: import.meta.env.VITE_SAMRA_SOCIAL_FACEBOOK_URL ?? "https://www.facebook.com/profile.php?id=61593951883521" },
+  { label: "Instagram", href: import.meta.env.VITE_SAMRA_SOCIAL_INSTAGRAM_URL ?? "https://www.instagram.com/trysamrapay/" },
   { label: "TikTok", href: import.meta.env.VITE_SAMRA_SOCIAL_TIKTOK_URL },
-  { label: "X", href: import.meta.env.VITE_SAMRA_SOCIAL_X_URL },
+  { label: "X", href: import.meta.env.VITE_SAMRA_SOCIAL_X_URL ?? "https://x.com/Samrapay" },
   { label: "LinkedIn", href: import.meta.env.VITE_SAMRA_SOCIAL_LINKEDIN_URL },
-  { label: "YouTube", href: import.meta.env.VITE_SAMRA_SOCIAL_YOUTUBE_URL },
+  { label: "YouTube", href: import.meta.env.VITE_SAMRA_SOCIAL_YOUTUBE_URL ?? "https://www.youtube.com/@SamraPay" },
 ];
 
 export function ComingSoonLogo({ dark = false }: { dark?: boolean }) {
