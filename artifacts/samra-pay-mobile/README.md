@@ -96,3 +96,13 @@ failure, cancellation, and refund effects do not remain stale. Cards and
 rewards show an explicit unavailable state in API mode until their own backend
 sources exist. None of these API-mode screens fall back to mobile fixtures when
 the API is unavailable.
+
+## Native module and permission scope
+
+The application does not use device location or photo-library selection.
+`expo-location` and `expo-image-picker` are not dependencies; `app.json` and
+the dynamic Expo configuration contain no plugins or usage descriptions for
+those capabilities. Adding either capability requires an explicit product need
+and review of the resulting native permissions and privacy declarations.
+Dependency removal alone does not verify a previously distributed native build;
+this change takes effect in a subsequent separately authorized build/release.
