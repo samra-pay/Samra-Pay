@@ -7,7 +7,7 @@ import {
   InvalidLedgerInputError,
   JournalAlreadyReversedError,
   NotFoundError,
-} from "./errors.js";
+} from "../../src/errors.js";
 import type {
   AccountBalance,
   AccountType,
@@ -32,7 +32,7 @@ import type {
   PostJournalCommand,
   ReleasedLedgerHold,
   ReverseJournalCommand,
-} from "./types.js";
+} from "../../src/types.js";
 
 type IdempotencyRecord =
   | {

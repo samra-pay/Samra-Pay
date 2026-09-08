@@ -1,7 +1,4 @@
-import {
-  InMemoryLedgerRepository,
-  type LedgerRepository,
-} from "@workspace/ledger";
+import type { LedgerRepository } from "@workspace/ledger";
 import type { LedgerControlPort } from "@workspace/remittance";
 
 export const DEMO_LEDGER_ACCOUNT_IDS = Object.freeze({
@@ -25,7 +22,7 @@ export class DemoLedgerAdapter implements LedgerControlPort {
   readonly repository: LedgerRepository;
   readonly #records = new Map<string, TransferAccountingRecord>();
 
-  constructor(repository: LedgerRepository = new InMemoryLedgerRepository()) {
+  constructor(repository: LedgerRepository) {
     this.repository = repository;
     this.#seed();
   }

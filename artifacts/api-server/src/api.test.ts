@@ -1,3 +1,4 @@
+import { TestDemoRuntime } from "../test/fixtures/demo-runtime";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
@@ -8,7 +9,6 @@ import { createApp } from "./app";
 import type { ApiRuntimeConfig } from "./config";
 import {
   DEMO_ACTOR,
-  DemoRuntime,
   type PublicTransferDemoScenario,
 } from "./domain/demo-runtime";
 import { DEMO_LEDGER_ACCOUNT_IDS } from "./domain/demo-ledger";
@@ -109,7 +109,7 @@ test("health remains available while disabled mode returns a stable 503 problem"
 });
 
 test("public waitlist records explicit consent idempotently and rejects extra tracking data", async () => {
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const input = {
       email: "Founder@Example.Test",
       consent: true,
@@ -171,7 +171,7 @@ test("public waitlist records explicit consent idempotently and rejects extra tr
 });
 
 test("readiness fails closed without exposing persistence errors", async () => {
-  const runtime = new DemoRuntime({
+  const runtime = new TestDemoRuntime({
     readiness: async () => {
       throw new Error("postgresql://sensitive-host/internal-detail");
     },
@@ -189,7 +189,7 @@ test("readiness fails closed without exposing persistence errors", async () => {
 test("production-style demo mode does not mount dev controls", async () => {
   await withServer(
     { ...demoConfig, devControlsEnabled: false },
-    new DemoRuntime(),
+    new TestDemoRuntime(),
     async (origin) => {
       const me = await request(origin, "/api/v1/me");
       assert.equal(me.status, 200);
@@ -241,7 +241,7 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
     },
   };
   const resolver = new Auth0CustomerActorResolver(identities, issuer);
-  const runtime = new DemoRuntime({
+  const runtime = new TestDemoRuntime({
     actorResolver: resolver,
     beneficiaryActorResolver: resolver,
     customerAuthenticationMode: "auth0",
@@ -280,7 +280,7 @@ test("Auth0 mode protects customer routes, resolves the canonical customer, and 
   };
 
   assert.throws(
-    () => createApp(authConfig, new DemoRuntime()),
+    () => createApp(authConfig, new TestDemoRuntime()),
     /requires an Auth0-backed customer actor resolver/,
   );
   await withServer(authConfig, runtime, async (origin) => {
@@ -423,7 +423,7 @@ test("Auth0 onboarding starts and resumes before the financial-route authorizati
     },
   };
   const resolver = new Auth0CustomerActorResolver(identities, issuer);
-  const runtime = new DemoRuntime({
+  const runtime = new TestDemoRuntime({
     actorResolver: resolver,
     beneficiaryActorResolver: resolver,
     customerAuthenticationMode: "auth0",
@@ -577,7 +577,7 @@ test("acquisition capture is public and privacy-safe while customer binding rema
     },
   };
   const resolver = new Auth0CustomerActorResolver(identities, issuer);
-  const runtime = new DemoRuntime({
+  const runtime = new TestDemoRuntime({
     actorResolver: resolver,
     beneficiaryActorResolver: resolver,
     customerAuthenticationMode: "auth0",
@@ -701,7 +701,7 @@ test("acquisition capture is public and privacy-safe while customer binding rema
 });
 
 test("development controls reject scenarios from the wrong domain", async () => {
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const transferControl = await request(
       origin,
       "/api/v1/dev/remittance/transfers/not-used/scenario",
@@ -724,7 +724,7 @@ test("development controls reject scenarios from the wrong domain", async () => 
 });
 
 test("$100 + $3 quote, idempotency, polling, and ledger-derived balances stay exact", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const quote = await createQuote(origin, 10_000n);
     assert.deepEqual(quote["sendAmount"], {
@@ -848,7 +848,7 @@ test("$100 + $3 quote, idempotency, polling, and ledger-derived balances stay ex
 });
 
 test("SAMRA_RUN_WORKER mode advances pending fake transfers to completion", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(
     { ...demoConfig, runWorker: true },
     runtime,
@@ -875,7 +875,7 @@ test("SAMRA_RUN_WORKER mode advances pending fake transfers to completion", asyn
 });
 
 test("the worker preserves an explicitly selected failure scenario", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const transferId = await createTransferForScenario(origin);
     const selected = await advanceScenario(origin, transferId, "chapa_failure");
@@ -893,7 +893,7 @@ test("the worker preserves an explicitly selected failure scenario", async () =>
 });
 
 test("reconciliation changes each transfer from its own item classification", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const transferIds: string[] = [];
     for (const [index, amountMinor] of [10_000n, 5_000n].entries()) {
@@ -937,7 +937,7 @@ test("reconciliation changes each transfer from its own item classification", as
 });
 
 test("an over-balance transfer returns public INSUFFICIENT_FUNDS without internals", async () => {
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const quote = await createQuote(origin, 425_000n);
     const transfer = await createTransfer(
       origin,
@@ -955,7 +955,7 @@ test("an over-balance transfer returns public INSUFFICIENT_FUNDS without interna
 });
 
 test("concurrent commands cannot consume one quote or reserve its funds twice", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const quote = await createQuote(origin, 10_000n);
     const responses = await Promise.all([
@@ -985,7 +985,7 @@ test("concurrent commands cannot consume one quote or reserve its funds twice", 
 });
 
 test("quote creation rejects a beneficiary and delivery-rail mismatch", async () => {
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const response = await request(origin, "/api/v1/remittance/quotes", {
       method: "POST",
       body: {
@@ -1002,7 +1002,7 @@ test("quote creation rejects a beneficiary and delivery-rail mismatch", async ()
 });
 
 test("beneficiary CRUD is actor-owned, rail-safe, and soft-deleted", async () => {
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const seeded = await request(origin, "/api/v1/beneficiaries");
     assert.equal(seeded.status, 200);
     assert.deepEqual(
@@ -1114,7 +1114,7 @@ test("beneficiary CRUD is actor-owned, rail-safe, and soft-deleted", async () =>
 });
 
 test("cancel idempotency replays exactly and rejects key reuse for another transfer", async () => {
-  await withServer(demoConfig, new DemoRuntime(), async (origin) => {
+  await withServer(demoConfig, new TestDemoRuntime(), async (origin) => {
     const firstTransferId = await createTransferForScenario(origin);
     const cancelPath = `/api/v1/remittance/transfers/${firstTransferId}/cancel`;
     const first = await request(origin, cancelPath, {
@@ -1152,7 +1152,7 @@ test("cancel idempotency replays exactly and rejects key reuse for another trans
 });
 
 test("Caliza rejection releases the hold and posts no transfer journal", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const transferId = await createTransferForScenario(origin);
     const failed = await advanceScenario(
@@ -1174,7 +1174,7 @@ test("Caliza rejection releases the hold and posts no transfer journal", async (
 });
 
 test("payout failure reverses settlement then capture and restores the customer", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const transferId = await createTransferForScenario(origin);
     for (const expected of [
@@ -1198,7 +1198,7 @@ test("payout failure reverses settlement then capture and restores the customer"
 });
 
 test("post-completion settlement refund reverses fee, settlement, then capture", async () => {
-  const runtime = new DemoRuntime();
+  const runtime = new TestDemoRuntime();
   await withServer(demoConfig, runtime, async (origin) => {
     const transferId = await createTransferForScenario(origin);
     for (const expected of [
@@ -1287,7 +1287,7 @@ function moneyMinor(value: unknown): unknown {
 }
 
 function assertRestoredLedger(
-  runtime: DemoRuntime,
+  runtime: TestDemoRuntime,
   expectedReversals: number,
   expectFeeRecognition: boolean,
 ): void {
@@ -1359,7 +1359,7 @@ async function request(
 
 async function withServer(
   config: ApiRuntimeConfig,
-  runtime: DemoRuntime | undefined,
+  runtime: TestDemoRuntime | undefined,
   run: (origin: string) => Promise<void>,
   dependencies: Parameters<typeof createApp>[2] = {},
 ): Promise<void> {
@@ -1386,3 +1386,10 @@ async function withServer(
     }
   }
 }
+
+
+test("enabled runtime cannot silently fall back to an in-memory ledger", () => {
+  for (const persistenceMode of [undefined, "memory"] as const) {
+    assert.throws(() => createApp({ ...demoConfig, persistenceMode }), /requires SAMRA_PERSISTENCE_MODE=postgres/);
+  }
+});

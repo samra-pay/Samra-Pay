@@ -7,7 +7,10 @@
 > [documentation index](README.md) and
 > [Alpha platform architecture](architecture/alpha-platform.md).
 
-The default runtime remains in-memory demo mode. Durable mode is explicit:
+The default backend is disabled and exposes health endpoints without a database.
+Every enabled demo runtime requires PostgreSQL; `memory` or omitted persistence
+fails before the configured runtime is created. Enable synthetic durable mode
+explicitly:
 
 ```text
 SAMRA_BACKEND_MODE=demo
@@ -41,6 +44,17 @@ successfully. A bounded forced connection close prevents indefinite shutdown.
 - The synthetic seed is idempotent and creates one demo customer, one USD
   product account, two beneficiaries, five ledger accounts, and one balanced
   425,000-minor-unit opening journal.
+
+## Test fixture boundary
+
+The package `@workspace/ledger` exports errors and types only. Its synchronous
+in-memory repository lives at `lib/ledger/test/fixtures/in-memory-ledger.ts` and
+is imported explicitly by tests, including the API test composition fixture.
+`DemoLedgerAdapter` requires a repository, and `DemoRuntime` requires an explicit
+ledger. The configured runtime retains the existing `PostgresLedgerControl`
+composition; the router cannot recreate a missing runtime. No startup path seeds
+an in-memory ledger or silently substitutes it for PostgreSQL. The separate
+remittance `InMemoryLedgerControl` test double remains unchanged.
 
 ## Financial truth
 
