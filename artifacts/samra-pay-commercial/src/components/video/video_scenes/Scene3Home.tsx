@@ -135,7 +135,7 @@ export function Scene3Home() {
           animate={{ opacity: phase >= 3 ? 1 : 0 }}
           transition={{ duration: 0.6 }}
         >
-          {['Send ETB instantly', 'Zero transfer fees', 'Family receives in seconds'].map((item, i) => (
+          {['Send to Ethiopia', 'Transparent pricing', 'Track every transfer'].map((item, i) => (
             <motion.div
               key={item}
               className="flex items-center gap-3"
@@ -174,14 +174,21 @@ export function Scene3Home() {
           Sent to Addis Ababa
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-          <span className="font-display gold-text" style={{ fontSize: '1.6rem', fontWeight: 600 }}>5,500</span>
+          <span className="font-display gold-text" style={{ fontSize: '1.6rem', fontWeight: 600 }}>Receive in</span>
           <span className="font-body" style={{ color: 'rgba(245,240,232,0.5)', fontSize: '0.8rem' }}>ETB</span>
         </div>
         <div className="font-body" style={{ color: 'rgba(76, 175, 80, 0.85)', fontSize: '0.7rem', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#4CAF50' }} />
-          Delivered instantly
+          Illustrative transfer
         </div>
       </motion.div>
+      {/* Always visible with the scene; never phase-gated with an amount. */}
+      <p
+        className="absolute font-body"
+        style={{ top: '0.5rem', left: '20%', right: '20%', margin: 0, padding: '0.25rem', zIndex: 50, textAlign: 'center', fontSize: '1rem', lineHeight: 1.5, color: 'var(--cream)', background: 'var(--espresso)' }}
+      >
+        Illustrative. Not a rate quote or an offer.
+      </p>
     </motion.div>
   );
 }

@@ -155,7 +155,7 @@ export function Scene2Here() {
           $4,250
         </div>
         <div className="font-body" style={{ color: 'rgba(201,154,46,0.7)', fontSize: '0.7rem', marginTop: '0.25rem' }}>
-          ↑ 12% this month
+          Illustrative balance
         </div>
       </motion.div>
 
@@ -166,6 +166,13 @@ export function Scene2Here() {
         initial={{ opacity: 0 }}
         animate={{ opacity: phase >= 5 ? 0 : 0 }}
       />
+      {/* Always visible with the scene; never phase-gated with an amount. */}
+      <p
+        className="absolute font-body"
+        style={{ top: '0.5rem', left: '20%', right: '20%', margin: 0, padding: '0.25rem', zIndex: 50, textAlign: 'center', fontSize: '1rem', lineHeight: 1.5, color: 'var(--cream)', background: 'var(--espresso)' }}
+      >
+        Illustrative. Not a rate quote or an offer.
+      </p>
     </motion.div>
   );
 }
