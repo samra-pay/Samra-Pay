@@ -85,3 +85,18 @@ authorization, ledger, reconciliation, and audit controls.
   ready; remove DNS before retiring a target to prevent subdomain takeover.
 - Treat each activation as a reviewed PR, controlled apply, independent
   post-audit, and separately authorized traffic decision.
+
+## Commercial presentation copy
+
+The isolated `artifacts/samra-pay-commercial` presentation is illustrative.
+Every amount-bearing scene must display “Illustrative. Not a rate quote or an
+offer.” throughout the scene, at readable contrast and size. Synthetic USD
+balances may remain; converted ETB figures and unqualified fee, speed or
+rate-superiority claims must not appear. This does not activate transfers,
+funding, rewards, or any other depicted capability.
+
+Restoring any converted ETB figure requires a separately authorized change
+using `lib/remittance/src/quote.ts` and the same disclosure. That module's rate
+is a synthetic fixture, not a live quote. Publication of restored figures is
+blocked until signed Bank of Abyssinia commercial terms exist. The package's
+location and release freeze are unchanged by this copy remediation.
