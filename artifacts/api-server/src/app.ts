@@ -1,12 +1,13 @@
 import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import type { Logger } from "pino";
 import { createApiRouter } from "./routes";
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from "./config";
 import { logger } from "./lib/logger";
 import { createHttpLogger } from "./lib/http-logger";
-import { problemHandler } from "./lib/problem";
+import { AuthorizationDeniedError, problemHandler } from "./lib/problem";
 import { DemoRuntime } from "./domain/demo-runtime";
 import { createConfiguredDemoRuntime } from "./domain/create-demo-runtime";
 import { startDemoWorker } from "./domain/demo-worker";
@@ -26,8 +27,30 @@ export function createApp(
       ? (demoRuntime ?? createConfiguredDemoRuntime(config))
       : undefined;
 
+  app.set("trust proxy", config.trustedProxies ?? false);
   app.use(createHttpLogger(dependencies.requestLogger ?? logger));
-  app.use(cors());
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      strictTransportSecurity: { maxAge: 31_536_000, includeSubDomains: true },
+      xContentTypeOptions: true,
+      xFrameOptions: { action: "deny" },
+      referrerPolicy: { policy: "no-referrer" },
+    }),
+  );
+  const allowedOrigins = new Set(config.allowedOrigins ?? []);
+  app.use(
+    cors({
+      origin(origin, callback) {
+        // Origin-less server/native calls still require the route's authentication.
+        if (origin === undefined) return callback(null, false);
+        if (allowedOrigins.has(origin)) return callback(null, true);
+        callback(
+          new AuthorizationDeniedError("The request origin is not allowed."),
+        );
+      },
+    }),
+  );
   app.use(cookieParser());
   app.post(
     "/api/v1/provider-events/persona",

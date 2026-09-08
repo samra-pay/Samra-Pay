@@ -208,3 +208,100 @@ test("internal operations cannot be enabled in memory or production mode", () =>
     /requires non-production demo\/fake mode with PostgreSQL persistence/,
   );
 });
+
+test("API origins deny by default and accept only canonical bare HTTPS origins", () => {
+  for (const value of [undefined, "", "   "]) {
+    assert.deepEqual(
+      loadApiRuntimeConfig({ SAMRA_ALLOWED_ORIGINS: value }).allowedOrigins,
+      [],
+    );
+  }
+  assert.deepEqual(
+    loadApiRuntimeConfig({ SAMRA_ALLOWED_ORIGINS: "https://app.samra.test" })
+      .allowedOrigins,
+    ["https://app.samra.test"],
+  );
+  assert.deepEqual(
+    loadApiRuntimeConfig({
+      SAMRA_ALLOWED_ORIGINS:
+        "https://app.samra.test, https://ops.samra.test:8443",
+    }).allowedOrigins,
+    ["https://app.samra.test", "https://ops.samra.test:8443"],
+  );
+  for (const origin of [
+    "http://app.samra.test",
+    "https://app.samra.test/path",
+    "https://app.samra.test/",
+    "https://user:pass@app.samra.test",
+    "https://app.samra.test?x=1",
+    "https://app.samra.test#x",
+    "https://app.samra.test?",
+    "null",
+    "*",
+    "app.samra.test",
+    "https://app.samra.test,",
+    "https://app.samra.test/../",
+  ]) {
+    assert.throws(
+      () => loadApiRuntimeConfig({ SAMRA_ALLOWED_ORIGINS: origin }),
+      /SAMRA_ALLOWED_ORIGINS/,
+    );
+  }
+});
+
+test("Alpha Release 1 requires at least one allowed origin", () => {
+  const alpha = {
+    SAMRA_RELEASE_PROFILE: "alpha-release-1",
+    SAMRA_BACKEND_MODE: "demo",
+    SAMRA_PERSISTENCE_MODE: "postgres",
+    SAMRA_CUSTOMER_AUTH_MODE: "auth0",
+    AUTH0_ISSUER_BASE_URL: "https://auth.samra.test",
+    AUTH0_AUDIENCE: "https://api.samra.test",
+  };
+  for (const origin of [undefined, ""]) {
+    assert.throws(
+      () => loadApiRuntimeConfig({ ...alpha, SAMRA_ALLOWED_ORIGINS: origin }),
+      /requires at least one SAMRA_ALLOWED_ORIGINS/,
+    );
+  }
+  assert.equal(
+    loadApiRuntimeConfig({
+      ...alpha,
+      SAMRA_ALLOWED_ORIGINS: "https://app.samra.test",
+    }).releaseProfile,
+    "alpha-release-1",
+  );
+});
+
+test("proxy trust defaults off and requires explicit bounded IPs or CIDRs", () => {
+  for (const value of [undefined, "", "false"]) {
+    assert.equal(
+      loadApiRuntimeConfig({ SAMRA_TRUSTED_PROXIES: value }).trustedProxies,
+      false,
+    );
+  }
+  assert.deepEqual(
+    loadApiRuntimeConfig({
+      SAMRA_TRUSTED_PROXIES: "127.0.0.1, 10.20.0.0/24, ::1, fd00::/64",
+    }).trustedProxies,
+    ["127.0.0.1", "10.20.0.0/24", "::1", "fd00::/64"],
+  );
+  for (const value of [
+    "true",
+    "1",
+    "loopback",
+    "*",
+    "0.0.0.0/0",
+    "::/0",
+    "10.0.0.0/33",
+    "::1/129",
+    "::1/",
+    "127.0.0.1,",
+    "10.0.0.1/24/3",
+  ]) {
+    assert.throws(
+      () => loadApiRuntimeConfig({ SAMRA_TRUSTED_PROXIES: value }),
+      /SAMRA_TRUSTED_PROXIES/,
+    );
+  }
+});

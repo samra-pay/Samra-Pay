@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 export type BackendMode = "disabled" | "demo";
 export type ProviderMode = "fake";
 export type PersistenceMode = "memory" | "postgres";
@@ -30,6 +32,8 @@ export type CustomerIdentityProviderConfig =
 
 export type ApiRuntimeConfig = Readonly<{
   releaseProfile?: "demo" | "alpha-release-1";
+  allowedOrigins?: readonly string[];
+  trustedProxies?: false | readonly string[];
   backendMode: BackendMode;
   providerMode: ProviderMode;
   persistenceMode?: PersistenceMode;
@@ -49,6 +53,17 @@ export function loadApiRuntimeConfig(
   if (releaseProfile !== "demo" && releaseProfile !== "alpha-release-1") {
     throw new Error(
       "SAMRA_RELEASE_PROFILE supports only demo or alpha-release-1.",
+    );
+  }
+  const allowedOrigins = parseAllowedOrigins(
+    environment["SAMRA_ALLOWED_ORIGINS"],
+  );
+  const trustedProxies = parseTrustedProxies(
+    environment["SAMRA_TRUSTED_PROXIES"],
+  );
+  if (releaseProfile === "alpha-release-1" && allowedOrigins.length === 0) {
+    throw new Error(
+      "Alpha Release 1 requires at least one SAMRA_ALLOWED_ORIGINS entry.",
     );
   }
   const backendMode = parseBackendMode(environment["SAMRA_BACKEND_MODE"]);
@@ -99,6 +114,8 @@ export function loadApiRuntimeConfig(
   );
   return Object.freeze({
     releaseProfile,
+    allowedOrigins,
+    trustedProxies,
     backendMode,
     providerMode,
     persistenceMode,
@@ -326,6 +343,65 @@ function normalizeAuth0Issuer(value: string): string {
     );
   }
   return `${issuer.origin}/`;
+}
+
+function parseAllowedOrigins(value: string | undefined): readonly string[] {
+  if (!value?.trim()) return Object.freeze([]);
+  return Object.freeze([
+    ...new Set(
+      value.split(",").map((entry) => {
+        const origin = entry.trim();
+        // Use the same URL parsing and structural checks as normalizeAuth0Issuer.
+        let parsed: URL;
+        try {
+          parsed = new URL(origin);
+        } catch {
+          throw new Error(
+            "SAMRA_ALLOWED_ORIGINS entries must be valid bare HTTPS origins.",
+          );
+        }
+        if (
+          parsed.protocol !== "https:" ||
+          parsed.username ||
+          parsed.password ||
+          parsed.search ||
+          parsed.hash ||
+          parsed.pathname !== "/" ||
+          origin !== parsed.origin
+        ) {
+          throw new Error(
+            "SAMRA_ALLOWED_ORIGINS entries must be canonical bare HTTPS origins without credentials, path, query, or fragment.",
+          );
+        }
+        return parsed.origin;
+      }),
+    ),
+  ]);
+}
+
+function parseTrustedProxies(
+  value: string | undefined,
+): false | readonly string[] {
+  if (!value?.trim() || value === "false") return false;
+  return Object.freeze(
+    value.split(",").map((entry) => {
+      const proxy = entry.trim();
+      const [address, prefix, ...extra] = proxy.split("/");
+      const version = isIP(address ?? "");
+      const bits = version === 4 ? 32 : 128;
+      if (
+        !version ||
+        extra.length ||
+        (prefix !== undefined &&
+          (!/^[1-9][0-9]*$/u.test(prefix) || Number(prefix) > bits))
+      ) {
+        throw new Error(
+          "SAMRA_TRUSTED_PROXIES must contain explicit IP addresses or bounded CIDRs; blanket trust and hop counts are not supported.",
+        );
+      }
+      return proxy;
+    }),
+  );
 }
 
 function parsePersistenceMode(value: string | undefined): PersistenceMode {

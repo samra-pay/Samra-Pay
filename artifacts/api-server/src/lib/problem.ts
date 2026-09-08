@@ -232,7 +232,7 @@ function domainTitle(status: number): string {
   }
 }
 
-function requestTraceId(request: Request): string {
+export function requestTraceId(request: Request): string {
   const withId = request as Request & { id?: string | number };
   return withId.id === undefined
     ? `request-${Date.now().toString(36)}`
