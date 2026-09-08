@@ -21,11 +21,11 @@ export function Scene5Product() {
 
   // Features that orbit the phone
   const features = [
-    { label: 'Instant Transfers', sub: 'USD → ETB in seconds', pos: { top: '15%', left: '6%' }, delay: 0 },
-    { label: 'Zero Fees', sub: 'No hidden costs', pos: { top: '38%', left: '3%' }, delay: 0.15 },
+    { label: 'Transfers', sub: 'USD to ETB', pos: { top: '15%', left: '6%' }, delay: 0 },
+    { label: 'Clear Pricing', sub: 'Fees shown before you send', pos: { top: '38%', left: '3%' }, delay: 0.15 },
     { label: 'Samra Card', sub: 'Debit & rewards', pos: { bottom: '28%', left: '6%' }, delay: 0.3 },
     { label: 'Family Wallet', sub: 'Send to anyone in ET', pos: { top: '15%', right: '6%' }, delay: 0.1 },
-    { label: 'Live Rates', sub: 'Best ETB exchange', pos: { top: '42%', right: '3%' }, delay: 0.25 },
+    { label: 'Live Rates', sub: 'Rate shown before you send', pos: { top: '42%', right: '3%' }, delay: 0.25 },
     { label: 'Gold Rewards', sub: 'Earn on every send', pos: { bottom: '28%', right: '6%' }, delay: 0.4 },
   ];
 
@@ -140,7 +140,6 @@ export function Scene5Product() {
             <div style={{ background: 'linear-gradient(135deg, rgba(201,154,46,0.25) 0%, rgba(201,154,46,0.1) 100%)', borderRadius: 12, padding: '0.8rem 0.75rem', border: '1px solid rgba(201,154,46,0.2)' }}>
               <div style={{ color: 'rgba(245,240,232,0.5)', fontSize: '0.45rem', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.3rem', fontFamily: 'var(--font-body)' }}>Total Balance</div>
               <div style={{ color: 'var(--cream)', fontSize: '1.1rem', fontFamily: 'var(--font-display)', fontWeight: 600 }}>$4,250.00</div>
-              <div style={{ color: 'rgba(201,154,46,0.7)', fontSize: '0.4rem', marginTop: '0.2rem', fontFamily: 'var(--font-body)' }}>≈ 233,750 ETB</div>
             </div>
             {/* Send button mock */}
             <div style={{ background: 'var(--gold)', borderRadius: 8, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
@@ -149,8 +148,8 @@ export function Scene5Product() {
             </div>
             {/* Transactions list mock */}
             {[
-              { to: 'Tigist A.', amount: '+2,200 ETB', time: 'Just now' },
-              { to: 'Meles F.', amount: '+5,500 ETB', time: '2h ago' },
+              { to: 'Tigist A.', amount: 'Illustrative', time: 'Just now' },
+              { to: 'Meles F.', amount: 'Illustrative', time: '2h ago' },
             ].map((tx) => (
               <div key={tx.to} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(201,154,46,0.08)' }}>
                 <div>
@@ -230,6 +229,13 @@ export function Scene5Product() {
           Built for the Ethiopian diaspora.
         </span>
       </motion.div>
+      {/* Always visible with the scene; never phase-gated with an amount. */}
+      <p
+        className="absolute font-body"
+        style={{ top: '0.5rem', left: '20%', right: '20%', margin: 0, padding: '0.25rem', zIndex: 50, textAlign: 'center', fontSize: '1rem', lineHeight: 1.5, color: 'var(--cream)', background: 'var(--espresso)' }}
+      >
+        Illustrative. Not a rate quote or an offer.
+      </p>
     </motion.div>
   );
 }

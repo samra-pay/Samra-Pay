@@ -215,7 +215,7 @@ export function Scene4Bridge() {
         </div>
         <div style={{ textAlign: 'center' }}>
           <div className="font-body" style={{ color: 'rgba(245,240,232,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.15rem' }}>They receive</div>
-          <div className="font-display gold-text" style={{ fontSize: '1.3rem', fontWeight: 600 }}>11,000 ETB</div>
+          <div className="font-display gold-text" style={{ fontSize: '1.3rem', fontWeight: 600 }}>ETB</div>
         </div>
       </motion.div>
 
@@ -233,6 +233,13 @@ export function Scene4Bridge() {
           className="w-full h-full object-cover"
         />
       </motion.div>
+      {/* Always visible with the scene; never phase-gated with an amount. */}
+      <p
+        className="absolute font-body"
+        style={{ top: '0.5rem', left: '20%', right: '20%', margin: 0, padding: '0.25rem', zIndex: 50, textAlign: 'center', fontSize: '1rem', lineHeight: 1.5, color: 'var(--cream)', background: 'var(--espresso)' }}
+      >
+        Illustrative. Not a rate quote or an offer.
+      </p>
     </motion.div>
   );
 }
