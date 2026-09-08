@@ -7,6 +7,7 @@ import { createApp } from "./app";
 const environment = {
   NODE_ENV: "test",
   SAMRA_RELEASE_PROFILE: "alpha-release-1",
+  SAMRA_ALLOWED_ORIGINS: "https://app.samra.test",
   SAMRA_BACKEND_MODE: "demo",
   SAMRA_PERSISTENCE_MODE: "postgres",
   SAMRA_CUSTOMER_AUTH_MODE: "auth0",

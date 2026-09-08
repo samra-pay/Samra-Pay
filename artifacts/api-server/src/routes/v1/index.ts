@@ -1,4 +1,5 @@
 import { Router, type RequestHandler } from "express";
+import { publicWriteBackstop } from "../../lib/public-write-backstop";
 import {
   AdvanceDemoCustomerIdentityBody,
   AdvanceDemoCustomerIdentityHeader,
@@ -272,6 +273,7 @@ export function createV1Router(
 
   router.post(
     "/waitlist/subscriptions",
+    publicWriteBackstop({ windowMs: 15 * 60_000, limit: 10 }),
     asyncRoute(async (req, res) => {
       const header = parseSchema(SubscribeWaitlistHeader, {
         "Idempotency-Key": req.header("Idempotency-Key"),
@@ -291,6 +293,7 @@ export function createV1Router(
     const funnel = runtime.customerFunnelStore;
     router.post(
       "/acquisition/events",
+      publicWriteBackstop({ windowMs: 60_000, limit: 60 }),
       asyncRoute(async (req, res) => {
         const header = parseSchema(RecordCustomerAcquisitionEventHeader, {
           "Idempotency-Key": req.header("Idempotency-Key"),
