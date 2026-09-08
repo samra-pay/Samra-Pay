@@ -112,5 +112,4 @@ financial truth.
 - no tested account recovery, deletion, incident, and customer-notification policy;
 - any real customer or PII in the staging evidence;
 - any provider token or status directly granting financial capability;
-- any public traffic or claim that Replit is retired before the Google staging
-  release and rollback gates pass.
+- any public traffic before the Google staging release and rollback gates pass.

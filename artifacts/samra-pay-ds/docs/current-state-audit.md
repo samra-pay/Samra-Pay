@@ -1,7 +1,7 @@
 # Samra Pay design system current state
 
 Status: current repository snapshot for the Alpha documentation refresh. The
-versioned package is authoritative; raw ZIP files, screenshots, Replit previews,
+versioned package is authoritative; raw ZIP files, screenshots, previews,
 and compiled output are reference evidence only.
 
 ## Source inventory
@@ -42,7 +42,7 @@ The package provides automated controls for generated-token drift, light and
 dark contrast, accessibility rules, required documentation, broken component
 references, TypeScript, and the static review build. Pull requests produce a
 commit-addressed design preview through GitHub Actions. Google Cloud is the
-target hosted preview; Replit remains temporary development convenience.
+target hosted preview; local previews use the standard Vite toolchain.
 
 Every financial surface must represent loading, empty, unavailable, stale,
 offline, failure, and retry behavior where applicable. No component or screen
@@ -62,8 +62,6 @@ history and should be replaced before public use.
 - physical iOS and Android review across supported viewport and accessibility
   settings;
 - hosted Google Cloud design preview at an immutable commit;
-- removal or conditional isolation of remaining Replit-only development
-  dependencies after preview parity;
 - replacement of unapproved airline, loyalty, card-network, and vendor marks;
 - manual design review of the complete Auth0, Persona, Crossmint, failure,
   recovery, and restricted-customer journeys;

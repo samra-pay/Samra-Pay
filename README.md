@@ -55,8 +55,6 @@ The two governing architecture documents are:
   under Samra transaction controls.
 - Real vendor traffic, customer data, public deployment, and production claims
   require separate evidence and approval.
-- Replit is temporary preview infrastructure, not source, database, financial,
-  design, or deployment truth.
 - GitHub Actions is the technical merge authority; Qase stores governed manual
   and automated evidence against the exact commit.
 

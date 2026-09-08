@@ -1,7 +1,7 @@
 # Samra Pay mobile runtime
 
 The Expo application has one portable API boundary. It does not infer its API
-from Replit, the Metro host, a browser location, or a device address.
+from the Metro host, a browser location, or a device address.
 
 ## Public build configuration
 
@@ -69,7 +69,7 @@ request. DPoP is explicitly disabled until the generated API client can produce
 the required per-request proof header; the API still validates RS256 issuer and
 audience exactly.
 
-This configuration keeps iOS, Android, Expo web, bounded Replit preview, and a
+This configuration keeps iOS, Android, Expo web, local previews, and a
 future Google Cloud staging API on the same generated client boundary. Native
 Auth0 API mode runs only in iOS and Android custom builds; Expo web remains on
 the disabled-auth mock preview because customer web has its own SPA boundary. The

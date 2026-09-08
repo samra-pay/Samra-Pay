@@ -1,5 +1,5 @@
 // Typed adapter from the generated read-only operations contract to the
-// Replit-built portal view model. API mode never reads fixture data.
+// portal view model. API mode never reads fixture data.
 
 import {
   addOperationsCaseNote,

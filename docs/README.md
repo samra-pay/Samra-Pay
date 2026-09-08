@@ -66,7 +66,6 @@ explicit approval for that scope. None of these states implies another.
 | Quality             | CI/security, PostgreSQL, resilience, performance, container and immutable release gates                                                | Required CI/security and portability passed for the baseline SHA; see evidence below                                                   | Candidate-specific results, governed manual acceptance evidence and separate release approval                                                                                                                            |
 | Merge protection    | Required-check contracts and CODEOWNERS                                                                                                | Ruleset `22344977` enforced after the Sept 5 organization transfer; exact checks, PR, queue, no force-push/deletion or bypass          | Keep exact-candidate checks and current settings evidence; source/cloud authority cutover remains pending                                                                                                                |
 | Operations          | Portal, workforce controls, cases, incident runbooks and synthetic recovery rehearsal                                                  | Staffed coverage, live monitoring, cloud restore and service targets not established                                                   | [Operational readiness](operations/operational-readiness.md)                                                                                                                                                             |
-| Replit              | Temporary preview/rollback support                                                                                                     | Not code, design, financial, database or production truth                                                                              | Retire only after governed replacement evidence                                                                                                                                                                          |
 
 ## Evidence and next verification
 
@@ -149,7 +148,6 @@ explicit approval for that scope. None of these states implies another.
 - [Qase and CI reporting](testing/qase-ci.md)
 - [Release-candidate evidence](testing/release-candidate-evidence.md)
 - [Optional Qase reporting decision](architecture/optional-qase-reporting.md)
-- [Replit transition boundary](architecture/replit-runbook.md)
 
 ### Experience system
 

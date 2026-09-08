@@ -11,26 +11,26 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-           // @replit: no hover, and add primary border
+           // no hover, and add primary border
            "bg-primary text-primary-foreground border border-primary-border",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm border-destructive-border",
         outline:
-          // @replit Shows the background color of whatever card / sidebar / accent background it is inside of.
+          // Shows the background color of whatever card / sidebar / accent background it is inside of.
           // Inherits the current text color. Uses shadow-xs. no shadow on active
           // No hover state
           " border [border-color:var(--button-outline)] shadow-xs active:shadow-none ",
         secondary:
-          // @replit border, no hover, no shadow, secondary border.
+          // border, no hover, no shadow, secondary border.
           "border bg-secondary text-secondary-foreground border border-secondary-border ",
-        // @replit no hover, transparent border
+        // no hover, transparent border
         ghost: "border border-transparent",
         link: "text-primary underline-offset-4 hover:underline",
         // Samra Pay brand: 22-karat Midnight Gold gradient with ambient gold glow
         gold: "bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black border border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.3)] hover:opacity-90",
       },
       size: {
-        // @replit changed sizes
+        // changed sizes
         default: "min-h-9 px-4 py-2",
         sm: "min-h-8 rounded-md px-3 text-xs",
         lg: "min-h-10 rounded-md px-8",

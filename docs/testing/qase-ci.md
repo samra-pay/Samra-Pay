@@ -49,8 +49,8 @@ single governed batch to succeed.
 
 Automated acceptance uses the Qase environment slug `github-ci-postgres`. It
 means an isolated PostgreSQL 16 service in GitHub Actions with synthetic data;
-it is not a deployment environment. `replit-development` remains limited to
-manual synthetic browser validation.
+it is not a deployment environment. Manual synthetic browser validation uses
+local previews and commit-addressed GitHub build artifacts.
 
 The same governed CI workflow runs from `main` every day at `06:17 UTC` and
 names the resulting Qase record `Samra Pay daily backend acceptance`. The

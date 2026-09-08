@@ -112,7 +112,6 @@ financial data.
 - [Customer funnel attribution](./customer-funnel-attribution.md)
 - [Frontend cutover](./frontend-cutover.md)
 - [Operations control plane](./operations-control-plane.md)
-- [Replit transition](./replit-runbook.md)
 - [Backend persistence](../backend-persistence.md)
 - [Testing strategy](../testing/testing-strategy.md)
 - [Google Cloud foundation](../../deploy/gcp/README.md)

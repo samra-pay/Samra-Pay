@@ -61,7 +61,7 @@ PORT=5003 BASE_PATH=/ pnpm --filter @workspace/samra-pay-ds run dev
 # API health endpoints only; no provider, worker, or database connection.
 PORT=8080 SAMRA_BACKEND_MODE=disabled pnpm --filter @workspace/api-server run dev
 
-# Local Expo mock preview, avoiding the Replit-specific dev wrapper.
+# Local Expo mock preview using the standard Expo CLI.
 EXPO_PUBLIC_SAMRA_DATA_MODE=mock EXPO_PUBLIC_SAMRA_AUTH_MODE=disabled pnpm --filter @workspace/samra-pay-mobile exec expo start --localhost --port 8081
 ```
 

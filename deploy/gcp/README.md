@@ -3,7 +3,8 @@
 Google Cloud is the locked Alpha hosting and database platform. This directory
 contains reviewed contracts, tests, container definitions, and guarded scripts
 for separately authorized staging phases. GitHub remains the source of truth;
-Replit remains a temporary preview and bounded rollback surface until cutover.
+Repository previews use local tooling and GitHub build artifacts. Cloud runtime
+activation and rollback require their own reviewed evidence.
 
 The public coming-soon launch is a separate production boundary. Its
 review-only contract is [`coming-soon-launch.json`](coming-soon-launch.json),
@@ -230,12 +231,12 @@ for loopback container testing and local development. See
 
 The design-system preview container uses the same versioned source and gates as
 the GitHub preview artifact. It provides an independent browser-based design
-review surface without making Replit or compiled ZIP exports authoritative.
+review surface without making compiled ZIP exports authoritative.
 
 The mobile UI remains an Expo application. It is not moved into Cloud Run. Its
 generated client accepts one validated `EXPO_PUBLIC_SAMRA_API_ORIGIN` for iOS,
-Android, and Expo web. Replit-specific Expo preview convenience may remain during
-transition, but it is not part of the backend hosting contract.
+Android, and Expo web. Local Expo preview is separate from the backend hosting
+contract and uses explicit domain metadata.
 
 ## Automatic-action boundary
 
@@ -921,7 +922,7 @@ cannot advance on visual inspection alone.
 
 ## Cutover gates
 
-Before any Replit dependency is removed:
+Before cloud staging is activated:
 
 - all images build from a clean GitHub commit;
 - Cloud SQL migrations pass on an empty staging database and a restored copy of
@@ -934,4 +935,4 @@ Before any Replit dependency is removed:
 - the critical Qase regression run is complete with no unresolved severity-one
   or severity-two defect;
 - logging, alerting, backups, rollback, and named operational ownership exist;
-- Replit remains available for a bounded rollback window before decommissioning.
+- a previously verified Google Cloud revision is retained for bounded rollback.
