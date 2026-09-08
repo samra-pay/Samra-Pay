@@ -20,7 +20,7 @@ transport hooks directly:
 The web cutover implements one API adapter and one hard boundary:
 
 - `ApiSamraDataSource` calls the versioned generated client.
-- default `mock` mode renders the untouched legacy overview and remittance
+- default `mock` mode renders the legacy overview and remittance
   components and does not route their local state through the new data-source
   interface;
 - the mock-side interface deliberately rejects financial calls, preventing a
@@ -74,3 +74,24 @@ their domains exist.
 - a retry reuses the same idempotency key;
 - API errors show an error and retry action;
 - API mode never silently returns mock balances or statuses.
+
+## Browser demo history privacy
+
+The legacy web transfer history stores only `id`, `recipient`, `location`,
+`date`, `usd`, `etb`, `status`, and optional `deliveryMethod`. It does not store
+account numbers, phone numbers, bank IDs or wallet IDs. Names, locations and
+synthetic history remain display data; this is not a claim that browser history
+is anonymous or a production beneficiary record.
+
+Reads validate rows, construct an explicit field allowlist, and rewrite the
+sanitized payload to remove identifiers from existing browsers. Invalid payloads
+are removed. Every write applies the same allowlist, including extra properties
+on runtime objects. If replacement fails, the old key is removed where the
+browser permits storage access. A browser that denies all storage access cannot
+be cleaned by page code until access is restored.
+
+Recipient delivery prefill uses component state for the current mounted page
+only; it is empty after refresh. Persistent transfer history cannot supply those
+details. API mode continues to use authorized server-side beneficiaries and
+financial state. This change does not activate deposits or transfers, and does
+not change the unrelated demo-state or localization preference stores.
