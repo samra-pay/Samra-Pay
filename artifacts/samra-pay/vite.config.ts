@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT?.trim();
 const port = rawPort ? Number(rawPort) : 5000;
@@ -78,6 +77,7 @@ const publicBundleBoundaryPlugin = {
   ) {
     if (webSurface === "legacy") return;
     const forbiddenModules = [
+      /\/node_modules\/@replit\//u,
       /\/lib\/launch-updates\//u,
       /\/src\/App\.tsx$/u,
       /\/src\/main-legacy\.tsx$/u,
@@ -187,20 +187,6 @@ export default defineConfig({
     publicPreloadPlugin,
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
   ],
   resolve: {
     alias: {

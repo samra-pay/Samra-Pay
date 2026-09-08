@@ -10,7 +10,7 @@ This package is the authoritative, code-first design system for Samra Pay web
 and native experiences. GitHub source, semantic tokens, governed components,
 financial patterns, documentation, and tests define the approved system.
 
-Replit, ZIP exports, screenshots, generated previews, and external design files
+ZIP exports, screenshots, generated previews, and external design files
 are reference or review surfaces. They do not override the versioned source.
 
 ## Source of truth
@@ -43,7 +43,7 @@ are reference or review surfaces. They do not override the versioned source.
 The `Design System Preview` GitHub workflow generates a downloadable static
 preview for every relevant pull request and every merged change to `main`.
 Later, the same preview can be hosted from the versioned Google Cloud container
-without changing its source or relying on Replit.
+without changing its source or requiring another hosting platform.
 
 ## Raw files and build exports
 

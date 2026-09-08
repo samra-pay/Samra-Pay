@@ -63,7 +63,7 @@ record.
 
 Manual Qase execution remains appropriate for the operations portal's visual
 behavior, role-specific navigation, customer-support workflows, audit explorer,
-and Replit runtime configuration. Manual review is not a substitute for the
+and approved runtime configuration. Manual review is not a substitute for the
 PostgreSQL gates and must not be used to override a failed automated invariant.
 
 ## Hard boundaries

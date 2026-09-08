@@ -178,5 +178,5 @@ References:
 - public unauthenticated Cloud Run service or direct default URL;
 - provider status directly granting a wallet, funding, remittance, card, or
   ledger capability;
-- any claim that Replit has been retired before Google staging has passed its
-  full access, runtime, rollback, and release gates.
+- any claim of staging readiness before Google staging has passed its full
+  access, runtime, rollback, and release gates.

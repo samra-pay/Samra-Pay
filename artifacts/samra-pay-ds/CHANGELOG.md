@@ -1,5 +1,11 @@
 # Changelog — Samra Pay Design System
 
+## 2026-09-08 — Preview portability
+
+Removed retired hosting plugins and their unconditional error overlay. Local
+and GitHub previews use the standard Vite toolchain; component styles and tokens
+are unchanged. Hosted activation still requires its own release approval.
+
 All notable changes to this design system are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).

@@ -22,14 +22,14 @@ if ! grep -Fq 'window.startRecording?.()' "$SRC_DIR/lib/video/hooks.ts" 2>/dev/n
   errors=$((errors + 1))
 fi
 
-if ! grep -Fq 'window.__replitVideoPlayerMounted = true' "$SRC_DIR/lib/video/hooks.ts" 2>/dev/null; then
-  echo "ERROR: src/lib/video/hooks.ts is missing the window.__replitVideoPlayerMounted marker."
+if ! grep -Fq 'window.__samraVideoPlayerMounted = true' "$SRC_DIR/lib/video/hooks.ts" 2>/dev/null; then
+  echo "ERROR: src/lib/video/hooks.ts is missing the window.__samraVideoPlayerMounted marker."
   echo "  This file should not be modified. Restore it from the template."
   errors=$((errors + 1))
 fi
 
-if ! grep -Fq 'window.__replitVideoTotalDurationMs' "$SRC_DIR/lib/video/hooks.ts" 2>/dev/null; then
-  echo "ERROR: src/lib/video/hooks.ts is missing the window.__replitVideoTotalDurationMs declaration."
+if ! grep -Fq 'window.__samraVideoTotalDurationMs' "$SRC_DIR/lib/video/hooks.ts" 2>/dev/null; then
+  echo "ERROR: src/lib/video/hooks.ts is missing the window.__samraVideoTotalDurationMs declaration."
   echo "  Without it the export renderer cannot bound recording at the video's intended length."
   echo "  This file should not be modified. Restore it from the template."
   errors=$((errors + 1))

@@ -59,9 +59,6 @@ flowchart TB
   transfer -. unresolved .-> payout[Ethiopia payout rail]
 
   mobile -. future test builds .-> firebase[Firebase App Distribution]
-  replit[Replit preview] -. temporary only .-> web
-  replit -. temporary only .-> mobile
-  replit -. temporary only .-> ops
 ```
 
 Web, mobile, and operations clients use the Samra API. They do not call a

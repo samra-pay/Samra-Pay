@@ -65,8 +65,8 @@ pull-request merge ref is the authoritative pre-merge result, and the later
 
 - Automated runs use `github-ci-postgres`, which means disposable PostgreSQL 16
   and synthetic data. It is not a deployment environment.
-- Replit remains a manual synthetic preview environment. GitHub automation must
-  not depend on it.
+- Manual synthetic previews use the local toolchain or commit-addressed GitHub
+  build artifacts. They do not establish deployment or provider readiness.
 - Run titles identify cadence, branch, and exact commit.
 - Release candidates are identified as `rc-<first 12 SHA characters>` and can
   only be dispatched with a full commit already contained in GitHub `main`.

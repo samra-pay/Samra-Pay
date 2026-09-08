@@ -263,7 +263,7 @@
     "promote customer web traffic",
     "deploy operations portal only after its blockers are closed",
     "run Qase staging regression",
-    "retain Replit only as a bounded rollback surface"
+    "retain a previously verified Google Cloud revision for bounded rollback"
   ],
   "approvalGates": [
     "approved staging project, billing owner, and region",

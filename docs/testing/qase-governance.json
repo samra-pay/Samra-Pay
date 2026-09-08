@@ -38,11 +38,6 @@
       "title": "GitHub CI — Disposable PostgreSQL",
       "slug": "github-ci-postgres",
       "purpose": "Automated acceptance against isolated PostgreSQL 16 with synthetic data"
-    },
-    {
-      "title": "Replit Development",
-      "slug": "replit-development",
-      "purpose": "Manual synthetic browser validation only"
     }
   ],
   "configurations": {

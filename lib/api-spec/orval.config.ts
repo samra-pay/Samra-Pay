@@ -58,7 +58,7 @@ export default defineConfig({
       override: {
         zod: {
           // The workspace intentionally resolves the Zod 3-compatible root
-          // entry. Pin output so codegen is identical on Replit and locally.
+          // entry. Pin output so codegen is identical in CI and locally.
           version: 3,
           coerce: {
             query: ["boolean", "number", "string"],

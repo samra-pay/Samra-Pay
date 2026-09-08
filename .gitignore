@@ -62,7 +62,3 @@ gha-creds-*.json
 *.pfx
 firebase-adminsdk-*.json
 service-account*.json
-
-# Replit
-.cache/
-.local/
