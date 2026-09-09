@@ -25,6 +25,19 @@ Migration, revision-probe and operational acceptance remain open. The release
 freeze remains active pending the remaining cutover and
 release evidence.
 
+## Current delivery priority: shared Dev and Test
+
+David confirmed on 2026-09-09 that both environments must be shared cloud
+runtimes. Local Compose is optional developer tooling, not delivery of shared
+Dev. The [environment plan](../deploy/gcp/dev-test-environments.md) records the
+two isolated projects, verified $50 combined budget, private PostgreSQL instances
+(currently stopped), and remaining runtime/identity/account-provisioning work.
+Neither environment is usable yet. See the dated
+[foundation read-back](operations/evidence/2026-09-09-dev-test-foundation.json).
+The [project read-back](operations/evidence/2026-09-09-dev-test-projects.json)
+proves project creation only. Delivery requires actual URLs and demonstrated
+login, account isolation, synthetic-money movement and ledger results.
+
 ## Active milestone: Alpha Release 1
 
 On 2026-09-06, David narrowed the next product milestone to **up to 100 invited

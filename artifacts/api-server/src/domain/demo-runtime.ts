@@ -1,3 +1,4 @@
+import type { SyntheticProductAccountStore } from "./postgres-product-account-store";
 import type { Request } from "express";
 import { randomUUID } from "node:crypto";
 import type {
@@ -161,6 +162,7 @@ export type DemoRuntimeDependencies = Readonly<{
   workforceAuthStore?: PostgresWorkforceAuthStore;
   operationsCaseStore?: PostgresOperationsCaseStore;
   customerAlphaAccessStore?: AlphaAccessStore;
+  productAccountStore?: SyntheticProductAccountStore;
   customerOnboardingStore?: CustomerOnboardingStore;
   customerIdentityVerificationService?: CustomerIdentityVerificationService;
   personaWebhookService?: PersonaWebhookService;
@@ -195,6 +197,7 @@ export class DemoRuntime {
   readonly customerWalletProvisioningService?: CustomerWalletProvisioningService;
   readonly customerFunnelStore?: CustomerFunnelStore;
   readonly marketingWaitlistStore: MarketingWaitlistStore;
+  readonly #productAccountStore?: SyntheticProductAccountStore;
   readonly #unitOfWork?: RemittanceUnitOfWork;
   readonly #reconciliationStore: ReconciliationStore;
   readonly #beneficiaryStore: BeneficiaryStore;
@@ -216,9 +219,11 @@ export class DemoRuntime {
       dependencies.customerAuthenticationMode ?? "seeded-demo";
     this.repository =
       dependencies.repository ?? new InMemoryRemittanceRepository();
-    if (!dependencies.ledger) throw new Error("An explicit ledger is required.");
+    if (!dependencies.ledger)
+      throw new Error("An explicit ledger is required.");
     this.ledger = dependencies.ledger as DemoLedgerAdapter;
     this.#unitOfWork = dependencies.unitOfWork;
+    this.#productAccountStore = dependencies.productAccountStore;
     this.workforceAuthStore = dependencies.workforceAuthStore;
     this.operationsCaseStore = dependencies.operationsCaseStore;
     this.customerAlphaAccessStore = dependencies.customerAlphaAccessStore;
@@ -263,7 +268,12 @@ export class DemoRuntime {
     await this.#readiness();
   }
 
-  assertAccount(actorId: string, accountId: string): void {
+  async assertAccount(actorId: string, accountId: string): Promise<void> {
+    if (this.#productAccountStore) {
+      const accounts = await this.#productAccountStore.list(actorId);
+      if (accounts.some((account) => account.id === accountId)) return;
+      throw new DomainError("NOT_FOUND", "The source account was not found.");
+    }
     if (
       actorId !== DEMO_ACTOR.id ||
       accountId !== DEMO_LEDGER_ACCOUNT_IDS.customerUsd
@@ -378,15 +388,16 @@ export class DemoRuntime {
     return beneficiary.displayName;
   }
 
-  async accountResponse() {
-    const balance = await this.ledger.getCustomerBalance(
-      DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
-    );
+  async accountResponse(
+    accountId: string = DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
+    last4 = "4242",
+  ) {
+    const balance = await this.ledger.getCustomerBalance(accountId);
     return {
-      id: DEMO_LEDGER_ACCOUNT_IDS.customerUsd,
+      id: accountId,
       kind: "domestic" as const,
       displayName: "Samra USD Balance",
-      last4: "4242",
+      last4,
       currency: "USD" as const,
       bookBalance: serializeMoney(money(balance.naturalBalanceMinor, "USD")),
       availableBalance: serializeMoney(money(balance.availableMinor, "USD")),
@@ -395,6 +406,13 @@ export class DemoRuntime {
   }
 
   async accountResponses(actorId: string) {
+    if (this.#productAccountStore) {
+      return Promise.all(
+        (await this.#productAccountStore.list(actorId)).map((account) =>
+          this.accountResponse(account.id, account.last4),
+        ),
+      );
+    }
     return actorId === DEMO_ACTOR.id ? [await this.accountResponse()] : [];
   }
 
@@ -406,7 +424,7 @@ export class DemoRuntime {
       )
     ).flat();
     const items = [
-      ...(actorId === DEMO_ACTOR.id
+      ...(!this.#productAccountStore && actorId === DEMO_ACTOR.id
         ? [
             {
               id: "activity_opening_balance_001",

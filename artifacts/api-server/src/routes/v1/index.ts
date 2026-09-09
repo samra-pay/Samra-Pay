@@ -235,6 +235,29 @@ export function createV1Router(
 ): Router {
   const router = Router();
 
+  if (config.releaseProfile === "synthetic-shared") {
+    if (
+      config.customerAuth.mode !== "auth0" ||
+      !runtime.customerAlphaAccessStore ||
+      config.devControlsEnabled ||
+      config.internalOperationsEnabled ||
+      config.customerIdentityProvider?.mode !== "fake" ||
+      config.customerWalletProvider?.mode !== "fake"
+    ) {
+      throw new Error(
+        "Shared synthetic environments require durable admission and fake providers without developer controls.",
+      );
+    }
+    // These surfaces are absent in shared customer environments, including
+    // workforce authentication and developer controls.
+    router.use(
+      ["/waitlist", "/acquisition", "/dev", "/internal"],
+      (_req, _res, next) => {
+        next(new DomainError("NOT_FOUND", "The route was not found."));
+      },
+    );
+  }
+
   if (config.releaseProfile === "alpha-release-1") {
     if (
       config.customerAuth.mode !== "auth0" ||
@@ -366,7 +389,10 @@ export function createV1Router(
       }),
     );
 
-    if (config.releaseProfile === "alpha-release-1") {
+    if (
+      config.releaseProfile === "alpha-release-1" ||
+      config.releaseProfile === "synthetic-shared"
+    ) {
       router.use(
         asyncRoute(async (req, _res, next) => {
           try {
@@ -562,7 +588,7 @@ export function createV1Router(
       const actor = await runtime.actorResolver.resolve(req);
       const query = parseSchema(ListActivityQueryParams, req.query);
       if (query.accountId !== undefined) {
-        runtime.assertAccount(actor.id, query.accountId);
+        await runtime.assertAccount(actor.id, query.accountId);
       }
       const items = await runtime.activity(actor.id);
       const page = paginate(items, query.cursor, query.limit);
@@ -666,7 +692,7 @@ export function createV1Router(
     asyncRoute(async (req, res) => {
       const actor = await runtime.actorResolver.resolve(req);
       const body = parseSchema(CreateRemittanceQuoteBody, req.body);
-      runtime.assertAccount(actor.id, body.sourceAccountId);
+      await runtime.assertAccount(actor.id, body.sourceAccountId);
       await runtime.assertBeneficiaryRail(
         actor.id,
         body.beneficiaryId,

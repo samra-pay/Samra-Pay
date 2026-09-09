@@ -1,37 +1,46 @@
 # Separate Dev, Test, Staging and Production
 
-Status: proposed on 2026-09-09; no cloud resources applied by this change.
+Status: Dev and Test projects created and read back on 2026-09-09; billing
+linked and combined $50 monthly budget verified. Private PostgreSQL instances
+and databases are created; both instances are STOPPED with activation NEVER.
+Schema migrations, credentials and application deployments are pending. No usable app URL is claimed.
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
+Dated [foundation read-back](../../docs/operations/evidence/2026-09-09-dev-test-foundation.json).
 Local backend implementation: [Dev Compose](../dev/README.md).
 
 ## Delivery order
 
-1. Local Dev: repeatable isolated PostgreSQL, migrations, fixtures and API.
-   This is a single-fixture developer backend with authentication disabled;
-   it is not a shared user-testing service or login acceptance environment.
-2. Shared Test/UAT: independent GCP project/database/IAM, Auth0 Test app, two
-   admitted test accounts, API-connected customer web and fake financial providers.
+1. Shared Dev: independent GCP project/database, authenticated customer web and
+   fake providers for daily development. The local Compose stack is optional.
+2. Shared Test/UAT: separate project/database and Auth0 client/audience, invited
+   synthetic testers and stable, exact-revision user sessions.
 3. Staging: preserve production-like exact-candidate release rehearsal.
 4. Production: preserve existing approval and readiness gates.
 
-Reserve the proposed `samra-pay-dev` project for future shared development; do
-not duplicate an always-on Cloud SQL stack there now. No feature branch or
-persistent database is shared with Test, Staging or Production. Project IDs and
-billing/organization must be read back before creation; their names here are
-proposals, not proof of availability or permission.
+David corrected the local-only Dev assumption on 2026-09-09. Both shared
+runtimes are the active delivery priority. Dev project `samra-pay-dev`
+(`829811168658`) and Test project `samra-pay-test` (`378050809796`) were created
+in existing organization `614833350075`, then read back as ACTIVE with separate
+environment labels and synthetic data classification. Both now have billing
+linked under the explicitly approved $50 combined monthly scope. The open billing account was verified as `01196E-DFC16E-433E6C`.
 
-## Smallest shared Test footprint
+Each environment gets its own copy of the following footprint, with the names
+in the JSON inventory. Dev uses subnet `10.60.0.0/24` and private-services range
+`10.61.0.0/24`; Test uses `10.70.0.0/24` and `10.71.0.0/24`. There is no peering
+to Staging or Production. No feature branch or persistent database is shared.
 
-| Resource | Proposed configuration |
-| --- | --- |
-| Project | `samra-pay-test`, existing organization after readback, `us-east4` |
-| Database | PostgreSQL 16, zonal `db-g1-small`, private IP, 10 GB SSD, 50 GB growth limit, seven retained backups/PITR, deletion protection |
-| Network | Dedicated VPC/subnet/private services access; direct VPC egress from API/jobs |
-| API | One 1-vCPU / 512-MiB instance during sessions, instance-based CPU, maximum one; IAM plus customer Auth0 authorization |
-| Web | Existing customer application, separate authenticated build, zero minimum/one maximum instance, IAM-authenticated API proxy |
-| Migrations | Existing migration image, explicit one-shot job, no retries, separate identity/DB role |
-| Secrets | Separate runtime and migration connection secrets, exact numbered versions; no production/provider keys |
-| Evidence/operations | Existing GitHub artifacts, Cloud Logging/Monitoring, read-only operator access; no public operations portal |
+## Shared Dev and Test footprint
+
+| Resource            | Proposed configuration                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Project             | `samra-pay-test`, existing organization after readback, `us-east4`                                                              |
+| Database            | PostgreSQL 16, zonal `db-g1-small`, private IP, 10 GB SSD, 50 GB growth limit, seven retained backups/PITR, deletion protection |
+| Network             | Dedicated VPC/subnet/private services access; direct VPC egress from API/jobs                                                   |
+| API                 | One 1-vCPU / 512-MiB instance during sessions, instance-based CPU, maximum one; IAM plus customer Auth0 authorization           |
+| Web                 | Existing customer application, separate authenticated build, zero minimum/one maximum instance, IAM-authenticated API proxy     |
+| Migrations          | Existing migration image, explicit one-shot job, no retries, separate identity/DB role                                          |
+| Secrets             | Separate runtime and migration connection secrets, exact numbered versions; no production/provider keys                         |
+| Evidence/operations | Existing GitHub artifacts, Cloud Logging/Monitoring, read-only operator access; no public operations portal                     |
 
 The fake worker currently runs on a timer inside the API process. Scaling to
 zero with CPU allocated only during requests can strand a transfer after the
@@ -42,35 +51,64 @@ background processing from HTTP readiness alone.
 
 ## Cost and authorization package
 
-Propose a **$100 monthly planning allowance** for the shared Test environment,
-with review after seven days. This is not an approved budget or guaranteed bill.
-Local Dev adds no cloud resource cost. Cloud pricing depends on region and usage;
-free-tier allowances are shared across the billing account, so do not count them
-as dedicated Test savings.
+David approved **$50 combined per month** on 2026-09-09. Billing linkage and
+budget `2404c65e-6bd9-4710-953a-59cf5d7a3870` were read back. The budget filters
+only Dev and Test and uses current-spend alerts at 50/80/100 percent plus a
+100-percent forecast alert. Default billing IAM recipients remain enabled.
+No hard spending cutoff is claimed. Staging, Production and vendor subscriptions
+are separate. Owner: David Haile; first cost review due 2026-09-16.
 
-For scale, Google's displayed instance-based base rates are $0.000018/vCPU-second
-and $0.000002/GiB-second. One 1-vCPU / 0.5-GiB instance for 730 hours is about
-$49.93 before free tier, region differences, networking or discounts. This is
-illustrative API compute, not a full `us-east4` quote. Add the region-specific
-Cloud SQL tier/storage/backups, web traffic, registry, builds, logging and egress
-in the pricing calculator before apply. See [Cloud Run pricing](https://cloud.google.com/run/pricing)
-and [Cloud SQL pricing](https://cloud.google.com/sql/pricing).
+Plan for approximately **200 combined environment-hours per month**, initially
+150 Dev and 50 Test. Retain separate PostgreSQL `db-g1-small` instances and data,
+but stop database compute outside sessions. At the verified us-east4 instance
+rate of $0.0375/hour, 200 database-hours cost $7.50; API compute is approximately
+$14; two 10-GiB SSD disks approximately $4/month. Allow $10 for web, backups,
+builds, registry, logs and secrets, with approximately $14 contingency. These
+are low-traffic estimates, not quotas or guarantees. Free tier is not assumed.
+See [Cloud SQL pricing](https://cloud.google.com/sql/pricing),
+[Cloud Run pricing](https://cloud.google.com/run/pricing), and
+[Cloud SQL stop/start](https://docs.cloud.google.com/sql/docs/postgres/start-stop-restart-instance).
 
-Use an alerts-only project budget at 50/80/100 percent and named review ownership.
-An alerts-only budget is not a hard spending cap; do not promise automatic
-shutdown from an alert. Any supported spend-cap feature requires separate
-service-coverage verification. See [Google budget documentation](https://docs.cloud.google.com/billing/docs/how-to/budgets).
+Safe session controls are a deployment prerequisite, not implemented by setting
+this budget. Start database, verify readiness, then enable the API worker and
+customer session. To stop, close new customer writes, drain or explicitly record
+unresolved work, stop API compute, then stop the database. Never kill a worker
+mid-transfer just because an alert arrived. Retain data and user-test evidence.
+A request-only scale-to-zero API does not guarantee background transfer progress.
+Do not leave either database or API running indefinitely while setup is blocked.
 
-The concrete cloud apply package must include the verified billing account,
-organization, exact proposed resource configuration above, approved cost scope,
-operator, candidate/image identity and rollback/cleanup actions. No cloud apply
-command is included in this local implementation PR. This avoids an executable
-half-configured environment being mistaken for an approved deployment.
+## Session operation using native Cloud Run controls
+
+Use Cloud Run manual scaling for the API: one instance during a session, zero
+outside it. A minimum-instance setting of zero alone is not an off switch.
+Manual zero disables serving without deleting the revision or its configuration.
+See [manual scaling](https://docs.cloud.google.com/run/docs/configuring/services/manual-scaling).
+
+After deployment and acceptance of the shutdown sequence, the operator performs:
+
+1. Start only the selected database (`gcloud sql instances patch ...
+   --activation-policy=ALWAYS`) and read back readiness.
+2. Set that environment's API to `--scaling=1`; verify its pinned revision and
+   database readiness. Start the customer web only after the API is healthy.
+3. End the customer session by setting customer web to `--scaling=0`. Ensure no
+   tester has direct Cloud Run API invocation rights and let in-flight requests
+   finish. Customer logout alone does not close the write boundary.
+4. Through the scoped read-only database role, verify no active transfer, ledger
+   hold, pending/processing outbox item or received/deferred provider event remains.
+   Failed or uncertain work needs a recorded recovery decision. Do not delete it
+   or force its financial state to make a shutdown check pass.
+5. Set API to `--scaling=0`, read it back, then stop the selected database with
+   `--activation-policy=NEVER`. Record session start/end and accumulated hours.
+
+These are the chosen native controls, not a claim that a deployed shutdown drill
+has passed. Exact service revisions, database roles and drain queries still need
+validation before user sessions. Do not configure an unattended shutdown that
+can interrupt financial work, and do not unlink billing as a session stop action.
 
 ## Demonstrated code/configuration blockers
 
-The runtime environment values in the JSON are a starting-point inventory,
-not a deployable shared-Test profile. `deploymentBlocked` remains true.
+The JSON records the desired `synthetic-shared` runtime configuration.
+`deploymentBlocked` remains true until provisioning and acceptance finish.
 
 - This change adds `--build-arg SAMRA_WEB_SURFACE=legacy` to the existing customer
   web Dockerfile, selecting `build:legacy`. The default remains the public build.
@@ -80,12 +118,19 @@ not a deployable shared-Test profile. `deploymentBlocked` remains true.
   admitted Auth0 account mappings with independently funded product accounts.
   Build a bounded operator provisioning path using the actual identity schema.
   Synthetic funding must use balanced journals and durable idempotency.
-- Current `demo` mode does not wire the alpha invitation store; `alpha-release-1`
-  does, but deliberately blocks financial routes. Implement a bounded Test
-  admission profile reusing the existing store before exposing synthetic transfers
-  to testers. Neither changing the project name nor selecting fake providers
-  closes that server-authorization gap. Reuse private account access work in
-  PR #194 rather than rebuilding its return-before-KYC flow.
+- `synthetic-shared` reuses the existing durable invitation store while allowing
+  the existing synthetic financial routes. It requires the exact matching Dev
+  or Test project name, Auth0, PostgreSQL, Node production mode, explicit origins
+  and fake identity/wallet/financial providers. The runtime/project environment
+  checks are misconfiguration guards, not independent proof of cloud identity.
+  Deployment must read back project, database, secrets and service identity.
+  Alpha Release 1 retains its financial-route prohibition. Marketing writes and
+  developer/operations controls stay unavailable in the shared profile.
+- The shared profile resolves active USD product accounts through their customer
+  and matching ledger account; balances still come from ledger postings. Account
+  suffixes are synthetic display identifiers, not bank/card details. Controlled
+  account provisioning and fixture credit remain operator deployment work, not
+  automatic effects of login. Reuse private account access work in PR #194.
 - Shared Test must keep `NODE_ENV=production` and development operations controls
   off. Do not enable debug/admin routes to bypass the missing tester setup path.
 - The Test browser URL, ingress boundary, Auth0 application/audience and callbacks

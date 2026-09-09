@@ -31,6 +31,63 @@ afterEach(() => {
 });
 
 describe("public analytics consent and privacy boundary", () => {
+  it.each(["facebook", "instagram", "x", "youtube", "tiktok"])(
+    "attributes approved %s profile traffic only after consent",
+    (source) => {
+      vi.spyOn(window, "location", "get").mockReturnValue(
+        new URL(
+          `https://www.samrapay.com/?utm_source=${source}&utm_medium=social&utm_campaign=social_profile&utm_content=bio&email=private&gclid=secret#private`,
+        ) as unknown as Location,
+      );
+      expect(analytics.startPublicAnalytics()).toBe(false);
+      expect(state.dataLayer).toBeUndefined();
+      analytics.storeAnalyticsChoice("granted");
+      expect(analytics.startPublicAnalytics()).toBe(true);
+      expect(commands().find((args) => args[0] === "config")?.[2]).toEqual(
+        expect.objectContaining({
+          page_location: "https://www.samrapay.com/",
+          campaign_source: source,
+          campaign_medium: "social",
+          campaign_name: "social_profile",
+          campaign_content: "bio",
+        }),
+      );
+      expect(JSON.stringify(commands())).not.toMatch(
+        /private|secret|gclid|email|utm_/,
+      );
+      analytics.stopPublicAnalytics();
+      expect(analytics.startPublicAnalytics()).toBe(false);
+    },
+  );
+
+  it.each([
+    "utm_source=someone%40example.com&utm_medium=social&utm_campaign=social_profile",
+    "utm_source=instagram&utm_medium=social&utm_campaign=customer_123",
+    "utm_source=instagram&utm_source=facebook&utm_medium=social&utm_campaign=social_profile",
+    "utm_source=instagram&utm_campaign=social_profile",
+    "utm_source=instagram&utm_medium=paid_social&utm_campaign=social_profile",
+  ])("rejects unapproved or ambiguous campaign input: %s", (query) => {
+    expect(
+      analytics.publicCampaignParameters(
+        new URL(`https://www.samrapay.com/?${query}`),
+      ),
+    ).toEqual({});
+  });
+
+  it("drops arbitrary content while retaining a valid approved campaign", () => {
+    expect(
+      analytics.publicCampaignParameters(
+        new URL(
+          "https://www.samrapay.com/?utm_source=youtube&utm_medium=social&utm_campaign=ask_samra&utm_content=private-person",
+        ),
+      ),
+    ).toEqual({
+      campaign_source: "youtube",
+      campaign_medium: "social",
+      campaign_name: "ask_samra",
+    });
+  });
+
   it("makes no tag or data queue before a saved opt-in", () => {
     expect(analytics.readAnalyticsChoice()).toBeNull();
     expect(analytics.startPublicAnalytics()).toBe(false);

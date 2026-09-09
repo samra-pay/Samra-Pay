@@ -31,7 +31,7 @@ export type CustomerIdentityProviderConfig =
     }>;
 
 export type ApiRuntimeConfig = Readonly<{
-  releaseProfile?: "demo" | "alpha-release-1";
+  releaseProfile?: "demo" | "alpha-release-1" | "synthetic-shared";
   allowedOrigins?: readonly string[];
   trustedProxies?: false | readonly string[];
   backendMode: BackendMode;
@@ -50,9 +50,13 @@ export function loadApiRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): ApiRuntimeConfig {
   const releaseProfile = environment["SAMRA_RELEASE_PROFILE"] ?? "demo";
-  if (releaseProfile !== "demo" && releaseProfile !== "alpha-release-1") {
+  if (
+    releaseProfile !== "demo" &&
+    releaseProfile !== "alpha-release-1" &&
+    releaseProfile !== "synthetic-shared"
+  ) {
     throw new Error(
-      "SAMRA_RELEASE_PROFILE supports only demo or alpha-release-1.",
+      "SAMRA_RELEASE_PROFILE supports only demo, alpha-release-1 or synthetic-shared.",
     );
   }
   const allowedOrigins = parseAllowedOrigins(
@@ -72,7 +76,7 @@ export function loadApiRuntimeConfig(
     environment["SAMRA_PERSISTENCE_MODE"],
   );
   const devControlsEnabled =
-    releaseProfile !== "alpha-release-1" &&
+    releaseProfile === "demo" &&
     backendMode === "demo" &&
     providerMode === "fake" &&
     environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"] !==
@@ -106,6 +110,26 @@ export function loadApiRuntimeConfig(
     throw new Error(
       "Alpha Release 1 requires Auth0, PostgreSQL, and disabled workers and operations controls.",
     );
+  }
+  if (releaseProfile === "synthetic-shared") {
+    const deployment = environment["SAMRA_DEPLOYMENT_ENVIRONMENT"];
+    if (
+      (deployment !== "dev" && deployment !== "test") ||
+      environment["GOOGLE_CLOUD_PROJECT"] !== `samra-pay-${deployment}` ||
+      environment["NODE_ENV"] !== "production" ||
+      backendMode !== "demo" ||
+      persistenceMode !== "postgres" ||
+      customerAuth.mode !== "auth0" ||
+      allowedOrigins.length === 0 ||
+      operationsRequested ||
+      environment["SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE"] !== "fake" ||
+      environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"] !== "fake" ||
+      environment["SAMRA_PROVIDER_MODE"] !== "fake"
+    ) {
+      throw new Error(
+        "Shared synthetic environments require the matching Dev/Test project, production Node mode, Auth0, PostgreSQL, explicit origins, fake providers and disabled operations.",
+      );
+    }
   }
   const customerIdentityProvider = parseCustomerIdentityProvider(
     environment,

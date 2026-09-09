@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-09-09T14:02:54Z",
+  "operator": "me@davidhaile.com",
+  "organizationId": "614833350075",
+  "method": "Cloud Shell gcloud project create and direct read-back",
+  "projects": [
+    {
+      "projectId": "samra-pay-dev",
+      "projectNumber": "829811168658",
+      "state": "ACTIVE",
+      "environment": "dev",
+      "dataClassification": "synthetic",
+      "billingEnabled": false
+    },
+    {
+      "projectId": "samra-pay-test",
+      "projectNumber": "378050809796",
+      "state": "ACTIVE",
+      "environment": "test",
+      "dataClassification": "synthetic",
+      "billingEnabled": false
+    }
+  ],
+  "billingAccountVerifiedOpen": "01196E-DFC16E-433E6C",
+  "paidResourcesCreated": false,
+  "runtimeDeployed": false,
+  "auth0ConfiguredByThisChange": false,
+  "usableApplicationUrls": [],
+  "stagingChanged": false,
+  "productionChanged": false
+}

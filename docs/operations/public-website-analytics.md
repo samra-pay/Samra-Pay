@@ -1,5 +1,15 @@
 # Public website analytics
 
+## September 9, 2026 source-attribution update
+
+Live GA4 UI inspection confirmed the existing property receives page views (10 active users and 140 events for September 2–8). The live bundle `index-BOT5GF-5.js` still strips all campaign parameters. The source change below is prepared for release; no deployed attribution claim is made here.
+
+Approved social links use `utm_source=facebook|instagram|x|youtube|tiktok`, `utm_medium=social`, `utm_campaign=social_profile|ask_samra|product_demo`, and optional `utm_content=bio|channel_link|post|video`. Each value must exactly match the allowlist and each required parameter must occur once. Invalid or incomplete campaigns are dropped; arbitrary content is dropped independently. These labels are passed through the documented GA4 `campaign_source`, `campaign_medium`, `campaign_name`, and `campaign_content` settings. Full queries, fragments, ad click IDs and arbitrary identifiers remain excluded. Existing consent, privacy-signal, canonical-host and preview protections remain in force. No campaign persistence or form events are added.
+
+Use **Reports → Generate leads → Traffic acquisition**, with **Session source / medium** and **Session campaign**. Profile links use `social_profile`; future Ask Samra and demo content can use the corresponding approved campaign names. Never put UTMs on internal navigation or the outbound social footer. Untagged historic direct visits cannot be retroactively identified. Counts exclude visitors who decline analytics or block it. This measures visits, not waitlist conversion.
+
+The September 2 status and verification record below are historical.
+
 Status on September 2, 2026: GA4 account, property, and web stream created;
 website integration prepared for review, **not deployed or collecting data**.
 David approved basic analytics setup, no advertising features, and accepting
