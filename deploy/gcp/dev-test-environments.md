@@ -69,6 +69,9 @@ half-configured environment being mistaken for an approved deployment.
 
 ## Demonstrated code/configuration blockers
 
+The runtime environment values in the JSON are a starting-point inventory,
+not a deployable shared-Test profile. `deploymentBlocked` remains true.
+
 - This change adds `--build-arg SAMRA_WEB_SURFACE=legacy` to the existing customer
   web Dockerfile, selecting `build:legacy`. The default remains the public build.
   CI builds both and checks the customer runtime-config/license artifacts.
@@ -77,6 +80,12 @@ half-configured environment being mistaken for an approved deployment.
   admitted Auth0 account mappings with independently funded product accounts.
   Build a bounded operator provisioning path using the actual identity schema.
   Synthetic funding must use balanced journals and durable idempotency.
+- Current `demo` mode does not wire the alpha invitation store; `alpha-release-1`
+  does, but deliberately blocks financial routes. Implement a bounded Test
+  admission profile reusing the existing store before exposing synthetic transfers
+  to testers. Neither changing the project name nor selecting fake providers
+  closes that server-authorization gap. Reuse private account access work in
+  PR #194 rather than rebuilding its return-before-KYC flow.
 - Shared Test must keep `NODE_ENV=production` and development operations controls
   off. Do not enable debug/admin routes to bypass the missing tester setup path.
 - The Test browser URL, ingress boundary, Auth0 application/audience and callbacks

@@ -30,6 +30,7 @@ test("shared Test is isolated, authenticated, fake-provider only and not activat
   assert.equal(new Set(Object.values(envs).map((e) => e.projectId)).size, 4);
   assert.equal(envs.dev.cloudDatabaseCount, 0);
   assert.equal(envs.test.spendingAuthorized, false);
+  assert.equal(envs.test.deploymentBlocked, true);
   assert.equal(envs.test.database.publicIp, false);
   assert.equal(envs.test.api.customerAuthentication, "auth0");
   assert.equal(envs.test.api.runtimeEnvironment.NODE_ENV, "production");
