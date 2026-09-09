@@ -131,13 +131,59 @@ describe("commercial launch copy", () => {
       },
     );
     it(
+      "renders all four approved card designs with responsive sources in " +
+        language,
+      () => {
+        const host = document.createElement("div");
+        host.innerHTML = markup(Features, language);
+        const artwork = [...host.querySelectorAll(".portfolio-card-art")];
+        const approvedNames = [
+          "samra-pay-charge-v1",
+          "samra-pay-elite-v1",
+          "samra-pay-airline-v1",
+          "samra-pay-elite-100-v1",
+        ];
+        expect(artwork).toHaveLength(approvedNames.length);
+        artwork.forEach((picture, index) => {
+          const image = picture.querySelector("img")!;
+          const name = approvedNames[index];
+          expect(image.getAttribute("src")).toContain(`${name}-856.webp`);
+          expect(image.getAttribute("width")).toBe("856");
+          expect(image.getAttribute("height")).toBe("540");
+          expect(image.getAttribute("alt")).toMatch(/^Samra Pay /);
+          expect(image.closest('[aria-hidden="true"]')).toBeNull();
+          for (const format of ["avif", "webp"]) {
+            const source = picture.querySelector(
+              `source[type="image/${format}"]`,
+            )!;
+            expect(source.getAttribute("srcset")).toContain(
+              `${name}-428.${format} 428w`,
+            );
+            expect(source.getAttribute("srcset")).toContain(
+              `${name}-856.${format} 856w`,
+            );
+            expect(source.getAttribute("sizes")).toBe(
+              index === 3
+                ? "(max-width: 720px) calc(100vw - 78px), 45vw"
+                : "(max-width: 720px) calc(100vw - 78px), (max-width: 860px) 45vw, 33vw",
+            );
+          }
+          if (language === "am")
+            expect(image.getAttribute("alt")).toMatch(/[\u1200-\u137f]/);
+        });
+        expect(artwork[3].querySelector("img")?.getAttribute("alt")).toContain(
+          language === "en" ? "sample number 001 / 100" : "የማሳያ ቁጥር 001 / 100",
+        );
+      },
+    );
+    it(
       "keeps the fourth card a distinct founding edition in " + language,
       () => {
         const host = document.createElement("div");
         host.innerHTML = markup(Features, language);
         const founder = host.querySelector("#elite-100")!;
         expect(founder).not.toBeNull();
-        expect(founder.querySelector(".portfolio-mastercard-logo")).toBeNull();
+        expect(founder.querySelector("h3")?.textContent).toBe("Samra Pay Elite 100");
         expect(founder.textContent).not.toMatch(
           /2026|Alpha|1\/100|\$495|45,000/i,
         );

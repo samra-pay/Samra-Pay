@@ -83,6 +83,20 @@ const imagePlans = [
     blurSigma: 0.7,
     maximumBytes: 80_000,
   },
+  ...[
+    "samra-pay-charge-v1",
+    "samra-pay-elite-v1",
+    "samra-pay-airline-v1",
+    "samra-pay-elite-100-v1",
+  ].map((name) => ({
+    name,
+    source: `${name}.png`,
+    widths: [428, 856],
+    // Preserve the approved lettering and fine etched borders at card scale.
+    webpQuality: 95,
+    avifQuality: 80,
+    maximumBytes: 200_000,
+  })),
 ];
 
 function expectedGeneratedFileNames() {
@@ -122,8 +136,7 @@ async function generationFingerprint() {
 async function generatedCacheIsCurrent(fingerprint) {
   try {
     if (
-      (await readFile(generationFingerprintPath, "utf8")).trim() !==
-      fingerprint
+      (await readFile(generationFingerprintPath, "utf8")).trim() !== fingerprint
     ) {
       return false;
     }

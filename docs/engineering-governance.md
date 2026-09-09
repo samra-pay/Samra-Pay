@@ -51,6 +51,7 @@ and the current-state index in the same PR.
 
 | Decision                                                                 | Status / governing record                                                                                                                                     |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Samra Pay card front artwork v1.0 | Approved by David on 2026-09-09: [four locked card designs and website artwork](design/approved-card-artwork-v1.md) |
 | Invite-only Alpha Release 1 | Accepted 2026-09-06 in the main task: [scope and sequence](architecture/alpha-release-1.md); 100-user cap, customer-controlled wallets, deposits/transfers unavailable |
 | Samra owns customer, financial state, ledger, and audit                  | Accepted: [architecture invariants](architecture/README.md)                                                                                                   |
 | Alpha uses Auth0, Persona, Crossmint, Google Cloud, GitHub Actions, Qase | Accepted repository decision: [Alpha platform](architecture/alpha-platform.md); funding and Ethiopia payout remain unresolved                                 |
