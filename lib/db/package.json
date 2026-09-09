@@ -16,7 +16,8 @@
     "test:staging-access:junit": "node ../../artifacts/api-server/test/run-with-junit.mjs ../../artifacts/api-server/test-results/staging-database-access.xml 'Staging database least-privilege access' src/staging-database-access-integration.ts",
     "test:migrate": "node --import tsx src/test-migrate.ts",
     "test:seed": "node --import tsx src/test-seed.ts",
-    "workforce:provision": "node --import tsx src/workforce-provision.ts"
+    "workforce:provision": "node --import tsx src/workforce-provision.ts",
+    "shared-test:operate": "node --import tsx src/shared-test-operator-cli.ts"
   },
   "dependencies": {
     "@workspace/remittance": "workspace:*",
