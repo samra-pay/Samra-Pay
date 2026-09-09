@@ -1,5 +1,12 @@
 # Public website analytics
 
+## September 9: public waitlist measurement draft
+
+The next implementation adds explicit, consent-gated `waitlist_form_started`, `waitlist_submission_accepted`, `waitlist_validation_error` and `waitlist_submission_error` events. Validation categories are fixed labels; no form contents are accepted by the measurement function. Known honeypot submissions are excluded. Rejection, withdrawal, privacy signals and noncanonical hosts block collection. Optional measurement failures cannot block signup. The English and Amharic privacy notice explains the added event categories.
+
+An accepted receipt is not a new unique contact, email ownership verification or a qualified lead. Do not mark this event as `generate_lead` or equate its count with unique subscribers. Verification and a durable first-party attribution/consent record remain separate work. No advertising tags, audience exports or identity matching are included. This is source-only until reviewed and deployed. The original status below remains historical.
+
+
 Status on September 2, 2026: GA4 account, property, and web stream created;
 website integration prepared for review, **not deployed or collecting data**.
 David approved basic analytics setup, no advertising features, and accepting

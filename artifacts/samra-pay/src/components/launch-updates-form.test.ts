@@ -3,6 +3,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicLanguageProvider } from "../lib/public-i18n";
 import { LaunchUpdatesForm } from "./launch-updates-form";
+import { trackPublicWaitlistEvent } from "../lib/public-analytics";
+
+vi.mock("../lib/public-analytics", () => ({
+  trackPublicWaitlistEvent: vi.fn(() => true),
+}));
 
 let root: Root;
 let host: HTMLDivElement;
@@ -132,6 +137,12 @@ describe("launch updates waitlist", () => {
       "You're on the pre-launch list. We'll keep you informed.",
     );
     expect(host.textContent).not.toContain("reader@example.com");
+    expect(trackPublicWaitlistEvent).toHaveBeenCalledWith("accepted");
+    expect(
+      vi
+        .mocked(trackPublicWaitlistEvent)
+        .mock.calls.filter(([kind]) => kind === "accepted"),
+    ).toHaveLength(1);
   });
 
   it("passes the hidden bot field and shows a truthful service error", async () => {
@@ -149,6 +160,35 @@ describe("launch updates waitlist", () => {
       "We couldn't save your email. Please try again.",
     );
     expect(email().value).toBe("reader@example.com");
+    expect(trackPublicWaitlistEvent).not.toHaveBeenCalledWith("accepted");
+  });
+
+  it("records a service error without recording an accepted submission", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    await render();
+    await enter(email(), "reader@example.com");
+    await act(async () => consent().click());
+    await submit();
+    await vi.waitFor(() =>
+      expect(trackPublicWaitlistEvent).toHaveBeenCalledWith("service_error"),
+    );
+    expect(trackPublicWaitlistEvent).not.toHaveBeenCalledWith("accepted");
+  });
+
+  it("does not count the honeypot's synthetic success as an accepted signup", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ accepted: true, acceptedAt: "2026-09-09T12:00:00Z" }),
+        { status: 202 },
+      ),
+    );
+    await render();
+    await enter(honeypot(), "https://bot.example");
+    await enter(email(), "reader@example.com");
+    await act(async () => consent().click());
+    await submit();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+    expect(trackPublicWaitlistEvent).not.toHaveBeenCalledWith("accepted");
   });
 
   it("localizes the accepted state in Amharic", async () => {

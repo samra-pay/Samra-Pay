@@ -1,10 +1,12 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
+import { trackPublicWaitlistEvent } from "@/lib/public-analytics";
 
 export function LaunchUpdatesForm() {
   const { language, text } = usePublicLanguage();
   const fieldId = useId();
+  const startMeasured = useRef(false);
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
@@ -19,10 +21,12 @@ export function LaunchUpdatesForm() {
     if (status === "submitting") return;
     const address = email.trim();
     if (address.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      if (!website) trackPublicWaitlistEvent("invalid_email");
       setError("email");
       return;
     }
     if (!consent) {
+      if (!website) trackPublicWaitlistEvent("missing_consent");
       setError("consent");
       return;
     }
@@ -36,11 +40,13 @@ export function LaunchUpdatesForm() {
         locale: language,
         website,
       });
+      if (!website) trackPublicWaitlistEvent("accepted");
       setEmail("");
       setConsent(false);
       setWebsite("");
       setStatus("accepted");
     } catch {
+      if (!website) trackPublicWaitlistEvent("service_error");
       setServiceError(true);
       setStatus("idle");
     }
@@ -92,6 +98,8 @@ export function LaunchUpdatesForm() {
               disabled={status === "submitting"}
               value={email}
               onChange={(event) => {
+                if (!startMeasured.current && !website)
+                  startMeasured.current = trackPublicWaitlistEvent("started");
                 setEmail(event.target.value);
                 setError(null);
                 setServiceError(false);
