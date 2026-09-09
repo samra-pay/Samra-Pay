@@ -177,10 +177,15 @@ Cloud Build ID and resulting image digests, and deploy only verified digests.
 The archive SHA-256 is provenance evidence; the build label alone is not source
 verification. Source upload is private to the selected GCP project.
 
-For the first Dev publication, use the already-provisioned legacy Cloud Build
-identity `829811168658@cloudbuild.gserviceaccount.com`, which the project audit
-shows already has `roles/cloudbuild.builds.builder`. The default Compute identity
-has no observed build grants and must not be silently granted broad access.
+The first Dev submission was rejected before execution: Cloud Build does not
+accept the legacy `829811168658@cloudbuild.gserviceaccount.com` identity as an
+explicit user-specified build account. The default Compute identity has no
+observed build grants and must not be silently granted broad access.
+Use dedicated `samra-build-dev` / `samra-build-test` identities with only
+objectViewer on their project source bucket, writer on their environment image
+registry, and logWriter on their project. `configure-dev-test-build-iam.sh`
+contains the exact grants and read-back commands; approval is pending. It grants
+no database, secret, deployment, impersonation or production access.
 A build failure stops publication; if an immutable tag was already pushed,
 inspect its digest and source before retrying. Database compute remains stopped
 through image publication. The combined $50 budget includes build charges.

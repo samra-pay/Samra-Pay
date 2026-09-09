@@ -148,7 +148,15 @@
         "stopRequiresDrainedTransfers": true,
         "newSessionsRequireOperatorStart": true
       },
-      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json"
+      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json",
+      "build": {
+        "serviceAccount": "samra-build-dev@samra-pay-dev.iam.gserviceaccount.com",
+        "identityCreated": true,
+        "permissionsApplied": false,
+        "sourceBucket": "gs://samra-pay-dev_cloudbuild",
+        "config": "deploy/gcp/cloudbuild.dev-test.yaml",
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-image-publication.json"
+      }
     },
     "test": {
       "projectId": "samra-pay-test",
@@ -287,7 +295,15 @@
         "newSessionsRequireOperatorStart": true
       },
       "cloudDatabaseCount": 1,
-      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json"
+      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json",
+      "build": {
+        "serviceAccount": "samra-build-test@samra-pay-test.iam.gserviceaccount.com",
+        "identityCreated": true,
+        "permissionsApplied": false,
+        "sourceBucket": "gs://samra-pay-test_cloudbuild",
+        "config": "deploy/gcp/cloudbuild.dev-test.yaml",
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-image-publication.json"
+      }
     },
     "staging": {
       "projectId": "samra-pay-staging",
