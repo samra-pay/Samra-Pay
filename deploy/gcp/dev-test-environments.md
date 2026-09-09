@@ -110,6 +110,11 @@ can interrupt financial work, and do not unlink billing as a session stop action
 ## Demonstrated code/configuration blockers
 
 The JSON records the desired `synthetic-shared` runtime configuration.
+
+The [initial tester operator procedure](../../docs/testing/shared-test-operator.md)
+provides preview/apply commands for the two synthetic invitations and fake
+identity decisions. It preserves customer-led consent and wallet creation;
+product account provisioning and synthetic funding are still separate prerequisites.
 `deploymentBlocked` remains true until provisioning and acceptance finish.
 
 - This change adds `--build-arg SAMRA_WEB_SURFACE=legacy` to the existing customer
