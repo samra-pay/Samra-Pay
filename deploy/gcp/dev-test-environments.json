@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "projects-created-runtime-pending",
+  "status": "foundations-created-runtime-pending",
   "sourceBaseline": "1c2d6853385c7cda3dea94e4131b0233c53f7c35",
   "owner": "David Haile",
   "organizationIdFromExistingFoundation": "614833350075",
@@ -26,7 +26,10 @@
           "samra_migrations_dev",
           "samra_runtime_dev",
           "samra_audit_dev"
-        ]
+        ],
+        "activationPolicy": "NEVER",
+        "observedState": "STOPPED",
+        "schemaMigrated": false
       },
       "network": {
         "name": "samra-dev-vpc",
@@ -108,7 +111,7 @@
       "initialRuntime": "shared-cloud-run",
       "composeFile": "deploy/dev/compose.yaml",
       "sharedLogin": false,
-      "cloudDatabaseCount": 0,
+      "cloudDatabaseCount": 1,
       "plannedCloudDatabaseCount": 1,
       "plannedSharedLogin": true,
       "initialTesterCount": 2,
@@ -120,7 +123,8 @@
         "persistentDataRetained": true,
         "stopRequiresDrainedTransfers": true,
         "newSessionsRequireOperatorStart": true
-      }
+      },
+      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json"
     },
     "test": {
       "projectId": "samra-pay-test",
@@ -143,7 +147,10 @@
           "samra_migrations_test",
           "samra_runtime_test",
           "samra_audit_test"
-        ]
+        ],
+        "activationPolicy": "NEVER",
+        "observedState": "STOPPED",
+        "schemaMigrated": false
       },
       "network": {
         "name": "samra-test-vpc",
@@ -230,7 +237,9 @@
         "persistentDataRetained": true,
         "stopRequiresDrainedTransfers": true,
         "newSessionsRequireOperatorStart": true
-      }
+      },
+      "cloudDatabaseCount": 1,
+      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json"
     },
     "staging": {
       "projectId": "samra-pay-staging",

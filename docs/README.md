@@ -30,8 +30,10 @@ release evidence.
 David confirmed on 2026-09-09 that both environments must be shared cloud
 runtimes. Local Compose is optional developer tooling, not delivery of shared
 Dev. The [environment plan](../deploy/gcp/dev-test-environments.md) records the
-two newly created projects, proposed isolated resource footprint and remaining
-runtime/identity/account-provisioning work. Neither environment is usable yet.
+two isolated projects, verified $50 combined budget, private PostgreSQL instances
+(currently stopped), and remaining runtime/identity/account-provisioning work.
+Neither environment is usable yet. See the dated
+[foundation read-back](operations/evidence/2026-09-09-dev-test-foundation.json).
 The [project read-back](operations/evidence/2026-09-09-dev-test-projects.json)
 proves project creation only. Delivery requires actual URLs and demonstrated
 login, account isolation, synthetic-money movement and ledger results.

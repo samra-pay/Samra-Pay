@@ -1,8 +1,11 @@
 # Separate Dev, Test, Staging and Production
 
 Status: Dev and Test projects created and read back on 2026-09-09; billing
-linked and combined $50 monthly budget verified, database/runtime deployments pending. No usable app URL is claimed.
+linked and combined $50 monthly budget verified. Private PostgreSQL instances
+and databases are created; both instances are STOPPED with activation NEVER.
+Schema migrations, credentials and application deployments are pending. No usable app URL is claimed.
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
+Dated [foundation read-back](../../docs/operations/evidence/2026-09-09-dev-test-foundation.json).
 Local backend implementation: [Dev Compose](../dev/README.md).
 
 ## Delivery order
@@ -73,6 +76,34 @@ unresolved work, stop API compute, then stop the database. Never kill a worker
 mid-transfer just because an alert arrived. Retain data and user-test evidence.
 A request-only scale-to-zero API does not guarantee background transfer progress.
 Do not leave either database or API running indefinitely while setup is blocked.
+
+## Session operation using native Cloud Run controls
+
+Use Cloud Run manual scaling for the API: one instance during a session, zero
+outside it. A minimum-instance setting of zero alone is not an off switch.
+Manual zero disables serving without deleting the revision or its configuration.
+See [manual scaling](https://docs.cloud.google.com/run/docs/configuring/services/manual-scaling).
+
+After deployment and acceptance of the shutdown sequence, the operator performs:
+
+1. Start only the selected database (`gcloud sql instances patch ...
+   --activation-policy=ALWAYS`) and read back readiness.
+2. Set that environment's API to `--scaling=1`; verify its pinned revision and
+   database readiness. Start the customer web only after the API is healthy.
+3. End the customer session by setting customer web to `--scaling=0`. Ensure no
+   tester has direct Cloud Run API invocation rights and let in-flight requests
+   finish. Customer logout alone does not close the write boundary.
+4. Through the scoped read-only database role, verify no active transfer, ledger
+   hold, pending/processing outbox item or received/deferred provider event remains.
+   Failed or uncertain work needs a recorded recovery decision. Do not delete it
+   or force its financial state to make a shutdown check pass.
+5. Set API to `--scaling=0`, read it back, then stop the selected database with
+   `--activation-policy=NEVER`. Record session start/end and accumulated hours.
+
+These are the chosen native controls, not a claim that a deployed shutdown drill
+has passed. Exact service revisions, database roles and drain queries still need
+validation before user sessions. Do not configure an unattended shutdown that
+can interrupt financial work, and do not unlink billing as a session stop action.
 
 ## Demonstrated code/configuration blockers
 

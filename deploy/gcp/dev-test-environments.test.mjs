@@ -40,10 +40,10 @@ test("Dev explicitly migrates and seeds before the persistent API starts", () =>
   assert.equal(workflow.match(/"deploy\/dev\/\*\*"/g)?.length, 2);
 });
 test("shared Test is isolated, authenticated, fake-provider only and not activated", () => {
-  assert.equal(plan.status, "projects-created-runtime-pending");
+  assert.equal(plan.status, "foundations-created-runtime-pending");
   const envs = plan.environments;
   assert.equal(new Set(Object.values(envs).map((e) => e.projectId)).size, 4);
-  assert.equal(envs.dev.cloudDatabaseCount, 0);
+  assert.equal(envs.dev.cloudDatabaseCount, 1);
   assert.equal(envs.dev.plannedCloudDatabaseCount, 1);
   assert.equal(envs.dev.initialRuntime, "shared-cloud-run");
   for (const name of ["dev", "test"]) {

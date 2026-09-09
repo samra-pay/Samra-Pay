@@ -1551,6 +1551,11 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
         );
         // A new admitted customer's account comes from PostgreSQL, not the
         // original seed actor. Funding uses an idempotent balanced journal.
+        assert.ok(
+          (await restarted.runtime.activity("demo_customer_001")).every(
+            (item) => item.sourceType !== "opening_balance",
+          ),
+        ); // shared runtimes never fabricate the legacy opening-balance event
         const accountRef = `synthetic_usd_${randomUUID()}`;
         const account = await pool.query<{ id: string }>(
           `INSERT INTO samra_core.product_accounts

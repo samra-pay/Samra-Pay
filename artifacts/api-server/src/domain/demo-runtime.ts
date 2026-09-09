@@ -424,7 +424,7 @@ export class DemoRuntime {
       )
     ).flat();
     const items = [
-      ...(actorId === DEMO_ACTOR.id
+      ...(!this.#productAccountStore && actorId === DEMO_ACTOR.id
         ? [
             {
               id: "activity_opening_balance_001",
