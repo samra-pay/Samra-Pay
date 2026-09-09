@@ -55,10 +55,41 @@ export function storeAnalyticsChoice(choice: AnalyticsChoice) {
   }
 }
 
+// Only published marketing labels are allowed through. Never forward arbitrary
+// query values (even syntactically valid ones can contain personal information).
+export function publicCampaignParameters(url: URL) {
+  const allowed = {
+    utm_source: ["facebook", "instagram", "x", "youtube", "tiktok"],
+    utm_medium: ["social"],
+    utm_campaign: ["social_profile", "ask_samra", "product_demo"],
+    utm_content: ["bio", "channel_link", "post", "video"],
+  };
+  const values: Record<string, string> = {};
+  for (const [key, choices] of Object.entries(allowed)) {
+    const entries = url.searchParams.getAll(key);
+    if (entries.length === 1 && choices.includes(entries[0]))
+      values[key] = entries[0];
+  }
+  if (!values.utm_source || !values.utm_medium || !values.utm_campaign)
+    return {};
+  return {
+    campaign_source: values.utm_source,
+    campaign_medium: values.utm_medium,
+    campaign_name: values.utm_campaign,
+    ...(values.utm_content ? { campaign_content: values.utm_content } : {}),
+  };
+}
+
 export function publicPageParameters(href: string, referrer: string) {
   const url = new URL(href);
   const route = resolvePublicRoute(url.pathname);
-  if (url.origin !== config.origin || !route || route === "login" || route === "signup") return null;
+  if (
+    url.origin !== config.origin ||
+    !route ||
+    route === "login" ||
+    route === "signup"
+  )
+    return null;
   let referralOrigin = "";
   try {
     const referral = new URL(referrer);
@@ -71,6 +102,7 @@ export function publicPageParameters(href: string, referrer: string) {
     page_location: config.origin + normalizePublicPath(url.pathname),
     page_title: `Samra Pay | ${route}`,
     page_referrer: referralOrigin,
+    ...publicCampaignParameters(url),
   };
 }
 
