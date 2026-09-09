@@ -57,7 +57,7 @@ The configuration flags attest to reviewed facts; setting one does not prove pro
 
 ## Release sequence
 
-1. Merge reviewed exact-candidate code only after required CI/security. Keep PRs #204 (social attribution), #206 (form measurement) and #208 (foundation) distinct; this build extends #208 without silently merging the other PRs.
+1. Merge reviewed exact-candidate code only after required CI/security. Keep PRs #204 (social attribution), #206 (form measurement) and #208 (foundation) distinct; this build extends #208. The branch includes the main-branch merges of #204 and #207; #206 remains separate.
 2. Resolve the public website release source; current main is not evidence of the currently deployed design. Prepare the exact source SHA, bundle/image digest and rollback revision.
 3. Apply reviewed migration 0020 using the existing separate migration process. Provision a role limited to the marketing tables and schema usage; no ledger/customer/workforce access. Runtime needs SELECT/INSERT on permission/event/reconciliation history, SELECT/INSERT/UPDATE on marketing profiles/receipts/challenges/sync/removals/limits/suppression/contacts, and no table ownership or history UPDATE/DELETE. Provision TLS and least-privilege secrets through existing cloud controls.
 4. Configure the dedicated Resend verified segment/topic, signing secret and tracking settings. Wire `/confirm-email`, `/email-preferences`, `/api/v1/marketing-leads`, `/api/v1/marketing-leads/confirm`, `/api/v1/marketing-leads/preferences`, and `/api/v1/marketing-leads/resend-webhook` to this service. Keep unrelated routes inaccessible. Add perimeter abuse controls; database budgets are global minute caps, not a replacement for edge protection. Do not trust caller-supplied forwarding headers as identity.
@@ -68,7 +68,7 @@ Retention/deletion policy and a governed private support process must be settled
 
 ## Local validation
 
-Passed: 100 launch-updates unit tests, 12 database unit tests, 21 PostgreSQL lifecycle tests and one full synthetic HTTP/provider flow; 263 website tests; TypeScript compilation; API regeneration; default and enabled public builds; frozen dependency installation; action-pin, migration-policy and repository controls. All 21 migrations applied to a fresh disposable local database. English and Amharic consent forms were visually inspected locally. The bundled runtime exits disabled without configuration. Docker is unavailable locally; the PR adds an isolated CI image check. These checks do not establish actual email delivery, audience matching or production deployment.
+Passed: 100 launch-updates unit tests, 12 database unit tests, 21 PostgreSQL lifecycle tests and one full synthetic HTTP/provider flow; 274 website tests; TypeScript compilation; API regeneration; default and enabled public builds; frozen dependency installation; action-pin, migration-policy and repository controls. All 21 migrations applied to a fresh disposable local database. English and Amharic consent forms were visually inspected locally. The bundled runtime exits disabled without configuration. Docker is unavailable locally; the PR adds an isolated CI image check. These checks do not establish actual email delivery, audience matching or production deployment.
 
 ## Primary interface references
 
