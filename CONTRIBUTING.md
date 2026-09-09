@@ -39,6 +39,12 @@ relink workspace packages. Do not reuse another worktree's `node_modules`.
 | `lib/launch-updates`                                                      | Separately gated Resend launch updates                   |
 | `scripts`, `deploy`, `.github/workflows`                                  | Quality evidence and guarded delivery                    |
 
+## Local PostgreSQL Dev backend
+
+Use the [isolated Dev stack](deploy/dev/README.md) to start PostgreSQL, apply
+migrations, seed synthetic balances and run the API with one Compose command.
+This local backend has no login and is separate from shared Test/UAT.
+
 ## Local mock preview
 
 Run each selected command in its own terminal at the repository root. These

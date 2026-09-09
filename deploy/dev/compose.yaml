@@ -1,0 +1,68 @@
+# Local synthetic backend only. Never use this profile for a shared/cloud runtime.
+name: samra-dev
+services:
+  postgres:
+    image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+    environment:
+      POSTGRES_USER: samra_local
+      POSTGRES_PASSWORD: local_synthetic_only
+      POSTGRES_DB: samra_dev
+    ports:
+      - "127.0.0.1:55484:5432"
+    volumes:
+      - samra-dev-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U samra_local -d samra_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  migrate:
+    image: samra-migrations:${SAMRA_DEV_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: deploy/gcp/Dockerfile.migrate
+    environment:
+      DATABASE_URL: postgresql://samra_local:local_synthetic_only@postgres:5432/samra_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+  seed:
+    image: samra-migrations:${SAMRA_DEV_IMAGE_TAG:-local}
+    command: ["node", "--import", "tsx", "src/test-seed.ts"]
+    environment:
+      TEST_DATABASE_URL: postgresql://samra_local:local_synthetic_only@postgres:5432/samra_dev
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+  api:
+    image: samra-api:${SAMRA_DEV_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: deploy/gcp/Dockerfile.api
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      DATABASE_URL: postgresql://samra_local:local_synthetic_only@postgres:5432/samra_dev
+      SAMRA_BACKEND_MODE: demo
+      SAMRA_RELEASE_PROFILE: demo
+      SAMRA_PROVIDER_MODE: fake
+      SAMRA_PERSISTENCE_MODE: postgres
+      SAMRA_RUN_WORKER: "true"
+      SAMRA_CUSTOMER_AUTH_MODE: disabled
+      SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: fake
+      SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: fake
+      SAMRA_INTERNAL_OPERATIONS_ENABLED: "false"
+    ports:
+      - "127.0.0.1:18084:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+volumes:
+  samra-dev-postgres:

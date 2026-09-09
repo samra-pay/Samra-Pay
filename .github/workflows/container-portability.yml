@@ -14,6 +14,7 @@ on:
       - "artifacts/samra-pay-ds/**"
       - "artifacts/samra-pay-ops/**"
       - "deploy/gcp/**"
+      - "deploy/dev/**"
       - "lib/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -30,6 +31,7 @@ on:
       - "artifacts/samra-pay-ds/**"
       - "artifacts/samra-pay-ops/**"
       - "deploy/gcp/**"
+      - "deploy/dev/**"
       - "lib/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -95,6 +97,18 @@ jobs:
           docker build --file deploy/gcp/Dockerfile.customer-web
           --tag "samra-customer-web:${SAMRA_CONTAINER_IMAGE_TAG}" .
 
+      - name: Build authenticated customer surface separately
+        run: >-
+          docker build --file deploy/gcp/Dockerfile.customer-web
+          --build-arg SAMRA_WEB_SURFACE=legacy
+          --tag "samra-customer-web-legacy:${SAMRA_CONTAINER_IMAGE_TAG}" .
+
+      - name: Verify customer app image contains runtime configuration and license
+        run: >-
+          docker run --rm --network none --entrypoint node
+          "samra-customer-web-legacy:${SAMRA_CONTAINER_IMAGE_TAG}"
+          -e 'const fs=require("node:fs");const s=fs.readFileSync("/app/public/index.html","utf8");if(!s.includes("samra-runtime-config.js"))process.exit(1);fs.accessSync("/app/public/licenses/crossmint-fintech-starter.txt");'
+
       - name: Build operations web image
         run: >-
           docker build --file deploy/gcp/Dockerfile.operations-web
@@ -112,6 +126,11 @@ jobs:
 
       - name: Run migration and container runtime smoke
         run: bash deploy/gcp/smoke-containers.sh
+
+      - name: Prove isolated local Dev startup and restart
+        env:
+          SAMRA_DEV_IMAGE_TAG: ${{ github.sha }}
+        run: bash deploy/dev/smoke.sh
 
       - name: Preserve container runtime evidence
         if: always()
