@@ -248,10 +248,14 @@ export function createV1Router(
         "Shared synthetic environments require durable admission and fake providers without developer controls.",
       );
     }
-    // The shared customer app does not expose the public marketing write routes.
-    router.use(["/waitlist", "/acquisition"], (_req, _res, next) => {
-      next(new DomainError("NOT_FOUND", "The route was not found."));
-    });
+    // These surfaces are absent in shared customer environments, including
+    // workforce authentication and developer controls.
+    router.use(
+      ["/waitlist", "/acquisition", "/dev", "/internal"],
+      (_req, _res, next) => {
+        next(new DomainError("NOT_FOUND", "The route was not found."));
+      },
+    );
   }
 
   if (config.releaseProfile === "alpha-release-1") {

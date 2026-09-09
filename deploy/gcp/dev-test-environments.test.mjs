@@ -48,8 +48,8 @@ test("shared Test is isolated, authenticated, fake-provider only and not activat
   assert.equal(envs.dev.initialRuntime, "shared-cloud-run");
   for (const name of ["dev", "test"]) {
     const runtime = envs[name].api.runtimeEnvironment;
-    assert.equal(envs[name].billingEnabled, false);
-    assert.equal(envs[name].spendingAuthorized, false);
+    assert.equal(envs[name].billingEnabled, true);
+    assert.equal(envs[name].spendingAuthorized, true);
     assert.ok(
       envs[name].database.roles.every((role) => role.endsWith(`_${name}`)),
     );
@@ -57,7 +57,8 @@ test("shared Test is isolated, authenticated, fake-provider only and not activat
     assert.equal(runtime.GOOGLE_CLOUD_PROJECT, `samra-pay-${name}`);
     assert.equal(runtime.SAMRA_DEPLOYMENT_ENVIRONMENT, name);
   }
-  assert.equal(envs.test.spendingAuthorized, false);
+  assert.equal(plan.budget.amountUsd, 50);
+  assert.equal(plan.budget.hardCap, false);
   assert.equal(envs.test.deploymentBlocked, true);
   assert.equal(envs.test.database.publicIp, false);
   assert.equal(envs.test.api.customerAuthentication, "auth0");

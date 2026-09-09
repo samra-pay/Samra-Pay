@@ -1517,6 +1517,7 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
           "/transfers",
           "/funding",
           "/internal/operations/summary",
+          "/INTERNAL/operations/summary/",
           "/dev/reconciliation/runs",
           "/dev/onboarding/identity/example/decision",
           "/waitlist/subscriptions",
@@ -1567,6 +1568,7 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
         for (const path of [
           "/dev/reconciliation/runs",
           "/internal/operations/summary",
+          "/INTERNAL/operations/summary/",
           "/waitlist/subscriptions",
           "/waitlist/subscriptions/",
           "/WAITLIST/subscriptions",
@@ -1582,6 +1584,7 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
               })
             ).status,
             404,
+            `POST ${path}`,
           );
         }
       }

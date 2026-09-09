@@ -1,7 +1,7 @@
 # Separate Dev, Test, Staging and Production
 
 Status: Dev and Test projects created and read back on 2026-09-09; billing
-unlinked, database/runtime deployments pending. No usable app URL is claimed.
+linked and combined $50 monthly budget verified, database/runtime deployments pending. No usable app URL is claimed.
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
 Local backend implementation: [Dev Compose](../dev/README.md).
 
@@ -18,8 +18,8 @@ David corrected the local-only Dev assumption on 2026-09-09. Both shared
 runtimes are the active delivery priority. Dev project `samra-pay-dev`
 (`829811168658`) and Test project `samra-pay-test` (`378050809796`) were created
 in existing organization `614833350075`, then read back as ACTIVE with separate
-environment labels and synthetic data classification. Neither has billing
-linked. The open billing account was verified as `01196E-DFC16E-433E6C`.
+environment labels and synthetic data classification. Both now have billing
+linked under the explicitly approved $50 combined monthly scope. The open billing account was verified as `01196E-DFC16E-433E6C`.
 
 Each environment gets its own copy of the following footprint, with the names
 in the JSON inventory. Dev uses subnet `10.60.0.0/24` and private-services range
@@ -48,30 +48,31 @@ background processing from HTTP readiness alone.
 
 ## Cost and authorization package
 
-Propose a **$200 combined monthly planning allowance** ($100 per project),
-with review after seven days. This is not an approved budget or guaranteed bill.
-The optional local Compose stack adds no cloud resource cost; shared Dev does. Cloud pricing depends on region and usage;
-free-tier allowances are shared across the billing account, so do not count them
-as dedicated Test savings.
+David approved **$50 combined per month** on 2026-09-09. Billing linkage and
+budget `2404c65e-6bd9-4710-953a-59cf5d7a3870` were read back. The budget filters
+only Dev and Test and uses current-spend alerts at 50/80/100 percent plus a
+100-percent forecast alert. Default billing IAM recipients remain enabled.
+No hard spending cutoff is claimed. Staging, Production and vendor subscriptions
+are separate. Owner: David Haile; first cost review due 2026-09-16.
 
-For scale, Google's displayed instance-based base rates are $0.000018/vCPU-second
-and $0.000002/GiB-second. One 1-vCPU / 0.5-GiB instance for 730 hours is about
-$49.93 before free tier, region differences, networking or discounts. This is
-illustrative API compute, not a full `us-east4` quote. Add the region-specific
-Cloud SQL tier/storage/backups, web traffic, registry, builds, logging and egress
-in the pricing calculator before apply. See [Cloud Run pricing](https://cloud.google.com/run/pricing)
-and [Cloud SQL pricing](https://cloud.google.com/sql/pricing).
+Plan for approximately **200 combined environment-hours per month**, initially
+150 Dev and 50 Test. Retain separate PostgreSQL `db-g1-small` instances and data,
+but stop database compute outside sessions. At the verified us-east4 instance
+rate of $0.0375/hour, 200 database-hours cost $7.50; API compute is approximately
+$14; two 10-GiB SSD disks approximately $4/month. Allow $10 for web, backups,
+builds, registry, logs and secrets, with approximately $14 contingency. These
+are low-traffic estimates, not quotas or guarantees. Free tier is not assumed.
+See [Cloud SQL pricing](https://cloud.google.com/sql/pricing),
+[Cloud Run pricing](https://cloud.google.com/run/pricing), and
+[Cloud SQL stop/start](https://docs.cloud.google.com/sql/docs/postgres/start-stop-restart-instance).
 
-Use an alerts-only project budget at 50/80/100 percent and named review ownership.
-An alerts-only budget is not a hard spending cap; do not promise automatic
-shutdown from an alert. Any supported spend-cap feature requires separate
-service-coverage verification. See [Google budget documentation](https://docs.cloud.google.com/billing/docs/how-to/budgets).
-
-The concrete cloud apply package must include the verified billing account,
-organization, exact proposed resource configuration above, approved cost scope,
-operator, candidate/image identity and rollback/cleanup actions. No cloud apply
-command is included in this local implementation PR. This avoids an executable
-half-configured environment being mistaken for an approved deployment.
+Safe session controls are a deployment prerequisite, not implemented by setting
+this budget. Start database, verify readiness, then enable the API worker and
+customer session. To stop, close new customer writes, drain or explicitly record
+unresolved work, stop API compute, then stop the database. Never kill a worker
+mid-transfer just because an alert arrived. Retain data and user-test evidence.
+A request-only scale-to-zero API does not guarantee background transfer progress.
+Do not leave either database or API running indefinitely while setup is blocked.
 
 ## Demonstrated code/configuration blockers
 
