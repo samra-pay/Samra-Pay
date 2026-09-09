@@ -588,7 +588,7 @@ export function createV1Router(
       const actor = await runtime.actorResolver.resolve(req);
       const query = parseSchema(ListActivityQueryParams, req.query);
       if (query.accountId !== undefined) {
-        runtime.assertAccount(actor.id, query.accountId);
+        await runtime.assertAccount(actor.id, query.accountId);
       }
       const items = await runtime.activity(actor.id);
       const page = paginate(items, query.cursor, query.limit);
@@ -692,7 +692,7 @@ export function createV1Router(
     asyncRoute(async (req, res) => {
       const actor = await runtime.actorResolver.resolve(req);
       const body = parseSchema(CreateRemittanceQuoteBody, req.body);
-      runtime.assertAccount(actor.id, body.sourceAccountId);
+      await runtime.assertAccount(actor.id, body.sourceAccountId);
       await runtime.assertBeneficiaryRail(
         actor.id,
         body.beneficiaryId,

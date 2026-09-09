@@ -9,6 +9,8 @@ import {
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   ALPHA_WALLET_PROVISIONING_DISCLOSURE,
   createDatabase,
+  PostgresLedgerJournalWriter,
+  PostgresPersistenceContext,
 } from "@workspace/db";
 import { createApp } from "../src/app";
 import type { ApiRuntimeConfig } from "../src/config";
@@ -1443,7 +1445,7 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
       );
       assert.equal(started["customerId"], externalRef);
       assert.equal(started["state"], "consent_pending"); // no legacy activation shortcut
-      const restarted = await startServer(config, {
+      let restarted = await startServer(config, {
         customerAccessTokenMiddleware: authenticate,
       });
       running.push(restarted);
@@ -1547,6 +1549,95 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
           ),
           [],
         );
+        // A new admitted customer's account comes from PostgreSQL, not the
+        // original seed actor. Funding uses an idempotent balanced journal.
+        const accountRef = `synthetic_usd_${randomUUID()}`;
+        const account = await pool.query<{ id: string }>(
+          `INSERT INTO samra_core.product_accounts
+           (customer_id, external_ref, kind, currency)
+           VALUES ($1, $2, 'domestic_cash', 'USD') RETURNING id`,
+          [customerId, accountRef],
+        );
+        await pool.query(
+          `INSERT INTO samra_core.ledger_accounts
+           (code, name, account_class, normal_side, currency, product_account_id)
+           VALUES ($1, 'Synthetic customer balance', 'liability', 'credit', 'USD', $2)`,
+          [accountRef, account.rows[0]!.id],
+        );
+        const journals = new PostgresLedgerJournalWriter(
+          new PostgresPersistenceContext(pool),
+        );
+        const credit = {
+          eventType: "synthetic_test_credit",
+          eventId: accountRef,
+          description: "Disposable HTTP acceptance fixture",
+          postings: [
+            ["control_rain_usd", "debit", 5000n],
+            [accountRef, "credit", 5000n],
+          ] as const,
+          metadata: { synthetic: "true" },
+        };
+        const journalId = await journals.post(credit);
+        assert.equal(await journals.post(credit), journalId);
+        const ownedAccounts = arrayBody(
+          await apiRequest(restarted.origin, "/api/v1/accounts", { headers }),
+          200,
+        );
+        assert.equal(ownedAccounts.length, 1);
+        const owned = ownedAccounts[0] as JsonObject;
+        assert.equal(owned["id"], accountRef);
+        assert.deepEqual(owned["bookBalance"], {
+          currency: "USD",
+          minorUnits: "5000",
+        });
+        assert.deepEqual(owned["availableBalance"], {
+          currency: "USD",
+          minorUnits: "5000",
+        });
+        assert.match(String(owned["last4"]), /^[0-9]{4}$/);
+        assert.equal(
+          (
+            await apiRequest(
+              restarted.origin,
+              "/api/v1/activity?accountId=demo_usd_account_001",
+              { headers },
+            )
+          ).status,
+          404,
+        );
+        await assert.rejects(
+          restarted.runtime.assertAccount("demo_customer_001", accountRef),
+          /source account was not found/,
+        );
+        await stopServer(first);
+        await stopServer(restarted);
+        restarted = await startServer(config, {
+          customerAccessTokenMiddleware: authenticate,
+        });
+        running.push(restarted);
+        assert.deepEqual(
+          arrayBody(
+            await apiRequest(restarted.origin, "/api/v1/accounts", { headers }),
+            200,
+          ),
+          ownedAccounts,
+        );
+        await pool.query(
+          `UPDATE samra_core.product_accounts SET state = 'disabled' WHERE id = $1`,
+          [account.rows[0]!.id],
+        );
+        assert.deepEqual(
+          arrayBody(
+            await apiRequest(restarted.origin, "/api/v1/accounts", { headers }),
+            200,
+          ),
+          [],
+        );
+        await assert.rejects(
+          restarted.runtime.assertAccount(externalRef, accountRef),
+          /source account was not found/,
+        );
+
         for (const path of [
           "/accounts",
           "/activity",

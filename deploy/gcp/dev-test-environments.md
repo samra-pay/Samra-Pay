@@ -95,11 +95,11 @@ The JSON records the desired `synthetic-shared` runtime configuration.
   Deployment must read back project, database, secrets and service identity.
   Alpha Release 1 retains its financial-route prohibition. Marketing writes and
   developer/operations controls stay unavailable in the shared profile.
-- `DemoRuntime.accountResponses` still serves only the seeded demo actor. A new
-  admitted customer therefore has no product account. Per-customer product-account
-  resolution and idempotent balanced fixture credit are launch blockers; creating
-  the projects or enabling the new profile does not close them. Reuse private
-  account access work in PR #194 rather than rebuilding its return-before-KYC flow.
+- The shared profile resolves active USD product accounts through their customer
+  and matching ledger account; balances still come from ledger postings. Account
+  suffixes are synthetic display identifiers, not bank/card details. Controlled
+  account provisioning and fixture credit remain operator deployment work, not
+  automatic effects of login. Reuse private account access work in PR #194.
 - Shared Test must keep `NODE_ENV=production` and development operations controls
   off. Do not enable debug/admin routes to bypass the missing tester setup path.
 - The Test browser URL, ingress boundary, Auth0 application/audience and callbacks

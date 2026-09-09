@@ -1,3 +1,4 @@
+import { PostgresProductAccountStore } from "./postgres-product-account-store";
 import {
   PostgresLedgerControl,
   PostgresPersistenceContext,
@@ -81,6 +82,10 @@ export function createConfiguredDemoRuntime(
       : new DeterministicFakePersonaAdapter();
   return new DemoRuntime({
     customerAlphaAccessStore,
+    productAccountStore:
+      config.releaseProfile === "synthetic-shared"
+        ? new PostgresProductAccountStore(context)
+        : undefined,
     repository: new PostgresRemittanceRepository(context),
     ledger: new PostgresLedgerControl(context),
     unitOfWork: context,

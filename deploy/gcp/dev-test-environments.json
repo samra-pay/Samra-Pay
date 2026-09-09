@@ -246,7 +246,6 @@
   "activationBlockers": [
     "Billing and combined $50 budget configured; safe session start/drain/stop controls and cost read-back remain required",
     "Exact candidate verification for synthetic-shared admission and financial-route profile",
-    "Per-customer product account resolution: current accountResponses and seed balance serve only the seeded demo actor",
     "Separate Auth0 Test app/audience, callback/logout origins and account recovery proof",
     "Two scoped test identity mappings, invitation eligibility and controlled per-user synthetic journal funding",
     "Pinned images and secret versions, private database/TLS reachability and separate runtime/migration/read-only roles",
