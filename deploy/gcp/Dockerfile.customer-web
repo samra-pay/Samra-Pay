@@ -5,6 +5,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV PORT=8080
 ENV BASE_PATH=/
+ARG SAMRA_WEB_SURFACE=public
 ARG VITE_SAMRA_DATA_MODE=api
 ENV VITE_SAMRA_DATA_MODE=$VITE_SAMRA_DATA_MODE
 
@@ -12,7 +13,11 @@ WORKDIR /workspace
 RUN corepack enable
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @workspace/samra-pay run build
+RUN case "$SAMRA_WEB_SURFACE" in \
+      public) pnpm --filter @workspace/samra-pay run build ;; \
+      legacy) pnpm --filter @workspace/samra-pay run build:legacy ;; \
+      *) echo "SAMRA_WEB_SURFACE must be public or legacy" >&2; exit 64 ;; \
+    esac
 
 FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS runtime
 
