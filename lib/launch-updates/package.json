@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./server": "./src/server.mjs"
+    "./server": "./src/server.mjs",
+    "./verified-leads": "./src/verified-lead-service.mjs"
   },
   "scripts": {
     "test": "node --test src/*.test.mjs"
