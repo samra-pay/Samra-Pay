@@ -1,0 +1,90 @@
+{
+  "date": "2026-09-09",
+  "status": "provider-configuration-saved-runtime-pending",
+  "authorization": "David approved the prepared Dev/Test Auth0 change set in this task",
+  "sourceCandidate": "c3d97b552de2cd162b244bdc3deb688e35c5465b",
+  "tenant": "dev-40h1kaj5488jqctu",
+  "tenantEnvironment": "DEVELOPMENT",
+  "observedVia": "Auth0 dashboard; saved values read back after navigating away and returning",
+  "environments": {
+    "dev": {
+      "application": "Samra One - Web - Development",
+      "clientId": "1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0",
+      "apiId": "6a9b52e5261b4bde124b13fb",
+      "domain": "dev-40h1kaj5488jqctu.us.auth0.com",
+      "issuer": "https://dev-40h1kaj5488jqctu.us.auth0.com/",
+      "audience": "https://api.samrapay.com/development",
+      "callbacks": [
+        "https://samra-customer-web-dev-829811168658.us-east4.run.app/"
+      ],
+      "logoutUrls": [
+        "https://samra-customer-web-dev-829811168658.us-east4.run.app/"
+      ],
+      "webOrigins": [
+        "https://samra-customer-web-dev-829811168658.us-east4.run.app"
+      ],
+      "existingDevApplicationReused": true,
+      "status": "saved-readback-verified-2026-09-09",
+      "runtimeAcceptance": false,
+      "evidence": "docs/operations/evidence/2026-09-09-dev-test-auth0.json"
+    },
+    "test": {
+      "application": "Samra One - Web - Test",
+      "clientId": "QA8sB8K21gjV7lSo5LbqOXE6vyiQ3Cx3",
+      "apiId": "6aa17d107e6b8389ad15b48f",
+      "domain": "dev-40h1kaj5488jqctu.us.auth0.com",
+      "issuer": "https://dev-40h1kaj5488jqctu.us.auth0.com/",
+      "audience": "https://api.samrapay.com/test",
+      "callbacks": [
+        "https://samra-customer-web-test-378050809796.us-east4.run.app/"
+      ],
+      "logoutUrls": [
+        "https://samra-customer-web-test-378050809796.us-east4.run.app/"
+      ],
+      "webOrigins": [
+        "https://samra-customer-web-test-378050809796.us-east4.run.app"
+      ],
+      "existingDevApplicationReused": false,
+      "status": "saved-readback-verified-2026-09-09",
+      "runtimeAcceptance": false,
+      "evidence": "docs/operations/evidence/2026-09-09-dev-test-auth0.json"
+    }
+  },
+  "testApiPolicy": {
+    "signingAlgorithm": "RS256",
+    "userDelegatedAccess": "Per-app authorization",
+    "clientAccess": "No apps allowed",
+    "offlineAccess": false,
+    "accessTokenLifetimeSeconds": 86400,
+    "testSpaGrantId": "cgr_kwGS6UmK4xkWh6O0",
+    "grantPermissions": [],
+    "alwaysGrantAllPermissions": false,
+    "devSpaHasTestGrant": false,
+    "testSpaHasDevGrant": false
+  },
+  "connections": {
+    "database": "Username-Password-Authentication",
+    "databaseId": "con_scGRctMQXZmP1fZE",
+    "devDatabaseEnabled": true,
+    "testDatabaseEnabled": true,
+    "devGoogleEnabled": true,
+    "testGoogleEnabled": false,
+    "disableSignUps": false,
+    "improvedBruteForceProtection": true,
+    "sharedIdentityStore": true
+  },
+  "automaticProviderSideEffect": {
+    "application": "Samra One API - Test (Test Application)",
+    "clientId": "r3fHsUdcCatxgZrsZZ07dFtF60cyWyoC",
+    "type": "machine-to-machine",
+    "testApiClientAccessDeniedByPolicy": true,
+    "secretAccessed": false
+  },
+  "limitations": [
+    "URLs are deterministic planned Cloud Run service addresses; no runtime deployed in this Auth0 change",
+    "Separate clients and audiences share one development tenant and managed identity connection; Samra admission and databases must remain isolated",
+    "No real user login, password recovery inbox, or deployed cross-audience rejection acceptance performed",
+    "Auth0 registration is not Samra account admission",
+    "No production provider activation, plan upgrade, or user credentials accessed"
+  ]
+}
