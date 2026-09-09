@@ -152,10 +152,11 @@
       "build": {
         "serviceAccount": "samra-build-dev@samra-pay-dev.iam.gserviceaccount.com",
         "identityCreated": true,
-        "permissionsApplied": false,
+        "permissionsApplied": true,
+        "iamEvidence": "docs/operations/evidence/2026-09-09-dev-test-build-iam.json",
         "sourceBucket": "gs://samra-pay-dev_cloudbuild",
         "config": "deploy/gcp/cloudbuild.dev-test.yaml",
-        "evidence": "docs/operations/evidence/2026-09-09-dev-test-image-publication.json"
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-build-publication.json"
       }
     },
     "test": {
@@ -299,10 +300,11 @@
       "build": {
         "serviceAccount": "samra-build-test@samra-pay-test.iam.gserviceaccount.com",
         "identityCreated": true,
-        "permissionsApplied": false,
+        "permissionsApplied": true,
+        "iamEvidence": "docs/operations/evidence/2026-09-09-dev-test-build-iam.json",
         "sourceBucket": "gs://samra-pay-test_cloudbuild",
         "config": "deploy/gcp/cloudbuild.dev-test.yaml",
-        "evidence": "docs/operations/evidence/2026-09-09-dev-test-image-publication.json"
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-build-publication.json"
       }
     },
     "staging": {

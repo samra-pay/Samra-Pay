@@ -4,6 +4,11 @@ Status: Dev and Test projects created and read back on 2026-09-09; billing
 linked and combined $50 monthly budget verified. Private PostgreSQL instances
 and databases are created; both instances are STOPPED with activation NEVER.
 Auth0 Dev/Test clients, distinct audiences and exact callback/logout origins are saved and read back.
+Build-only IAM is applied and both projects successfully published the API,
+customer web and migration images from `ed2f4459d82434949ac72111f80c1840b168a165`.
+See the [image publication read-back](../../docs/operations/evidence/2026-09-09-dev-test-build-publication.json).
+These initial images predate the integration of tester setup from PR #211;
+user testing requires a final reviewed candidate containing that setup.
 Schema migrations, credentials and application deployments are pending. No usable app URL is claimed.
 See the [Auth0 read-back](../../docs/operations/evidence/2026-09-09-dev-test-auth0.json).
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
@@ -189,7 +194,9 @@ observed build grants and must not be silently granted broad access.
 Use dedicated `samra-build-dev` / `samra-build-test` identities with only
 objectViewer on their project source bucket, writer on their environment image
 registry, and logWriter on their project. `configure-dev-test-build-iam.sh`
-contains the exact grants and read-back commands; approval is pending. It grants
+contains the exact grants and read-back commands. David approved the six grants;
+they were applied as `me@davidhaile.com` and independently read back on 2026-09-09.
+See the [build IAM evidence](../../docs/operations/evidence/2026-09-09-dev-test-build-iam.json). It grants
 no database, secret, deployment, impersonation or production access.
 A build failure stops publication; if an immutable tag was already pushed,
 inspect its digest and source before retrying. Database compute remains stopped

@@ -32,7 +32,11 @@ runtimes. Local Compose is optional developer tooling, not delivery of shared
 Dev. The [environment plan](../deploy/gcp/dev-test-environments.md) records the
 two isolated projects, verified $50 combined budget, private PostgreSQL instances
 (currently stopped), and remaining runtime/identity/account-provisioning work.
-Neither environment is usable yet. See the dated
+Both environments now have verified build IAM and successful API/customer-web/
+migration image publication; see the dated
+[build read-back](operations/evidence/2026-09-09-dev-test-build-publication.json).
+These initial images are pinned to the earlier source recorded there and are
+not the final tester-setup candidate. Neither environment is usable yet. See the dated
 [foundation read-back](operations/evidence/2026-09-09-dev-test-foundation.json).
 The [project read-back](operations/evidence/2026-09-09-dev-test-projects.json)
 proves project creation only. Delivery requires actual URLs and demonstrated
