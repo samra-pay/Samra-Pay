@@ -213,6 +213,9 @@ jobs:
       - name: Prove staging database least-privilege activation
         run: pnpm --filter @workspace/db run test:staging-access:junit
 
+      - name: Verify Dev/Test database role boundaries on disposable PostgreSQL
+        run: node --test lib/db/src/dev-test-database-integration.mjs
+
       - name: Prove seed idempotency
         run: |
           pnpm --filter @workspace/db run test:seed
