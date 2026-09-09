@@ -6,7 +6,6 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "audit-expo-types": "tsx ./src/audit-expo-types.ts",
-    "validate-qase-contract": "tsx ./src/validate-qase-contract.ts",
     "validate-testing-cadence": "tsx ./src/validate-testing-cadence.ts",
     "validate-release-candidate": "tsx ./src/validate-release-candidate.ts",
     "validate-action-pins": "tsx ./src/validate-action-pins.ts",
@@ -17,7 +16,8 @@
     "validate-experience-budgets": "tsx ./src/validate-experience-budgets.ts",
     "release-evidence": "tsx ./src/release-evidence-cli.ts",
     "test": "vitest run --config vitest.config.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "validate-test-evidence": "node ./src/validate-test-evidence.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",

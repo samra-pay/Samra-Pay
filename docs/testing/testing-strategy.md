@@ -1,15 +1,14 @@
 # Samra Pay testing strategy
 
-Status: GitHub Actions and Qase are the locked Alpha quality system. GitHub is
-the technical merge authority; Qase is the durable traceability, manual-test,
-and release-evidence record.
+Status: GitHub Actions and GitHub issues are the Alpha quality system as of
+2026-09-09. Qase is retired. Use [user testing](user-testing.md) for the scenario
+catalog, participant sessions, failures and verified retests.
 
 ## Decision
 
-Samra Pay uses risk-based test cadence instead of running every test at every
-moment. GitHub Actions is the technical merge authority. Qase is the durable
-traceability, manual-execution, and release-evidence system. PostgreSQL and the
-Samra control ledger remain the financial source of truth.
+Samra Pay uses risk-based test cadence. GitHub Actions is the technical merge
+authority; versioned scenarios and GitHub issues hold manual acceptance evidence.
+PostgreSQL and the Samra control ledger remain financial truth.
 
 The machine-readable contract is
 [`testing-cadence.json`](testing-cadence.json). The Linux quality gate validates
@@ -38,12 +37,12 @@ independently verified control.
 | Daily             | `06:17 UTC` every day        | Detect time-dependent, dependency, build, restart, and cross-package regressions                           |     30 minutes |
 | Weekly ledger     | `06:17 UTC` every Sunday     | Enforce the 100,000/1,000,000-posting materialized-balance performance gate                                |     45 minutes |
 | Weekly resilience | `07:43 UTC` every Saturday   | Soak concurrency, replay seeded ledger sequences, inject controlled failures, and rehearse schema upgrades |     45 minutes |
-| Release candidate | Manual exact-SHA dispatch    | Retest one immutable `main` commit, report Qase gates, and retain a content-addressed evidence manifest    |     90 minutes |
+| Release candidate | Manual exact-SHA dispatch    | Retest one immutable `main` commit, record engineering gates, and retain a content-addressed evidence manifest    |     90 minutes |
 
 The schedules deliberately avoid the start of the hour, when hosted workflow
 queues are more likely to be delayed. Scheduled runs execute only from the
 default branch. A workflow change is therefore not active until it is merged.
-Feature-branch pushes do not create a second full CI or Qase run. The
+Feature-branch pushes do not create a second full CI run. The
 pull-request merge ref is the authoritative pre-merge result, and the later
 `main` push independently proves the actual merged commit.
 
@@ -53,28 +52,25 @@ pull-request merge ref is the authoritative pre-merge result, and the later
 | --------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
 | PostgreSQL and ledger | Migrations, repeatable seed, double entry, precision, holds, idempotency, immutability, concurrency, reconciliation | Full repeat on a fresh disposable database plus restart    | Exact journal and audit sampling                                   |
 | API and remittance    | Unit, contract, HTTP-to-PostgreSQL, and compiled-process restart                                                    | Full repeat against synthetic PostgreSQL                   | Candidate-SHA failure and recovery review                          |
-| Customer web          | Unit/component tests, typecheck, production build, explicit API failure behavior, raw/gzip artifact budgets         | Full repeat through workspace CI                           | Browser and quote-handoff smoke in Qase                            |
-| Mobile                | Unit/model tests, typecheck, portable API configuration, recovery, production bundle, raw/gzip artifact budgets     | Full repeat through workspace CI                           | iOS and Android device smoke in Qase                               |
-| Operations portal     | Unit/model tests, role restrictions, explicit unavailable states, production build, raw/gzip entry budget           | Full repeat through workspace CI                           | Administrator, CS, compliance, and auditor workflows in Qase       |
+| Customer web          | Unit/component tests, typecheck, production build, explicit API failure behavior, raw/gzip artifact budgets         | Full repeat through workspace CI                           | Browser and quote-handoff smoke in GitHub test-session issues                            |
+| Mobile                | Unit/model tests, typecheck, portable API configuration, recovery, production bundle, raw/gzip artifact budgets     | Full repeat through workspace CI                           | iOS and Android device smoke in GitHub test-session issues                               |
+| Operations portal     | Unit/model tests, role restrictions, explicit unavailable states, production build, raw/gzip entry budget           | Full repeat through workspace CI                           | Administrator, CS, compliance, and auditor workflows in GitHub test-session issues       |
 | Design system         | Source boundary, token drift, contrast/accessibility tests, typecheck, preview build                                | Workspace build repeat                                     | Visual review across product surfaces                              |
 | GCP portability       | Docker and configuration contract tests                                                                             | Portability contract repeat                                | Deployment, migration, and rollback rehearsal only when authorized |
 | Vendor adapters       | Fake Auth0, Persona, Crossmint, funding, and payout contracts; replay, timeout, and redaction controls              | Synthetic onboarding and recovery repeat                   | Separate sandbox certification before any live credential          |
 | Commercial site       | Isolated typecheck and production build                                                                             | Separate daily job so it cannot weaken the financial gates | Visual review when included in a release                           |
 
-## Qase execution policy
+## GitHub evidence policy
 
-- Automated runs use `github-ci-postgres`, which means disposable PostgreSQL 16
-  and synthetic data. It is not a deployment environment.
-- Manual synthetic previews use the local toolchain or commit-addressed GitHub
-  build artifacts. They do not establish deployment or provider readiness.
-- Run titles identify cadence, branch, and exact commit.
-- Release candidates are identified as `rc-<first 12 SHA characters>` and can
-  only be dispatched with a full commit already contained in GitHub `main`.
-- GitHub validates every governed JUnit file and sends them to Qase in one
-  directory upload. A Qase run is completed only after that batch succeeds.
+- Automated runs identify their exact SHA/run/attempt and use `github-ci-postgres`:
+  disposable PostgreSQL 16 with synthetic data, not a deployed environment.
+- Retain JUnit and other evidence in GitHub artifacts under the existing policies.
+- User sessions follow [user testing](user-testing.md) with scenario/version,
+  deployed build, environment, owner, result, defect and verified retest links.
 - Manual plans never override a failed automated P0 control.
-- Scheduled manual runs require a named owner. A schedule that only creates an
-  unowned run should be reduced or removed.
+- A missing manual execution or unavailable environment is Blocked/Not run.
+- Compatibility reporting fields in v2 immutable manifests record Qase disabled,
+  no run identity and skipped outcomes. They do not make outbound calls.
 
 ## Merge and release stop conditions
 
@@ -88,7 +84,7 @@ Stop the merge or release when any of the following is true:
 5. An API outage silently exposes mock financial data.
 6. The tested commit differs from the candidate commit.
 7. Required exact-revision evidence or environment attribution is missing.
-   External Qase reporting is optional; its local status must remain accurate.
+   Retired Qase compatibility metadata must remain disabled and truthful.
 8. A governed customer, mobile, or operations artifact is missing, ambiguous,
    or exceeds its approved raw or gzip budget.
 
@@ -99,8 +95,8 @@ Stop the merge or release when any of the following is true:
   or real customer data.
 - Auth0, Persona, and Crossmint sandbox certification must use separate
   environments, synthetic identities, credential redaction, bounded test data,
-  and an exact-SHA Qase plan; it does not replace provider or legal approval.
-- Browser and physical-device execution remains governed manual Qase evidence
+  and an exact-SHA GitHub test plan; it does not replace provider or legal approval.
+- Browser and physical-device execution remains governed manual GitHub session evidence
   until a separate automation phase is approved.
 - This cadence phase does not authorize GCP deployment, production identity,
   secrets infrastructure, live payments, or provider connectivity.
@@ -116,7 +112,7 @@ limit by omitting or duplicating the expected artifact.
 ## Immutable release-candidate evidence
 
 [`release-evidence-contract.json`](release-evidence-contract.json) defines the
-required gates, files, retention, Qase attribution, and controlled boundaries.
+required gates, files, retention, test-environment attribution, and controlled boundaries.
 The manual workflow checks out the exact 40-character candidate SHA with no
 persisted Git credentials, verifies it is contained in GitHub `main`, and runs
 quality, commercial, migration, PostgreSQL, HTTP/restart, resilience, and
@@ -132,7 +128,7 @@ database so one suite cannot change another suite's financial baseline.
 
 Every required JUnit and performance result is SHA-256 hashed into
 `release-evidence-manifest.json`. GitHub retains the manifest, its independent
-hash record, Qase run identity, and raw evidence for 365 days. The workflow
+hash record, disabled compatibility reporting record, and raw evidence for 365 days. The workflow
 uploads evidence before enforcing stop conditions, so a failed candidate leaves
 an auditable failed record and cannot be converted into a pass by omission.
 
@@ -160,7 +156,7 @@ The daily PostgreSQL job now publishes nine separately identifiable synthetic
 journeys for completion, provider rejection, timeout retry, cancellation,
 payout-failure refund, settlement reversal, restart/idempotency,
 reconciliation resolution, and cross-journey ledger/audit sweeps. Each result
-is independently visible in GitHub artifacts and Qase. The weekly resilience
+is independently visible in GitHub artifacts. The weekly resilience
 lane adds six stable controls without sending traffic to any deployed surface:
 one concurrency soak, one reproducible model-based sequence, three controlled
 fault boundaries, and one upgrade from migration `0007` to the current schema.

@@ -2,9 +2,9 @@
   "version": 1,
   "authority": {
     "merge": "GitHub Actions",
-    "traceability": "Qase",
+    "traceability": "GitHub",
     "financialTruth": "PostgreSQL API and Samra control ledger",
-    "manualEvidence": "Qase runs against synthetic non-production environments"
+    "manualEvidence": "GitHub test-session issues against synthetic non-production environments"
   },
   "riskTiers": [
     {
@@ -33,7 +33,7 @@
       "trigger": "pull_request",
       "maximumMinutes": 20,
       "requiredJobs": ["required-ci"],
-      "qaseEnvironment": "github-ci-postgres"
+      "testEnvironment": "github-ci-postgres"
     },
     {
       "id": "main",
@@ -41,7 +41,7 @@
       "trigger": "push:main",
       "maximumMinutes": 20,
       "requiredJobs": ["required-ci"],
-      "qaseEnvironment": "github-ci-postgres"
+      "testEnvironment": "github-ci-postgres"
     },
     {
       "id": "daily",
@@ -50,7 +50,7 @@
       "cron": "17 6 * * *",
       "maximumMinutes": 30,
       "requiredJobs": ["required-ci", "commercial-daily"],
-      "qaseEnvironment": "github-ci-postgres"
+      "testEnvironment": "github-ci-postgres"
     },
     {
       "id": "weekly-ledger",
@@ -59,7 +59,7 @@
       "cron": "17 6 * * 0",
       "maximumMinutes": 45,
       "requiredJobs": ["performance"],
-      "qaseEnvironment": "github-ci-postgres"
+      "testEnvironment": "github-ci-postgres"
     },
     {
       "id": "weekly-resilience",
@@ -68,7 +68,7 @@
       "cron": "43 7 * * 6",
       "maximumMinutes": 45,
       "requiredJobs": ["resilience"],
-      "qaseEnvironment": "github-ci-postgres"
+      "testEnvironment": "github-ci-postgres"
     },
     {
       "id": "release",
@@ -76,7 +76,7 @@
       "trigger": "workflow_dispatch",
       "maximumMinutes": 90,
       "requiredJobs": ["release-assurance"],
-      "qaseEnvironment": "github-ci-postgres"
+      "testEnvironment": "github-ci-postgres"
     }
   ],
   "surfaces": [
@@ -159,14 +159,14 @@
     "A journal is unbalanced or a reconciliation variance is unexplained.",
     "A duplicate command can move money twice or changed replay evidence is accepted.",
     "An API outage silently exposes mock financial data.",
-    "The tested commit differs from the candidate commit or Qase environment attribution is missing.",
+    "The tested commit differs from the candidate commit or test environment attribution is missing.",
     "A governed customer, mobile, or operations artifact is missing, ambiguous, or exceeds its approved raw or gzip budget."
   ],
   "boundaries": [
     "Use disposable PostgreSQL and synthetic fixtures only.",
     "Do not send automated test traffic to Replit, production, real providers, or shared databases.",
-    "GitHub Actions remains the merge authority; Qase records traceability and manual evidence.",
-    "Feature-branch pushes do not duplicate pull-request CI or Qase evidence.",
+    "GitHub Actions remains the merge authority; GitHub issues record traceability and manual evidence.",
+    "Feature-branch pushes do not duplicate pull-request CI evidence.",
     "Browser and physical-device execution remains manual until a separately approved automation phase."
   ]
 }

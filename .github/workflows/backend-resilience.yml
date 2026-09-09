@@ -39,6 +39,9 @@ on:
   schedule:
     - cron: "43 7 * * 6"
 
+env:
+  TEST_ENVIRONMENT: github-ci-postgres
+
 permissions:
   contents: read
 
@@ -152,8 +155,8 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  qase-report:
-    name: Qase weekly backend resilience report
+  test-evidence:
+    name: Weekly backend resilience evidence
     needs: resilience
     if: >-
       always() &&
@@ -161,9 +164,6 @@ jobs:
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      QASE_TESTOPS_PROJECT: SAMP
-      QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
       - name: Download weekly resilience evidence
@@ -185,38 +185,3 @@ jobs:
             grep -q '<testsuite ' "$report"
             grep -q '<testcase ' "$report"
           done
-
-      - name: Create Qase weekly resilience run
-        id: qase-run-create
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: Samra Pay weekly backend resilience — ${{ github.ref_name }} @ ${{ github.sha }}
-          description: Bounded concurrency soak, seeded ledger model, controlled fault injection, migration compatibility, and synthetic logical backup/restore against disposable PostgreSQL 16.
-
-      - name: Upload weekly resilience results to Qase
-        id: qase-upload-resilience
-        if: steps.qase-run-create.outputs.id != ''
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}
-          format: junit
-          path: test-results
-
-      - name: Complete Qase weekly resilience run
-        if: >-
-          always() &&
-          steps.qase-run-create.outputs.id != '' &&
-          steps.qase-upload-resilience.outcome == 'success'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}

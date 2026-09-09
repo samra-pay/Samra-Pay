@@ -525,19 +525,19 @@ function assertWorkflowBinding(
     );
   }
 
-  const qaseJob = readJob(workflow, "qase-report");
-  const qaseValidation = readNamedStep(
-    qaseJob,
+  const evidenceJob = readJob(workflow, "test-evidence");
+  const evidenceValidation = readNamedStep(
+    evidenceJob,
     "Validate weekly resilience JUnit payloads",
   );
   if (
-    optionalScalar(qaseValidation, 8, "if") !== undefined ||
-    optionalScalar(qaseValidation, 8, "continue-on-error") !== undefined
+    optionalScalar(evidenceValidation, 8, "if") !== undefined ||
+    optionalScalar(evidenceValidation, 8, "continue-on-error") !== undefined
   ) {
-    throw new Error("Qase recovery evidence validation cannot be skipped.");
+    throw new Error("Recovery evidence validation cannot be skipped.");
   }
-  const qaseCommands = literalLines(qaseValidation, 8, "run");
-  const requiredQaseCommands = [
+  const evidenceCommands = literalLines(evidenceValidation, 8, "run");
+  const requiredEvidenceCommands = [
     "for report in \\",
     "test-results/weekly-concurrency-soak.xml \\",
     "test-results/weekly-randomized-ledger.xml \\",
@@ -550,9 +550,12 @@ function assertWorkflowBinding(
     "grep -q '<testcase ' \"$report\"",
     "done",
   ];
-  if (JSON.stringify(qaseCommands) !== JSON.stringify(requiredQaseCommands)) {
+  if (
+    JSON.stringify(evidenceCommands) !==
+    JSON.stringify(requiredEvidenceCommands)
+  ) {
     throw new Error(
-      "Qase validation is missing executable weekly recovery JUnit checks.",
+      "Evidence validation is missing executable weekly recovery JUnit checks.",
     );
   }
 }

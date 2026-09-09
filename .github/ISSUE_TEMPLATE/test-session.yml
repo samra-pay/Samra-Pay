@@ -1,0 +1,87 @@
+---
+name: User test session
+description: Plan and record a facilitated user test against an exact synthetic build.
+title: "[User test] "
+body:
+  - type: markdown
+    attributes:
+      value:
+        Use synthetic profiles and tester aliases. Do not attach credentials, recovery
+        links, KYC documents, real personal/financial data, raw provider payloads or
+        unredacted logs. A facilitator can file this for a participant without granting
+        repository access.
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective and scope
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Facilitator / engineering owner
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Test / UAT
+        - Local Dev
+        - Staging (separately authorized)
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: Exact tested version
+      description:
+        Full source SHA, runtime revision, deployment URL, scenario-catalog
+        SHA, and mobile build number if applicable. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Test setup
+      description:
+        Browser/OS/device, synthetic fixture version, provider modes and
+        tester aliases. Missing prerequisites mean Blocked.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Scenario results
+      description:
+        One row per scenario, tester and surface. Append retest comments;
+        preserve failures.
+      value: |-
+        | Scenario | Tester alias / surface | Result | Actual observation | Evidence / defect | UTC time |
+        | --- | --- | --- | --- | --- | --- |
+        | UAT-01 | Tester A / web | Not run | No observation yet | None | Not started |
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Session outcome
+      options:
+        - Planned / not run
+        - In progress
+        - Completed with failures
+        - Blocked
+        - Completed — all selected cases passed
+    validations:
+      required: true
+  - type: textarea
+    id: followup
+    attributes:
+      label: Summary and follow-up
+      description:
+        Record passed/failed/blocked/not-run counts, linked P0/P1 defects,
+        cleanup, next owner and retest version/date. For a planned session, write Not
+        run.
+    validations:
+      required: true

@@ -3,29 +3,6 @@ name: CI
 on:
   workflow_dispatch:
     inputs:
-      qase_api_base_url:
-        description: Compatibility input from Qase; accepted but never used as an executable URL
-        required: false
-        default: https://api.qase.io
-      qase_report:
-        description: Report automated acceptance results to Qase
-        required: false
-        default: "true"
-      qase_project_code:
-        description: Qase project code
-        required: false
-        default: SAMP
-      qase_environment:
-        description: Qase environment slug
-        required: false
-        default: github-ci-postgres
-      qase_run_id:
-        description: Existing Qase automated run ID
-        required: false
-      qase_run_complete:
-        description: Complete the Qase run after reporting
-        required: false
-        default: "true"
       run_commercial:
         description: Run the isolated commercial typecheck and build
         required: false
@@ -39,6 +16,9 @@ on:
       - main
   schedule:
     - cron: "17 6 * * *"
+
+env:
+  TEST_ENVIRONMENT: github-ci-postgres
 
 permissions:
   contents: read
@@ -80,8 +60,8 @@ jobs:
       - name: Verify generated contracts
         run: pnpm --filter @workspace/api-spec run codegen:check
 
-      - name: Validate Qase governance contract
-        run: pnpm run test:qase-contract
+      - name: Validate GitHub test evidence
+        run: pnpm run test:test-evidence
 
       - name: Validate testing cadence contract
         run: pnpm run test:testing-cadence
@@ -375,49 +355,18 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  qase-report:
-    name: Qase automated acceptance report
+  test-evidence:
+    name: Automated acceptance evidence
     needs:
       - postgres-persistence
       - postgres-http
     if: >-
       always() &&
-      inputs.qase_report != 'false' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      QASE_TESTOPS_PROJECT: ${{ inputs.qase_project_code || 'SAMP' }}
-      QASE_TESTOPS_ENVIRONMENT: ${{ inputs.qase_environment || 'github-ci-postgres' }}
-      QASE_TESTOPS_RUN_ID: ${{ inputs.qase_run_id }}
-      QASE_TESTOPS_RUN_COMPLETE: ${{ inputs.qase_run_complete || 'true' }}
-      QASE_RUN_SOURCE: "${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}"
 
     steps:
-      - name: Link a Qase-triggered workflow run
-        if: inputs.qase_run_id != ''
-        shell: bash
-        env:
-          QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          [[ "${QASE_TESTOPS_PROJECT}" =~ ^[A-Za-z0-9_-]+$ ]]
-          [[ "${QASE_TESTOPS_RUN_ID}" =~ ^[0-9]+$ ]]
-          [[ "${GITHUB_RUN_ID}" =~ ^[0-9]+$ ]]
-          curl \
-            --fail-with-body \
-            --silent \
-            --show-error \
-            --retry 3 \
-            --retry-all-errors \
-            --connect-timeout 10 \
-            --max-time 60 \
-            --request POST \
-            --header "Content-Type: application/json" \
-            --header "Token: ${QASE_TESTOPS_API_TOKEN}" \
-            --data "{\"run_id\":\"${QASE_TESTOPS_RUN_ID}\",\"external_run_id\":\"${GITHUB_RUN_ID}\"}" \
-            "https://api.qase.io/apps/external_link/${QASE_TESTOPS_PROJECT}/github-app/"
-
       - name: Download acceptance results
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -425,7 +374,7 @@ jobs:
           path: test-results
           merge-multiple: true
 
-      - name: Validate Qase JUnit payloads
+      - name: Validate retained JUnit payloads
         run: |
           for report in \
             test-results/postgres-persistence.xml \
@@ -450,58 +399,6 @@ jobs:
             grep -q '<testsuite ' "$report"
             grep -q '<testcase ' "$report"
           done
-
-      - name: Create Qase run for GitHub-triggered CI
-        id: qase-run-create
-        if: inputs.qase_run_id == ''
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: ${{ github.event_name == 'schedule' && 'Samra Pay daily backend acceptance' || 'Samra Pay automated backend acceptance' }} — ${{ env.QASE_RUN_SOURCE }} @ ${{ github.sha }}
-          description: PostgreSQL durability and HTTP-to-ledger acceptance from ${{ github.event_name }} GitHub Actions.
-
-      - name: Resolve Qase run
-        id: qase-run
-        env:
-          INPUT_RUN_ID: ${{ inputs.qase_run_id }}
-          CREATED_RUN_ID: ${{ steps.qase-run-create.outputs.id }}
-        run: |
-          run_id="${INPUT_RUN_ID:-$CREATED_RUN_ID}"
-          if [ -n "$run_id" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "id=$run_id" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Qase reporting skipped because no run ID was available."
-          fi
-
-      - name: Upload automated acceptance results to Qase
-        id: qase-upload-acceptance
-        if: steps.qase-run.outputs.available == 'true'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
-          format: junit
-          path: test-results
-
-      - name: Complete Qase run
-        if: >-
-          always() &&
-          steps.qase-run.outputs.available == 'true' &&
-          steps.qase-upload-acceptance.outcome == 'success' &&
-          (inputs.qase_run_id == '' || inputs.qase_run_complete != 'false')
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run.outputs.id }}
 
   required-ci:
     name: Required CI

@@ -6,11 +6,9 @@ on:
       candidate_sha:
         description: Exact 40-character commit SHA already contained in GitHub main
         required: true
-      report_to_qase:
-        description: Optionally mirror engineering gate results to Qase (non-blocking)
-        type: boolean
-        default: false
-        required: false
+
+env:
+  TEST_ENVIRONMENT: github-ci-postgres
 
 permissions:
   contents: read
@@ -222,8 +220,6 @@ jobs:
       LEDGER_PERF_LARGE_POSTINGS: "1000000"
       LEDGER_PERF_SAMPLES: "40"
       LEDGER_PERF_RESULTS_PATH: test-results/ledger-performance-characterization.json
-      QASE_TESTOPS_PROJECT: SAMP
-      QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
       - name: Check out the exact candidate
@@ -381,7 +377,7 @@ jobs:
           EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.ci.invalid"
         run: |
           pnpm --filter @workspace/api-spec run codegen:check
-          pnpm run test:qase-contract
+          pnpm run test:test-evidence
           pnpm run test:testing-cadence
           pnpm run test:release-contract
           pnpm run typecheck
@@ -497,50 +493,13 @@ jobs:
           --identity artifacts/release-candidate/release-candidate-identity.json
           --output artifacts/release-candidate/release-gates.xml
 
-      - name: Create Qase release-candidate run
-        id: qase_create
-        if: inputs.report_to_qase && steps.qase_payload.outcome == 'success' && !cancelled()
-        continue-on-error: true
-        timeout-minutes: 2
-        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: Samra Pay ${{ steps.identity.outputs.release_id }} — ${{ steps.identity.outputs.candidate_sha }}
-          description: Exact-SHA release evidence from GitHub Actions using disposable PostgreSQL 16 and synthetic data.
-
-      - name: Upload release gates to Qase
-        id: qase_upload
-        if: steps.qase_create.outputs.id != '' && !cancelled()
-        continue-on-error: true
-        timeout-minutes: 2
-        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase_create.outputs.id }}
-          format: junit
-          path: artifacts/release-candidate/release-gates.xml
-
-      - name: Complete Qase release-candidate run
-        id: qase_complete
-        if: steps.qase_create.outputs.id != '' && !cancelled()
-        continue-on-error: true
-        timeout-minutes: 2
-        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase_create.outputs.id }}
-
       - name: Record Qase release identity
         if: always()
         env:
-          QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}
-          QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}
+          QASE_REPORTING_ENABLED: "false"
+          QASE_RUN_ID: ""
           QASE_REPORTING_RESULTS: >-
-            {"qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
+            {"qase_create":"skipped","qase_upload":"skipped","qase_complete":"skipped"}
         run: >-
           pnpm --filter @workspace/scripts run release-evidence -- qase-metadata
           --output artifacts/release-candidate/qase-run.json

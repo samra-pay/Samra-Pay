@@ -1,5 +1,9 @@
 # Optional Qase reporting
 
+> Superseded on 2026-09-09: David retired Qase. Follow [GitHub user testing](../testing/user-testing.md).
+> The content below is historical context, not current setup or activation instructions.
+
+
 Status: accepted implementation direction, pending PR review and merge.
 Owner: David Haile. Decision date: 2026-09-05.
 

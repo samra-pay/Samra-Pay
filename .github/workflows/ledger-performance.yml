@@ -27,6 +27,9 @@ on:
   schedule:
     - cron: "17 6 * * 0"
 
+env:
+  TEST_ENVIRONMENT: github-ci-postgres
+
 permissions:
   contents: read
 
@@ -104,8 +107,8 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  qase-report:
-    name: Qase materialized balance performance report
+  test-evidence:
+    name: Materialized balance performance evidence
     needs: performance
     if: >-
       always() &&
@@ -113,9 +116,6 @@ jobs:
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      QASE_TESTOPS_PROJECT: SAMP
-      QASE_TESTOPS_ENVIRONMENT: github-ci-postgres
 
     steps:
       - name: Download performance evidence
@@ -129,38 +129,3 @@ jobs:
           test -s test-results/ledger-performance-characterization.xml
           grep -q '<testsuite ' test-results/ledger-performance-characterization.xml
           grep -q '<testcase ' test-results/ledger-performance-characterization.xml
-
-      - name: Create Qase performance run
-        id: qase-run-create
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: ${{ github.event_name == 'schedule' && 'Samra Pay weekly ledger performance' || 'Samra Pay ledger performance' }} — ${{ github.ref_name }} @ ${{ github.sha }}
-          description: Required materialized balance read gate at 100k and 1M postings from GitHub Actions.
-
-      - name: Upload performance result to Qase
-        id: qase-upload
-        if: steps.qase-run-create.outputs.id != ''
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}
-          format: junit
-          path: test-results/ledger-performance-characterization.xml
-
-      - name: Complete Qase performance run
-        if: >-
-          always() &&
-          steps.qase-run-create.outputs.id != '' &&
-          steps.qase-upload.outcome == 'success'
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase-run-create.outputs.id }}
