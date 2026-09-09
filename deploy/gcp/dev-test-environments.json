@@ -1,23 +1,122 @@
 {
   "version": 1,
-  "status": "proposed-not-applied",
-  "sourceBaseline": "a3e851352e22e41623d5805b4e3ba75421cc418d",
+  "status": "projects-created-runtime-pending",
+  "sourceBaseline": "1c2d6853385c7cda3dea94e4131b0233c53f7c35",
   "owner": "David Haile",
   "organizationIdFromExistingFoundation": "614833350075",
   "region": "us-east4",
   "environments": {
     "dev": {
       "projectId": "samra-pay-dev",
-      "cloudProjectStatus": "proposed-id-availability-unverified",
-      "initialRuntime": "local-compose",
-      "composeFile": "deploy/dev/compose.yaml",
+      "cloudProjectStatus": "ACTIVE-verified-2026-09-09",
       "data": "synthetic-only",
+      "initialDeverCount": 2,
+      "database": {
+        "instance": "samra-dev-postgres",
+        "name": "samra_dev",
+        "version": "POSTGRES_16",
+        "tier": "db-g1-small",
+        "availability": "zonal",
+        "diskGb": 10,
+        "maxDiskGb": 50,
+        "publicIp": false,
+        "backups": 7,
+        "pointInTimeRecovery": true,
+        "deletionProtection": true,
+        "roles": [
+          "samra_migrations_test",
+          "samra_runtime_test",
+          "samra_audit_test"
+        ]
+      },
+      "network": {
+        "name": "samra-dev-vpc",
+        "subnet": "samra-dev-us-east4",
+        "privateServicesAccess": true,
+        "runtimeConnection": "direct-vpc-egress",
+        "subnetCidr": "10.60.0.0/24",
+        "privateServicesCidr": "10.61.0.0/24"
+      },
+      "registry": "samra-dev",
+      "runtimeIdentities": [
+        "samra-api-dev",
+        "samra-customer-web-dev",
+        "samra-migrations-dev"
+      ],
+      "secretNames": [
+        "samra-dev-database-url",
+        "samra-dev-migration-database-url"
+      ],
+      "api": {
+        "service": "samra-api-dev",
+        "cpu": 1,
+        "memoryMiB": 512,
+        "minInstancesDuringSessions": 1,
+        "maxInstances": 1,
+        "billingMode": "instance-based",
+        "iamAuthenticationRequired": true,
+        "customerAuthentication": "auth0",
+        "providerModes": {
+          "identity": "fake",
+          "wallet": "fake",
+          "funding": "fake",
+          "payout": "fake"
+        },
+        "runtimeEnvironment": {
+          "NODE_ENV": "production",
+          "SAMRA_RELEASE_PROFILE": "synthetic-shared",
+          "SAMRA_BACKEND_MODE": "demo",
+          "SAMRA_PERSISTENCE_MODE": "postgres",
+          "SAMRA_PROVIDER_MODE": "fake",
+          "SAMRA_CUSTOMER_AUTH_MODE": "auth0",
+          "SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE": "fake",
+          "SAMRA_CUSTOMER_WALLET_PROVIDER_MODE": "fake",
+          "SAMRA_RUN_WORKER": "true",
+          "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false",
+          "SAMRA_DEPLOYMENT_ENVIRONMENT": "dev",
+          "GOOGLE_CLOUD_PROJECT": "samra-pay-dev"
+        }
+      },
+      "web": {
+        "service": "samra-customer-web-dev",
+        "surface": "legacy-authenticated-customer",
+        "dockerBuildArgs": {
+          "SAMRA_WEB_SURFACE": "legacy"
+        },
+        "minInstances": 0,
+        "maxInstances": 1,
+        "customerDataMode": "api",
+        "apiProxyAuth": "cloud-run-iam",
+        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary"
+      },
+      "migrationJob": {
+        "name": "samra-migrations-dev",
+        "maxRetries": 0
+      },
+      "auth0": {
+        "application": "separate-Dev-SPA-required",
+        "audience": "separate-Dev-audience-required",
+        "callbacks": "pending-test-URL",
+        "existingDevApplicationReused": false
+      },
+      "proposedMonthlyPlanningAllowanceUsd": 100,
+      "spendingAuthorized": false,
+      "alertThresholdsPercent": [50, 80, 100],
+      "budgetType": "alerts-only-not-a-hard-cap",
+      "initialReviewAfterDays": 7,
+      "deploymentBlocked": true,
+      "projectNumber": "829811168658",
+      "billingEnabled": false,
+      "initialRuntime": "shared-cloud-run",
+      "composeFile": "deploy/dev/compose.yaml",
       "sharedLogin": false,
-      "cloudDatabaseCount": 0
+      "cloudDatabaseCount": 0,
+      "plannedCloudDatabaseCount": 1,
+      "plannedSharedLogin": true
     },
     "test": {
       "projectId": "samra-pay-test",
-      "cloudProjectStatus": "proposed-id-availability-unverified",
+      "cloudProjectStatus": "ACTIVE-verified-2026-09-09",
       "data": "synthetic-only",
       "initialTesterCount": 2,
       "database": {
@@ -42,7 +141,9 @@
         "name": "samra-test-vpc",
         "subnet": "samra-test-us-east4",
         "privateServicesAccess": true,
-        "runtimeConnection": "direct-vpc-egress"
+        "runtimeConnection": "direct-vpc-egress",
+        "subnetCidr": "10.70.0.0/24",
+        "privateServicesCidr": "10.71.0.0/24"
       },
       "registry": "samra-test",
       "runtimeIdentities": [
@@ -71,7 +172,7 @@
         },
         "runtimeEnvironment": {
           "NODE_ENV": "production",
-          "SAMRA_RELEASE_PROFILE": "demo",
+          "SAMRA_RELEASE_PROFILE": "synthetic-shared",
           "SAMRA_BACKEND_MODE": "demo",
           "SAMRA_PERSISTENCE_MODE": "postgres",
           "SAMRA_PROVIDER_MODE": "fake",
@@ -79,7 +180,9 @@
           "SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE": "fake",
           "SAMRA_CUSTOMER_WALLET_PROVIDER_MODE": "fake",
           "SAMRA_RUN_WORKER": "true",
-          "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false"
+          "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false",
+          "SAMRA_DEPLOYMENT_ENVIRONMENT": "test",
+          "GOOGLE_CLOUD_PROJECT": "samra-pay-test"
         }
       },
       "web": {
@@ -106,14 +209,12 @@
       },
       "proposedMonthlyPlanningAllowanceUsd": 100,
       "spendingAuthorized": false,
-      "alertThresholdsPercent": [
-        50,
-        80,
-        100
-      ],
+      "alertThresholdsPercent": [50, 80, 100],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
-      "deploymentBlocked": true
+      "deploymentBlocked": true,
+      "projectNumber": "378050809796",
+      "billingEnabled": false
     },
     "staging": {
       "projectId": "samra-pay-staging",
@@ -127,15 +228,17 @@
     }
   },
   "activationBlockers": [
-    "Exact cloud project availability, organization and billing readback, price estimate and approved spend scope",
-    "Successful exact-SHA customer web image build with SAMRA_WEB_SURFACE=legacy",
+    "Approval for paid Dev and Test provisioning, regional price validation and billing linkage",
+    "Exact candidate verification for synthetic-shared admission and financial-route profile",
+    "Per-customer product account resolution: current accountResponses and seed balance serve only the seeded demo actor",
     "Separate Auth0 Test app/audience, callback/logout origins and account recovery proof",
-    "A bounded shared-Test admission profile: demo currently permits synthetic transfers but does not wire invitation enforcement; alpha-release-1 enforces invitations but blocks transfers",
     "Two scoped test identity mappings, invitation eligibility and controlled per-user synthetic journal funding",
     "Pinned images and secret versions, private database/TLS reachability and separate runtime/migration/read-only roles",
     "Browser-access decision and tested API/customer authorization without broad IAM bypass",
     "Failure-injection controls restricted to operators; do not enable development controls in a shared production-mode process",
     "Working worker CPU allocation, runtime logs, alert drill and named session operator",
     "Exact-revision synthetic UAT session and deployment/rollback evidence"
-  ]
+  ],
+  "billingAccountVerified": "01196E-DFC16E-433E6C",
+  "combinedProposedMonthlyPlanningAllowanceUsd": 200
 }

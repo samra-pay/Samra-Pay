@@ -1321,255 +1321,325 @@ test("the Auth0 HTTP onboarding boundary creates one customer, resumes after res
   }
 });
 
-test("alpha HTTP admission survives restart, rejects other accounts, and keeps all money routes unavailable", async () => {
-  const originalDatabaseUrl = process.env["DATABASE_URL"];
-  process.env["DATABASE_URL"] = connectionString;
-  const connection = createDatabase({ connectionString });
-  const pool = connection.pool;
-  const running: RunningServer[] = [];
-  const issuer = `https://${randomUUID()}.alpha-http.samra.test/`;
-  const subject = `auth0|${randomUUID()}`;
-  const externalRef = `customer_${randomUUID().replaceAll("-", "")}`;
-  const config: ApiRuntimeConfig = {
-    ...postgresConfig,
-    releaseProfile: "alpha-release-1",
-    devControlsEnabled: false,
-    internalOperationsEnabled: false,
-    customerAuth: {
-      mode: "auth0",
-      issuerBaseUrl: issuer,
-      audience: "https://api.samra.test",
-      tokenSigningAlgorithm: "RS256",
-    },
-  };
-  const headers = {
-    authorization: "Bearer synthetic-invited",
-    "Idempotency-Key": "alpha-http-command-1",
-  };
-  const authenticate: RequestHandler = (req, _res, next) => {
-    const token = req.header("authorization");
-    if (!token) {
-      next(new UnauthorizedError());
-      return;
-    }
-    req.auth = {
-      header: { alg: "RS256" },
-      token,
-      payload: {
-        iss: issuer,
-        sub: token === headers.authorization ? subject : "auth0|other-account",
-        aud: "https://api.samra.test",
-        exp: Math.floor(Date.now() / 1000) + 300,
-        email: "same-claim@example.test",
-        alpha_invited: true,
+for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
+  test(`${releaseProfile} HTTP admission survives restart and denies uninvited or revoked accounts`, async () => {
+    const originalDatabaseUrl = process.env["DATABASE_URL"];
+    process.env["DATABASE_URL"] = connectionString;
+    const connection = createDatabase({ connectionString });
+    const pool = connection.pool;
+    const running: RunningServer[] = [];
+    const issuer = `https://${randomUUID()}.alpha-http.samra.test/`;
+    const subject = `auth0|${randomUUID()}`;
+    const externalRef = `customer_${randomUUID().replaceAll("-", "")}`;
+    const config: ApiRuntimeConfig = {
+      ...postgresConfig,
+      releaseProfile,
+      customerIdentityProvider: { mode: "fake" },
+      customerWalletProvider: { mode: "fake" },
+      devControlsEnabled: false,
+      internalOperationsEnabled: false,
+      customerAuth: {
+        mode: "auth0",
+        issuerBaseUrl: issuer,
+        audience: "https://api.samra.test",
+        tokenSigningAlgorithm: "RS256",
       },
     };
-    next();
-  };
-  try {
-    // Auth0-managed invitations can reserve an identity before Samra onboarding.
-    const customer = await pool.query(
-      `INSERT INTO samra_core.customers
+    const headers = {
+      authorization: "Bearer synthetic-invited",
+      "Idempotency-Key": "alpha-http-command-1",
+    };
+    const authenticate: RequestHandler = (req, _res, next) => {
+      const token = req.header("authorization");
+      if (!token) {
+        next(new UnauthorizedError());
+        return;
+      }
+      req.auth = {
+        header: { alg: "RS256" },
+        token,
+        payload: {
+          iss: issuer,
+          sub:
+            token === headers.authorization ? subject : "auth0|other-account",
+          aud: "https://api.samra.test",
+          exp: Math.floor(Date.now() / 1000) + 300,
+          email: "same-claim@example.test",
+          alpha_invited: true,
+        },
+      };
+      next();
+    };
+    const initialAdmissions = Number(
+      (
+        await pool.query(
+          "SELECT count(*) AS count FROM samra_core.alpha_admissions",
+        )
+      ).rows[0].count,
+    );
+    try {
+      // Auth0-managed invitations can reserve an identity before Samra onboarding.
+      const customer = await pool.query(
+        `INSERT INTO samra_core.customers
       (external_ref, display_name, country_code, state, metadata)
       VALUES ($1, NULL, NULL, 'active', '{}') RETURNING id`,
-      [externalRef],
-    );
-    const customerId = customer.rows[0].id;
-    await pool.query(
-      `INSERT INTO samra_core.customer_auth_identities (customer_id, provider, issuer, subject)
+        [externalRef],
+      );
+      const customerId = customer.rows[0].id;
+      await pool.query(
+        `INSERT INTO samra_core.customer_auth_identities (customer_id, provider, issuer, subject)
       VALUES ($1, 'auth0', $2, $3)`,
-      [customerId, issuer, subject],
-    );
-    const first = await startServer(config, {
-      customerAccessTokenMiddleware: authenticate,
-    });
-    running.push(first);
-    assert.equal((await apiRequest(first.origin, "/api/readyz")).status, 200);
-    assert.equal(
-      (await apiRequest(first.origin, "/api/v1/onboarding")).status,
-      401,
-    );
-    assert.equal(
-      (
-        await apiRequest(first.origin, "/api/v1/onboarding", {
-          method: "POST",
-          headers,
-        })
-      ).status,
-      403,
-    );
-    await pool.query(
-      `INSERT INTO samra_core.alpha_invitations (issuer, subject, expires_at)
-      VALUES ($1, $2, now() + interval '1 hour')`,
-      [issuer, subject],
-    );
-    assert.equal(
-      objectBody(
-        await apiRequest(first.origin, "/api/v1/me", { headers }),
-        403,
-      )["code"],
-      "CUSTOMER_IDENTITY_UNBOUND",
-    );
-    assert.equal(
-      (
-        await apiRequest(first.origin, "/api/v1/onboarding", {
-          method: "POST",
-          headers,
-        })
-      ).status,
-      403,
-    );
-    await pool.query(
-      `UPDATE samra_core.alpha_release_controls SET admission_limit = 1`,
-    );
-    const started = objectBody(
-      await apiRequest(first.origin, "/api/v1/onboarding", {
-        method: "POST",
-        headers,
-      }),
-      201,
-    );
-    assert.equal(started["customerId"], externalRef);
-    assert.equal(started["state"], "consent_pending"); // no legacy activation shortcut
-    const restarted = await startServer(config, {
-      customerAccessTokenMiddleware: authenticate,
-    });
-    running.push(restarted);
-    const resumed = objectBody(
-      await apiRequest(restarted.origin, "/api/v1/onboarding", { headers }),
-      200,
-    );
-    assert.equal(resumed["onboardingId"], started["onboardingId"]);
-    for (const path of [
-      "/onboarding",
-      "/onboarding/identity",
-      "/onboarding/wallet",
-      "/me",
-    ]) {
+        [customerId, issuer, subject],
+      );
+      const first = await startServer(config, {
+        customerAccessTokenMiddleware: authenticate,
+      });
+      running.push(first);
+      assert.equal((await apiRequest(first.origin, "/api/readyz")).status, 200);
+      assert.equal(
+        (await apiRequest(first.origin, "/api/v1/onboarding")).status,
+        401,
+      );
       assert.equal(
         (
-          await apiRequest(restarted.origin, `/api/v1${path}`, {
-            headers: {
-              ...headers,
-              authorization: "Bearer synthetic-other",
-              "x-demo-user-id": externalRef,
+          await apiRequest(first.origin, "/api/v1/onboarding", {
+            method: "POST",
+            headers,
+          })
+        ).status,
+        403,
+      );
+      await pool.query(
+        `INSERT INTO samra_core.alpha_invitations (issuer, subject, expires_at)
+      VALUES ($1, $2, now() + interval '1 hour')`,
+        [issuer, subject],
+      );
+      assert.equal(
+        objectBody(
+          await apiRequest(first.origin, "/api/v1/me", { headers }),
+          403,
+        )["code"],
+        "CUSTOMER_IDENTITY_UNBOUND",
+      );
+      assert.equal(
+        (
+          await apiRequest(first.origin, "/api/v1/onboarding", {
+            method: "POST",
+            headers,
+          })
+        ).status,
+        403,
+      );
+      await pool.query(
+        `UPDATE samra_core.alpha_release_controls SET admission_limit = $1`,
+        [initialAdmissions + 1],
+      );
+      const started = objectBody(
+        await apiRequest(first.origin, "/api/v1/onboarding", {
+          method: "POST",
+          headers,
+        }),
+        201,
+      );
+      assert.equal(started["customerId"], externalRef);
+      assert.equal(started["state"], "consent_pending"); // no legacy activation shortcut
+      const restarted = await startServer(config, {
+        customerAccessTokenMiddleware: authenticate,
+      });
+      running.push(restarted);
+      const resumed = objectBody(
+        await apiRequest(restarted.origin, "/api/v1/onboarding", { headers }),
+        200,
+      );
+      assert.equal(resumed["onboardingId"], started["onboardingId"]);
+      for (const path of [
+        "/onboarding",
+        "/onboarding/identity",
+        "/onboarding/wallet",
+        "/me",
+      ]) {
+        assert.equal(
+          (
+            await apiRequest(restarted.origin, `/api/v1${path}`, {
+              headers: {
+                ...headers,
+                authorization: "Bearer synthetic-other",
+                "x-demo-user-id": externalRef,
+              },
+            })
+          ).status,
+          403,
+        );
+      }
+      assert.equal(
+        (
+          await apiRequest(first.origin, "/api/v1/onboarding/wallet", {
+            method: "POST",
+            headers,
+            body: {
+              bundleVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.bundleVersion,
+              documentVersion:
+                ALPHA_WALLET_PROVISIONING_DISCLOSURE.documentVersion,
+              locale: ALPHA_WALLET_PROVISIONING_DISCLOSURE.locale,
+              decision: "accepted",
             },
           })
         ).status,
-        403,
-      );
-    }
-    assert.equal(
-      (
-        await apiRequest(first.origin, "/api/v1/onboarding/wallet", {
-          method: "POST",
-          headers,
-          body: {
-            bundleVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.bundleVersion,
-            documentVersion:
-              ALPHA_WALLET_PROVISIONING_DISCLOSURE.documentVersion,
-            locale: ALPHA_WALLET_PROVISIONING_DISCLOSURE.locale,
-            decision: "accepted",
-          },
-        })
-      ).status,
-      409,
-    ); // consent and approved KYC are still required
-    // Even a previously activated account cannot bypass the release boundary.
-    // Construct a synthetic legacy state through the database's guarded transitions.
-    for (const state of [
-      "identity_in_progress",
-      "identity_approved",
-      "wallet_consent_pending",
-      "wallet_provisioning",
-      "wallet_ready",
-      "funding_ready",
-      "activated",
-    ]) {
-      await pool.query(
-        `UPDATE samra_core.customer_onboardings SET state = $2, version = version + 1,
+        409,
+      ); // consent and approved KYC are still required
+      // Even a previously activated account cannot bypass the release boundary.
+      // Construct a synthetic legacy state through the database's guarded transitions.
+      for (const state of [
+        "identity_in_progress",
+        "identity_approved",
+        "wallet_consent_pending",
+        "wallet_provisioning",
+        "wallet_ready",
+        "funding_ready",
+        "activated",
+      ]) {
+        await pool.query(
+          `UPDATE samra_core.customer_onboardings SET state = $2, version = version + 1,
           entered_at = now(), updated_at = now() WHERE customer_id = $1`,
-        [customerId, state],
-      );
-    }
-    for (const path of [
-      "/accounts",
-      "/activity",
-      "/beneficiaries",
-      "/remittance/options",
-      "/remittance/quotes",
-      "/remittance/transfers",
-      "/remittance/transfers/example/cancel",
-      "/deposits",
-      "/transfers",
-      "/funding",
-      "/internal/operations/summary",
-      "/dev/reconciliation/runs",
-      "/dev/onboarding/identity/example/decision",
-      "/waitlist/subscriptions",
-      "/acquisition/events",
-      "/future-money-route",
-    ]) {
-      for (const method of ["GET", "POST"]) {
-        const response = await apiRequest(restarted.origin, `/api/v1${path}`, {
-          method,
-          headers,
-          body: method === "POST" ? {} : undefined,
-        });
-        assert.equal(response.status, 404, `${method} ${path}`);
+          [customerId, state],
+        );
       }
-    }
-    await pool.query(
-      `UPDATE samra_core.customers SET state = 'suspended' WHERE id = $1`,
-      [customerId],
-    );
-    assert.equal(
-      (await apiRequest(restarted.origin, "/api/v1/onboarding", { headers }))
-        .status,
-      403,
-    );
-    await pool.query(
-      `UPDATE samra_core.customers SET state = 'active' WHERE id = $1`,
-      [customerId],
-    );
-    await pool.query(
-      `UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2`,
-      [issuer, subject],
-    );
-    for (const path of [
-      "/onboarding",
-      "/onboarding/consents",
-      "/onboarding/identity",
-      "/onboarding/wallet",
-    ]) {
+      if (releaseProfile === "alpha-release-1") {
+        for (const path of [
+          "/accounts",
+          "/activity",
+          "/beneficiaries",
+          "/remittance/options",
+          "/remittance/quotes",
+          "/remittance/transfers",
+          "/remittance/transfers/example/cancel",
+          "/deposits",
+          "/transfers",
+          "/funding",
+          "/internal/operations/summary",
+          "/dev/reconciliation/runs",
+          "/dev/onboarding/identity/example/decision",
+          "/waitlist/subscriptions",
+          "/acquisition/events",
+          "/future-money-route",
+        ]) {
+          for (const method of ["GET", "POST"]) {
+            const response = await apiRequest(
+              restarted.origin,
+              `/api/v1${path}`,
+              {
+                method,
+                headers,
+                body: method === "POST" ? {} : undefined,
+              },
+            );
+            assert.equal(response.status, 404, `${method} ${path}`);
+          }
+        }
+      } else {
+        // Shared synthetic admits the existing financial routes, but authorization
+        // still precedes them. This new customer has no product account yet.
+        assert.deepEqual(
+          arrayBody(
+            await apiRequest(restarted.origin, "/api/v1/accounts", { headers }),
+            200,
+          ),
+          [],
+        );
+        for (const path of [
+          "/accounts",
+          "/activity",
+          "/remittance/transfers",
+        ]) {
+          assert.equal(
+            (
+              await apiRequest(restarted.origin, `/api/v1${path}`, {
+                headers: {
+                  ...headers,
+                  authorization: "Bearer synthetic-other",
+                  "x-demo-user-id": externalRef,
+                },
+              })
+            ).status,
+            403,
+          );
+        }
+        for (const path of [
+          "/dev/reconciliation/runs",
+          "/internal/operations/summary",
+          "/waitlist/subscriptions",
+          "/waitlist/subscriptions/",
+          "/WAITLIST/subscriptions",
+          "/acquisition/events",
+          "/acquisition/events/",
+        ]) {
+          assert.equal(
+            (
+              await apiRequest(restarted.origin, `/api/v1${path}`, {
+                method: "POST",
+                headers,
+                body: {},
+              })
+            ).status,
+            404,
+          );
+        }
+      }
+      await pool.query(
+        `UPDATE samra_core.customers SET state = 'suspended' WHERE id = $1`,
+        [customerId],
+      );
       assert.equal(
-        (
-          await apiRequest(restarted.origin, `/api/v1${path}`, {
-            method: "POST",
-            headers,
-            body: {},
-          })
-        ).status,
+        (await apiRequest(restarted.origin, "/api/v1/onboarding", { headers }))
+          .status,
         403,
       );
+      await pool.query(
+        `UPDATE samra_core.customers SET state = 'active' WHERE id = $1`,
+        [customerId],
+      );
+      await pool.query(
+        `UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2`,
+        [issuer, subject],
+      );
+      for (const path of [
+        "/onboarding",
+        "/onboarding/consents",
+        "/onboarding/identity",
+        "/onboarding/wallet",
+        ...(releaseProfile === "synthetic-shared"
+          ? ["/accounts", "/remittance/transfers"]
+          : []),
+      ]) {
+        assert.equal(
+          (
+            await apiRequest(restarted.origin, `/api/v1${path}`, {
+              method: "POST",
+              headers,
+              body: {},
+            })
+          ).status,
+          403,
+        );
+      }
+      assert.equal(
+        Number(
+          (
+            await pool.query(
+              `SELECT count(*) AS count FROM samra_core.alpha_admissions`,
+            )
+          ).rows[0].count,
+        ),
+        initialAdmissions + 1,
+      );
+    } finally {
+      await Promise.all(running.map(stopServer));
+      await pool.end();
+      if (originalDatabaseUrl === undefined) delete process.env["DATABASE_URL"];
+      else process.env["DATABASE_URL"] = originalDatabaseUrl;
     }
-    assert.equal(
-      Number(
-        (
-          await pool.query(
-            `SELECT count(*) AS count FROM samra_core.alpha_admissions`,
-          )
-        ).rows[0].count,
-      ),
-      1,
-    );
-  } finally {
-    await Promise.all(running.map(stopServer));
-    await pool.end();
-    if (originalDatabaseUrl === undefined) delete process.env["DATABASE_URL"];
-    else process.env["DATABASE_URL"] = originalDatabaseUrl;
-  }
-});
+  });
+}
 
 async function startServer(
   config: ApiRuntimeConfig = postgresConfig,

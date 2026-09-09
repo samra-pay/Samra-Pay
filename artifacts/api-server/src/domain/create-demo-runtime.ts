@@ -45,7 +45,8 @@ export function createConfiguredDemoRuntime(
   const context = new PostgresPersistenceContext(connection.pool);
   const customerIdentityStore = new PostgresCustomerIdentityStore(context);
   const customerAlphaAccessStore =
-    config.releaseProfile === "alpha-release-1"
+    config.releaseProfile === "alpha-release-1" ||
+    config.releaseProfile === "synthetic-shared"
       ? new PostgresAlphaAccessStore(context)
       : undefined;
   const customerOnboardingStore = new PostgresCustomerOnboardingStore(
@@ -127,7 +128,9 @@ export function createConfiguredDemoRuntime(
     nextReconciliationId: () => `recon_run_${randomUUID()}`,
     readiness: () =>
       assertPostgresRuntimeReady(connection.pool, {
-        alphaReleaseAdmission: config.releaseProfile === "alpha-release-1",
+        alphaReleaseAdmission:
+          config.releaseProfile === "alpha-release-1" ||
+          config.releaseProfile === "synthetic-shared",
         customerControlledSandboxWallets:
           walletConfig.mode === "crossmint-sandbox-customer",
       }),

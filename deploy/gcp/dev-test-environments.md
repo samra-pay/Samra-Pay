@@ -1,37 +1,43 @@
 # Separate Dev, Test, Staging and Production
 
-Status: proposed on 2026-09-09; no cloud resources applied by this change.
+Status: Dev and Test projects created and read back on 2026-09-09; billing
+unlinked, database/runtime deployments pending. No usable app URL is claimed.
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
 Local backend implementation: [Dev Compose](../dev/README.md).
 
 ## Delivery order
 
-1. Local Dev: repeatable isolated PostgreSQL, migrations, fixtures and API.
-   This is a single-fixture developer backend with authentication disabled;
-   it is not a shared user-testing service or login acceptance environment.
-2. Shared Test/UAT: independent GCP project/database/IAM, Auth0 Test app, two
-   admitted test accounts, API-connected customer web and fake financial providers.
+1. Shared Dev: independent GCP project/database, authenticated customer web and
+   fake providers for daily development. The local Compose stack is optional.
+2. Shared Test/UAT: separate project/database and Auth0 client/audience, invited
+   synthetic testers and stable, exact-revision user sessions.
 3. Staging: preserve production-like exact-candidate release rehearsal.
 4. Production: preserve existing approval and readiness gates.
 
-Reserve the proposed `samra-pay-dev` project for future shared development; do
-not duplicate an always-on Cloud SQL stack there now. No feature branch or
-persistent database is shared with Test, Staging or Production. Project IDs and
-billing/organization must be read back before creation; their names here are
-proposals, not proof of availability or permission.
+David corrected the local-only Dev assumption on 2026-09-09. Both shared
+runtimes are the active delivery priority. Dev project `samra-pay-dev`
+(`829811168658`) and Test project `samra-pay-test` (`378050809796`) were created
+in existing organization `614833350075`, then read back as ACTIVE with separate
+environment labels and synthetic data classification. Neither has billing
+linked. The open billing account was verified as `01196E-DFC16E-433E6C`.
 
-## Smallest shared Test footprint
+Each environment gets its own copy of the following footprint, with the names
+in the JSON inventory. Dev uses subnet `10.60.0.0/24` and private-services range
+`10.61.0.0/24`; Test uses `10.70.0.0/24` and `10.71.0.0/24`. There is no peering
+to Staging or Production. No feature branch or persistent database is shared.
 
-| Resource | Proposed configuration |
-| --- | --- |
-| Project | `samra-pay-test`, existing organization after readback, `us-east4` |
-| Database | PostgreSQL 16, zonal `db-g1-small`, private IP, 10 GB SSD, 50 GB growth limit, seven retained backups/PITR, deletion protection |
-| Network | Dedicated VPC/subnet/private services access; direct VPC egress from API/jobs |
-| API | One 1-vCPU / 512-MiB instance during sessions, instance-based CPU, maximum one; IAM plus customer Auth0 authorization |
-| Web | Existing customer application, separate authenticated build, zero minimum/one maximum instance, IAM-authenticated API proxy |
-| Migrations | Existing migration image, explicit one-shot job, no retries, separate identity/DB role |
-| Secrets | Separate runtime and migration connection secrets, exact numbered versions; no production/provider keys |
-| Evidence/operations | Existing GitHub artifacts, Cloud Logging/Monitoring, read-only operator access; no public operations portal |
+## Shared Dev and Test footprint
+
+| Resource            | Proposed configuration                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Project             | `samra-pay-test`, existing organization after readback, `us-east4`                                                              |
+| Database            | PostgreSQL 16, zonal `db-g1-small`, private IP, 10 GB SSD, 50 GB growth limit, seven retained backups/PITR, deletion protection |
+| Network             | Dedicated VPC/subnet/private services access; direct VPC egress from API/jobs                                                   |
+| API                 | One 1-vCPU / 512-MiB instance during sessions, instance-based CPU, maximum one; IAM plus customer Auth0 authorization           |
+| Web                 | Existing customer application, separate authenticated build, zero minimum/one maximum instance, IAM-authenticated API proxy     |
+| Migrations          | Existing migration image, explicit one-shot job, no retries, separate identity/DB role                                          |
+| Secrets             | Separate runtime and migration connection secrets, exact numbered versions; no production/provider keys                         |
+| Evidence/operations | Existing GitHub artifacts, Cloud Logging/Monitoring, read-only operator access; no public operations portal                     |
 
 The fake worker currently runs on a timer inside the API process. Scaling to
 zero with CPU allocated only during requests can strand a transfer after the
@@ -42,9 +48,9 @@ background processing from HTTP readiness alone.
 
 ## Cost and authorization package
 
-Propose a **$100 monthly planning allowance** for the shared Test environment,
+Propose a **$200 combined monthly planning allowance** ($100 per project),
 with review after seven days. This is not an approved budget or guaranteed bill.
-Local Dev adds no cloud resource cost. Cloud pricing depends on region and usage;
+The optional local Compose stack adds no cloud resource cost; shared Dev does. Cloud pricing depends on region and usage;
 free-tier allowances are shared across the billing account, so do not count them
 as dedicated Test savings.
 
@@ -69,8 +75,8 @@ half-configured environment being mistaken for an approved deployment.
 
 ## Demonstrated code/configuration blockers
 
-The runtime environment values in the JSON are a starting-point inventory,
-not a deployable shared-Test profile. `deploymentBlocked` remains true.
+The JSON records the desired `synthetic-shared` runtime configuration.
+`deploymentBlocked` remains true until provisioning and acceptance finish.
 
 - This change adds `--build-arg SAMRA_WEB_SURFACE=legacy` to the existing customer
   web Dockerfile, selecting `build:legacy`. The default remains the public build.
@@ -80,12 +86,19 @@ not a deployable shared-Test profile. `deploymentBlocked` remains true.
   admitted Auth0 account mappings with independently funded product accounts.
   Build a bounded operator provisioning path using the actual identity schema.
   Synthetic funding must use balanced journals and durable idempotency.
-- Current `demo` mode does not wire the alpha invitation store; `alpha-release-1`
-  does, but deliberately blocks financial routes. Implement a bounded Test
-  admission profile reusing the existing store before exposing synthetic transfers
-  to testers. Neither changing the project name nor selecting fake providers
-  closes that server-authorization gap. Reuse private account access work in
-  PR #194 rather than rebuilding its return-before-KYC flow.
+- `synthetic-shared` reuses the existing durable invitation store while allowing
+  the existing synthetic financial routes. It requires the exact matching Dev
+  or Test project name, Auth0, PostgreSQL, Node production mode, explicit origins
+  and fake identity/wallet/financial providers. The runtime/project environment
+  checks are misconfiguration guards, not independent proof of cloud identity.
+  Deployment must read back project, database, secrets and service identity.
+  Alpha Release 1 retains its financial-route prohibition. Marketing writes and
+  developer/operations controls stay unavailable in the shared profile.
+- `DemoRuntime.accountResponses` still serves only the seeded demo actor. A new
+  admitted customer therefore has no product account. Per-customer product-account
+  resolution and idempotent balanced fixture credit are launch blockers; creating
+  the projects or enabling the new profile does not close them. Reuse private
+  account access work in PR #194 rather than rebuilding its return-before-KYC flow.
 - Shared Test must keep `NODE_ENV=production` and development operations controls
   off. Do not enable debug/admin routes to bypass the missing tester setup path.
 - The Test browser URL, ingress boundary, Auth0 application/audience and callbacks

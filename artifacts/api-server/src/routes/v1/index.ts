@@ -235,6 +235,25 @@ export function createV1Router(
 ): Router {
   const router = Router();
 
+  if (config.releaseProfile === "synthetic-shared") {
+    if (
+      config.customerAuth.mode !== "auth0" ||
+      !runtime.customerAlphaAccessStore ||
+      config.devControlsEnabled ||
+      config.internalOperationsEnabled ||
+      config.customerIdentityProvider?.mode !== "fake" ||
+      config.customerWalletProvider?.mode !== "fake"
+    ) {
+      throw new Error(
+        "Shared synthetic environments require durable admission and fake providers without developer controls.",
+      );
+    }
+    // The shared customer app does not expose the public marketing write routes.
+    router.use(["/waitlist", "/acquisition"], (_req, _res, next) => {
+      next(new DomainError("NOT_FOUND", "The route was not found."));
+    });
+  }
+
   if (config.releaseProfile === "alpha-release-1") {
     if (
       config.customerAuth.mode !== "auth0" ||
@@ -366,7 +385,10 @@ export function createV1Router(
       }),
     );
 
-    if (config.releaseProfile === "alpha-release-1") {
+    if (
+      config.releaseProfile === "alpha-release-1" ||
+      config.releaseProfile === "synthetic-shared"
+    ) {
       router.use(
         asyncRoute(async (req, _res, next) => {
           try {
