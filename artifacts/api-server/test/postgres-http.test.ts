@@ -1432,7 +1432,7 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
       );
       await pool.query(
         `UPDATE samra_core.alpha_release_controls SET admission_limit = $1`,
-        [initialAdmissions + 1],
+        [[1, 5, 25, 100].find((limit) => limit > initialAdmissions)],
       );
       const started = objectBody(
         await apiRequest(first.origin, "/api/v1/onboarding", {

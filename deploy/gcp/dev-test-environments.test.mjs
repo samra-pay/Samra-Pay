@@ -50,6 +50,9 @@ test("shared Test is isolated, authenticated, fake-provider only and not activat
     const runtime = envs[name].api.runtimeEnvironment;
     assert.equal(envs[name].billingEnabled, false);
     assert.equal(envs[name].spendingAuthorized, false);
+    assert.ok(
+      envs[name].database.roles.every((role) => role.endsWith(`_${name}`)),
+    );
     assert.equal(runtime.SAMRA_RELEASE_PROFILE, "synthetic-shared");
     assert.equal(runtime.GOOGLE_CLOUD_PROJECT, `samra-pay-${name}`);
     assert.equal(runtime.SAMRA_DEPLOYMENT_ENVIRONMENT, name);

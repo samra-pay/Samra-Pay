@@ -10,7 +10,6 @@
       "projectId": "samra-pay-dev",
       "cloudProjectStatus": "ACTIVE-verified-2026-09-09",
       "data": "synthetic-only",
-      "initialDeverCount": 2,
       "database": {
         "instance": "samra-dev-postgres",
         "name": "samra_dev",
@@ -24,9 +23,9 @@
         "pointInTimeRecovery": true,
         "deletionProtection": true,
         "roles": [
-          "samra_migrations_test",
-          "samra_runtime_test",
-          "samra_audit_test"
+          "samra_migrations_dev",
+          "samra_runtime_dev",
+          "samra_audit_dev"
         ]
       },
       "network": {
@@ -101,7 +100,11 @@
       },
       "proposedMonthlyPlanningAllowanceUsd": 100,
       "spendingAuthorized": false,
-      "alertThresholdsPercent": [50, 80, 100],
+      "alertThresholdsPercent": [
+        50,
+        80,
+        100
+      ],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
       "deploymentBlocked": true,
@@ -112,7 +115,8 @@
       "sharedLogin": false,
       "cloudDatabaseCount": 0,
       "plannedCloudDatabaseCount": 1,
-      "plannedSharedLogin": true
+      "plannedSharedLogin": true,
+      "initialTesterCount": 2
     },
     "test": {
       "projectId": "samra-pay-test",
@@ -209,7 +213,11 @@
       },
       "proposedMonthlyPlanningAllowanceUsd": 100,
       "spendingAuthorized": false,
-      "alertThresholdsPercent": [50, 80, 100],
+      "alertThresholdsPercent": [
+        50,
+        80,
+        100
+      ],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
       "deploymentBlocked": true,
@@ -240,5 +248,12 @@
     "Exact-revision synthetic UAT session and deployment/rollback evidence"
   ],
   "billingAccountVerified": "01196E-DFC16E-433E6C",
-  "combinedProposedMonthlyPlanningAllowanceUsd": 200
+  "combinedProposedMonthlyPlanningAllowanceUsd": 200,
+  "spendingAuthorization": {
+    "status": "pending-explicit-confirmation",
+    "combinedMonthlyPlanningLimitUsd": 200,
+    "reviewAfterDays": 7,
+    "automatedSpendCap": false,
+    "reason": "Automatic approval review rejected billing linkage pending explicit spending approval"
+  }
 }
