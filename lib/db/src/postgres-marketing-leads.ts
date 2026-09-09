@@ -120,6 +120,9 @@ export class PostgresMarketingLeadStore {
           throw new Error("MARKETING_IDEMPOTENCY_CONFLICT");
         return receipt();
       }
+      await q.query("SELECT pg_advisory_xact_lock(hashtextextended($1,21))", [
+        digest(email),
+      ]);
       const contacts = await q.query(
         "INSERT INTO samra_core.marketing_waitlist_contacts(email,email_hash) VALUES($1,$2) ON CONFLICT(email_hash) DO UPDATE SET email_hash=EXCLUDED.email_hash RETURNING id,email",
         [email, digest(email)],
@@ -139,6 +142,17 @@ export class PostgresMarketingLeadStore {
         [command, fingerprint, contact.id],
       );
       if (profile.rows[0].suppressed_at) return receipt();
+      const suppressed = await q.query(
+        "SELECT 1 FROM samra_core.marketing_email_suppressions WHERE email_hash=$1",
+        [digest(email)],
+      );
+      if (suppressed.rowCount) {
+        await q.query(
+          "UPDATE samra_core.marketing_lead_profiles SET suppressed_at=now() WHERE contact_id=$1",
+          [contact.id],
+        );
+        return receipt();
+      }
       const cooldown = await q.query(
         "SELECT 1 FROM samra_core.marketing_lead_challenges WHERE contact_id=$1 AND created_at > now()-interval '60 seconds' LIMIT 1",
         [contact.id],
@@ -271,6 +285,11 @@ export class PostgresMarketingLeadStore {
           [contactId, purpose, reason, command],
         );
       await this.#remove(q, contactId);
+      await q.query(
+        `INSERT INTO samra_core.marketing_audience_sync(contact_id,destination,desired_member) VALUES($1,'resend',false)
+        ON CONFLICT(contact_id,destination) DO UPDATE SET desired_member=false,revision=marketing_audience_sync.revision+1,updated_at=now() WHERE marketing_audience_sync.desired_member`,
+        [contactId],
+      );
     });
   }
   async #remove(q: Pick<pg.Pool, "query">, id: string) {
@@ -322,8 +341,9 @@ export class PostgresMarketingLeadStore {
       email: string;
       locale: "en" | "am";
       token: string;
+      contactId: string;
       idempotencyKey: string;
-    }) => Promise<void>,
+    }) => Promise<void | { suppressed: true }>,
   ) {
     if (!uuid.test(id) || !uuid.test(leaseId) || typeof send !== "function")
       throw new Error("INVALID_MARKETING_LEASE");
@@ -354,12 +374,21 @@ export class PostgresMarketingLeadStore {
       if (digest(token) !== row.token_digest)
         throw new Error("MARKETING_TOKEN_KEY_MISMATCH");
       // Bounded sender timeout required. Withdrawal cannot race past this send.
-      await send({
+      const outcome = await send({
+        contactId: row.contact_id,
         email: contact.rows[0].email,
         locale: row.locale,
         token,
         idempotencyKey: `lead-verification-${id}`,
       });
+      if (outcome?.suppressed) {
+        await this.withdraw(
+          row.contact_id,
+          "unsubscribed",
+          `provider-suppressed-${id}`,
+        );
+        return false;
+      }
       await q.query(
         "UPDATE samra_core.marketing_lead_challenges SET sent_at=now(),lease_until=NULL WHERE id=$1",
         [id],

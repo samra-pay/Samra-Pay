@@ -16,3 +16,4 @@ export * from "./marketing";
 export * from "./alpha-access";
 
 export * from "./marketing-leads";
+export * from "./marketing-activation";

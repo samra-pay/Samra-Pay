@@ -5,6 +5,119 @@
  * Samra Pay synthetic architecture-foundation API
  * OpenAPI spec version: 0.2.0
  */
+export type ResendMarketingEventData = { [key: string]: unknown };
+
+export interface ResendMarketingEvent {
+  /** @maxLength 80 */
+  type: string;
+  data: ResendMarketingEventData;
+  [key: string]: unknown;
+}
+
+export interface MarketingAcceptance {
+  accepted: boolean;
+}
+
+export interface MarketingConfirmation {
+  confirmed: boolean;
+  /** @maxLength 600 */
+  preferencesUrl?: string;
+}
+
+export type VerifiedMarketingLeadRequestLocale =
+  (typeof VerifiedMarketingLeadRequestLocale)[keyof typeof VerifiedMarketingLeadRequestLocale];
+
+export const VerifiedMarketingLeadRequestLocale = {
+  en: "en",
+  am: "am",
+} as const;
+
+export type VerifiedMarketingLeadRequestNoticeVersion =
+  (typeof VerifiedMarketingLeadRequestNoticeVersion)[keyof typeof VerifiedMarketingLeadRequestNoticeVersion];
+
+export const VerifiedMarketingLeadRequestNoticeVersion = {
+  "marketing-2026-09-09": "marketing-2026-09-09",
+} as const;
+
+export type VerifiedMarketingLeadRequestAttributionSource =
+  (typeof VerifiedMarketingLeadRequestAttributionSource)[keyof typeof VerifiedMarketingLeadRequestAttributionSource];
+
+export const VerifiedMarketingLeadRequestAttributionSource = {
+  facebook: "facebook",
+  instagram: "instagram",
+  x: "x",
+  youtube: "youtube",
+  tiktok: "tiktok",
+} as const;
+
+export type VerifiedMarketingLeadRequestAttributionMedium =
+  (typeof VerifiedMarketingLeadRequestAttributionMedium)[keyof typeof VerifiedMarketingLeadRequestAttributionMedium];
+
+export const VerifiedMarketingLeadRequestAttributionMedium = {
+  social: "social",
+} as const;
+
+export type VerifiedMarketingLeadRequestAttributionCampaign =
+  (typeof VerifiedMarketingLeadRequestAttributionCampaign)[keyof typeof VerifiedMarketingLeadRequestAttributionCampaign];
+
+export const VerifiedMarketingLeadRequestAttributionCampaign = {
+  social_profile: "social_profile",
+  ask_samra: "ask_samra",
+  product_demo: "product_demo",
+} as const;
+
+export type VerifiedMarketingLeadRequestAttributionContent =
+  (typeof VerifiedMarketingLeadRequestAttributionContent)[keyof typeof VerifiedMarketingLeadRequestAttributionContent];
+
+export const VerifiedMarketingLeadRequestAttributionContent = {
+  bio: "bio",
+  channel_link: "channel_link",
+  post: "post",
+  video: "video",
+} as const;
+
+export type VerifiedMarketingLeadRequestAttribution = {
+  source?: VerifiedMarketingLeadRequestAttributionSource;
+  medium?: VerifiedMarketingLeadRequestAttributionMedium;
+  campaign?: VerifiedMarketingLeadRequestAttributionCampaign;
+  content?: VerifiedMarketingLeadRequestAttributionContent;
+};
+
+export interface VerifiedMarketingLeadRequest {
+  /** @maxLength 254 */
+  email: string;
+  emailConsent: true;
+  adsConsent: boolean;
+  locale: VerifiedMarketingLeadRequestLocale;
+  noticeVersion: VerifiedMarketingLeadRequestNoticeVersion;
+  /** @maxLength 300 */
+  website: string;
+  attribution: VerifiedMarketingLeadRequestAttribution;
+}
+
+export interface ConfirmMarketingLeadRequest {
+  /**
+   * @minLength 43
+   * @maxLength 43
+   */
+  token: string;
+  adsConsent: boolean;
+}
+
+export type MarketingPreferenceRequestScope =
+  (typeof MarketingPreferenceRequestScope)[keyof typeof MarketingPreferenceRequestScope];
+
+export const MarketingPreferenceRequestScope = {
+  all: "all",
+  ads: "ads",
+} as const;
+
+export interface MarketingPreferenceRequest {
+  /** @maxLength 512 */
+  token: string;
+  scope: MarketingPreferenceRequestScope;
+}
+
 export type SubscribeWaitlistRequestLocale =
   (typeof SubscribeWaitlistRequestLocale)[keyof typeof SubscribeWaitlistRequestLocale];
 

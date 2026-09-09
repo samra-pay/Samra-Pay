@@ -12,6 +12,7 @@ import {
 } from "@/lib/public-i18n";
 import { usePublicPageMeta } from "@/lib/public-page-meta";
 import "./coming-soon.css";
+import { verifiedLeadsEnabled } from "@/lib/verified-marketing-leads";
 
 type LegalKind = "privacy" | "terms";
 
@@ -144,7 +145,32 @@ export default function PublicLegalPage() {
     .endsWith("/terms")
     ? "terms"
     : "privacy";
-  const content = legalContent[kind];
+  const original = legalContent[kind];
+  const content =
+    kind === "privacy" && verifiedLeadsEnabled()
+      ? {
+          ...original,
+          sections: original.sections.map((section, index) =>
+            index === 0
+              ? {
+                  ...section,
+                  body: localized(
+                    "We store your email, verification status, separate email and advertising choices, notice version, timestamps and suppression evidence. If you accept analytics, we also attach approved social campaign labels from the signup page. We do not collect financial account or identity-document information for this list.",
+                    "ኢሜይልዎን፣ የማረጋገጫ ሁኔታዎን፣ የተለዩ የኢሜይልና የማስታወቂያ ምርጫዎችን፣ የማስታወቂያ ስሪትን፣ ቀናትንና የማገጃ ማስረጃን እናስቀምጣለን። ትንታኔን ከፈቀዱ፣ ከምዝገባ ገጹ የማህበራዊ ሚዲያ ዘመቻ መለያዎችንም እናያይዛለን። ለዚህ ዝርዝር የፋይናንስ አካውንት ወይም የማንነት ሰነድ መረጃ አንሰበስብም።",
+                  ),
+                }
+              : index === 1
+                ? {
+                    ...section,
+                    body: localized(
+                      "Resend delivers a confirmation email. Email updates start after you confirm. Advertising permission is optional and separate: if you confirm it, we may share a hashed email with Meta and Google for account matching and personalized Samra Pay ads. Hashing does not make it anonymous. The preference link in your email lets you stop advertising matching only, or stop both email updates and matching. Provider removal takes time. We retain consent and suppression evidence to honor your choices. Contact support@samrapay.com for access or deletion requests. Joining does not create a financial account.",
+                      "Resend የማረጋገጫ ኢሜይል ይልካል። የኢሜይል መረጃ ካረጋገጡ በኋላ ይጀምራል። የማስታወቂያ ፈቃድ አማራጭና የተለየ ነው። ካረጋገጡት፣ ለማዛመድና ለእርስዎ የተዘጋጁ ማስታወቂያዎችን ለማሳየት በሃሽ የተቀየረ ኢሜይል ከMeta እና Google ጋር ልናጋራ እንችላለን። ሃሽ ማድረግ ማንነትን ሙሉ በሙሉ አይደብቅም። በኢሜይልዎ ያለው የምርጫ አገናኝ ማስታወቂያ ማዛመድን ብቻ ወይም ከኢሜይል መረጃ ጋር ሁለቱንም ለማቆም ያስችላል። የአቅራቢው ማስወገድ ጊዜ ይወስዳል። ምርጫዎን ለማክበር የፈቃድና የማገጃ ማስረጃ እናቆያለን። መረጃዎን ለማየት ወይም ለማስሰረዝ support@samrapay.com ያነጋግሩ። ምዝገባው የፋይናንስ አካውንት አይፈጥርም።",
+                    ),
+                  }
+                : section,
+          ),
+        }
+      : original;
   const { language, text } = usePublicLanguage();
 
   usePublicPageMeta({

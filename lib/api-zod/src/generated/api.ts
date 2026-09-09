@@ -117,6 +117,103 @@ export const RecordCustomerAcquisitionEventResponse = zod.object({
 });
 
 /**
+ * @summary Request email ownership confirmation; receipt does not grant email or advertising permission
+ */
+export const registerVerifiedMarketingLeadHeaderIdempotencyKeyMin = 8;
+export const registerVerifiedMarketingLeadHeaderIdempotencyKeyMax = 128;
+
+export const RegisterVerifiedMarketingLeadHeader = zod.object({
+  "Idempotency-Key": zod
+    .string()
+    .min(registerVerifiedMarketingLeadHeaderIdempotencyKeyMin)
+    .max(registerVerifiedMarketingLeadHeaderIdempotencyKeyMax),
+});
+
+export const registerVerifiedMarketingLeadBodyEmailMax = 254;
+
+export const registerVerifiedMarketingLeadBodyWebsiteMax = 300;
+
+export const RegisterVerifiedMarketingLeadBody = zod.object({
+  email: zod.string().email().max(registerVerifiedMarketingLeadBodyEmailMax),
+  emailConsent: zod.literal(true),
+  adsConsent: zod.boolean(),
+  locale: zod.enum(["en", "am"]),
+  noticeVersion: zod.enum(["marketing-2026-09-09"]),
+  website: zod.string().max(registerVerifiedMarketingLeadBodyWebsiteMax),
+  attribution: zod.object({
+    source: zod
+      .enum(["facebook", "instagram", "x", "youtube", "tiktok"])
+      .optional(),
+    medium: zod.enum(["social"]).optional(),
+    campaign: zod
+      .enum(["social_profile", "ask_samra", "product_demo"])
+      .optional(),
+    content: zod.enum(["bio", "channel_link", "post", "video"]).optional(),
+  }),
+});
+
+export const RegisterVerifiedMarketingLeadResponse = zod.object({
+  accepted: zod.boolean(),
+});
+
+/**
+ * @summary Confirm email ownership using an expiring bearer token and optional advertising choice
+ */
+export const confirmMarketingLeadBodyTokenMin = 43;
+export const confirmMarketingLeadBodyTokenMax = 43;
+
+export const ConfirmMarketingLeadBody = zod.object({
+  token: zod
+    .string()
+    .min(confirmMarketingLeadBodyTokenMin)
+    .max(confirmMarketingLeadBodyTokenMax),
+  adsConsent: zod.boolean(),
+});
+
+export const confirmMarketingLeadResponsePreferencesUrlMax = 600;
+
+export const ConfirmMarketingLeadResponse = zod.object({
+  confirmed: zod.boolean(),
+  preferencesUrl: zod
+    .string()
+    .max(confirmMarketingLeadResponsePreferencesUrlMax)
+    .optional(),
+});
+
+/**
+ * @summary Withdraw permission using an email-delivered purpose-limited bearer capability
+ */
+export const withdrawMarketingPermissionBodyTokenMax = 512;
+
+export const WithdrawMarketingPermissionBody = zod.object({
+  token: zod.string().max(withdrawMarketingPermissionBodyTokenMax),
+  scope: zod.enum(["all", "ads"]),
+});
+
+export const WithdrawMarketingPermissionResponse = zod.object({
+  accepted: zod.boolean(),
+});
+
+/**
+ * Requires svix-id, svix-timestamp and svix-signature headers verified with the endpoint secret. Deduplicates signed events and only reduces permissions. No raw event payload is retained.
+ * @summary Receive raw-body Svix-signed Resend events
+ */
+export const ReceiveMarketingResendWebhookHeader = zod.object({
+  "svix-id": zod.string(),
+  "svix-timestamp": zod.string(),
+  "svix-signature": zod.string(),
+});
+
+export const receiveMarketingResendWebhookBodyTypeMax = 80;
+
+export const ReceiveMarketingResendWebhookBody = zod.object({
+  type: zod.string().max(receiveMarketingResendWebhookBodyTypeMax),
+  data: zod.record(zod.string(), zod.unknown()),
+});
+
+export const ReceiveMarketingResendWebhookResponse = zod.unknown();
+
+/**
  * Stores the normalized email separately from acquisition telemetry and records the exact consent notice version, locale, server timestamp, and idempotency evidence. The endpoint accepts no customer, identity, device, or financial data.
  * @summary Join the public launch waitlist with explicit consent
  */

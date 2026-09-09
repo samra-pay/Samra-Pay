@@ -17,7 +17,7 @@
     "test:migrate": "node --import tsx src/test-migrate.ts",
     "test:seed": "node --import tsx src/test-seed.ts",
     "workforce:provision": "node --import tsx src/workforce-provision.ts",
-    "test:marketing-leads:postgres": "node --import tsx --test src/marketing-leads.postgres.ts"
+    "test:marketing-leads:postgres": "node --import tsx --test src/marketing-leads.postgres.ts && node --import tsx --test src/marketing-flow.postgres.mjs"
   },
   "dependencies": {
     "@workspace/remittance": "workspace:*",

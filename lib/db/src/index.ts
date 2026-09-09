@@ -99,3 +99,6 @@ export * from "./postgres-marketing-waitlist";
 export * from "./postgres-alpha-access";
 
 export * from "./postgres-marketing-leads";
+
+export * from "./postgres-marketing-activation";
+export * from "./marketing-runtime";

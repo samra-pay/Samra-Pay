@@ -104,6 +104,116 @@ paths:
         "422": { $ref: "#/components/responses/ValidationProblem" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/marketing-leads:
+    post:
+      operationId: registerVerifiedMarketingLead
+      tags: [marketing]
+      summary: Request email ownership confirmation; receipt does not grant email or advertising permission
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifiedMarketingLeadRequest"
+      responses:
+        "202":
+          description: Request processed; no claim of advertising match or delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingAcceptance"
+        "422": { description: Invalid request or expired capability }
+        "429": { description: Request rate exceeded }
+        "503": { description: Temporarily unavailable }
+
+  /v1/marketing-leads/confirm:
+    post:
+      operationId: confirmMarketingLead
+      tags: [marketing]
+      summary: Confirm email ownership using an expiring bearer token and optional advertising choice
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmMarketingLeadRequest"
+      responses:
+        "200":
+          description: Request processed; no claim of advertising match or delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingConfirmation"
+        "422": { description: Invalid request or expired capability }
+        "429": { description: Request rate exceeded }
+        "503": { description: Temporarily unavailable }
+
+  /v1/marketing-leads/preferences:
+    post:
+      operationId: withdrawMarketingPermission
+      tags: [marketing]
+      summary: Withdraw permission using an email-delivered purpose-limited bearer capability
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingPreferenceRequest"
+      responses:
+        "200":
+          description: Request processed; no claim of advertising match or delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingAcceptance"
+        "422": { description: Invalid request or expired capability }
+        "429": { description: Request rate exceeded }
+        "503": { description: Temporarily unavailable }
+
+  /v1/marketing-leads/resend-webhook:
+    post:
+      operationId: receiveMarketingResendWebhook
+      tags: [marketing]
+      summary: Receive raw-body Svix-signed Resend events
+      description: Requires svix-id, svix-timestamp and svix-signature headers verified with the endpoint secret. Deduplicates signed events and only reduces permissions. No raw event payload is retained.
+      security: []
+      parameters:
+        - {
+            in: header,
+            name: svix-id,
+            required: true,
+            schema: { type: string },
+          }
+        - {
+            in: header,
+            name: svix-timestamp,
+            required: true,
+            schema: { type: string },
+          }
+        - {
+            in: header,
+            name: svix-signature,
+            required: true,
+            schema: { type: string },
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendMarketingEvent"
+      responses:
+        "200": { description: Signed event processed or safely replayed }
+        "400": { description: Invalid signature or body }
+        "422": { description: Invalid event }
+        "429": { description: Request rate exceeded }
+        "503": { description: Retryable processing failure }
+
   /v1/waitlist/subscriptions:
     post:
       operationId: subscribeWaitlist
@@ -1380,6 +1490,69 @@ components:
             $ref: "#/components/schemas/ApiProblem"
 
   schemas:
+    ResendMarketingEvent:
+      type: object
+      additionalProperties: true
+      required: [type, data]
+      properties:
+        type: { type: string, maxLength: 80 }
+        data: { type: object, additionalProperties: true }
+    MarketingAcceptance:
+      type: object
+      required: [accepted]
+      properties:
+        accepted: { type: boolean }
+    MarketingConfirmation:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed: { type: boolean }
+        preferencesUrl: { type: string, maxLength: 600 }
+    VerifiedMarketingLeadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          email,
+          emailConsent,
+          adsConsent,
+          locale,
+          noticeVersion,
+          website,
+          attribution,
+        ]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        emailConsent: { type: boolean, enum: [true] }
+        adsConsent: { type: boolean }
+        locale: { type: string, enum: [en, am] }
+        noticeVersion: { type: string, enum: [marketing-2026-09-09] }
+        website: { type: string, maxLength: 300 }
+        attribution:
+          type: object
+          additionalProperties: false
+          properties:
+            source:
+              { type: string, enum: [facebook, instagram, x, youtube, tiktok] }
+            medium: { type: string, enum: [social] }
+            campaign:
+              { type: string, enum: [social_profile, ask_samra, product_demo] }
+            content: { type: string, enum: [bio, channel_link, post, video] }
+    ConfirmMarketingLeadRequest:
+      type: object
+      additionalProperties: false
+      required: [token, adsConsent]
+      properties:
+        token: { type: string, minLength: 43, maxLength: 43 }
+        adsConsent: { type: boolean }
+    MarketingPreferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [token, scope]
+      properties:
+        token: { type: string, maxLength: 512 }
+        scope: { type: string, enum: [all, ads] }
+
     SubscribeWaitlistRequest:
       type: object
       additionalProperties: false
@@ -1742,7 +1915,8 @@ components:
           anyOf: [{ type: string }, { type: "null" }]
         configurationVersion:
           type: string
-          enum: [crossmint-synthetic-v1, crossmint-sandbox-evm-customer-email-v1]
+          enum:
+            [crossmint-synthetic-v1, crossmint-sandbox-evm-customer-email-v1]
         synthetic:
           type: boolean
         version:
