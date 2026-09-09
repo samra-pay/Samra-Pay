@@ -56,7 +56,7 @@
       "surface": "customer-web-public",
       "directory": "artifacts/samra-pay/dist/public",
       "match": "\\.(?:avif|webp|png|svg|ico|gif|jpe?g)$",
-      "expectedMatches": 32,
+      "expectedMatches": 47,
       "maximumBytes": 200000
     },
     {
