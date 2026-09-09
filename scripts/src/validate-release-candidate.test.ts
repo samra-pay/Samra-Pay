@@ -76,10 +76,6 @@ const workflow = [
   "    inputs:",
   "      candidate_sha:",
   "        required: true",
-  "      report_to_qase:",
-  "        type: boolean",
-  "        default: false",
-  "        required: false",
   "cancel-in-progress: false",
   "  runtime-image-security:",
   "    name: Release runtime image security (${{ matrix.id }})",
@@ -111,8 +107,7 @@ const workflow = [
   "        uses: actions/download-artifact@0123456789abcdef0123456789abcdef01234567 # v8",
   "        with:",
   "          pattern: release-runtime-security-*-${{ inputs.candidate_sha }}",
-  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
-  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+  "TEST_ENVIRONMENT: github-ci-postgres",
   ...requiredGates.map(({ id }) => `id: ${id}`),
   "      - name: Aggregate exact-SHA security gate",
   "        env:",
@@ -167,23 +162,12 @@ const workflow = [
   "        env:",
   `          RELEASE_GATE_RESULTS: {${qaseGatePayload}}`,
   "        run: release-evidence -- gate-junit",
-  "      - name: Create Qase release-candidate run",
-  "        id: qase_create",
-  "        continue-on-error: true",
-  "        if: inputs.report_to_qase && steps.qase_payload.outcome == 'success' && !cancelled()",
-  "      - name: Upload release gates to Qase",
-  "        id: qase_upload",
-  "        continue-on-error: true",
-  "      - name: Complete Qase release-candidate run",
-  "        id: qase_complete",
-  "        continue-on-error: true",
-  "        if: steps.qase_create.outputs.id != '' && !cancelled()",
   "      - name: Record Qase release identity",
   "        if: always()",
   "        env:",
-  "          QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}",
-  "          QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}",
-  '          QASE_REPORTING_RESULTS: {"qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}',
+  '          QASE_REPORTING_ENABLED: "false"',
+  '          QASE_RUN_ID: ""',
+  '          QASE_REPORTING_RESULTS: {"qase_create":"skipped","qase_upload":"skipped","qase_complete":"skipped"}',
   "        run: release-evidence -- qase-metadata",
   "      - name: Build content-addressed release evidence manifest",
   "        env:",
@@ -230,26 +214,20 @@ describe("validateReleaseCandidateContract", () => {
 
   it("rejects reporting policy drift or an engineering gate replaced by Qase", () => {
     for (const changed of [
-      workflow.replace("default: false", "default: true"),
-      workflow.replace("if: inputs.report_to_qase &&", "if:"),
+      workflow + "\nreport_to_qase:",
+      workflow +
+        "\nuses: qase-tms/gh-actions/report@0123456789abcdef0123456789abcdef01234567",
       replaceInStep(
         workflow,
         "Record Qase release identity",
         "if: always()",
         "if: success()",
       ),
-      replaceInStep(
-        workflow,
-        "Upload release gates to Qase",
-        "continue-on-error: true",
-        "continue-on-error: false",
+      workflow.replace(
+        'QASE_REPORTING_ENABLED: "false"',
+        'QASE_REPORTING_ENABLED: "true"',
       ),
-      replaceInStep(
-        workflow,
-        "Record Qase release identity",
-        '"qase_create":"${{ steps.qase_create.outcome }}"',
-        '"qase_create":"success"',
-      ),
+      workflow.replace('"qase_create":"skipped"', '"qase_create":"success"'),
     ]) {
       expect(() =>
         validateReleaseCandidateContract(contract, changed, {
@@ -293,19 +271,6 @@ describe("validateReleaseCandidateContract", () => {
         { automatedReports: reports },
       ),
     ).toThrow(/preserved before stop conditions/);
-  });
-
-  it("rejects orphaned Qase runs when result upload fails", () => {
-    expect(() =>
-      validateReleaseCandidateContract(
-        contract,
-        workflow.replace(
-          "if: steps.qase_create.outputs.id != '' && !cancelled()\n      - name: Record Qase release identity",
-          "if: steps.qase_upload.outcome == 'success' && !cancelled()\n      - name: Record Qase release identity",
-        ),
-        { automatedReports: reports },
-      ),
-    ).toThrow(/close every created Qase run/);
   });
 
   it("rejects a database shared across release suites", () => {

@@ -1,0 +1,101 @@
+---
+name: Test failure
+description: Track a reproduced failure through a fix and verified retest.
+title: "[Test failure] "
+body:
+  - type: markdown
+    attributes:
+      value:
+        Use synthetic profiles and tester aliases. Do not attach credentials, recovery
+        links, KYC documents, real personal/financial data, raw provider payloads or
+        unredacted logs. A facilitator can file this for a participant without granting
+        repository access.
+  - type: input
+    id: session
+    attributes:
+      label: Test-session issue and scenario ID
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Test / UAT
+        - Local Dev
+        - Staging (separately authorized)
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: Exact tested version
+      description:
+        Full source SHA, runtime revision, deployment URL, scenario-catalog
+        SHA, and mobile build number if applicable. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Test setup
+      description:
+        Browser/OS/device, synthetic fixture version, provider modes and
+        tester aliases. Missing prerequisites mean Blocked.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - P0 — isolation, integrity or sensitive-data exposure
+        - P1 — core journey blocked
+        - P2 — safe workaround exists
+        - P3 — cosmetic / minor
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and frequency
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Link restricted evidence or explain why it could not be safely captured.
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Engineering owner / triage
+      description:
+        Name the assigned owner, or Needs triage. Do not imply someone accepted
+        ownership.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Fix and retest record
+      description:
+        Append fix PR, deployed SHA/revision, retest result and verifier
+        before closing. A merged fix is not a verified fix.
+      value: Not fixed or retested yet.
+    validations:
+      required: true

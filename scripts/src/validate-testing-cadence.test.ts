@@ -31,9 +31,7 @@ const workflow = [
   "      - postgres-http",
   "  commercial-daily:",
   "    if: github.event_name == 'schedule' || inputs.run_commercial == 'true'",
-  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
-  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
-  "QASE_RUN_SOURCE: \"${{ github.event_name == 'pull_request' && format('PR #{0} ({1})', github.event.pull_request.number, github.head_ref) || github.ref_name }}\"",
+  "TEST_ENVIRONMENT: github-ci-postgres",
   "pnpm run test:testing-cadence",
   "pnpm run test:release-contract",
   "pnpm run test:gcp-platform",
@@ -48,8 +46,7 @@ const performanceWorkflow = [
   '    - cron: "17 6 * * 0"',
   "jobs:",
   "  performance:",
-  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
-  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+  "TEST_ENVIRONMENT: github-ci-postgres",
 ].join("\n");
 
 const resilienceWorkflow = [
@@ -67,12 +64,9 @@ const resilienceWorkflow = [
   '    - cron: "43 7 * * 6"',
   "jobs:",
   "  resilience:",
-  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
-  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
-  "id: qase-upload-resilience",
-  "uses: qase-tms/gh-actions/report@0123456789abcdef0123456789abcdef01234567 # v1",
+  "TEST_ENVIRONMENT: github-ci-postgres",
+  "Validate weekly resilience JUnit payloads",
   "path: test-results",
-  "qase-upload-resilience.outcome == 'success'",
 ].join("\n");
 
 const releaseWorkflow = [
@@ -80,17 +74,16 @@ const releaseWorkflow = [
   "  workflow_dispatch:",
   "jobs:",
   "  release-assurance:",
-  "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
-  "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+  "TEST_ENVIRONMENT: github-ci-postgres",
 ].join("\n");
 
 const policy: TestingCadencePolicy = {
   version: 1,
   authority: {
     merge: "GitHub Actions",
-    traceability: "Qase",
+    traceability: "GitHub",
     financialTruth: "PostgreSQL API and Samra control ledger",
-    manualEvidence: "Qase synthetic runs",
+    manualEvidence: "GitHub synthetic runs",
   },
   riskTiers: [
     {
@@ -119,7 +112,7 @@ const policy: TestingCadencePolicy = {
       trigger: "pull_request",
       maximumMinutes: 20,
       requiredJobs: ["required-ci"],
-      qaseEnvironment: "github-ci-postgres",
+      testEnvironment: "github-ci-postgres",
     },
     {
       id: "main",
@@ -127,7 +120,7 @@ const policy: TestingCadencePolicy = {
       trigger: "push:main",
       maximumMinutes: 20,
       requiredJobs: ["required-ci"],
-      qaseEnvironment: "github-ci-postgres",
+      testEnvironment: "github-ci-postgres",
     },
     {
       id: "daily",
@@ -136,7 +129,7 @@ const policy: TestingCadencePolicy = {
       cron: "17 6 * * *",
       maximumMinutes: 30,
       requiredJobs: ["commercial-daily"],
-      qaseEnvironment: "github-ci-postgres",
+      testEnvironment: "github-ci-postgres",
     },
     {
       id: "weekly-ledger",
@@ -145,7 +138,7 @@ const policy: TestingCadencePolicy = {
       cron: "17 6 * * 0",
       maximumMinutes: 45,
       requiredJobs: ["performance"],
-      qaseEnvironment: "github-ci-postgres",
+      testEnvironment: "github-ci-postgres",
     },
     {
       id: "weekly-resilience",
@@ -154,7 +147,7 @@ const policy: TestingCadencePolicy = {
       cron: "43 7 * * 6",
       maximumMinutes: 45,
       requiredJobs: ["resilience"],
-      qaseEnvironment: "github-ci-postgres",
+      testEnvironment: "github-ci-postgres",
     },
     {
       id: "release",
@@ -162,7 +155,7 @@ const policy: TestingCadencePolicy = {
       trigger: "workflow_dispatch",
       maximumMinutes: 90,
       requiredJobs: ["release-assurance"],
-      qaseEnvironment: "github-ci-postgres",
+      testEnvironment: "github-ci-postgres",
     },
   ],
   surfaces: [
@@ -262,19 +255,21 @@ describe("validateTestingCadence", () => {
     ).toThrow(/financial-core does not satisfy P0 cadence daily/);
   });
 
-  it("rejects missing Qase environment attribution", () => {
+  it("rejects missing test environment attribution", () => {
     expect(() =>
       validateTestingCadence(
         policy,
         {
           ...workflows,
-          ".github/workflows/ledger-performance.yml": performanceWorkflow
-            .replace("QASE_TESTOPS_ENVIRONMENT: github-ci-postgres", "")
-            .replace("environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}", ""),
+          ".github/workflows/ledger-performance.yml":
+            performanceWorkflow.replace(
+              "TEST_ENVIRONMENT: github-ci-postgres",
+              "",
+            ),
         },
         documentation,
       ),
-    ).toThrow(/weekly-ledger workflow is missing Qase environment attribution/);
+    ).toThrow(/weekly-ledger workflow is missing test environment attribution/);
   });
 
   it("rejects a release dispatch that silently omits the commercial gate", () => {
@@ -325,33 +320,21 @@ describe("validateTestingCadence", () => {
     ).toThrow(/feature-branch push triggers duplicate pull-request evidence/);
   });
 
-  it("rejects an unquoted Qase source expression containing a YAML hash", () => {
+  it("rejects missing weekly resilience evidence validation", () => {
     expect(() =>
       validateTestingCadence(
         policy,
         {
           ...workflows,
-          ".github/workflows/ci.yml": workflow.replace(
-            'QASE_RUN_SOURCE: "${{',
-            "QASE_RUN_SOURCE: ${{",
-          ),
+          ".github/workflows/backend-resilience.yml":
+            resilienceWorkflow.replace(
+              "Validate weekly resilience JUnit payloads",
+              "",
+            ),
         },
         documentation,
       ),
-    ).toThrow(/QASE_RUN_SOURCE expression must be fully quoted/);
-  });
-
-  it("rejects multiple weekly resilience Qase report actions", () => {
-    expect(() =>
-      validateTestingCadence(
-        policy,
-        {
-          ...workflows,
-          ".github/workflows/backend-resilience.yml": `${resilienceWorkflow}\nuses: qase-tms/gh-actions/report@89abcdef0123456789abcdef0123456789abcdef # v1`,
-        },
-        documentation,
-      ),
-    ).toThrow(/Weekly resilience must upload its Qase evidence in one batch/);
+    ).toThrow(/missing evidence control/);
   });
 
   it("rejects weekly resilience triggers that omit migration inputs", () => {

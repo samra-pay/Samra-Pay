@@ -40,7 +40,7 @@ This changes delivery priority, not the historical evidence or readiness gates.
 Samra Pay's Alpha is a synthetic-first remittance product with a Samra-owned
 customer record, double-entry control ledger, audit history, reconciliation,
 and PostgreSQL database. The accepted repository stack remains Auth0, Persona,
-Crossmint, Google Cloud, GitHub Actions, and Qase. Funding and Ethiopia payout
+Crossmint, Google Cloud, GitHub Actions and GitHub issues. Funding and Ethiopia payout
 providers remain unresolved. Cybrid, Rain, and Bridge are post-Alpha alternatives.
 
 Crossmint, Auth0, and Persona provide bounded capabilities. They do not own the
@@ -92,6 +92,12 @@ explicit approval for that scope. None of these states implies another.
   [private deployment package](operations/staging-wallet-deployment-package.md)
   and [governed migrations](operations/staging-migrations.md); source availability
   does not satisfy their cloud, identity, cost or activation gates.
+
+## User testing
+
+David retired Qase on 2026-09-09. Use the [GitHub user-testing procedure](testing/user-testing.md),
+scenario catalogs and test-session/failure issue templates. Test deployment is
+a separate prerequisite; scenarios and templates are not executed user evidence.
 
 ## Governing documentation
 

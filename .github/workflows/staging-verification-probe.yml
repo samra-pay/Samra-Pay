@@ -33,11 +33,6 @@ on:
         description: For verify only, enter AUTHORIZED_STAGING_REVISION_PROBE
         required: false
         type: string
-      report_to_qase:
-        description: Optionally mirror combined staging results to Qase (non-blocking)
-        type: boolean
-        default: false
-        required: false
 
 permissions:
   contents: read
@@ -61,8 +56,6 @@ env:
   SAMRA_ZERO_TRAFFIC_RUN_ATTEMPT: ${{ inputs.zero_traffic_run_attempt }}
   SAMRA_IMAGE_VERIFICATION_RUN_ID: ${{ inputs.image_verification_run_id }}
   SAMRA_IMAGE_VERIFICATION_RUN_ATTEMPT: ${{ inputs.image_verification_run_attempt }}
-  QASE_TESTOPS_PROJECT: SAMP
-  QASE_TESTOPS_ENVIRONMENT: google-cloud-staging
 
 jobs:
   verification:
@@ -205,50 +198,13 @@ jobs:
           cp "artifacts/staging-release/staging-revision-probe.junit.xml" "${RUNNER_TEMP}/samra-qase-staging/exact-deployed-revision-private-http.xml"
           [[ "$(find "${RUNNER_TEMP}/samra-qase-staging" -type f -name '*.xml' | wc -l | tr -d ' ')" == "2" ]]
 
-      - name: Create one Qase Google Cloud staging run
-        id: qase_create
-        continue-on-error: true
-        if: inputs.mode == 'verify' && inputs.report_to_qase && success()
-        timeout-minutes: 2
-        uses: qase-tms/gh-actions/run-create@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}
-          title: Samra Pay staging verification — ${{ github.sha }}
-          description: Exact-image private PostgreSQL assurance plus an authenticated private HTTP probe of the exact deployed zero-traffic API revision.
-
-      - name: Upload both evidence planes to the same Qase run
-        id: qase_upload
-        continue-on-error: true
-        if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && success()
-        timeout-minutes: 2
-        uses: qase-tms/gh-actions/report@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase_create.outputs.id }}
-          format: junit
-          path: ${{ runner.temp }}/samra-qase-staging
-
-      - name: Complete the combined Qase run
-        id: qase_complete
-        continue-on-error: true
-        if: inputs.mode == 'verify' && steps.qase_create.outputs.id != '' && !cancelled()
-        timeout-minutes: 2
-        uses: qase-tms/gh-actions/run-complete@e4f92808975e11c5b9c8a26701726076d942ca9b # v1.2
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ env.QASE_TESTOPS_PROJECT }}
-          id: ${{ steps.qase_create.outputs.id }}
-
       - name: Record final tamper-evident staging verification
         if: inputs.mode == 'verify' && success()
         env:
-          QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}
-          QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}
+          QASE_REPORTING_ENABLED: "false"
+          QASE_RUN_ID: ""
           QASE_REPORTING_RESULTS: >-
-            {"qase_create":"${{ steps.qase_create.outcome }}","qase_upload":"${{ steps.qase_upload.outcome }}","qase_complete":"${{ steps.qase_complete.outcome }}"}
+            {"qase_create":"skipped","qase_upload":"skipped","qase_complete":"skipped"}
         shell: bash
         run: |
           set -euo pipefail

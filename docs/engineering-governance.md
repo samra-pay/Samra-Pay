@@ -14,7 +14,7 @@ vendor, cloud, or spending authority.
 | Architecture decisions and financial invariants | [Architecture](architecture/README.md) and the decision register below                                                 |
 | Engineering implementation and acceptance       | GitHub issue/PR; link an existing Notion request when it originated there                                              |
 | Business priorities and meeting records         | Original Notion/business record, linked into the engineering task                                                      |
-| Automated/manual quality evidence               | Exact-SHA GitHub results and governed Qase records                                                                     |
+| Automated/manual quality evidence               | Exact-SHA GitHub artifacts and user-test session/defect issues                                                                     |
 | Runtime configuration, resources, deployment    | Dated cloud/provider read-back and immutable release evidence                                                          |
 | UI implementation                               | Repository design-system tokens/components; identify the approved Figma file/revision when a design request uses Figma |
 
@@ -54,14 +54,15 @@ and the current-state index in the same PR.
 | Samra Pay card front artwork v1.0 | Approved by David on 2026-09-09: [four locked card designs and website artwork](design/approved-card-artwork-v1.md) |
 | Invite-only Alpha Release 1 | Accepted 2026-09-06 in the main task: [scope and sequence](architecture/alpha-release-1.md); 100-user cap, customer-controlled wallets, deposits/transfers unavailable |
 | Samra owns customer, financial state, ledger, and audit                  | Accepted: [architecture invariants](architecture/README.md)                                                                                                   |
-| Alpha uses Auth0, Persona, Crossmint, Google Cloud, GitHub Actions, Qase | Accepted repository decision: [Alpha platform](architecture/alpha-platform.md); funding and Ethiopia payout remain unresolved                                 |
+| Alpha uses Auth0, Persona, Crossmint, Google Cloud, GitHub Actions, GitHub issues | Accepted repository decision: [Alpha platform](architecture/alpha-platform.md); funding and Ethiopia payout remain unresolved                                 |
 | Customer-controlled sandbox signing/recovery                             | Recorded choice on 2026-09-04: [Crossmint evidence](operations/crossmint-sandbox-connection.md); complete signer/recovery proof and deployment remain blocked |
 | Public marketing versus authenticated financial surfaces                 | Accepted: [surface boundary](architecture/public-product-surface-boundary.md); activation is separately authorized                                            |
 | Merge enforcement                                                        | Enforced after approved Sept 5 transfer to `samra-pay/Samra-Pay`: [transfer evidence](operations/enterprise-transfer-2026-09-05.md)                                |
 
-The [5 September reporting decision](architecture/optional-qase-reporting.md)
-makes Qase optional for release and staging reporting; GitHub engineering gates
-and immutable local evidence remain mandatory.
+The **2026-09-09 Qase retirement decision** supersedes the earlier optional
+reporting policy. [User testing](testing/user-testing.md) governs scenario
+catalogs, sessions, defects and retests in GitHub. Existing engineering checks,
+retained automated evidence and independent release approvals remain mandatory.
 
 ## Open decisions and next evidence
 

@@ -1,5 +1,9 @@
 # Qase CI reporting
 
+> Superseded on 2026-09-09: David retired Qase. Follow [GitHub user testing](user-testing.md).
+> The content below is historical context, not current setup or activation instructions.
+
+
 Status: Qase is the locked Alpha test-management and evidence system. GitHub
 Actions remains the technical pass/fail and merge authority.
 

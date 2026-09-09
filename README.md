@@ -10,7 +10,7 @@ The locked Alpha vendors are:
 - Persona for KYC evidence;
 - Crossmint for an approved USDC wallet configuration;
 - Google Cloud for staging runtime and data infrastructure;
-- GitHub Actions and Qase for technical and governed test evidence.
+- GitHub Actions and GitHub issues for automated and user-test evidence.
 
 Funding and Ethiopia payout providers are unresolved. Cybrid, Rain, and Bridge
 are post-Alpha wallet-platform alternatives, not active integrations.
@@ -29,6 +29,9 @@ The two governing architecture documents are:
 
 - [Alpha platform and vendor boundary](docs/architecture/alpha-platform.md)
 - [Architecture and financial invariants](docs/architecture/README.md)
+
+See [user testing](docs/testing/user-testing.md) to run scenarios with testers and
+track failures through fixes and retests. Qase is retired; historical evidence remains.
 
 ## Workspace map
 
@@ -55,8 +58,8 @@ The two governing architecture documents are:
   under Samra transaction controls.
 - Real vendor traffic, customer data, public deployment, and production claims
   require separate evidence and approval.
-- GitHub Actions is the technical merge authority; Qase stores governed manual
-  and automated evidence against the exact commit.
+- GitHub Actions is the technical merge authority; GitHub issues record manual
+  acceptance and defects, linked to exact-version automated artifacts.
 
 Use pnpm and the frozen lockfile. Never commit credentials, database URLs,
 access tokens, customer PII, KYC evidence, or raw provider payloads.

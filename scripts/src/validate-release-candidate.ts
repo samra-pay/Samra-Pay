@@ -9,19 +9,19 @@ const CONTRACT_PATH = path.join(
   WORKSPACE_ROOT,
   "docs/testing/release-evidence-contract.json",
 );
-const QASE_GOVERNANCE_PATH = path.join(
+const TEST_EVIDENCE_PATH = path.join(
   WORKSPACE_ROOT,
-  "docs/testing/qase-governance.json",
+  "docs/testing/test-evidence.json",
 );
 
-type QaseGovernance = Readonly<{
+type TestEvidence = Readonly<{
   automatedReports: readonly Readonly<{ report: string }>[];
 }>;
 
 export function validateReleaseCandidateContract(
   contract: ReleaseEvidenceContract,
   workflow: string,
-  governance: QaseGovernance,
+  governance: TestEvidence,
 ): void {
   if (
     contract.version !== 2 ||
@@ -75,46 +75,29 @@ export function validateReleaseCandidateContract(
     );
   }
   if (
-    !/report_to_qase:[\s\S]*?type: boolean\n        default: false\n        required: false/u.test(
-      workflow,
-    )
+    /report_to_qase:|qase-tms\/|secrets\.QASE_|api\.qase\.io/.test(workflow)
   ) {
     throw new Error(
-      "Qase reporting must be an explicit, disabled-by-default boolean input.",
+      "Qase is retired; release workflows must not expose remote reporting.",
     );
   }
   const reportingStep = readWorkflowStep(
     workflow,
     "Record Qase release identity",
   );
-  if (
-    !reportingStep.includes("if: always()") ||
-    !reportingStep.includes(
-      "QASE_REPORTING_ENABLED: ${{ inputs.report_to_qase }}",
-    ) ||
-    !reportingStep.includes(
-      "QASE_RUN_ID: ${{ steps.qase_create.outputs.id }}",
-    ) ||
-    !reportingStep.includes("release-evidence -- qase-metadata")
-  ) {
-    throw new Error(
-      "Local Qase reporting evidence must always record the selected mode and run identity.",
-    );
-  }
-  for (const id of ["qase_create", "qase_upload", "qase_complete"]) {
-    if (!reportingStep.includes(`"${id}":"\${{ steps.${id}.outcome }}"`)) {
-      throw new Error(
-        `Local Qase reporting evidence must record ${id} outcome.`,
-      );
-    }
-  }
-  for (const name of [
-    "Create Qase release-candidate run",
-    "Upload release gates to Qase",
-    "Complete Qase release-candidate run",
+  for (const required of [
+    "if: always()",
+    'QASE_REPORTING_ENABLED: "false"',
+    'QASE_RUN_ID: ""',
+    '"qase_create":"skipped"',
+    '"qase_upload":"skipped"',
+    '"qase_complete":"skipped"',
+    "release-evidence -- qase-metadata",
   ]) {
-    if (!readWorkflowStep(workflow, name).includes("continue-on-error: true")) {
-      throw new Error("External Qase reporting must remain non-blocking.");
+    if (!reportingStep.includes(required)) {
+      throw new Error(
+        "Retired Qase compatibility evidence must record disabled, skipped, and no run identity.",
+      );
     }
   }
   for (const report of governance.automatedReports) {
@@ -183,12 +166,10 @@ export function validateReleaseCandidateContract(
     "needs.runtime-image-security.result",
     "pnpm run test:experience-budgets",
     "id: qase_payload",
-    "if: inputs.report_to_qase && steps.qase_payload.outcome == 'success' && !cancelled()",
     "release-evidence -- manifest",
     "release-evidence -- verify --require-passing",
     `retention-days: ${contract.retentionDays}`,
-    "QASE_TESTOPS_ENVIRONMENT: github-ci-postgres",
-    "environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}",
+    "TEST_ENVIRONMENT: github-ci-postgres",
   ]) {
     if (!workflow.includes(requiredWorkflowControl)) {
       throw new Error(
@@ -294,24 +275,6 @@ export function validateReleaseCandidateContract(
     throw new Error("Release workflow must not depend on Replit.");
   }
   validateIsolatedPostgresSuites(workflow);
-  const completeQaseIndex = workflow.indexOf(
-    "name: Complete Qase release-candidate run",
-  );
-  const recordQaseIndex = workflow.indexOf(
-    "name: Record Qase release identity",
-  );
-  const completeQaseStep = workflow.slice(completeQaseIndex, recordQaseIndex);
-  if (
-    completeQaseIndex < 0 ||
-    recordQaseIndex <= completeQaseIndex ||
-    !completeQaseStep.includes(
-      "if: steps.qase_create.outputs.id != '' && !cancelled()",
-    )
-  ) {
-    throw new Error(
-      "Release workflow must close every created Qase run even when upload fails.",
-    );
-  }
 }
 
 function validateIsolatedPostgresSuites(workflow: string): void {
@@ -481,8 +444,8 @@ function main(): void {
     fs.readFileSync(CONTRACT_PATH, "utf8"),
   ) as ReleaseEvidenceContract;
   const governance = JSON.parse(
-    fs.readFileSync(QASE_GOVERNANCE_PATH, "utf8"),
-  ) as QaseGovernance;
+    fs.readFileSync(TEST_EVIDENCE_PATH, "utf8"),
+  ) as TestEvidence;
   const workflow = fs.readFileSync(
     path.join(WORKSPACE_ROOT, contract.workflow),
     "utf8",

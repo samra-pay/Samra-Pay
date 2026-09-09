@@ -27,7 +27,7 @@ type Cadence = Readonly<{
   cron?: string;
   maximumMinutes: number;
   requiredJobs: readonly string[];
-  qaseEnvironment: string;
+  testEnvironment: string;
 }>;
 
 type Surface = Readonly<{
@@ -146,7 +146,7 @@ export function validateTestingCadence(
   }
   if (
     policy.authority.merge !== "GitHub Actions" ||
-    policy.authority.traceability !== "Qase" ||
+    policy.authority.traceability !== "GitHub" ||
     !policy.authority.financialTruth.includes("PostgreSQL")
   ) {
     throw new Error("Testing authorities are incomplete or unsafe.");
@@ -222,9 +222,9 @@ export function validateTestingCadence(
     if (cadence.maximumMinutes <= 0 || cadence.requiredJobs.length === 0) {
       throw new Error(`${cadence.id} must define runtime and required jobs.`);
     }
-    if (cadence.qaseEnvironment !== "github-ci-postgres") {
+    if (cadence.testEnvironment !== "github-ci-postgres") {
       throw new Error(
-        `${cadence.id} must use the disposable PostgreSQL Qase environment.`,
+        `${cadence.id} must use the disposable PostgreSQL test environment.`,
       );
     }
     const workflow = workflows[cadence.workflow];
@@ -237,12 +237,9 @@ export function validateTestingCadence(
     for (const job of cadence.requiredJobs) {
       assertWorkflowJob(workflow, job, cadence.id);
     }
-    if (
-      !workflow.includes("QASE_TESTOPS_ENVIRONMENT") ||
-      !workflow.includes("environment: ${{ env.QASE_TESTOPS_ENVIRONMENT }}")
-    ) {
+    if (!workflow.includes("TEST_ENVIRONMENT: github-ci-postgres")) {
       throw new Error(
-        `${cadence.id} workflow is missing Qase environment attribution.`,
+        `${cadence.id} workflow is missing test environment attribution.`,
       );
     }
   }
@@ -256,24 +253,12 @@ export function validateTestingCadence(
       `CI feature-branch push triggers duplicate pull-request evidence: ${featurePushBranches.join(", ")}.`,
     );
   }
-  const qaseRunSourceLine = ciWorkflow
-    .split("\n")
-    .find((line) => line.includes("QASE_RUN_SOURCE:"));
-  if (
-    !qaseRunSourceLine ||
-    !/^\s*QASE_RUN_SOURCE:\s+"\$\{\{.+\}\}"\s*$/.test(qaseRunSourceLine)
-  ) {
-    throw new Error(
-      "CI QASE_RUN_SOURCE expression must be fully quoted so YAML preserves hash characters.",
-    );
-  }
   for (const requiredControl of [
     "pnpm run test:testing-cadence",
     "pnpm run test:release-contract",
     "pnpm run test:gcp-platform",
     "pnpm run test:experience-budgets",
     "customer-experience-budgets",
-    "Samra Pay daily backend acceptance",
     "if: github.event_name == 'schedule' || inputs.run_commercial == 'true'",
   ]) {
     if (!ciWorkflow.includes(requiredControl)) {
@@ -290,24 +275,13 @@ export function validateTestingCadence(
 
   const resilienceWorkflow =
     workflows[".github/workflows/backend-resilience.yml"]!;
-  const resilienceReportActionCount = (
-    resilienceWorkflow.match(
-      /uses:\s+qase-tms\/gh-actions\/report@[0-9a-f]{40}(?:\s+#.*)?/g,
-    ) ?? []
-  ).length;
-  if (resilienceReportActionCount !== 1) {
-    throw new Error(
-      `Weekly resilience must upload its Qase evidence in one batch; found ${resilienceReportActionCount} report actions.`,
-    );
-  }
   for (const requiredControl of [
-    "id: qase-upload-resilience",
+    "Validate weekly resilience JUnit payloads",
     "path: test-results",
-    "qase-upload-resilience.outcome == 'success'",
   ]) {
     if (!resilienceWorkflow.includes(requiredControl)) {
       throw new Error(
-        `Weekly resilience workflow is missing batch control ${requiredControl}.`,
+        `Weekly resilience workflow is missing evidence control ${requiredControl}.`,
       );
     }
   }
