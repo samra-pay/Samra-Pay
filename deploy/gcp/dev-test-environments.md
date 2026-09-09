@@ -3,7 +3,14 @@
 Status: Dev and Test projects created and read back on 2026-09-09; billing
 linked and combined $50 monthly budget verified. Private PostgreSQL instances
 and databases are created; both instances are STOPPED with activation NEVER.
+Auth0 Dev/Test clients, distinct audiences and exact callback/logout origins are saved and read back.
+Build-only IAM is applied and both projects successfully published the API,
+customer web and migration images from `ed2f4459d82434949ac72111f80c1840b168a165`.
+See the [image publication read-back](../../docs/operations/evidence/2026-09-09-dev-test-build-publication.json).
+These initial images predate the integration of tester setup from PR #211;
+user testing requires a final reviewed candidate containing that setup.
 Schema migrations, credentials and application deployments are pending. No usable app URL is claimed.
+See the [Auth0 read-back](../../docs/operations/evidence/2026-09-09-dev-test-auth0.json).
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
 Dated [foundation read-back](../../docs/operations/evidence/2026-09-09-dev-test-foundation.json).
 Local backend implementation: [Dev Compose](../dev/README.md).
@@ -138,10 +145,14 @@ product account provisioning and synthetic funding are still separate prerequisi
   automatic effects of login. Reuse private account access work in PR #194.
 - Shared Test must keep `NODE_ENV=production` and development operations controls
   off. Do not enable debug/admin routes to bypass the missing tester setup path.
-- The Test browser URL, ingress boundary, Auth0 application/audience and callbacks
-  are not yet configured. Auth0 authorization, invitation enforcement and API IAM
-  have separate jobs. Private Cloud Run URLs alone do not provide a usable browser
-  flow. Any externally reachable frontend must be reviewed with account admission.
+- Dev/Test Auth0 application settings and distinct API audiences are saved, using
+  exact deterministic planned Cloud Run URLs. Test permits only its explicit SPA
+  user grant; client-credentials access is denied. Both environments share the
+  development tenant and managed password connection, while Samra admission and
+  data remain independently scoped. Test Google login is disabled; Dev is unchanged.
+  Browser ingress, runtime deployment, recovery delivery and actual login acceptance
+  remain pending. Auth0 authorization, invitation enforcement and API IAM have
+  separate jobs. Any externally reachable frontend must be reviewed with admission.
 - Existing staging controllers deliberately bind staging identities/projects.
   Do not global-replace staging strings or weaken those guards. Reuse Docker,
   migration logic and provider adapters; prepare only the minimum Test-specific
@@ -164,3 +175,29 @@ Preserve user-test evidence before resetting fixtures. At the seven-day review,
 record measured cost, failed scenarios and the next decision. Stop shared Test
 only through a reviewed change; do not delete its persistent database as an
 incidental CI cleanup. Staging and production are outside this change.
+
+## Publish the three runtime images
+
+`cloudbuild.dev-test.yaml` uses native Cloud Build and the existing Dockerfiles
+for API, authenticated customer web (`SAMRA_WEB_SURFACE=legacy`) and migrations.
+The publication script rejects every project except the isolated Dev/Test
+projects and requires a full source commit SHA. It never deploys or migrates.
+Submit an archive fetched from that exact GitHub commit, record its SHA-256,
+Cloud Build ID and resulting image digests, and deploy only verified digests.
+The archive SHA-256 is provenance evidence; the build label alone is not source
+verification. Source upload is private to the selected GCP project.
+
+The first Dev submission was rejected before execution: Cloud Build does not
+accept the legacy `829811168658@cloudbuild.gserviceaccount.com` identity as an
+explicit user-specified build account. The default Compute identity has no
+observed build grants and must not be silently granted broad access.
+Use dedicated `samra-build-dev` / `samra-build-test` identities with only
+objectViewer on their project source bucket, writer on their environment image
+registry, and logWriter on their project. `configure-dev-test-build-iam.sh`
+contains the exact grants and read-back commands. David approved the six grants;
+they were applied as `me@davidhaile.com` and independently read back on 2026-09-09.
+See the [build IAM evidence](../../docs/operations/evidence/2026-09-09-dev-test-build-iam.json). It grants
+no database, secret, deployment, impersonation or production access.
+A build failure stops publication; if an immutable tag was already pushed,
+inspect its digest and source before retrying. Database compute remains stopped
+through image publication. The combined $50 budget includes build charges.

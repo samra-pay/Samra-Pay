@@ -43,6 +43,18 @@ activate an API, or create real customers.
   A failed provider redirect leaves a closed local session and generic retry
   state. It is not evidence of provider-session or already-issued JWT revocation.
 
+## Dev/Test configuration update — 2026-09-09
+
+The [Dev/Test Auth0 evidence](evidence/2026-09-09-dev-test-auth0.json) supersedes
+the empty Dev callback lists in the historical observation below. The existing
+Dev SPA is reused. A separate Test SPA and RS256 API audience are now saved,
+with exact callback/logout/web origins and a Test-only user-delegated grant.
+The deployment inventory contains the public runtime identifiers. Test uses
+the managed password connection; Dev retains its existing password/Google options.
+The two clients share a development tenant and identity connection. Samra still
+owns separate environment admission and account data. Actual login, logout,
+recovery delivery and deployed audience rejection remain unverified.
+
 ## Auth0-first read-back — 2026-09-07
 
 Baseline: main `ece64330ec8d28c60eee006b5eee8af0a5ca1509` (#189).

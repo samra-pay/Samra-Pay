@@ -76,7 +76,9 @@
           "SAMRA_RUN_WORKER": "true",
           "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false",
           "SAMRA_DEPLOYMENT_ENVIRONMENT": "dev",
-          "GOOGLE_CLOUD_PROJECT": "samra-pay-dev"
+          "GOOGLE_CLOUD_PROJECT": "samra-pay-dev",
+          "AUTH0_ISSUER_BASE_URL": "https://dev-40h1kaj5488jqctu.us.auth0.com/",
+          "AUTH0_AUDIENCE": "https://api.samrapay.com/development"
         }
       },
       "web": {
@@ -89,17 +91,39 @@
         "maxInstances": 1,
         "customerDataMode": "api",
         "apiProxyAuth": "cloud-run-iam",
-        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary"
+        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary",
+        "runtimeEnvironment": {
+          "SAMRA_PUBLIC_DATA_MODE": "api",
+          "SAMRA_PUBLIC_AUTH0_DOMAIN": "dev-40h1kaj5488jqctu.us.auth0.com",
+          "SAMRA_PUBLIC_AUTH0_CLIENT_ID": "1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0",
+          "SAMRA_PUBLIC_AUTH0_AUDIENCE": "https://api.samrapay.com/development"
+        },
+        "plannedUrl": "https://samra-customer-web-dev-829811168658.us-east4.run.app"
       },
       "migrationJob": {
         "name": "samra-migrations-dev",
         "maxRetries": 0
       },
       "auth0": {
-        "application": "separate-Dev-SPA-required",
-        "audience": "separate-Dev-audience-required",
-        "callbacks": "pending-test-URL",
-        "existingDevApplicationReused": false
+        "application": "Samra One - Web - Development",
+        "clientId": "1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0",
+        "apiId": "6a9b52e5261b4bde124b13fb",
+        "domain": "dev-40h1kaj5488jqctu.us.auth0.com",
+        "issuer": "https://dev-40h1kaj5488jqctu.us.auth0.com/",
+        "audience": "https://api.samrapay.com/development",
+        "callbacks": [
+          "https://samra-customer-web-dev-829811168658.us-east4.run.app/"
+        ],
+        "logoutUrls": [
+          "https://samra-customer-web-dev-829811168658.us-east4.run.app/"
+        ],
+        "webOrigins": [
+          "https://samra-customer-web-dev-829811168658.us-east4.run.app"
+        ],
+        "existingDevApplicationReused": true,
+        "status": "saved-readback-verified-2026-09-09",
+        "runtimeAcceptance": false,
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-auth0.json"
       },
       "spendingAuthorized": true,
       "alertThresholdsPercent": [50, 80, 100],
@@ -124,7 +148,16 @@
         "stopRequiresDrainedTransfers": true,
         "newSessionsRequireOperatorStart": true
       },
-      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json"
+      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json",
+      "build": {
+        "serviceAccount": "samra-build-dev@samra-pay-dev.iam.gserviceaccount.com",
+        "identityCreated": true,
+        "permissionsApplied": true,
+        "iamEvidence": "docs/operations/evidence/2026-09-09-dev-test-build-iam.json",
+        "sourceBucket": "gs://samra-pay-dev_cloudbuild",
+        "config": "deploy/gcp/cloudbuild.dev-test.yaml",
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-build-publication.json"
+      }
     },
     "test": {
       "projectId": "samra-pay-test",
@@ -197,7 +230,9 @@
           "SAMRA_RUN_WORKER": "true",
           "SAMRA_INTERNAL_OPERATIONS_ENABLED": "false",
           "SAMRA_DEPLOYMENT_ENVIRONMENT": "test",
-          "GOOGLE_CLOUD_PROJECT": "samra-pay-test"
+          "GOOGLE_CLOUD_PROJECT": "samra-pay-test",
+          "AUTH0_ISSUER_BASE_URL": "https://dev-40h1kaj5488jqctu.us.auth0.com/",
+          "AUTH0_AUDIENCE": "https://api.samrapay.com/test"
         }
       },
       "web": {
@@ -210,17 +245,39 @@
         "maxInstances": 1,
         "customerDataMode": "api",
         "apiProxyAuth": "cloud-run-iam",
-        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary"
+        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary",
+        "runtimeEnvironment": {
+          "SAMRA_PUBLIC_DATA_MODE": "api",
+          "SAMRA_PUBLIC_AUTH0_DOMAIN": "dev-40h1kaj5488jqctu.us.auth0.com",
+          "SAMRA_PUBLIC_AUTH0_CLIENT_ID": "QA8sB8K21gjV7lSo5LbqOXE6vyiQ3Cx3",
+          "SAMRA_PUBLIC_AUTH0_AUDIENCE": "https://api.samrapay.com/test"
+        },
+        "plannedUrl": "https://samra-customer-web-test-378050809796.us-east4.run.app"
       },
       "migrationJob": {
         "name": "samra-migrations-test",
         "maxRetries": 0
       },
       "auth0": {
-        "application": "separate-Test-SPA-required",
-        "audience": "separate-Test-audience-required",
-        "callbacks": "pending-test-URL",
-        "existingDevApplicationReused": false
+        "application": "Samra One - Web - Test",
+        "clientId": "QA8sB8K21gjV7lSo5LbqOXE6vyiQ3Cx3",
+        "apiId": "6aa17d107e6b8389ad15b48f",
+        "domain": "dev-40h1kaj5488jqctu.us.auth0.com",
+        "issuer": "https://dev-40h1kaj5488jqctu.us.auth0.com/",
+        "audience": "https://api.samrapay.com/test",
+        "callbacks": [
+          "https://samra-customer-web-test-378050809796.us-east4.run.app/"
+        ],
+        "logoutUrls": [
+          "https://samra-customer-web-test-378050809796.us-east4.run.app/"
+        ],
+        "webOrigins": [
+          "https://samra-customer-web-test-378050809796.us-east4.run.app"
+        ],
+        "existingDevApplicationReused": false,
+        "status": "saved-readback-verified-2026-09-09",
+        "runtimeAcceptance": false,
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-auth0.json"
       },
       "spendingAuthorized": true,
       "alertThresholdsPercent": [50, 80, 100],
@@ -239,7 +296,16 @@
         "newSessionsRequireOperatorStart": true
       },
       "cloudDatabaseCount": 1,
-      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json"
+      "foundationEvidence": "docs/operations/evidence/2026-09-09-dev-test-foundation.json",
+      "build": {
+        "serviceAccount": "samra-build-test@samra-pay-test.iam.gserviceaccount.com",
+        "identityCreated": true,
+        "permissionsApplied": true,
+        "iamEvidence": "docs/operations/evidence/2026-09-09-dev-test-build-iam.json",
+        "sourceBucket": "gs://samra-pay-test_cloudbuild",
+        "config": "deploy/gcp/cloudbuild.dev-test.yaml",
+        "evidence": "docs/operations/evidence/2026-09-09-dev-test-build-publication.json"
+      }
     },
     "staging": {
       "projectId": "samra-pay-staging",
@@ -255,7 +321,7 @@
   "activationBlockers": [
     "Billing and combined $50 budget configured; safe session start/drain/stop controls and cost read-back remain required",
     "Exact candidate verification for synthetic-shared admission and financial-route profile",
-    "Separate Auth0 Test app/audience, callback/logout origins and account recovery proof",
+    "Auth0 Dev/Test configuration saved; deployed login/logout, cross-audience rejection and account recovery inbox proof remain required",
     "Two scoped test identity mappings, invitation eligibility and controlled per-user synthetic journal funding",
     "Pinned images and secret versions, private database/TLS reachability and separate runtime/migration/read-only roles",
     "Browser-access decision and tested API/customer authorization without broad IAM bypass",

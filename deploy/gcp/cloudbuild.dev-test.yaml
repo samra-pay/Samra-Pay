@@ -1,0 +1,16 @@
+# Submit an archive of the exact _SOURCE_SHA; record archive hash and build ID.
+# This publishes images only. It does not migrate, deploy or open app access.
+substitutions:
+  _SOURCE_SHA: unset
+steps:
+  - id: publish-synthetic-runtime-images
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - deploy/gcp/publish-dev-test-images.sh
+    env:
+      - BUILD_PROJECT=$PROJECT_ID
+      - SOURCE_SHA=${_SOURCE_SHA}
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 2400s

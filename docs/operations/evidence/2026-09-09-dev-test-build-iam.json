@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-09",
+  "status": "applied-and-independently-read-back",
+  "operator": "me@davidhaile.com",
+  "authorization": "David approved the six exact build-only grants, then explicitly approved using the existing owner account.",
+  "environments": {
+    "dev": {
+      "projectId": "samra-pay-dev",
+      "projectNumber": "829811168658",
+      "member": "serviceAccount:samra-build-dev@samra-pay-dev.iam.gserviceaccount.com",
+      "grants": [
+        { "resource": "gs://samra-pay-dev_cloudbuild", "role": "roles/storage.objectViewer" },
+        { "resource": "projects/samra-pay-dev/locations/us-east4/repositories/samra-dev", "role": "roles/artifactregistry.writer" },
+        { "resource": "projects/samra-pay-dev", "role": "roles/logging.logWriter" }
+      ]
+    },
+    "test": {
+      "projectId": "samra-pay-test",
+      "projectNumber": "378050809796",
+      "member": "serviceAccount:samra-build-test@samra-pay-test.iam.gserviceaccount.com",
+      "grants": [
+        { "resource": "gs://samra-pay-test_cloudbuild", "role": "roles/storage.objectViewer" },
+        { "resource": "projects/samra-pay-test/locations/us-east4/repositories/samra-test", "role": "roles/artifactregistry.writer" },
+        { "resource": "projects/samra-pay-test", "role": "roles/logging.logWriter" }
+      ]
+    }
+  },
+  "verification": "Described both projects, service accounts, source buckets and registries before mutation. After apply, independently retrieved each of the six resource IAM policies and matched the exact member and role.",
+  "scope": "Build source read, environment image publication and build logging only. No deployment, database, secret or production access was added.",
+  "rollback": "If these build permissions must be withdrawn, remove only the listed member/role binding from its exact listed resource after checking for active builds; preserve all unrelated policy bindings. Rollback has not been executed."
+}
