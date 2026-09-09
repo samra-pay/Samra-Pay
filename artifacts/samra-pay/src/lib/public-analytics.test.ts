@@ -31,6 +31,46 @@ afterEach(() => {
 });
 
 describe("public analytics consent and privacy boundary", () => {
+  it("gates explicit waitlist events on consent and strips private data", () => {
+    expect(analytics.trackPublicWaitlistEvent("started")).toBe(false);
+    expect(state.dataLayer).toBeUndefined();
+    analytics.storeAnalyticsChoice("granted");
+    expect(analytics.trackPublicWaitlistEvent("accepted")).toBe(true);
+    expect(
+      commands().filter((args) => args[1] === "waitlist_submission_accepted"),
+    ).toEqual([
+      [
+        "event",
+        "waitlist_submission_accepted",
+        {
+          page_location: "https://www.samrapay.com/",
+          page_title: "Samra Pay | home",
+          page_referrer: "https://example.com",
+          form_id: "launch_updates",
+          send_to: config.measurementId,
+        },
+      ],
+    ]);
+    expect(JSON.stringify(commands())).not.toMatch(
+      /private|secret|generate_lead|verified/,
+    );
+    analytics.stopPublicAnalytics();
+    expect(analytics.trackPublicWaitlistEvent("accepted")).toBe(false);
+  });
+
+  it("blocks waitlist events on preview hosts and under privacy signals", () => {
+    analytics.storeAnalyticsChoice("granted");
+    vi.spyOn(window, "location", "get").mockReturnValue(
+      new URL("https://samra-pay-production.web.app/") as unknown as Location,
+    );
+    expect(analytics.trackPublicWaitlistEvent("accepted")).toBe(false);
+    expect(state.dataLayer).toBeUndefined();
+    vi.spyOn(window, "location", "get").mockReturnValue(
+      new URL("https://www.samrapay.com/") as unknown as Location,
+    );
+    vi.stubGlobal("navigator", { globalPrivacyControl: true });
+    expect(analytics.trackPublicWaitlistEvent("accepted")).toBe(false);
+  });
   it("makes no tag or data queue before a saved opt-in", () => {
     expect(analytics.readAnalyticsChoice()).toBeNull();
     expect(analytics.startPublicAnalytics()).toBe(false);

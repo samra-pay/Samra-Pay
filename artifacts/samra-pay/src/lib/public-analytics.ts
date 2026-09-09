@@ -58,7 +58,13 @@ export function storeAnalyticsChoice(choice: AnalyticsChoice) {
 export function publicPageParameters(href: string, referrer: string) {
   const url = new URL(href);
   const route = resolvePublicRoute(url.pathname);
-  if (url.origin !== config.origin || !route || route === "login" || route === "signup") return null;
+  if (
+    url.origin !== config.origin ||
+    !route ||
+    route === "login" ||
+    route === "signup"
+  )
+    return null;
   let referralOrigin = "";
   try {
     const referral = new URL(referrer);
@@ -126,6 +132,48 @@ export function analyticsNeedsReload() {
     withdrawn &&
     publicPageParameters(window.location.href, document.referrer) !== null
   );
+}
+
+export type WaitlistMeasurement =
+  | "started"
+  | "accepted"
+  | "invalid_email"
+  | "missing_consent"
+  | "service_error";
+
+// A receipt confirms only submission handling, not email ownership, a new
+// contact, or eligibility. Never send form values or label this generate_lead.
+export function trackPublicWaitlistEvent(kind: WaitlistMeasurement) {
+  const names: Record<WaitlistMeasurement, string> = {
+    started: "waitlist_form_started",
+    accepted: "waitlist_submission_accepted",
+    invalid_email: "waitlist_validation_error",
+    missing_consent: "waitlist_validation_error",
+    service_error: "waitlist_submission_error",
+  };
+  try {
+    if (
+      !Object.hasOwn(names, kind) ||
+      withdrawn ||
+      readAnalyticsChoice() !== "granted"
+    )
+      return false;
+    const page = publicPageParameters(window.location.href, document.referrer);
+    if (!page) return false;
+    if (!started && !startPublicAnalytics()) return false;
+    analyticsWindow.gtag?.("event", names[kind], {
+      ...page,
+      form_id: "launch_updates",
+      ...(kind === "invalid_email" || kind === "missing_consent"
+        ? { error_category: kind }
+        : {}),
+      send_to: config.measurementId,
+    });
+    return true;
+  } catch {
+    // Optional measurement must never block a submission or alter its result.
+    return false;
+  }
 }
 
 export function stopPublicAnalytics() {
