@@ -21,6 +21,10 @@ import {
 import type { ProviderEvent } from "@workspace/remittance";
 import { DemoRuntime } from "../src/domain/demo-runtime";
 import { PostgresReconciliationStore } from "../src/domain/postgres-reconciliation";
+import {
+  parseSharedTestManifest,
+  runSharedTestOperation,
+} from "../../../lib/db/src/shared-test-operator";
 
 const connectionString = process.env["TEST_DATABASE_URL"];
 if (!connectionString) {
@@ -93,6 +97,277 @@ async function onboardingPersistenceCounts(
 
 test.after(async () => {
   await Promise.all(connections.map((connection) => connection.pool.end()));
+});
+
+test("shared synthetic operator previews roll back, binds two invitations, and applies only admitted fake identity decisions", async () => {
+  const { context } = createRuntime();
+  // Roll back this entire fixture so the existing lifetime admission tests start closed.
+  const rollback = new Error("operator fixture complete");
+  await assert.rejects(
+    context.run(async () => {
+      const issuer = `https://${randomUUID()}.operator.samra.test/`;
+      const subject = `auth0|${randomUUID()}`;
+      const otherSubject = `auth0|${randomUUID()}`;
+      const manifest = parseSharedTestManifest({
+        environment: "test",
+        operation: "invite",
+        operatorAlias: "operator_fixture",
+        issuer,
+        admissionLimit: 5,
+        subjects: [subject, otherSubject],
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      });
+      const counts = async () =>
+        (
+          await context.query().query(
+            `SELECT (SELECT count(*)::int FROM samra_core.alpha_invitations) AS invitations,
+              (SELECT count(*)::int FROM samra_core.customers) AS customers,
+              (SELECT count(*)::int FROM samra_core.audit_events) AS audits,
+              (SELECT admission_limit FROM samra_core.alpha_release_controls) AS admission_limit`,
+          )
+        ).rows[0];
+      const before = await counts();
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...manifest, environment: "dev" },
+          true,
+        ),
+        /connected database/,
+      );
+      assert.equal(
+        (await runSharedTestOperation(context, manifest)).applied,
+        false,
+      );
+      assert.deepEqual(await counts(), before);
+      await runSharedTestOperation(context, manifest, true);
+      const applied = await counts();
+      assert.equal(applied.invitations, 2);
+      assert.equal(applied.customers, before.customers);
+      assert.equal(applied.admission_limit, 5);
+      await runSharedTestOperation(context, manifest, true);
+      assert.deepEqual(await counts(), applied);
+      if (manifest.operation !== "invite")
+        throw new Error("Expected invitation fixture");
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...manifest, subjects: [subject, "auth0|replacement"] },
+          true,
+        ),
+        /Existing invitations differ/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...manifest, expiresAt: new Date(Date.now() - 1000).toISOString() },
+          true,
+        ),
+        /expiry/,
+      );
+      const onboarding = new PostgresCustomerOnboardingStore(
+        context,
+        new PostgresAlphaAccessStore(context),
+      );
+      await assert.rejects(
+        onboarding.startAuth0Onboarding({
+          issuer,
+          subject: "auth0|uninvited",
+          idempotencyKey: "operator-uninvited-fixture",
+        }),
+        AlphaAccessDeniedError,
+      );
+      assert.equal(
+        (
+          await onboarding.startAuth0Onboarding({
+            issuer,
+            subject,
+            idempotencyKey: "operator-start-fixture",
+          })
+        ).snapshot.state,
+        "consent_pending",
+      );
+      const store = new PostgresCustomerIdentityCaseStore(context);
+      await assert.rejects(
+        store.prepareAuth0IdentityCase({
+          issuer,
+          subject,
+          idempotencyKey: "operator-before-consent-fixture",
+        }),
+      );
+      await onboarding.recordAuth0ConsentBundle({
+        issuer,
+        subject,
+        idempotencyKey: "operator-consent-fixture",
+        bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+        locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+        decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+          (document) => ({
+            consentType: document.consentType,
+            documentVersion: document.documentVersion,
+            decision: "accepted" as const,
+          }),
+        ),
+      });
+      const prepared = await store.prepareAuth0IdentityCase({
+        issuer,
+        subject,
+        idempotencyKey: "operator-inquiry-fixture",
+      });
+      const identityCaseId = prepared.snapshot.identityCaseId;
+      await store.attachProviderInquiry({
+        identityCaseId,
+        providerRequestKey: prepared.providerRequestKey,
+        providerInquiryRef: `inq_fake_${randomUUID()}`,
+      });
+      const decision = parseSharedTestManifest({
+        environment: "test",
+        operation: "identity-decision",
+        operatorAlias: "operator_fixture",
+        issuer,
+        subject,
+        identityCaseId,
+        decision: "approved",
+        commandId: "synthetic_operator_decision_fixture",
+      });
+      if (decision.operation !== "identity-decision")
+        throw new Error("Expected decision fixture");
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...decision, subject: otherSubject },
+          true,
+        ),
+        /admitted, active/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          {
+            ...decision,
+            identityCaseId: `identity_case_${randomUUID().replaceAll("-", "")}`,
+          },
+          true,
+        ),
+        /does not belong/,
+      );
+      const beforeDecision = await counts();
+      await runSharedTestOperation(context, decision);
+      assert.equal(
+        (await store.getAuth0IdentityCase({ issuer, subject })).state,
+        "pending",
+      );
+      assert.deepEqual(await counts(), beforeDecision);
+      assert.match(
+        (await runSharedTestOperation(context, decision, true)).result,
+        /approved; applied/,
+      );
+      assert.equal(
+        (await onboarding.getAuth0Onboarding({ issuer, subject })).state,
+        "identity_approved",
+      );
+      assert.match(
+        (await runSharedTestOperation(context, decision, true)).result,
+        /replayed/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...decision, decision: "declined" },
+          true,
+        ),
+        /different evidence/,
+      );
+      assert.equal(
+        (await store.getAuth0IdentityCase({ issuer, subject })).state,
+        "approved",
+      );
+      const audits = JSON.stringify(
+        (
+          await context
+            .query()
+            .query(
+              "SELECT metadata, actor_id FROM samra_core.audit_events WHERE entity_type = 'synthetic_test_setup'",
+            )
+        ).rows,
+      );
+      assert.equal(audits.includes(subject), false);
+      assert.equal(audits.includes(otherSubject), false);
+      assert.match(audits, /operator_fixture/);
+      // The second admitted tester cannot target the first case or simulate a real inquiry.
+      await onboarding.startAuth0Onboarding({
+        issuer,
+        subject: otherSubject,
+        idempotencyKey: "operator-second-start-fixture",
+      });
+      await onboarding.recordAuth0ConsentBundle({
+        issuer,
+        subject: otherSubject,
+        idempotencyKey: "operator-second-consent-fixture",
+        bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+        locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+        decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+          (document) => ({
+            consentType: document.consentType,
+            documentVersion: document.documentVersion,
+            decision: "accepted" as const,
+          }),
+        ),
+      });
+      const otherCase = await store.prepareAuth0IdentityCase({
+        issuer,
+        subject: otherSubject,
+        idempotencyKey: "operator-second-inquiry-fixture",
+      });
+      await store.attachProviderInquiry({
+        identityCaseId: otherCase.snapshot.identityCaseId,
+        providerRequestKey: otherCase.providerRequestKey,
+        providerInquiryRef: `inq_non_synthetic_${randomUUID()}`,
+      });
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...decision, subject: otherSubject },
+          true,
+        ),
+        /does not belong/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          {
+            ...decision,
+            subject: otherSubject,
+            identityCaseId: otherCase.snapshot.identityCaseId,
+            commandId: "synthetic_operator_second_fixture",
+          },
+          true,
+        ),
+        /required for non-synthetic/,
+      );
+      assert.equal(
+        (await store.getAuth0IdentityCase({ issuer, subject: otherSubject }))
+          .state,
+        "pending",
+      );
+      await context
+        .query()
+        .query(
+          "UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2",
+          [issuer, subject],
+        );
+      await assert.rejects(
+        runSharedTestOperation(context, decision, true),
+        /admitted, active/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(context, manifest, true),
+        /reactivation/,
+      );
+      throw rollback;
+    }),
+    (error) => error === rollback,
+  );
 });
 
 test("customer funnel attribution is append-only, concurrent, privacy-safe, and derives the five-send milestone only from durable transfers", async () => {
