@@ -165,3 +165,22 @@ Preserve user-test evidence before resetting fixtures. At the seven-day review,
 record measured cost, failed scenarios and the next decision. Stop shared Test
 only through a reviewed change; do not delete its persistent database as an
 incidental CI cleanup. Staging and production are outside this change.
+
+## Publish the three runtime images
+
+`cloudbuild.dev-test.yaml` uses native Cloud Build and the existing Dockerfiles
+for API, authenticated customer web (`SAMRA_WEB_SURFACE=legacy`) and migrations.
+The publication script rejects every project except the isolated Dev/Test
+projects and requires a full source commit SHA. It never deploys or migrates.
+Submit an archive fetched from that exact GitHub commit, record its SHA-256,
+Cloud Build ID and resulting image digests, and deploy only verified digests.
+The archive SHA-256 is provenance evidence; the build label alone is not source
+verification. Source upload is private to the selected GCP project.
+
+For the first Dev publication, use the already-provisioned legacy Cloud Build
+identity `829811168658@cloudbuild.gserviceaccount.com`, which the project audit
+shows already has `roles/cloudbuild.builds.builder`. The default Compute identity
+has no observed build grants and must not be silently granted broad access.
+A build failure stops publication; if an immutable tag was already pushed,
+inspect its digest and source before retrying. Database compute remains stopped
+through image publication. The combined $50 budget includes build charges.
