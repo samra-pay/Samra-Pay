@@ -137,8 +137,8 @@ export const featureCopyAm: Record<string, string> = {
   "Clarity comes with the card.": "ግልጽነት ከካርዱ ጋር ይመጣል።",
   "This portfolio presents the products we are preparing to launch. Product rollout, regional eligibility, and final terms will be shared with launch announcements.":
     "ይህ ስብስብ ለማስጀመር የምናዘጋጃቸውን ምርቶች ያቀርባል። የምርት መጀመሪያ፣ የአካባቢ ብቁነትና የመጨረሻ ውሎች ከምረቃ ማስታወቂያዎች ጋር ይጋራሉ።",
-  "Samra Elite 100 is a separate founding edition for 100 founder-selected members, not an automatic upgrade from the airline tier. Its own pricing, benefits, and terms will accompany invitations. Artwork illustrates the edition, not an issued card or assigned membership number.":
-    "Samra Elite 100 በመስራቹ ለሚመረጡ 100 አባላት የተለየ የመስራች እትም ነው፤ ከአየር መንገድ ደረጃው በራስ-ሰር የሚገኝ ማሻሻያ አይደለም። የራሱ ዋጋ፣ ጥቅሞችና ውሎች ከግብዣው ጋር ይገለጻሉ። ምስሉ እትሙን ያሳያል እንጂ የወጣ ካርድን ወይም የተመደበ የአባልነት ቁጥርን አይወክልም።",
+  "Samra Pay Elite 100 is a separate founding edition for 100 founder-selected members, not an automatic upgrade from the airline tier. Its own pricing, benefits, and terms will accompany invitations. Artwork illustrates the edition, not an issued card or assigned membership number.":
+    "Samra Pay Elite 100 በመስራቹ ለሚመረጡ 100 አባላት የተለየ የመስራች እትም ነው፤ ከአየር መንገድ ደረጃው በራስ-ሰር የሚገኝ ማሻሻያ አይደለም። የራሱ ዋጋ፣ ጥቅሞችና ውሎች ከግብዣው ጋር ይገለጻሉ። ምስሉ እትሙን ያሳያል እንጂ የወጣ ካርድን ወይም የተመደበ የአባልነት ቁጥርን አይወክልም።",
   "Follow our launch in the United States and Canada, and the next chapter of your connection to Ethiopia.":
     "በአሜሪካና ካናዳ የምንጀምረውን ጉዞ፣ እንዲሁም ከኢትዮጵያ ጋር ያለዎትን ግንኙነት ቀጣይ ምዕራፍ ይከታተሉ።",
   "Get launch updates": "የምረቃ ዜና ያግኙ",

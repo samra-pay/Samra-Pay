@@ -14,15 +14,17 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { tibebPattern } from "@/assets/coming-soon/images";
+import {
+  airlineCard,
+  chargeCard,
+  elite100Card,
+  eliteCard,
+} from "@/assets/coming-soon/approved-cards";
 import {
   ComingSoonFooter,
   ComingSoonHeader,
-  ComingSoonLogo,
 } from "@/components/coming-soon-shell";
 import { OptimizedPicture } from "@/components/optimized-picture";
-import ethiopianAirlinesLogo from "@/assets/ethiopian-airlines-logo.svg";
-import mastercardSymbol from "@/assets/mastercard-symbol.svg";
 import { featureCopyAm } from "@/content/features-am";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 import { usePublicPageMeta } from "@/lib/public-page-meta";
@@ -45,6 +47,11 @@ const cardTiers = [
     className: "is-charge",
     icon: TrendingUp,
     name: "Samra Pay Charge",
+    artwork: chargeCard,
+    artworkAlt: localized(
+      "Samra Pay Charge card design",
+      "Samra Pay Charge የካርድ ንድፍ",
+    ),
     shortName: "Charge",
     label: "Entry · Credit building",
     headline: "Build your foundation.",
@@ -65,6 +72,11 @@ const cardTiers = [
     className: "is-elite",
     icon: Sparkles,
     name: "Samra Pay Elite",
+    artwork: eliteCard,
+    artworkAlt: localized(
+      "Samra Pay Elite card design",
+      "Samra Pay Elite የካርድ ንድፍ",
+    ),
     shortName: "Elite",
     label: "Everyday rewards",
     headline: "Turn everyday spend into miles.",
@@ -85,6 +97,11 @@ const cardTiers = [
     className: "is-cobrand",
     icon: Plane,
     name: "Samra Pay × Ethiopian Airlines",
+    artwork: airlineCard,
+    artworkAlt: localized(
+      "Samra Pay × Ethiopian Airlines proposed co-brand card design",
+      "Samra Pay × Ethiopian Airlines የታቀደ የጋራ ብራንድ ካርድ ንድፍ",
+    ),
     shortName: "Co-branded",
     label: "Proposed airline co-brand",
     headline: "Go further with every purchase.",
@@ -104,7 +121,12 @@ const cardTiers = [
     level: "04",
     className: "is-founder",
     icon: Crown,
-    name: "Samra Elite 100",
+    name: "Samra Pay Elite 100",
+    artwork: elite100Card,
+    artworkAlt: localized(
+      "Samra Pay Elite 100 founding-edition card design, sample number 001 / 100",
+      "Samra Pay Elite 100 የመስራች እትም ካርድ ንድፍ፣ የማሳያ ቁጥር 001 / 100",
+    ),
     shortName: "Elite 100",
     label: "Invitation only · Founding 100",
     headline: "For the first 100 who believed.",
@@ -211,98 +233,18 @@ const includedCardFeatures = [
   },
 ];
 
-function CardArtwork({
-  tier,
-  copy,
-}: {
-  tier: (typeof cardTiers)[number];
-  copy: (english: string) => string;
-}) {
-  const isFounder = tier.className === "is-founder";
-  const { language } = usePublicLanguage();
+function CardArtwork({ tier }: { tier: (typeof cardTiers)[number] }) {
+  const { text } = usePublicLanguage();
 
   return (
-    <div
-      className={`portfolio-card-art ${tier.className}`}
-      role={isFounder ? "img" : undefined}
-      aria-label={
-        isFounder
-          ? language === "am"
-            ? "የSamra Elite 100 የቲታኒየም መስራች እትም ካርድ ንድፍ"
-            : "Samra Elite 100 titanium founding-edition card design"
-          : undefined
-      }
-      aria-hidden={isFounder ? undefined : "true"}
-    >
-      {isFounder ? (
-        <OptimizedPicture
-          asset={tibebPattern}
-          className="portfolio-founder-pattern"
-          pictureClassName="public-picture-contents"
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      ) : null}
-      <div className="portfolio-card-topline">
-        {isFounder ? (
-          <div className="portfolio-founder-identity">
-            <strong>Samra</strong>
-            <span>{copy("Founding member")}</span>
-          </div>
-        ) : (
-          <ComingSoonLogo />
-        )}
-        {isFounder ? (
-          <div className="portfolio-founder-credentials">
-            <span className="portfolio-founder-material">
-              {copy("Titanium")}
-            </span>
-            <span className="portfolio-founder-edition">
-              {copy("Founding 100")}
-            </span>
-          </div>
-        ) : tier.className === "is-cobrand" ? (
-          <img
-            className="portfolio-airline-logo"
-            src={ethiopianAirlinesLogo}
-            alt=""
-            width="96"
-            height="36"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <span>{tier.shortName}</span>
-        )}
-      </div>
-      <div className="portfolio-card-chip">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      {isFounder ? (
-        <div className="portfolio-founder-index" aria-hidden="true">
-          <span>{copy("Limited edition")}</span>
-          <strong>100</strong>
-        </div>
-      ) : null}
-      <div className="portfolio-card-bottomline">
-        <span>{copy(tier.cardLine)}</span>
-        {!isFounder && (
-          <img
-            className="portfolio-mastercard-logo"
-            src={mastercardSymbol}
-            alt=""
-            width="42"
-            height="26"
-            loading="lazy"
-            decoding="async"
-          />
-        )}
-      </div>
-    </div>
+    <OptimizedPicture
+      asset={tier.artwork}
+      alt={text(tier.artworkAlt)}
+      className="portfolio-card-image"
+      pictureClassName="portfolio-card-art"
+      loading="lazy"
+      decoding="async"
+    />
   );
 }
 
@@ -412,7 +354,7 @@ export default function Features() {
                           : copy("Launch portfolio")}
                       </span>
                     </div>
-                    <CardArtwork tier={tier} copy={copy} />
+                    <CardArtwork tier={tier} />
                   </div>
 
                   <div className="portfolio-tier-copy">
@@ -636,7 +578,7 @@ export default function Features() {
               </p>
               <p>
                 {copy(
-                  "Samra Elite 100 is a separate founding edition for 100 founder-selected members, not an automatic upgrade from the airline tier. Its own pricing, benefits, and terms will accompany invitations. Artwork illustrates the edition, not an issued card or assigned membership number.",
+                  "Samra Pay Elite 100 is a separate founding edition for 100 founder-selected members, not an automatic upgrade from the airline tier. Its own pricing, benefits, and terms will accompany invitations. Artwork illustrates the edition, not an issued card or assigned membership number.",
                 )}
               </p>
             </div>

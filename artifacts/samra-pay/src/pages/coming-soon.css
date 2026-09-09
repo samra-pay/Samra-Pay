@@ -2221,252 +2221,14 @@ a.coming-social-link:hover {
 }
 .portfolio-card-art {
   align-self: center;
-  aspect-ratio: 1.58 / 1;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 15px;
-  box-shadow: 0 17px 32px rgba(23, 25, 23, 0.16);
-  color: #fffdf8;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  padding: 20px;
-  position: relative;
+  display: block;
   width: 100%;
 }
-.portfolio-card-art::after {
-  border: 1px solid currentColor;
-  border-radius: 34% 66% 59% 41% / 58% 37% 63% 42%;
-  content: "";
-  height: 155%;
-  opacity: 0.07;
-  position: absolute;
-  right: -39%;
-  top: -54%;
-  transform: rotate(26deg);
-  width: 92%;
-}
-.portfolio-card-art.is-charge {
-  background: linear-gradient(145deg, #242826, #0e100f 74%);
-}
-.portfolio-card-art.is-elite {
-  background: linear-gradient(145deg, #315641, #14271d 76%);
-}
-.portfolio-card-art.is-cobrand {
-  background: linear-gradient(145deg, #d7b95f, #a17927 78%);
-  color: #1c201d;
-}
-.portfolio-card-art.is-founder {
-  background: linear-gradient(
-    116deg,
-    #59625d 0%,
-    #252b27 18%,
-    #111512 43%,
-    #303833 69%,
-    #0b0e0c 88%,
-    #414c46 100%
-  );
-  border-color: rgba(231, 220, 190, 0.7);
-  box-shadow:
-    0 34px 64px rgba(2, 5, 3, 0.46),
-    0 7px 18px rgba(1, 3, 2, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.75);
-  color: #fffaf0;
-}
-.portfolio-card-art.is-founder::before {
-  background: linear-gradient(
-    108deg,
-    rgba(255, 255, 255, 0.19),
-    transparent 18%,
-    transparent 47%,
-    rgba(225, 214, 184, 0.08) 58%,
-    transparent 72%
-  );
-  content: "";
-  inset: 0;
-  pointer-events: none;
-  position: absolute;
-  z-index: 1;
-}
-.portfolio-card-art.is-founder::after {
-  border-color: rgba(244, 230, 193, 0.56);
-  border-radius: 11px;
-  height: auto;
-  inset: 8px;
-  opacity: 0.28;
-  transform: none;
-  width: auto;
-}
-.portfolio-card-art.is-cobrand .coming-logo {
-  color: #1c201d;
-}
-.portfolio-card-art.is-cobrand .coming-logo > em {
-  color: #fff9e6;
-}
-.portfolio-card-topline,
-.portfolio-card-bottomline {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-  position: relative;
-  z-index: 2;
-}
-.portfolio-card-topline > span:last-child {
-  font-size: 0.62rem;
-  font-weight: 650;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.portfolio-card-bottomline > span {
-  font-size: 0.67rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.portfolio-airline-logo {
-  display: block;
-  height: 36px;
-  object-fit: contain;
-  object-position: right center;
-  width: 96px;
-}
-.portfolio-mastercard-logo {
+.portfolio-card-image {
+  border-radius: 3.738318% / 5.925926%;
   display: block;
   height: auto;
-  width: 42px;
-}
-.portfolio-founder-pattern {
-  filter: grayscale(1) contrast(1.2) brightness(1.08);
-  height: 100%;
-  inset: 0;
-  mix-blend-mode: screen;
-  object-fit: cover;
-  opacity: 0.055;
-  pointer-events: none;
-  position: absolute;
   width: 100%;
-  z-index: 0;
-}
-.portfolio-founder-identity {
-  align-items: flex-start;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  position: relative;
-  z-index: 2;
-}
-.portfolio-founder-identity strong {
-  font-family: var(--app-font-serif);
-  font-size: 2.2rem;
-  font-weight: 600;
-  letter-spacing: -0.05em;
-  line-height: 0.86;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-.portfolio-founder-identity span {
-  color: #d9cfb7;
-  font-size: 0.61rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-.portfolio-founder-credentials {
-  align-items: flex-end;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-  z-index: 2;
-}
-.portfolio-founder-material {
-  color: #f2e6c4;
-  font-size: 0.56rem;
-  font-weight: 750;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-}
-.portfolio-founder-edition {
-  border: 1px solid rgba(226, 199, 124, 0.5);
-  border-radius: 999px;
-  color: #ead69e;
-  font-size: 0.56rem;
-  letter-spacing: 0.13em;
-  padding: 7px 10px;
-  text-transform: uppercase;
-}
-.portfolio-founder-index {
-  color: #f3e5bf;
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  right: 24px;
-  top: 46%;
-  transform: translateY(-50%);
-  z-index: 2;
-}
-.portfolio-founder-index > span {
-  color: rgba(238, 230, 210, 0.56);
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  margin: 0 0 3px 5px;
-  text-transform: uppercase;
-}
-.portfolio-founder-index strong {
-  font-family: var(--app-font-serif);
-  font-size: clamp(4.2rem, 6vw, 6.2rem);
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  letter-spacing: -0.07em;
-  line-height: 0.78;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.2),
-    0 5px 18px rgba(0, 0, 0, 0.42);
-}
-.portfolio-founder-index em {
-  color: #ceb66f;
-  font-family: var(--app-font-sans);
-  font-size: 0.17em;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  margin-left: 8px;
-}
-.portfolio-card-art.is-founder .portfolio-card-chip {
-  color: #d8ccb0;
-  opacity: 0.94;
-}
-.portfolio-card-art.is-founder .portfolio-card-bottomline > span {
-  color: #ead69e;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-}
-.portfolio-card-chip {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  height: 31px;
-  left: 20px;
-  opacity: 0.72;
-  position: absolute;
-  top: 48%;
-  transform: translateY(-50%);
-  width: 40px;
-  z-index: 2;
-}
-.portfolio-card-chip span {
-  border: 1px solid currentColor;
-}
-.portfolio-card-chip span:first-child {
-  border-radius: 5px 0 0;
-}
-.portfolio-card-chip span:nth-child(2) {
-  border-radius: 0 5px 0 0;
-}
-.portfolio-card-chip span:nth-child(3) {
-  border-radius: 0 0 0 5px;
-}
-.portfolio-card-chip span:last-child {
-  border-radius: 0 0 5px;
 }
 
 .portfolio-tier-copy {
@@ -2961,9 +2723,6 @@ a.coming-social-link:hover {
     padding-left: 22px;
     padding-right: 22px;
   }
-  .portfolio-card-art {
-    padding: 17px;
-  }
   .values-page .editorial-hero-grid {
     gap: 52px;
     grid-template-columns: 1fr 1fr;
@@ -3109,9 +2868,6 @@ a.coming-social-link:hover {
   .portfolio-tier-visual {
     border-bottom: 0;
     border-right: 1px solid var(--cs-line);
-  }
-  .portfolio-card-art {
-    margin-top: 0;
   }
   .portfolio-disclosure-copy {
     margin-top: 10px;
@@ -3411,9 +3167,6 @@ a.coming-social-link:hover {
     border-right: 0;
     padding: 18px;
   }
-  .portfolio-card-art {
-    margin-top: 0;
-  }
   .portfolio-tier.is-founder .portfolio-tier-copy {
     padding: 32px 24px 36px;
   }
@@ -3436,31 +3189,6 @@ a.coming-social-link:hover {
   }
   .portfolio-founder-facts dd {
     font-size: 0.94rem;
-  }
-  .portfolio-founder-identity strong {
-    font-size: 1.8rem;
-  }
-  .portfolio-founder-identity span {
-    font-size: 0.625rem;
-    letter-spacing: 0.11em;
-  }
-  .portfolio-founder-material {
-    font-size: 0.625rem;
-    letter-spacing: 0.13em;
-  }
-  .portfolio-founder-edition {
-    font-size: 0.625rem;
-    padding: 6px 8px;
-  }
-  .portfolio-founder-index > span {
-    font-size: 0.625rem;
-    letter-spacing: 0.13em;
-  }
-  .portfolio-founder-index {
-    right: 18px;
-  }
-  .portfolio-founder-index strong {
-    font-size: 4rem;
   }
   .portfolio-tier-copy {
     padding: 28px 24px 32px;

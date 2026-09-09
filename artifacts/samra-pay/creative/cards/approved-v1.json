@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0",
+  "status": "approved-brand-artwork",
+  "approvedBy": "David Haile",
+  "approvedOn": "2026-09-09",
+  "fileKey": "XS05bi0uuU8YA1SoYu361Y",
+  "boardNodeId": "58:3",
+  "approval": "Lock these in as official designs and update the website.",
+  "cards": [
+    {
+      "name": "Samra Pay Charge",
+      "nodeId": "61:2",
+      "source": "artifacts/samra-pay/src/assets/coming-soon/source/samra-pay-charge-v1.png",
+      "width": 856,
+      "height": 540,
+      "bytes": 526165,
+      "sha256": "a248984ed7dbafe492dfc58376fb361fba0561ea13c3ba7054dec1d03cab8f6a"
+    },
+    {
+      "name": "Samra Pay Elite",
+      "nodeId": "63:2",
+      "source": "artifacts/samra-pay/src/assets/coming-soon/source/samra-pay-elite-v1.png",
+      "width": 856,
+      "height": 540,
+      "bytes": 580137,
+      "sha256": "cedad602ff64c122f4e0e599a33a7602dd4aab0fcfdd3fb54c5d2f432f5fa036"
+    },
+    {
+      "name": "Samra Pay Airline",
+      "nodeId": "63:14",
+      "source": "artifacts/samra-pay/src/assets/coming-soon/source/samra-pay-airline-v1.png",
+      "width": 856,
+      "height": 540,
+      "bytes": 573645,
+      "sha256": "a63735f13d8d3f3aa2b581e467459d9f1877b5dc92a0696d60d26a1fc725515f"
+    },
+    {
+      "name": "Samra Pay Elite 100",
+      "nodeId": "62:2",
+      "source": "artifacts/samra-pay/src/assets/coming-soon/source/samra-pay-elite-100-v1.png",
+      "width": 856,
+      "height": 540,
+      "bytes": 559886,
+      "sha256": "e02d174e100cf8d774dc9fe34234be049d94162c6a343b2bbbdc54681421882a"
+    }
+  ],
+  "foundingNumber": "Illustrative 001 / 100"
+}
