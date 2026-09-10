@@ -66,7 +66,14 @@
     "sourceSha": "d4ec932c8ee9fdf19f24bac535153b294e7ea40a",
     "localTestsPassed": 504,
     "prChecks": "passed",
-    "deployed": false
+    "deployed": false,
+    "protectedMainMerge": {
+      "commit": "f2536413799d3c23e1fdd32248964f5b36fe2d4f",
+      "mergedAt": "2026-09-10T20:16:43Z",
+      "requiredCiRun": 34524689887,
+      "requiredSecurityRun": 34524689898,
+      "result": "passed"
+    }
   },
   "productionActivation": false
 }
