@@ -1,4 +1,5 @@
 import { healthCheck, setBaseUrl } from "@workspace/api-client-react";
+import nativeEnvironments from "../native-environments.json";
 
 export type MobileDataMode = "mock" | "api";
 
@@ -13,10 +14,11 @@ export type MobileAuthConfig =
       domain: string;
       clientId: string;
       audience: string;
-      customScheme: typeof MOBILE_AUTH0_CUSTOM_SCHEME;
+      customScheme: string;
     }>;
 
 export type MobilePublicEnvironment = Readonly<{
+  EXPO_PUBLIC_SAMRA_ENVIRONMENT?: string;
   EXPO_PUBLIC_SAMRA_DATA_MODE?: string;
   EXPO_PUBLIC_SAMRA_API_ORIGIN?: string;
   EXPO_PUBLIC_SAMRA_AUTH_MODE?: string;
@@ -35,6 +37,7 @@ function readPublicEnvironment(): MobilePublicEnvironment {
   // Expo replaces direct EXPO_PUBLIC_* references when it creates the bundle.
   // Keep these as dot-property reads rather than dynamic process.env lookups.
   return {
+    EXPO_PUBLIC_SAMRA_ENVIRONMENT: process.env.EXPO_PUBLIC_SAMRA_ENVIRONMENT,
     EXPO_PUBLIC_SAMRA_DATA_MODE: process.env.EXPO_PUBLIC_SAMRA_DATA_MODE,
     EXPO_PUBLIC_SAMRA_API_ORIGIN: process.env.EXPO_PUBLIC_SAMRA_API_ORIGIN,
     EXPO_PUBLIC_SAMRA_AUTH_MODE: process.env.EXPO_PUBLIC_SAMRA_AUTH_MODE,
@@ -165,6 +168,13 @@ function resolveMobileAuthConfig(
   dataMode: MobileDataMode,
 ): MobileAuthConfig {
   const mode = parseAuthMode(environment.EXPO_PUBLIC_SAMRA_AUTH_MODE);
+  const target = environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT || "staging";
+  if (!Object.hasOwn(nativeEnvironments, target)) {
+    throw new Error(
+      "EXPO_PUBLIC_SAMRA_ENVIRONMENT must be dev, test, or staging.",
+    );
+  }
+  const native = nativeEnvironments[target as keyof typeof nativeEnvironments];
   const auth0Values = [
     environment.EXPO_PUBLIC_AUTH0_DOMAIN,
     environment.EXPO_PUBLIC_AUTH0_CLIENT_ID,
@@ -196,7 +206,7 @@ function resolveMobileAuthConfig(
     domain: parseAuth0Domain(environment.EXPO_PUBLIC_AUTH0_DOMAIN),
     clientId: parseAuth0ClientId(environment.EXPO_PUBLIC_AUTH0_CLIENT_ID),
     audience: parseAuth0Audience(environment.EXPO_PUBLIC_AUTH0_AUDIENCE),
-    customScheme: MOBILE_AUTH0_CUSTOM_SCHEME,
+    customScheme: native.customScheme,
   });
 }
 

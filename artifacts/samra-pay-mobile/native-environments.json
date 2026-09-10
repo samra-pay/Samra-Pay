@@ -1,0 +1,17 @@
+{
+  "dev": {
+    "name": "Samra Pay Dev",
+    "applicationId": "com.samrapay.mobile.dev",
+    "customScheme": "samrapaydevauth"
+  },
+  "test": {
+    "name": "Samra Pay Test",
+    "applicationId": "com.samrapay.mobile.test",
+    "customScheme": "samrapaytestauth"
+  },
+  "staging": {
+    "name": "Samra Pay Mobile",
+    "applicationId": "com.samrapay.mobile.staging",
+    "customScheme": "samrapayauth"
+  }
+}

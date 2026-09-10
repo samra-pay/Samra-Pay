@@ -1,4 +1,5 @@
 const base = require("./app.json").expo;
+const nativeEnvironments = require("./native-environments.json");
 
 const AUTH0_CUSTOM_SCHEME = "samrapayauth";
 const NATIVE_APPLICATION_ID = "com.samrapay.mobile.staging";
@@ -6,6 +7,20 @@ const NATIVE_APPLICATION_ID = "com.samrapay.mobile.staging";
 function resolveExpoConfig(environment = process.env) {
   const mode = environment.EXPO_PUBLIC_SAMRA_AUTH_MODE || "disabled";
   const expo = structuredClone(base);
+  const target = environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT || "staging";
+  if (!Object.hasOwn(nativeEnvironments, target)) {
+    throw new Error(
+      "EXPO_PUBLIC_SAMRA_ENVIRONMENT must be dev, test, or staging.",
+    );
+  }
+  const native = nativeEnvironments[target];
+  if (mode === "auth0-native" || environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT) {
+    expo.name = native.name;
+    expo.ios = { ...expo.ios, bundleIdentifier: native.applicationId };
+    expo.android = { ...expo.android, package: native.applicationId };
+    // Separate schemes avoid one installed environment claiming another's callback.
+    if (target !== "staging") expo.scheme = `samra-pay-${target}`;
+  }
 
   if (mode === "disabled") return expo;
   if (mode !== "auth0-native") {
@@ -55,17 +70,9 @@ function resolveExpoConfig(environment = process.env) {
     );
   }
 
-  expo.ios = {
-    ...expo.ios,
-    bundleIdentifier: NATIVE_APPLICATION_ID,
-  };
-  expo.android = {
-    ...expo.android,
-    package: NATIVE_APPLICATION_ID,
-  };
   expo.plugins = [
     ...expo.plugins,
-    ["react-native-auth0", { domain, customScheme: AUTH0_CUSTOM_SCHEME }],
+    ["react-native-auth0", { domain, customScheme: native.customScheme }],
   ];
   return expo;
 }

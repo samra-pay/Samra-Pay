@@ -4,6 +4,8 @@
   "sourceBaseline": "1c2d6853385c7cda3dea94e4131b0233c53f7c35",
   "owner": "David Haile",
   "organizationIdFromExistingFoundation": "614833350075",
+  "currentOrganizationId": "993968777863",
+  "organizationReadback": "docs/operations/evidence/2026-09-10-dev-test-handoff-readback.json",
   "region": "us-east4",
   "environments": {
     "dev": {
@@ -126,11 +128,7 @@
         "evidence": "docs/operations/evidence/2026-09-09-dev-test-auth0.json"
       },
       "spendingAuthorized": true,
-      "alertThresholdsPercent": [
-        50,
-        80,
-        100
-      ],
+      "alertThresholdsPercent": [50, 80, 100],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
       "deploymentBlocked": false,
@@ -287,11 +285,7 @@
         "evidence": "docs/operations/evidence/2026-09-09-dev-test-auth0.json"
       },
       "spendingAuthorized": true,
-      "alertThresholdsPercent": [
-        50,
-        80,
-        100
-      ],
+      "alertThresholdsPercent": [50, 80, 100],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
       "deploymentBlocked": false,
@@ -359,18 +353,9 @@
     "name": "billingAccounts/01196E-DFC16E-433E6C/budgets/2404c65e-6bd9-4710-953a-59cf5d7a3870",
     "amountUsd": 50,
     "period": "MONTH",
-    "projects": [
-      "829811168658",
-      "378050809796"
-    ],
-    "currentSpendThresholds": [
-      0.5,
-      0.8,
-      1.0
-    ],
-    "forecastSpendThresholds": [
-      1.0
-    ],
+    "projects": ["829811168658", "378050809796"],
+    "currentSpendThresholds": [0.5, 0.8, 1.0],
+    "forecastSpendThresholds": [1.0],
     "hardCap": false,
     "status": "created-readback-verified-2026-09-09"
   },

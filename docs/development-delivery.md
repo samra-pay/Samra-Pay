@@ -4,12 +4,12 @@ Decision owner: David Haile. Requested 2026-09-09. This is the delivery process
 for all subsequent Samra Pay application changes, including already-open PRs.
 It does not claim that the environments or any particular release have passed.
 
-| Step | Target and purpose | Evidence required to advance |
-| --- | --- | --- |
-| Develop | Isolated branch from current main; local Mac workspace and isolated local/CI tests; shared `samra-pay-dev` when cloud behavior needs verification | Appropriate automated checks, exact source SHA, reviewed change and affected local/native smoke result; cloud Dev evidence when used |
-| Test | Stable candidate in `samra-pay-test`; synthetic users and money | Exact revision/digests/configuration, scenario session, account isolation and affected user-flow results; failed cases linked to defects and retested |
-| Stage | `samra-pay-staging`; production-like release rehearsal | Existing immutable release-candidate workflow, database/migration safety, image/revision verification, operational readiness and promotion/rollback evidence |
-| Deploy | `samra-pay-production`; separately approved live scope | Named release owner, explicit release authorization, ready operational gates, approved provider configuration, verified deployment and rollback record |
+| Step    | Target and purpose                                                                                                                                | Evidence required to advance                                                                                                                                 |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Develop | Isolated branch from current main; local Mac workspace and isolated local/CI tests; shared `samra-pay-dev` when cloud behavior needs verification | Appropriate automated checks, exact source SHA, reviewed change and affected local/native smoke result; cloud Dev evidence when used                         |
+| Test    | Stable candidate in `samra-pay-test`; synthetic users and money                                                                                   | Exact revision/digests/configuration, scenario session, account isolation and affected user-flow results; failed cases linked to defects and retested        |
+| Stage   | `samra-pay-staging`; production-like release rehearsal                                                                                            | Existing immutable release-candidate workflow, database/migration safety, image/revision verification, operational readiness and promotion/rollback evidence |
+| Deploy  | `samra-pay-production`; separately approved live scope                                                                                            | Named release owner, explicit release authorization, ready operational gates, approved provider configuration, verified deployment and rollback record       |
 
 Use short-lived feature branches and the protected main merge queue. Environments
 are deployment targets, not separate long-lived code branches. A GitHub merge
@@ -85,6 +85,9 @@ David's Mac. Migration, seed, one fake-provider transfer, duplicate replay,
 journal balance and restart persistence passed. See the
 [local evidence](operations/evidence/2026-09-10-local-dev-runtime.json). Its
 auth-disabled loopback API is a developer tool; shared Auth0 UAT remains separate.
-[PR #215](https://github.com/samra-pay/Samra-Pay/pull/215) addresses demonstrated
-native configuration/SDK blockers. Xcode platform and Android installation,
-Auth0 Native clients and real tester sign-in still need completion.
+[PR #215](https://github.com/samra-pay/Samra-Pay/pull/215) merged the native
+configuration/SDK fixes and records the saved Dev/Test Auth0 Native clients.
+iOS 26.5 and base Android tools are installed. The September 10 iOS compilation
+stopped at the 2 GB free-space floor; Android NDK/CMake/emulator installation and
+both platforms' build/install/participant acceptance remain incomplete.
+Keep those results separate from browser and shared-backend evidence.

@@ -57,6 +57,9 @@ jobs:
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate installed Expo SDK compatibility
+        run: pnpm --filter @workspace/samra-pay-mobile run check:expo
+
       - name: Verify generated contracts
         run: pnpm --filter @workspace/api-spec run codegen:check
 
