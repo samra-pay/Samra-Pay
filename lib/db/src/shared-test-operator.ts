@@ -239,6 +239,44 @@ export async function runSharedTestOperation(
             throw new Error(
               "Approved simulated identity required for fixture funding.",
             );
+          eventKey = `synthetic-opening:${digest(JSON.stringify([manifest.environment, customerId]))}`;
+          const eligible = await context.query().query<{
+            id: string;
+            state: string;
+            version: number;
+          }>(
+            `SELECT o.id, o.state, o.version
+             FROM samra_core.customer_onboardings o
+             JOIN samra_core.customer_wallets w ON w.onboarding_id=o.id AND w.customer_id=o.customer_id
+             JOIN samra_core.customer_wallet_provider_mappings m ON m.wallet_id=w.id
+             JOIN samra_core.customer_consents wc ON wc.id=w.wallet_consent_id
+             WHERE o.customer_id=$1 AND o.state IN ('wallet_ready','activated')
+               AND w.state='ready' AND w.environment='synthetic'
+               AND w.configuration_version='crossmint-synthetic-v1'
+               AND m.configuration_version=w.configuration_version
+               AND m.network='synthetic' AND m.custody_model='synthetic'
+               AND m.public_address IS NULL AND left(m.provider_wallet_ref,12)='wallet_fake_'
+               AND wc.consent_type='wallet_provisioning' AND wc.decision='accepted'
+             FOR UPDATE OF o, w, m`,
+            [customerId],
+          );
+          if (eligible.rows.length !== 1)
+            throw new Error(
+              "A ready, consented synthetic wallet is required for fixture funding.",
+            );
+          const onboarding = eligible.rows[0]!;
+          if (onboarding.state === "activated") {
+            const previous = await context
+              .query()
+              .query(
+                "SELECT 1 FROM samra_core.customer_onboarding_transitions WHERE onboarding_id=$1 AND command_key=$2 AND to_state='activated'",
+                [onboarding.id, `${eventKey}:activate`],
+              );
+            if (previous.rowCount !== 1)
+              throw new Error(
+                "The account was not activated by this synthetic funding operation.",
+              );
+          }
           const accountRef = `synthetic_usd_${customerId.replaceAll("-", "")}`;
           await context
             .query()
@@ -323,7 +361,6 @@ export async function runSharedTestOperation(
               );
           }
           // One initial credit per admitted customer. A different amount on retry conflicts.
-          eventKey = `synthetic-opening:${digest(JSON.stringify([manifest.environment, customerId]))}`;
           entityId = await new PostgresLedgerJournalWriter(context).post({
             eventType: "synthetic_initial_credit",
             eventId: eventKey,
@@ -341,8 +378,57 @@ export async function runSharedTestOperation(
               actorId: manifest.operatorAlias,
             },
           });
+          // Keep financial-route authorization unchanged: only this reviewed,
+          // Test-only operator command can complete synthetic activation.
+          // Preview, credit, transitions and audit all share one transaction.
+          if (onboarding.state === "wallet_ready") {
+            await context.query().query(
+              `INSERT INTO samra_core.customer_onboarding_transitions
+               (onboarding_id, sequence, from_state, to_state, reason_family, command_key)
+               VALUES ($1,$2,'wallet_ready','funding_ready','synthetic_initial_credit',$4),
+                      ($1,$3,'funding_ready','activated','synthetic_initial_credit',$5)`,
+              [
+                onboarding.id,
+                onboarding.version + 1,
+                onboarding.version + 2,
+                `${eventKey}:funding-ready`,
+                `${eventKey}:activate`,
+              ],
+            );
+            for (const state of ["funding_ready", "activated"] as const) {
+              await context.query().query(
+                `UPDATE samra_core.customer_onboardings
+                 SET state=$2, latest_completed_step=$3,
+                     reason_family='synthetic_initial_credit', version=version+1,
+                     entered_at=now(), updated_at=now()
+                 WHERE id=$1`,
+                [
+                  onboarding.id,
+                  state,
+                  state === "activated"
+                    ? "synthetic_account_activated"
+                    : "synthetic_initial_credit",
+                ],
+              );
+            }
+            await context.query().query(
+              `INSERT INTO samra_core.audit_events
+               (event_key,actor_type,actor_id,action,entity_type,entity_id,metadata)
+               VALUES ($1,'system',$2,'synthetic_customer_activated','customer_onboarding',$3,$4::jsonb)`,
+              [
+                `${eventKey}:activate`,
+                manifest.operatorAlias,
+                onboarding.id,
+                JSON.stringify({
+                  environment: manifest.environment,
+                  syntheticOnly: true,
+                  journalId: entityId,
+                }),
+              ],
+            );
+          }
           result =
-            "Synthetic account ready; initial balanced credit applied or replayed. No real money moved.";
+            "Synthetic account activated; initial balanced credit applied or replayed. No real money moved.";
         } else {
           const store = new PostgresCustomerIdentityCaseStore(context);
           const current = await store.getAuth0IdentityCase(manifest);
