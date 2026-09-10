@@ -207,3 +207,75 @@ test("contradictory terminal identity decisions restrict onboarding", async () =
     "restricted",
   );
 });
+
+test("server activation completes the journey even with a retained ready wallet", async () => {
+  const source = new SyntheticSamraOnboardingSource(() => now);
+  const started = await source.startOnboarding("activation-handoff-start");
+  await source.submitConsentBundle(
+    consentInput(started),
+    "activation-handoff-consent",
+  );
+  const identity = await source.startIdentityVerification(
+    "activation-handoff-identity",
+  );
+  const approved = await source.advanceIdentity(
+    identity.identityCaseId,
+    "approved",
+    "activation-handoff-approval",
+  );
+  const wallet = await source.startWalletProvisioning(
+    SYNTHETIC_WALLET_PROVISIONING_INPUT,
+    "activation-handoff-wallet",
+  );
+  const walletReady = (await source.getOnboarding())!;
+  const activated: CustomerOnboardingSnapshot = {
+    ...walletReady,
+    state: "activated",
+    latestCompletedStep: "synthetic_account_activated",
+    version: walletReady.version + 2,
+  };
+
+  // Only the server's activated state completes onboarding. A ready wallet or
+  // an intermediate funding state cannot grant financial access.
+  assert.equal(
+    buildOnboardingJourneyView(walletReady, approved, wallet).stage,
+    "wallet_ready",
+  );
+  assert.notEqual(
+    buildOnboardingJourneyView(
+      { ...walletReady, state: "funding_ready" },
+      approved,
+      wallet,
+    ).stage,
+    "complete",
+  );
+  for (const retainedWallet of [wallet, null]) {
+    const view = buildOnboardingJourneyView(
+      activated,
+      approved,
+      retainedWallet,
+    );
+    assert.equal(view.stage, "complete");
+    assert.equal(view.progressPercent, 100);
+  }
+  // A restriction or unresolved wallet result continues to take precedence.
+  for (const [state, expected] of [
+    ["restricted", "restricted"],
+    ["error", "wallet_error"],
+    ["provisioning", "wallet_provisioning"],
+  ] as const) {
+    assert.equal(
+      buildOnboardingJourneyView(activated, approved, { ...wallet, state })
+        .stage,
+      expected,
+    );
+  }
+  assert.equal(
+    buildOnboardingJourneyView(
+      { ...activated, state: "restricted" },
+      approved,
+      wallet,
+    ).stage,
+    "restricted",
+  );
+});

@@ -149,6 +149,13 @@ rolls back activation as well as credit. A retry preserves the original credit,
 onboarding version and audit history. A restricted account or a wallet that is not
 ready, consented and synthetic cannot be funded or reactivated by retrying.
 
+After the applied credit, the participant refreshes onboarding and selects
+**Open your account**. Web rechecks customer access through the existing session
+route; native opens the existing account tabs, whose API reads still enforce
+server authorization. A ready wallet alone does not show this completed-account
+action. Confirm the displayed synthetic balance and return after logout using
+the same account; do not infer either result from the operator receipt.
+
 It does not accept customer or wallet consent, create a provider wallet, or claim
 real KYC approval. Additional top-ups/resetting balances require a reviewed fixture
 change. Do not write directly to materialized balances.
