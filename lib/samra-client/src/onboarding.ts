@@ -399,23 +399,23 @@ function resolveJourneyStage(
 }
 
 const SYNTHETIC_CONSENT_BUNDLE: CustomerConsentBundle = Object.freeze({
-  bundleVersion: "alpha-non-production-v1",
+  bundleVersion: "alpha-non-production-v2",
   locale: "en-US",
   legalEffect: "non_production",
   documents: Object.freeze([
     Object.freeze({
       consentType: "terms_of_service" as const,
-      documentVersion: "alpha-non-production-v1",
+      documentVersion: "alpha-non-production-v2",
       required: true as const,
     }),
     Object.freeze({
       consentType: "privacy_notice" as const,
-      documentVersion: "alpha-non-production-v1",
+      documentVersion: "alpha-non-production-v2",
       required: true as const,
     }),
     Object.freeze({
       consentType: "electronic_communications" as const,
-      documentVersion: "alpha-non-production-v1",
+      documentVersion: "alpha-non-production-v2",
       required: true as const,
     }),
   ]),

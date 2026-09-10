@@ -12,6 +12,8 @@ import {
   AlphaAccessDeniedError,
   AlphaAdmissionRequiredError,
   PostgresCustomerIdentityCaseStore,
+  PostgresCustomerWalletStore,
+  ALPHA_WALLET_PROVISIONING_DISCLOSURE,
   PostgresCustomerFunnelStore,
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerIdentityConflictError,
@@ -20,6 +22,12 @@ import {
 } from "@workspace/db";
 import type { ProviderEvent } from "@workspace/remittance";
 import { DemoRuntime } from "../src/domain/demo-runtime";
+import {
+  CustomerWalletProvisioningService,
+  DeterministicFakeCrossmintAdapter,
+} from "../src/domain/customer-wallet";
+import { Auth0CustomerActorResolver } from "../src/domain/customer-auth";
+import type { Request } from "express";
 import { PostgresReconciliationStore } from "../src/domain/postgres-reconciliation";
 import {
   parseSharedTestManifest,
@@ -303,7 +311,42 @@ test("shared synthetic operator previews roll back, binds two invitations, and a
           )
       ).rows[0]!.customer_id;
       const accountRef = `synthetic_usd_${customerId.replaceAll("-", "")}`;
+      await assert.rejects(
+        runSharedTestOperation(context, funding, true),
+        /ready, consented synthetic wallet/,
+      );
+      const actorResolver = new Auth0CustomerActorResolver(
+        new PostgresCustomerIdentityStore(context),
+        issuer,
+      );
+      const request = {
+        auth: { payload: { iss: issuer, sub: subject } },
+      } as Request;
+      await assert.rejects(actorResolver.resolve(request), /onboarding/);
+      const wallets = new CustomerWalletProvisioningService({
+        store: new PostgresCustomerWalletStore(context),
+        provider: new DeterministicFakeCrossmintAdapter(),
+      });
+      await wallets.startAuth0Wallet({
+        issuer,
+        subject,
+        idempotencyKey: "operator-wallet-fixture",
+        consent: {
+          bundleVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.bundleVersion,
+          documentVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.documentVersion,
+          locale: ALPHA_WALLET_PROVISIONING_DISCLOSURE.locale,
+          decision: "accepted",
+        },
+      });
+      const beforeFunding = await onboarding.getAuth0Onboarding({
+        issuer,
+        subject,
+      });
       await runSharedTestOperation(context, funding);
+      assert.deepEqual(
+        await onboarding.getAuth0Onboarding({ issuer, subject }),
+        beforeFunding,
+      );
       assert.equal(
         (
           await context
@@ -316,12 +359,32 @@ test("shared synthetic operator previews roll back, binds two invitations, and a
         0,
       );
       await runSharedTestOperation(context, funding, true);
+      const activated = await onboarding.getAuth0Onboarding({
+        issuer,
+        subject,
+      });
+      assert.equal(activated.state, "activated");
+      assert.equal(activated.version, beforeFunding.version + 2);
+      assert.equal(
+        (await actorResolver.resolve(request)).id,
+        activated.customerId,
+      );
+      assert.equal(
+        (await wallets.getAuth0Wallet({ issuer, subject })).state,
+        "ready",
+      );
+      const fundedCounts = await counts();
       const ledger = new PostgresLedgerControl(context);
       assert.equal(
         (await ledger.getCustomerBalance(accountRef)).availableMinor,
         50000n,
       );
       await runSharedTestOperation(context, funding, true);
+      assert.deepEqual(
+        await onboarding.getAuth0Onboarding({ issuer, subject }),
+        activated,
+      );
+      assert.deepEqual(await counts(), fundedCounts);
       assert.equal(
         (await ledger.getCustomerBalance(accountRef)).availableMinor,
         50000n,
@@ -432,6 +495,110 @@ test("shared synthetic operator previews roll back, binds two invitations, and a
       await assert.rejects(
         runSharedTestOperation(context, manifest, true),
         /reactivation/,
+      );
+      throw rollback;
+    }),
+    (error) => error === rollback,
+  );
+});
+
+test("updated consent notices preserve v1 receipt replay but reject new v1 commands", async () => {
+  const { context } = createRuntime();
+  const rollback = new Error("historical receipt fixture complete");
+  await assert.rejects(
+    context.run(async () => {
+      const issuer = `https://${randomUUID()}.consent.samra.test/`;
+      const subject = `auth0|${randomUUID()}`;
+      const store = new PostgresCustomerOnboardingStore(context);
+      const { snapshot } = await store.startAuth0Onboarding({
+        issuer,
+        subject,
+        idempotencyKey: "historical-consent-start",
+      });
+      const bundle = {
+        ...snapshot.consentBundle,
+        bundleVersion: "alpha-non-production-v1",
+        documents: snapshot.consentBundle.documents.map((d) => ({
+          ...d,
+          documentVersion: "alpha-non-production-v1",
+        })),
+      };
+      const decisions = bundle.documents
+        .map((d) => ({
+          consentType: d.consentType,
+          documentVersion: d.documentVersion,
+          decision: "accepted" as const,
+        }))
+        .sort((a, b) => a.consentType.localeCompare(b.consentType));
+      const input = {
+        issuer,
+        subject,
+        idempotencyKey: "historical-consent-receipt",
+        bundleVersion: bundle.bundleVersion,
+        locale: bundle.locale,
+        decisions,
+      };
+      const priorSnapshot = {
+        ...snapshot,
+        state: "identity_in_progress",
+        latestCompletedStep: "required_consents",
+        version: 2,
+        consentBundle: bundle,
+      };
+      const requestHash = sha256(
+        JSON.stringify({
+          bundleVersion: bundle.bundleVersion,
+          locale: bundle.locale,
+          decisions,
+        }),
+      );
+      // A retained pre-upgrade response fixture; no existing receipt is rewritten.
+      await context.query().query(
+        `INSERT INTO samra_core.idempotency_records
+       (scope,idempotency_key,request_hash,state,resource_type,resource_id,response_status,response_body,completed_at,expires_at)
+       VALUES ($1,$2,$3,'succeeded','customer_onboarding',$4,200,$5::jsonb,now(),now()+interval '10 years')`,
+        [
+          `${snapshot.customerId}:onboarding-consents`,
+          sha256(input.idempotencyKey),
+          requestHash,
+          snapshot.onboardingId,
+          JSON.stringify(priorSnapshot),
+        ],
+      );
+      const replay = await store.recordAuth0ConsentBundle(input);
+      assert.equal(replay.replayed, true);
+      assert.deepEqual(replay.snapshot, priorSnapshot);
+      await assert.rejects(
+        store.recordAuth0ConsentBundle({
+          ...input,
+          idempotencyKey: "unrecorded-v1-command",
+        }),
+        /not current/,
+      );
+      await assert.rejects(
+        store.recordAuth0ConsentBundle({
+          ...input,
+          decisions: decisions.map((d) => ({
+            ...d,
+            decision: "declined" as const,
+          })),
+        }),
+        /different consent decisions/,
+      );
+      assert.equal(
+        (await store.getAuth0Onboarding({ issuer, subject })).state,
+        "consent_pending",
+      );
+      assert.equal(
+        (
+          await context
+            .query()
+            .query(
+              "SELECT count(*)::int AS n FROM samra_core.customer_consents WHERE onboarding_id=$1",
+              [snapshot.onboardingId],
+            )
+        ).rows[0].n,
+        0,
       );
       throw rollback;
     }),
