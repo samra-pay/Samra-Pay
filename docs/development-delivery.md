@@ -4,18 +4,27 @@ Decision owner: David Haile. Requested 2026-09-09. This is the delivery process
 for all subsequent Samra Pay application changes, including already-open PRs.
 It does not claim that the environments or any particular release have passed.
 
-| Step | Target and purpose | Evidence required to advance |
-| --- | --- | --- |
-| Develop | Isolated branch from current main; local disposable tests and shared `samra-pay-dev` | Appropriate automated checks, exact source SHA, reviewed change, Dev deployment and smoke result for affected runtime behavior |
-| Test | Stable candidate in `samra-pay-test`; synthetic users and money | Exact revision/digests/configuration, scenario session, account isolation and affected user-flow results; failed cases linked to defects and retested |
-| Stage | `samra-pay-staging`; production-like release rehearsal | Existing immutable release-candidate workflow, database/migration safety, image/revision verification, operational readiness and promotion/rollback evidence |
-| Deploy | `samra-pay-production`; separately approved live scope | Named release owner, explicit release authorization, ready operational gates, approved provider configuration, verified deployment and rollback record |
+| Step    | Target and purpose                                                                                                                                | Evidence required to advance                                                                                                                                 |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Develop | Isolated branch from current main; local Mac workspace and isolated local/CI tests; shared `samra-pay-dev` when cloud behavior needs verification | Appropriate automated checks, exact source SHA, reviewed change and affected local/native smoke result; cloud Dev evidence when used                         |
+| Test    | Stable candidate in `samra-pay-test`; synthetic users and money                                                                                   | Exact revision/digests/configuration, scenario session, account isolation and affected user-flow results; failed cases linked to defects and retested        |
+| Stage   | `samra-pay-staging`; production-like release rehearsal                                                                                            | Existing immutable release-candidate workflow, database/migration safety, image/revision verification, operational readiness and promotion/rollback evidence |
+| Deploy  | `samra-pay-production`; separately approved live scope                                                                                            | Named release owner, explicit release authorization, ready operational gates, approved provider configuration, verified deployment and rollback record       |
 
 Use short-lived feature branches and the protected main merge queue. Environments
 are deployment targets, not separate long-lived code branches. A GitHub merge
 records source integration; it does not skip Test, Stage, or release authorization.
 Documentation-only changes run their relevant checks and record why runtime tests
 are not applicable. Do not invent a deployed result for such a change.
+
+The September 10 environment coordination makes local development the primary
+daily workspace: Cursor, repository Node/pnpm versions, and the existing
+React Native/Expo app. Use Xcode/iOS Simulator and Android Studio/Emulator for
+native acceptance. Auth0 requires a custom native development build; Expo Go is
+only a mock visual preview. Cloud Dev remains available for bounded integration
+sessions, with its compute paused outside those sessions. Shared Test is the
+stable, persisted UAT target. Do not require an always-on Cloud Dev service as
+an extra gate for every local edit.
 
 Use one reviewed source candidate through the sequence. Record image digests and
 build provenance in every environment. If artifacts must be rebuilt for an
@@ -41,6 +50,10 @@ iOS/Android build. Public site previews are useful for review but are not shared
 customer Test environments. Existing public-site delivery still needs affected
 preview/Test evidence and its separate production release approval.
 
+The [September 10 open-work inventory](operations/open-work-delivery-2026-09-10.md)
+maps existing PRs to their next acceptance requirements. Refresh each PR's state
+before acting; the inventory is not merge or deployment approval.
+
 ## Isolation, fixtures, and operations
 
 Dev and Test use separate GCP projects, databases, service identities, Auth0
@@ -64,3 +77,17 @@ The existing [staging release controls](operations/staging-release-control-plane
 and [operational readiness](operations/operational-readiness.md) remain mandatory.
 This process authorizes no production funds, provider activation, or customer
 rollout merely because code, a build, or a Test session passed.
+
+## September 10 local runtime proof
+
+The existing local Compose stack was built from protected main and started on
+David's Mac. Migration, seed, one fake-provider transfer, duplicate replay,
+journal balance and restart persistence passed. See the
+[local evidence](operations/evidence/2026-09-10-local-dev-runtime.json). Its
+auth-disabled loopback API is a developer tool; shared Auth0 UAT remains separate.
+[PR #215](https://github.com/samra-pay/Samra-Pay/pull/215) merged the native
+configuration/SDK fixes and records the saved Dev/Test Auth0 Native clients.
+iOS 26.5 and base Android tools are installed. The September 10 iOS compilation
+stopped at the 2 GB free-space floor; Android NDK/CMake/emulator installation and
+both platforms' build/install/participant acceptance remain incomplete.
+Keep those results separate from browser and shared-backend evidence.

@@ -1,0 +1,116 @@
+{
+  "status": "dev-deployed-auth0-redirect-verified-human-acceptance-pending",
+  "appSourceSha": "836f76bd368e9d81c633d7483e48b907c42ef775",
+  "archiveSha256": "0b430175a1e2c4114549fcdd1eeae01e648daf6669e9e2f10f8b211fbf9c23c2",
+  "project": "samra-pay-dev",
+  "region": "us-east4",
+  "build": {
+    "id": "8169ca40-1bd9-4567-944e-64127be07664",
+    "status": "SUCCESS",
+    "finishTime": "2026-09-10T14:36:56.435544Z"
+  },
+  "images": {
+    "api": "sha256:d6041d74b9728b53bdef8136679e15ff1730d79fcd12bfc9ec5250937ed6966c",
+    "customer-web": "sha256:d18308bb633bc28aafd45d00cc9d10ee1062b38680fb47bc72eedd93fd9f1f1e",
+    "migrations": "sha256:008c9d4fea6831cd7c46f6cc3c0c95122b1cab83cd6a26f74c4356dfb97d6f46"
+  },
+  "databaseJobs": {
+    "bootstrap": "samra-db-bootstrap-dev-bznhp",
+    "migrate": "samra-db-migrate-dev-xwhh7",
+    "audit-runtime": "samra-db-audit-runtime-dev-lw4lx",
+    "audit-reader": "samra-db-audit-reader-dev-7j57f",
+    "drain": "samra-db-drain-dev-d6b2r"
+  },
+  "databaseJobsResult": "all-passed",
+  "secretVersions": {
+    "ca": "1",
+    "migration": "1",
+    "runtime": "1",
+    "audit": "1",
+    "bootstrap": "1"
+  },
+  "bootstrapRetired": {
+    "databaseUserDeleted": true,
+    "serviceAccountDisabled": true,
+    "setupSecretDisabled": true,
+    "readbackPassed": true
+  },
+  "revisions": {
+    "api": "samra-api-dev-00001-wss",
+    "customer-web": "samra-customer-web-dev-00001-6pg"
+  },
+  "webEntry": "https://samra-customer-web-dev-829811168658.us-east4.run.app/login",
+  "initialWebFailure": {
+    "httpStatus": 403,
+    "cause": "Domain-restricted IAM sharing prevented allUsers grant; CLI deployment returned success without that grant.",
+    "resolution": "Only customer web uses supported no-invoker-iam-check setting. Organization policy unchanged.",
+    "settingReadback": true
+  },
+  "httpChecks": {
+    "webRoot": 200,
+    "publicRuntimeConfig": 200,
+    "onboardingWithoutAuth0": 401,
+    "directApiWithoutCloudIam": 403,
+    "login": 200,
+    "meWithoutAuth0": 401,
+    "accountsWithoutAuth0": 401,
+    "activityWithoutAuth0": 401,
+    "beneficiariesWithoutAuth0": 401,
+    "transfersWithoutAuth0": 401
+  },
+  "browserCheck": "Login route rendered invitation notice and redirected to Auth0 application Samra One - Web - Development; no credentials entered.",
+  "apiReadiness": "passed-on-recorded-revision",
+  "sessionShutdownRestart": "start-stop-restart-stop-passed",
+  "functionalAcceptance": false,
+  "testEnvironment": "deployed-session-controls-passed-human-acceptance-pending",
+  "remaining": [
+    "Real two-user login, consent, synthetic KYC/wallet, ledger and recovery acceptance",
+    "Operational alert delivery drill and cost review"
+  ],
+  "costBoundary": {
+    "combinedMonthlyPlanningUsd": 50,
+    "hardCap": false
+  },
+  "productionChanges": false,
+  "protectedMainMerge": {
+    "pr": 213,
+    "commit": "58122e04efcd706f1b6b79d62444da1fe192f3de",
+    "mergedAt": "2026-09-10T15:06:28Z",
+    "includesAppSourceAsParent": true,
+    "treeMatchesAppSource": true
+  },
+  "sessionOperatorSourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc",
+  "sessions": [
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T14:53:00.660630+00:00",
+      "finishedAt": "2026-09-10T14:53:58.923952+00:00",
+      "status": "passed-api-only-web-defect-found-separately"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:07:33.258681+00:00",
+      "finishedAt": "2026-09-10T15:10:00.080853+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T15:13:25.699402+00:00",
+      "finishedAt": "2026-09-10T15:19:55.106145+00:00",
+      "status": "passed-api-and-login-shell"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:22:53.585876+00:00",
+      "finishedAt": "2026-09-10T15:25:38.050401+00:00",
+      "status": "passed"
+    }
+  ],
+  "pausedReadback": {
+    "databaseState": "STOPPED",
+    "activationPolicy": "NEVER",
+    "apiManualInstances": 0,
+    "webManualInstances": 0,
+    "revisionsUnchanged": true
+  }
+}
