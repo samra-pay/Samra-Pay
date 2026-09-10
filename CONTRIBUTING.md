@@ -150,3 +150,10 @@ deployment. See [merge controls](docs/operations/repository-merge-controls.md).
 For live enforcement evidence, use the
 [read-only settings audit](docs/operations/repository-settings-audit.md) with the
 reviewed current `main` SHA. It does not replace candidate CI or authorize merge.
+
+## Shared delivery
+
+Follow [Develop → Test → Stage → Deploy](docs/development-delivery.md) for every
+application change. Local Compose and CI use disposable data; shared Dev/Test
+retain isolated synthetic accounts and require recorded sessions. Link the
+affected user-test results before staging rehearsal and production release.

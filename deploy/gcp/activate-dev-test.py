@@ -8,7 +8,9 @@ import secrets
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -33,10 +35,86 @@ def secret(project, name, data, member):
     return version
 
 
+def verify_receipt(receipt, project, images):
+    assert receipt['project'] == project, 'Receipt belongs to another project'
+    assert receipt['sourceSha'] == images['sourceSha'], 'Receipt belongs to another source revision'
+    assert receipt['images'] == images['images'], 'Receipt image digests changed'
+
+
+def control_session(action, env, inventory, receipt, save, drain_job, ready):
+    """Close ingress before draining; failures never stop the worker/database."""
+    project = 'samra-pay-' + env
+    common = ['--project=' + project, '--region=us-east4']
+    api = 'samra-api-' + env
+    web = 'samra-customer-web-' + env
+    instance = 'samra-' + env + '-postgres'
+    assert receipt.get('bootstrapRetired') and receipt.get('services')
+    assert action in ['start', 'stop']
+    for key, name in [('api', api), ('web', web)]:
+        current = gcloud('run', 'services', 'describe', name, *common)
+        recorded = receipt['services'][key]
+        assert current['status']['latestReadyRevisionName'] == recorded['status']['latestReadyRevisionName'], 'Service revision changed'
+        assert current['spec']['template']['spec']['containers'][0]['image'] == receipt['images']['api' if key == 'api' else 'customer-web']
+        assert current['spec']['template']['spec']['timeoutSeconds'] <= 60
+        # Manual zero does not disable tagged revision URLs. Refuse split/tagged
+        # traffic rather than claiming these sessions have closed ingress.
+        assert not any(x.get('tag') for x in current['spec'].get('traffic', []) + current['status'].get('traffic', [])), 'Tagged traffic requires review'
+        traffic = [x for x in current['status']['traffic'] if x.get('percent', 0)]
+        assert len(traffic) == 1 and traffic[0]['percent'] == 100
+        assert traffic[0]['revisionName'] == recorded['status']['latestReadyRevisionName']
+    # Explicitly close the browser entry point before either start or stop.
+    gcloud('run', 'services', 'update', web, *common, '--scaling=0')
+    closed = gcloud('run', 'services', 'describe', web, *common)['metadata']['annotations']
+    assert closed['run.googleapis.com/scalingMode'] == 'manual'
+    assert str(closed['run.googleapis.com/manualInstanceCount']) == '0'
+    session = {'action': action, 'startedAt': datetime.now(timezone.utc).isoformat(), 'status': 'in-progress'}
+    receipt.setdefault('sessions', []).append(session)
+    save()
+    try:
+        if action == 'stop':
+            # The deployed request timeout is 60s. Allow in-flight proxy requests
+            # to finish before checking asynchronous financial work.
+            time.sleep(65)
+            drain_job()
+            gcloud('run', 'services', 'update', api, *common, '--scaling=0')
+            gcloud('sql', 'instances', 'patch', instance, '--project=' + project, '--activation-policy=NEVER')
+        else:
+            gcloud('sql', 'instances', 'patch', instance, '--project=' + project, '--activation-policy=ALWAYS')
+            db = gcloud('sql', 'instances', 'describe', instance, '--project=' + project)
+            assert db['state'] == 'RUNNABLE', 'Database is not ready'
+            gcloud('run', 'services', 'update', api, *common, '--scaling=1')
+            ready('https://' + api + '-' + inventory['projectNumber'] + '.us-east4.run.app', receipt['services']['api']['status']['latestReadyRevisionName'])
+            gcloud('run', 'services', 'update', web, *common, '--scaling=1')
+        for key, name in [('api', api), ('web', web)]:
+            current = gcloud('run', 'services', 'describe', name, *common)
+            annotations = current['metadata']['annotations']
+            assert annotations['run.googleapis.com/scalingMode'] == 'manual'
+            assert str(annotations['run.googleapis.com/manualInstanceCount']) == ('0' if action == 'stop' else '1')
+        db = gcloud('sql', 'instances', 'describe', instance, '--project=' + project)
+        assert db['settings']['activationPolicy'] == ('NEVER' if action == 'stop' else 'ALWAYS')
+        session['status'] = 'passed'
+    except Exception:
+        session['status'] = 'blocked-recovery-required'
+        raise
+    finally:
+        session['finishedAt'] = datetime.now(timezone.utc).isoformat()
+        save()
+
+
+def check_readiness(url, revision):
+    token = subprocess.check_output(['gcloud', 'auth', 'print-identity-token'], text=True).strip()
+    request = urllib.request.Request(url + '/api/readyz', headers={'Authorization': 'Bearer ' + token})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        assert response.headers.get('X-Samra-Cloud-Run-Revision') == revision
+        assert json.load(response) == {'status': 'ready'}
+
+
 def main():
+    if not __debug__:
+        raise RuntimeError('Optimized Python disables validation and is unsupported')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('environment', choices=['dev', 'test'])
-    parser.add_argument('action', choices=['prepare-database', 'database-job', 'retire-bootstrap', 'deploy'])
+    parser.add_argument('action', choices=['prepare-database', 'database-job', 'retire-bootstrap', 'deploy', 'start', 'stop'])
     parser.add_argument('--images', required=True, help='Reviewed publication JSON with sourceSha and images digest map')
     parser.add_argument('--receipt', required=True, help='Sanitized per-environment operator receipt')
     parser.add_argument('--job-action', choices=['bootstrap','migrate','audit-migration','audit-runtime','audit-reader','drain'])
@@ -49,9 +127,11 @@ def main():
     images = json.loads(Path(opts.images).read_text())
     assert re.fullmatch('[a-f0-9]{40}', images['sourceSha'])
     for image in ['api','customer-web','migrations']:
-        assert re.fullmatch(f'us-east4-docker.pkg.dev/{project}/samra-{env}/samra-{image}@sha256:[a-f0-9]{{64}}', images['images'][image])
+        assert re.fullmatch(re.escape(f'us-east4-docker.pkg.dev/{project}/samra-{env}/samra-{image}') + r'@sha256:[a-f0-9]{64}', images['images'][image])
         gcloud('artifacts','docker','images','describe', images['images'][image], '--project='+project)
     inventory = json.loads((Path(__file__).parent/'dev-test-environments.json').read_text())['environments'][env]
+    cloud_project = gcloud('projects', 'describe', project)
+    assert str(cloud_project['projectNumber']) == inventory['projectNumber']
     db = gcloud('sql','instances','describe',instance,'--project='+project)
     assert db['settings']['ipConfiguration']['ipv4Enabled'] is False
     assert db['settings']['ipConfiguration']['sslMode'] == 'ENCRYPTED_ONLY'
@@ -61,9 +141,10 @@ def main():
     assert ip.startswith('10.61.' if env=='dev' else '10.71.')
     if receipt_path.exists():
         receipt = json.loads(receipt_path.read_text())
-        assert receipt['project'] == project
+        verify_receipt(receipt, project, images)
     else:
-        receipt = {'project':project,'sourceSha':images['sourceSha'],'versions':{},'jobs':{}}
+        assert opts.action == 'prepare-database', 'Existing receipt required'
+        receipt = {'project':project,'sourceSha':images['sourceSha'],'images':images['images'],'versions':{},'jobs':{}}
     identities = {key:f'samra-{key}-{env}@{project}.iam.gserviceaccount.com' for key in ['api','customer-web','migrations','audit','bootstrap']}
     names = {key:f'samra-{env}-{suffix}' for key,suffix in {'runtime':'database-url','migration':'migration-database-url','audit':'audit-database-url','ca':'database-ca','bootstrap':'database-setup'}.items()}
     def save():
@@ -123,6 +204,14 @@ def main():
         gcloud('secrets','remove-iam-policy-binding',names['ca'],'--project='+project,'--member=serviceAccount:'+identities['bootstrap'],'--role=roles/secretmanager.secretAccessor')
         gcloud('iam','service-accounts','disable',identities['bootstrap'],'--project='+project)
         receipt['bootstrapRetired']=True;save()
+    elif opts.action in ['start', 'stop']:
+        def drain_job():
+            subprocess.run([sys.executable, str(Path(__file__).resolve()), env, 'database-job', '--images', str(Path(opts.images).resolve()), '--receipt', str(receipt_path.resolve()), '--job-action', 'drain'], check=True)
+            updated = json.loads(receipt_path.read_text())
+            verify_receipt(updated, project, images)
+            receipt['jobs'] = updated['jobs']
+        control_session(opts.action, env, inventory, receipt, save, drain_job, check_readiness)
+        print(json.dumps({'project': project, 'session': opts.action, 'status': 'passed'}))
     elif opts.action == 'deploy':
         assert receipt.get('bootstrapRetired'), 'Temporary access must be retired first'
         assert all(receipt['jobs'].get(k,{}).get('status',{}).get('succeededCount')==1 for k in ['migrate','audit-runtime','audit-reader'])
@@ -133,9 +222,9 @@ def main():
             web_env=dict(inventory['web']['runtimeEnvironment'],SAMRA_API_ORIGIN=apiurl,SAMRA_API_SERVICE_AUDIENCE=apiurl,SAMRA_API_SERVICE_AUTH_MODE='cloud-run-iam')
             ap=Path(directory)/'api.json';wp=Path(directory)/'web.json';ap.write_text(json.dumps(api_env));wp.write_text(json.dumps(web_env))
             common=['--project='+project,'--region='+region,'--cpu=1','--memory=512Mi','--max-instances=1','--concurrency=40','--timeout=60s']
-            gcloud('run','deploy',api,*common,'--image='+images['images']['api'],'--service-account='+identities['api'],'--no-allow-unauthenticated','--no-cpu-throttling','--scaling=1','--network=samra-'+env+'-vpc','--subnet=samra-'+env+'-us-east4','--vpc-egress=private-ranges-only','--env-vars-file='+str(ap),'--set-secrets=DATABASE_URL='+names['runtime']+':'+receipt['versions']['runtime']+',/secrets/ca/server-ca.pem='+names['ca']+':'+receipt['versions']['ca'])
+            gcloud('run','deploy',api,*common,'--image='+images['images']['api'],'--service-account='+identities['api'],'--no-allow-unauthenticated','--no-cpu-throttling','--scaling=0','--network=samra-'+env+'-vpc','--subnet=samra-'+env+'-us-east4','--vpc-egress=private-ranges-only','--env-vars-file='+str(ap),'--set-secrets=DATABASE_URL='+names['runtime']+':'+receipt['versions']['runtime']+',/secrets/ca/server-ca.pem='+names['ca']+':'+receipt['versions']['ca'])
             gcloud('run','services','add-iam-policy-binding',api,'--project='+project,'--region='+region,'--member=serviceAccount:'+identities['customer-web'],'--role=roles/run.invoker')
-            gcloud('run','deploy',web,*common,'--image='+images['images']['customer-web'],'--service-account='+identities['customer-web'],'--allow-unauthenticated','--min-instances=0','--env-vars-file='+str(wp))
+            gcloud('run','deploy',web,*common,'--image='+images['images']['customer-web'],'--service-account='+identities['customer-web'],'--allow-unauthenticated','--scaling=0','--min-instances=0','--env-vars-file='+str(wp))
         receipt['services']={key:gcloud('run','services','describe',name,'--project='+project,'--region='+region) for key,name in [('api',api),('web',web)]};save()
         print(json.dumps({'project':project,'webUrl':weburl,'functionalAcceptance':False}))
 

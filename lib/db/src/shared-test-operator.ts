@@ -4,6 +4,7 @@ import {
   normalizeAuth0Issuer,
   normalizeAuth0Subject,
 } from "./postgres-customer-identities";
+import { PostgresLedgerJournalWriter } from "./postgres-ledger";
 import { PostgresCustomerIdentityCaseStore } from "./postgres-customer-identity";
 import type { PostgresPersistenceContext } from "./postgres-persistence";
 
@@ -35,6 +36,17 @@ const base = {
   operatorAlias: z.string().regex(/^operator_[a-z0-9_-]{3,48}$/),
 };
 const manifestSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      ...base,
+      operation: z.literal("fund-synthetic-account"),
+      subject,
+      amountMinor: z
+        .string()
+        .regex(/^[1-9][0-9]{0,5}$/)
+        .refine((value) => BigInt(value) <= 100000n),
+    })
+    .strict(),
   z
     .object({
       ...base,
@@ -215,30 +227,150 @@ export async function runSharedTestOperation(
         );
         if (admitted.rows.length !== 1)
           throw new Error("An admitted, active tester is required.");
-        const store = new PostgresCustomerIdentityCaseStore(context);
-        const current = await store.getAuth0IdentityCase(manifest);
-        if (current.identityCaseId !== manifest.identityCaseId)
-          throw new Error("The identity case does not belong to this tester.");
-        // The store also rejects any inquiry without the synthetic inq_fake_ prefix.
-        const commandDigest = digest(
-          JSON.stringify([manifest.environment, manifest.commandId]),
-        );
-        const outcome = await store.recordProviderEvent({
-          identityCaseId: manifest.identityCaseId,
-          providerEventRef: `evt_fake_operator_${commandDigest}`,
-          eventType: `inquiry.${manifest.decision}`,
-          decision: manifest.decision,
-          payloadDigest: digest(
-            JSON.stringify([
-              manifest.identityCaseId,
-              manifest.decision,
-              "synthetic-only",
-            ]),
-          ),
-        });
-        eventKey = `synthetic-decision:${commandDigest}`;
-        entityId = manifest.identityCaseId;
-        result = `Synthetic identity ${outcome.snapshot.state}; ${outcome.replayed ? "replayed" : outcome.disposition}.`;
+        if (manifest.operation === "fund-synthetic-account") {
+          const customerId = admitted.rows[0]!.customer_id;
+          const identity = await context
+            .query()
+            .query(
+              "SELECT 1 FROM samra_core.customer_identity_cases WHERE customer_id=$1 AND state='approved' AND left(provider_inquiry_ref,9) = 'inq_fake_'",
+              [customerId],
+            );
+          if (identity.rows.length !== 1)
+            throw new Error(
+              "Approved simulated identity required for fixture funding.",
+            );
+          const accountRef = `synthetic_usd_${customerId.replaceAll("-", "")}`;
+          await context
+            .query()
+            .query(
+              "INSERT INTO samra_core.product_accounts(customer_id,external_ref,kind,currency) VALUES ($1,$2,'domestic_cash','USD') ON CONFLICT(external_ref) DO NOTHING",
+              [customerId, accountRef],
+            );
+          const account = await context
+            .query()
+            .query<{ id: string }>(
+              "SELECT id FROM samra_core.product_accounts WHERE customer_id=$1 AND external_ref=$2 AND currency='USD' AND kind='domestic_cash' AND state='active' FOR UPDATE",
+              [customerId, accountRef],
+            );
+          if (account.rows.length !== 1)
+            throw new Error("Synthetic account ownership or state mismatch.");
+          const accounts = [
+            [
+              accountRef,
+              "Synthetic customer USD liability",
+              "liability",
+              "credit",
+              account.rows[0]!.id,
+              false,
+            ],
+            [
+              "control_rain_usd",
+              "Synthetic funding control asset",
+              "asset",
+              "debit",
+              null,
+              false,
+            ],
+            [
+              "clearing_remittance_principal_usd",
+              "Synthetic principal clearing",
+              "liability",
+              "credit",
+              null,
+              false,
+            ],
+            [
+              "liability_deferred_remittance_fee_usd",
+              "Synthetic deferred fee",
+              "liability",
+              "credit",
+              null,
+              false,
+            ],
+            [
+              "revenue_remittance_fee_usd",
+              "Synthetic fee revenue",
+              "revenue",
+              "credit",
+              null,
+              false,
+            ],
+            [
+              "asset_reconciliation_suspense_usd",
+              "Synthetic reconciliation suspense",
+              "asset",
+              "debit",
+              null,
+              true,
+            ],
+          ];
+          for (const values of accounts) {
+            await context
+              .query()
+              .query(
+                "INSERT INTO samra_core.ledger_accounts(code,name,account_class,normal_side,product_account_id,allow_negative_available,currency) VALUES($1,$2,$3,$4,$5,$6,'USD') ON CONFLICT(code) DO NOTHING",
+                values,
+              );
+            const matching = await context
+              .query()
+              .query(
+                "SELECT 1 FROM samra_core.ledger_accounts WHERE code=$1 AND account_class=$2 AND normal_side=$3 AND product_account_id IS NOT DISTINCT FROM $4::uuid AND allow_negative_available=$5 AND currency='USD' AND state='active'",
+                [values[0], values[2], values[3], values[4], values[5]],
+              );
+            if (matching.rowCount !== 1)
+              throw new Error(
+                "Ledger account dimensions differ from the fixture contract.",
+              );
+          }
+          // One initial credit per admitted customer. A different amount on retry conflicts.
+          eventKey = `synthetic-opening:${digest(JSON.stringify([manifest.environment, customerId]))}`;
+          entityId = await new PostgresLedgerJournalWriter(context).post({
+            eventType: "synthetic_initial_credit",
+            eventId: eventKey,
+            description: "Initial synthetic test balance",
+            metadata: {
+              environment: manifest.environment,
+              syntheticOnly: "true",
+            },
+            postings: [
+              ["control_rain_usd", "debit", BigInt(manifest.amountMinor)],
+              [accountRef, "credit", BigInt(manifest.amountMinor)],
+            ],
+            auditActor: {
+              actorType: "system",
+              actorId: manifest.operatorAlias,
+            },
+          });
+          result =
+            "Synthetic account ready; initial balanced credit applied or replayed. No real money moved.";
+        } else {
+          const store = new PostgresCustomerIdentityCaseStore(context);
+          const current = await store.getAuth0IdentityCase(manifest);
+          if (current.identityCaseId !== manifest.identityCaseId)
+            throw new Error(
+              "The identity case does not belong to this tester.",
+            );
+          // The store also rejects any inquiry without the synthetic inq_fake_ prefix.
+          const commandDigest = digest(
+            JSON.stringify([manifest.environment, manifest.commandId]),
+          );
+          const outcome = await store.recordProviderEvent({
+            identityCaseId: manifest.identityCaseId,
+            providerEventRef: `evt_fake_operator_${commandDigest}`,
+            eventType: `inquiry.${manifest.decision}`,
+            decision: manifest.decision,
+            payloadDigest: digest(
+              JSON.stringify([
+                manifest.identityCaseId,
+                manifest.decision,
+                "synthetic-only",
+              ]),
+            ),
+          });
+          eventKey = `synthetic-decision:${commandDigest}`;
+          entityId = manifest.identityCaseId;
+          result = `Synthetic identity ${outcome.snapshot.state}; ${outcome.replayed ? "replayed" : outcome.disposition}.`;
+        }
       }
       await context.query().query(
         `INSERT INTO samra_core.audit_events

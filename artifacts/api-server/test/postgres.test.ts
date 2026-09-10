@@ -251,6 +251,18 @@ test("shared synthetic operator previews roll back, binds two invitations, and a
         ),
         /does not belong/,
       );
+      const funding = parseSharedTestManifest({
+        environment: "test",
+        operation: "fund-synthetic-account",
+        operatorAlias: "operator_fixture",
+        issuer,
+        subject,
+        amountMinor: "50000",
+      });
+      await assert.rejects(
+        runSharedTestOperation(context, funding, true),
+        /Approved simulated identity/,
+      );
       const beforeDecision = await counts();
       await runSharedTestOperation(context, decision);
       assert.equal(
@@ -281,6 +293,59 @@ test("shared synthetic operator previews roll back, binds two invitations, and a
       assert.equal(
         (await store.getAuth0IdentityCase({ issuer, subject })).state,
         "approved",
+      );
+      const customerId = (
+        await context
+          .query()
+          .query<{ customer_id: string }>(
+            "SELECT customer_id FROM samra_core.customer_auth_identities WHERE issuer=$1 AND subject=$2",
+            [issuer, subject],
+          )
+      ).rows[0]!.customer_id;
+      const accountRef = `synthetic_usd_${customerId.replaceAll("-", "")}`;
+      await runSharedTestOperation(context, funding);
+      assert.equal(
+        (
+          await context
+            .query()
+            .query(
+              "SELECT 1 FROM samra_core.product_accounts WHERE external_ref=$1",
+              [accountRef],
+            )
+        ).rowCount,
+        0,
+      );
+      await runSharedTestOperation(context, funding, true);
+      const ledger = new PostgresLedgerControl(context);
+      assert.equal(
+        (await ledger.getCustomerBalance(accountRef)).availableMinor,
+        50000n,
+      );
+      await runSharedTestOperation(context, funding, true);
+      assert.equal(
+        (await ledger.getCustomerBalance(accountRef)).availableMinor,
+        50000n,
+      );
+      if (funding.operation !== "fund-synthetic-account")
+        throw new Error("Expected funding fixture");
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...funding, amountMinor: "60000" },
+          true,
+        ),
+      );
+      assert.equal(
+        (await ledger.getCustomerBalance(accountRef)).availableMinor,
+        50000n,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...funding, subject: otherSubject },
+          true,
+        ),
+        /admitted, active/,
       );
       const audits = JSON.stringify(
         (
@@ -358,6 +423,10 @@ test("shared synthetic operator previews roll back, binds two invitations, and a
         );
       await assert.rejects(
         runSharedTestOperation(context, decision, true),
+        /admitted, active/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(context, funding, true),
         /admitted, active/,
       );
       await assert.rejects(
