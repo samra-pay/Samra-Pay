@@ -1,0 +1,98 @@
+{
+  "date": "2026-09-10",
+  "status": "provider-configuration-saved-native-acceptance-pending",
+  "authorization": "David explicitly approved the prepared Dev/Test Native client change set in the main task",
+  "sourceCandidate": "7cda0f98b124facbd081330133fef783a9a8c544",
+  "observedVia": "Authenticated Auth0 dashboard; saved callback, connection and grant values read back after reload or reopening the grant inspector",
+  "tenant": "dev-40h1kaj5488jqctu",
+  "tenantEnvironment": "DEVELOPMENT",
+  "domain": "dev-40h1kaj5488jqctu.us.auth0.com",
+  "clients": {
+    "dev": {
+      "name": "Samra One - Mobile - Development",
+      "clientId": "NbcuUH99abGjdE7gkKBY9wjfniE8e4r9",
+      "applicationType": "Native",
+      "existingClientReused": true,
+      "applicationId": "com.samrapay.mobile.dev",
+      "customScheme": "samrapaydevauth",
+      "callbacks": [
+        "samrapaydevauth://dev-40h1kaj5488jqctu.us.auth0.com/ios/com.samrapay.mobile.dev/callback",
+        "samrapaydevauth://dev-40h1kaj5488jqctu.us.auth0.com/android/com.samrapay.mobile.dev/callback"
+      ],
+      "logoutUrls": [
+        "samrapaydevauth://dev-40h1kaj5488jqctu.us.auth0.com/ios/com.samrapay.mobile.dev/callback",
+        "samrapaydevauth://dev-40h1kaj5488jqctu.us.auth0.com/android/com.samrapay.mobile.dev/callback"
+      ],
+      "audience": "https://api.samrapay.com/development",
+      "apiId": "6a9b52e5261b4bde124b13fb",
+      "userGrantId": "cgr_jyRBvAoSNn1oXEwK",
+      "grantPermissions": [],
+      "alwaysGrantAllPermissions": false,
+      "otherSamraApiUserGrant": false,
+      "developmentApiMachineGrant": false,
+      "testApiMachineAccess": "denied-by-api-policy",
+      "grantTypes": ["authorization_code"],
+      "connections": ["Username-Password-Authentication", "google-oauth2"],
+      "webOrigins": [],
+      "corsOrigins": [],
+      "crossOriginAuth": false,
+      "oidcConformant": true,
+      "jwtSignatureAlgorithm": "RS256",
+      "oldStagingCallbackUrlsRemoved": true
+    },
+    "test": {
+      "name": "Samra One - Mobile - Test",
+      "clientId": "dFM0ZxzcQoQ6Ppj7KrgOxx70M9KSkk5K",
+      "applicationType": "Native",
+      "existingClientReused": false,
+      "applicationId": "com.samrapay.mobile.test",
+      "customScheme": "samrapaytestauth",
+      "callbacks": [
+        "samrapaytestauth://dev-40h1kaj5488jqctu.us.auth0.com/ios/com.samrapay.mobile.test/callback",
+        "samrapaytestauth://dev-40h1kaj5488jqctu.us.auth0.com/android/com.samrapay.mobile.test/callback"
+      ],
+      "logoutUrls": [
+        "samrapaytestauth://dev-40h1kaj5488jqctu.us.auth0.com/ios/com.samrapay.mobile.test/callback",
+        "samrapaytestauth://dev-40h1kaj5488jqctu.us.auth0.com/android/com.samrapay.mobile.test/callback"
+      ],
+      "audience": "https://api.samrapay.com/test",
+      "apiId": "6aa17d107e6b8389ad15b48f",
+      "userGrantId": "cgr_5d4kcukL03JKBgPO",
+      "grantPermissions": [],
+      "alwaysGrantAllPermissions": false,
+      "otherSamraApiUserGrant": false,
+      "developmentApiMachineGrant": false,
+      "testApiMachineAccess": "denied-by-api-policy",
+      "grantTypes": ["authorization_code"],
+      "connections": ["Username-Password-Authentication"],
+      "googleConnectionEnabled": false,
+      "webOrigins": [],
+      "corsOrigins": [],
+      "crossOriginAuth": false,
+      "oidcConformant": true,
+      "jwtSignatureAlgorithm": "RS256"
+    }
+  },
+  "sdkContract": {
+    "authorizationCodeWithPkce": true,
+    "requestedScopes": ["openid"],
+    "offlineAccessRequested": false,
+    "tokenEndpointAuthMethodExpected": "none",
+    "tokenEndpointAuthMethodSeparatelyReadBack": false,
+    "tokenEndpointReadbackLimitation": "Native dashboard settings did not expose this field; installed code exchange remains unverified",
+    "tokensStoredBy": "Auth0 SDK credentials manager",
+    "installedAcceptance": false
+  },
+  "secretValuesAccessed": false,
+  "productionActivation": false,
+  "limitations": [
+    "Separate clients and audiences share one development tenant and managed identity connection; Samra admission and databases remain separate boundaries",
+    "No human login, password-recovery inbox, consent, native code exchange, secure-storage restart or logout acceptance performed",
+    "No signed-token cross-audience or two-account native acceptance performed",
+    "Auth0 registration does not establish Samra admission or financial eligibility",
+    "Existing web SPA clients and production configuration were not changed",
+    "No new staging Native client was created; the reused Dev client no longer accepts staging callbacks",
+    "Xcode matching iOS platform and Android tooling remain native build blockers",
+    "Shared cloud sessions remain paused during migration coordination; this evidence does not claim a runtime restart or deployment"
+  ]
+}

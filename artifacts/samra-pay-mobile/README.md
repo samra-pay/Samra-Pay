@@ -22,12 +22,15 @@ simulator runtime. CocoaPods 1.17.0 installed all native dependencies successful
 Xcode rejected the simulator destination because its required iOS 26.5 platform
 is not installed; native compilation and simulator launch remain blocked on
 Xcode Settings → Components. Android Studio, its SDK/emulator and Java were not
-found. Docker Desktop exists but its engine was stopped at the latest check.
+found. Docker subsequently ran the separate local PostgreSQL/API stack and
+synthetic ledger checks; that result does not establish native compilation.
 These observations are dated prerequisites, not native user acceptance.
 
 Use separate Dev/Test native identifiers and Auth0 Native Application clients.
-Saved shared-web SPA clients are not substitutes. Native Auth0 configuration
-still needs an authenticated administrator session and exact client readback.
+Saved shared-web SPA clients are not substitutes. On September 10, the approved
+Dev client correction and separate Test Native client were saved and read back
+in Auth0. See the [public provider evidence](../../docs/operations/evidence/2026-09-10-native-dev-test-auth0.json).
+Installed login, logout, recovery and two-account acceptance remain unverified.
 The client uses the approved customer-web proxy origin; never embed Google
 service-account credentials or grant mobile users invocation of the private API.
 Tester passwords, recovery and consent remain under each tester's control.
@@ -39,6 +42,20 @@ Tester passwords, recovery and consent remain under each tester's control.
 | `dev`               | `com.samrapay.mobile.dev`        | `samrapaydevauth`     |
 | `test`              | `com.samrapay.mobile.test`       | `samrapaytestauth`    |
 | `staging` (default) | `com.samrapay.mobile.staging`    | `samrapayauth`        |
+
+The saved Dev/Test tenant is `dev-40h1kaj5488jqctu.us.auth0.com`:
+
+| Environment | Public Native client ID | Samra API audience | Login connections |
+| --- | --- | --- | --- |
+| `dev` | `NbcuUH99abGjdE7gkKBY9wjfniE8e4r9` | `https://api.samrapay.com/development` | Password and Google |
+| `test` | `dFM0ZxzcQoQ6Ppj7KrgOxx70M9KSkk5K` | `https://api.samrapay.com/test` | Password only |
+
+Each client has a user-delegated grant only for its matching Samra API, no
+machine grant, and Authorization Code as its only enabled grant type. The
+shared development identity store does not provide Samra account admission or
+cross-environment customer access. Server authorization and isolated databases
+remain required. No staging client was created by this change; the reused Dev
+client no longer accepts the old staging callback URLs.
 
 `native-environments.json` is shared by Expo build configuration and the runtime
 adapter so their callback schemes cannot diverge. `app.config.js` is the Expo 54
@@ -92,6 +109,27 @@ EXPO_PUBLIC_AUTH0_CLIENT_ID=<public-native-client-id> \
 EXPO_PUBLIC_AUTH0_AUDIENCE=https://api.staging.samrapay.com \
 pnpm --filter @workspace/samra-pay-mobile run build
 ```
+
+For an installed Test client, use the verified public configuration below after
+the Xcode platform is available and the Test runtime owner opens a bounded
+session. The shared runtimes remain paused during the separate cloud migration.
+This command builds and launches locally; it does not activate a cloud session:
+
+```sh
+EXPO_PUBLIC_SAMRA_ENVIRONMENT=test \
+EXPO_PUBLIC_SAMRA_DATA_MODE=api \
+EXPO_PUBLIC_SAMRA_API_ORIGIN=https://samra-customer-web-test-378050809796.us-east4.run.app \
+EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native \
+EXPO_PUBLIC_AUTH0_DOMAIN=dev-40h1kaj5488jqctu.us.auth0.com \
+EXPO_PUBLIC_AUTH0_CLIENT_ID=dFM0ZxzcQoQ6Ppj7KrgOxx70M9KSkk5K \
+EXPO_PUBLIC_AUTH0_AUDIENCE=https://api.samrapay.com/test \
+pnpm --filter @workspace/samra-pay-mobile run ios
+```
+
+For Dev, substitute the Dev target, client and audience from the table and
+`https://samra-customer-web-dev-829811168658.us-east4.run.app` as the API origin.
+Use `run android` only after installing Android tooling. Record the actual
+installed build SHA and configuration in the existing user-test session #216.
 
 Expo embeds `EXPO_PUBLIC_*` values in the client bundle. None of these values is
 a secret. Never put a client secret, server API key, access token, refresh token,
