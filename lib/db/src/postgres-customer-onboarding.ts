@@ -50,23 +50,23 @@ export type CustomerConsentBundleSnapshot = Readonly<{
 
 export const ALPHA_ONBOARDING_CONSENT_BUNDLE: CustomerConsentBundleSnapshot =
   Object.freeze({
-    bundleVersion: "alpha-non-production-v1",
+    bundleVersion: "alpha-non-production-v2",
     locale: "en-US",
     legalEffect: "non_production" as const,
     documents: Object.freeze([
       Object.freeze({
         consentType: "terms_of_service" as const,
-        documentVersion: "alpha-non-production-v1",
+        documentVersion: "alpha-non-production-v2",
         required: true,
       }),
       Object.freeze({
         consentType: "privacy_notice" as const,
-        documentVersion: "alpha-non-production-v1",
+        documentVersion: "alpha-non-production-v2",
         required: true,
       }),
       Object.freeze({
         consentType: "electronic_communications" as const,
-        documentVersion: "alpha-non-production-v1",
+        documentVersion: "alpha-non-production-v2",
         required: true,
       }),
     ]),
@@ -329,7 +329,9 @@ export class PostgresCustomerOnboardingStore {
     const issuer = normalizeAuth0Issuer(input.issuer);
     const subject = normalizeAuth0Subject(input.subject);
     const key = hashCommandKey(normalizeIdempotencyKey(input.idempotencyKey));
-    const decisions = normalizeConsentDecisions(input);
+    // A previously completed v1 command must still replay after the notice update.
+    // Historical versions can never create a new consent record.
+    const decisions = normalizeConsentDecisions(input, true);
     const requestHash = fingerprint({
       bundleVersion: input.bundleVersion,
       locale: input.locale,
@@ -377,6 +379,7 @@ export class PostgresCustomerOnboardingStore {
         });
       }
 
+      normalizeConsentDecisions(input);
       if (onboarding.state !== "consent_pending") {
         throw new DomainError(
           "INVALID_TRANSITION",
@@ -558,13 +561,19 @@ function assertIdentityAccess(identity: IdentityCustomerRow): void {
   }
 }
 
-function normalizeConsentDecisions(input: {
-  bundleVersion: string;
-  locale: string;
-  decisions: readonly ConsentDecisionInput[];
-}): readonly ConsentDecisionInput[] {
+function normalizeConsentDecisions(
+  input: {
+    bundleVersion: string;
+    locale: string;
+    decisions: readonly ConsentDecisionInput[];
+  },
+  allowHistoricalReplay = false,
+): readonly ConsentDecisionInput[] {
+  const historical =
+    allowHistoricalReplay && input.bundleVersion === "alpha-non-production-v1";
   if (
-    input.bundleVersion !== ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion ||
+    (!historical &&
+      input.bundleVersion !== ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion) ||
     input.locale !== ALPHA_ONBOARDING_CONSENT_BUNDLE.locale
   ) {
     throw new DomainError(
@@ -584,7 +593,8 @@ function normalizeConsentDecisions(input: {
     );
     if (
       matches.length !== 1 ||
-      matches[0]!.documentVersion !== document.documentVersion ||
+      matches[0]!.documentVersion !==
+        (historical ? "alpha-non-production-v1" : document.documentVersion) ||
       !new Set(["accepted", "declined"]).has(matches[0]!.decision)
     ) {
       throw invalidConsentBundle();

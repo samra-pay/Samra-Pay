@@ -127,7 +127,8 @@ session start/drain/stop acceptance remain separate work.
 
 ## Provision one synthetic opening balance
 
-After admission, consent and an approved **simulated** identity case, use the
+After admission, consent, an approved **simulated** identity case and customer-initiated
+creation of a ready synthetic wallet, use the
 same private-manifest CLI with `operation: "fund-synthetic-account"`, the selected
 `environment`, `issuer`, `subject`, `operatorAlias`, and `amountMinor: "50000"`.
 The example is 500 synthetic USD; the server accepts integer strings from 1 to
@@ -140,6 +141,23 @@ journal writer to debit synthetic control assets and credit the customer liabili
 There is only one initial credit per customer/environment. Retrying the same
 amount returns the existing journal; changing the amount conflicts. Suspended or
 revoked identities, pending/rejected identity cases, or non-fake inquiries fail.
+The same transaction advances onboarding through `funding_ready` to `activated`,
+with versioned transitions and a `synthetic_customer_activated` audit event. This
+allows the existing financial API authorization gate to admit the Test customer;
+it does not change that gate or enable Alpha Release 1 financial routes. A preview
+rolls back activation as well as credit. A retry preserves the original credit,
+onboarding version and audit history. A restricted account or a wallet that is not
+ready, consented and synthetic cannot be funded or reactivated by retrying.
+
 It does not accept customer or wallet consent, create a provider wallet, or claim
 real KYC approval. Additional top-ups/resetting balances require a reviewed fixture
 change. Do not write directly to materialized balances.
+
+## Participant disclosures
+
+New onboarding uses `alpha-non-production-v2` for the September 10, 2026 notices.
+The notices describe real Auth0 authentication and distinguish it from synthetic
+identity decisions, wallets and funds. Existing v1 consent records remain immutable.
+An exact completed v1 command can replay its retained response; an unrecorded v1
+command cannot create consent after the update. Each participant accepts the
+current notices and wallet disclosure privately through the customer controls.
