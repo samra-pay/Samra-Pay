@@ -1,22 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { configuredCustomerLinks } from "@/lib/public-customer-entry";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
+import { ComingSoonSocialChannels } from "./coming-soon-social";
 
 const publicNavigation = [
   { label: localized("Features", "ባህሪያት"), href: "/features" },
   { label: localized("Values", "እሴቶቻችን"), href: "/values" },
   { label: localized("FAQ", "ጥያቄና መልስ"), href: "/faq" },
   { label: localized("Blog", "ጽሑፎች"), href: "/blog" },
-];
-
-const socialLinks = [
-  { label: "Facebook", href: import.meta.env.VITE_SAMRA_SOCIAL_FACEBOOK_URL },
-  { label: "Instagram", href: import.meta.env.VITE_SAMRA_SOCIAL_INSTAGRAM_URL },
-  { label: "TikTok", href: import.meta.env.VITE_SAMRA_SOCIAL_TIKTOK_URL },
-  { label: "X", href: import.meta.env.VITE_SAMRA_SOCIAL_X_URL },
-  { label: "LinkedIn", href: import.meta.env.VITE_SAMRA_SOCIAL_LINKEDIN_URL },
-  { label: "YouTube", href: import.meta.env.VITE_SAMRA_SOCIAL_YOUTUBE_URL },
 ];
 
 export function ComingSoonLogo({ dark = false }: { dark?: boolean }) {
@@ -333,46 +325,7 @@ export function ComingSoonFooter() {
           </a>
         </div>
       </div>
-      {socialLinks.some((social) => social.href) && (
-        <div className="coming-container coming-footer-social">
-          <div>
-            <h3>{text(localized("Follow Samra Pay", "Samra Payን ይከተሉ"))}</h3>
-            <p>
-              {text(
-                localized(
-                  "Follow the people and stories behind Samra.",
-                  "ከSamra ጀርባ ያሉትን ሰዎችና ታሪኮች ይከታተሉ።",
-                ),
-              )}
-            </p>
-          </div>
-          <div
-            className="coming-social-links"
-            aria-label={text(
-              localized(
-                "Samra Pay social channels",
-                "የSamra Pay ማህበራዊ ሚዲያ መለያዎች",
-              ),
-            )}
-          >
-            {socialLinks
-              .filter((social) => social.href)
-              .map((social) => (
-                <a
-                  className="coming-social-link"
-                  href={social.href}
-                  key={social.label}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={`${social.label} — ${text(localized("opens in a new tab", "በአዲስ ትር ይከፈታል"))}`}
-                >
-                  {social.label}
-                  <ArrowUpRight aria-hidden="true" />
-                </a>
-              ))}
-          </div>
-        </div>
-      )}
+      <ComingSoonSocialChannels />
     </footer>
   );
 }
