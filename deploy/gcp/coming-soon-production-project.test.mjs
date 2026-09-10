@@ -29,7 +29,7 @@ const exactProject = {
   name: "Samra Pay Production",
   projectNumber: "382465561715",
   lifecycleState: "ACTIVE",
-  parent: { type: "organization", id: "614833350075" },
+  parent: { type: "organization", id: "993968777863" },
   labels: {
     application: "samra-pay",
     data_classification: "customer-pii",
@@ -58,7 +58,7 @@ test("validates the applied and independently verified production project contro
     projectId: "samra-pay-production",
     projectNumber: "382465561715",
     projectName: "Samra Pay Production",
-    organizationId: "614833350075",
+    organizationId: "993968777863",
     sourceBillingProjectId: "samra-pay-staging",
     monthlyBudgetUsd: 25,
     thresholdPercents: [0.5, 0.9, 1],
@@ -126,11 +126,11 @@ test("requires the staging billing source project to be active in the reviewed o
   const sourceProject = {
     projectId: "samra-pay-staging",
     lifecycleState: "ACTIVE",
-    parent: { type: "organization", id: "614833350075" },
+    parent: { type: "organization", id: "993968777863" },
   };
   assert.deepEqual(validateSourceBillingProject(sourceProject), {
     projectId: "samra-pay-staging",
-    organizationId: "614833350075",
+    organizationId: "993968777863",
     state: "ready",
   });
 

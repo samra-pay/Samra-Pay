@@ -10,7 +10,7 @@ import { validateStagingImagePublicationManifest } from "./record-staging-image-
 export const MIGRATION = Object.freeze({
   project: "samra-pay-staging",
   projectNumber: "934122615631",
-  organization: "614833350075",
+  organization: "993968777863",
   region: "us-east4",
   job: "samra-staging-migrations",
   instance: "samra-staging-postgres",

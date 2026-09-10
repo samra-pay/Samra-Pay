@@ -90,7 +90,7 @@ export function validateStagingTrafficControl(
   assert(
     cloud.projectId === "samra-pay-staging" &&
       cloud.projectNumber === "934122615631" &&
-      cloud.organizationId === "614833350075" &&
+      cloud.organizationId === "993968777863" &&
       cloud.region === "us-east4" &&
       cloud.workloadIdentityLocation === "global" &&
       cloud.workloadIdentityPoolId === "samra-traffic-staging" &&

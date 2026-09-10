@@ -10,7 +10,7 @@ if [[ "${MODE}" != "--plan" && "${MODE}" != "--review" && "${MODE}" != "--apply"
 fi
 
 : "${SAMRA_GCP_PROJECT_ID:=samra-pay-staging}"
-: "${SAMRA_GCP_ORGANIZATION_ID:=614833350075}"
+: "${SAMRA_GCP_ORGANIZATION_ID:=993968777863}"
 : "${SAMRA_GCP_REGION:=us-east4}"
 : "${SAMRA_GCP_REPOSITORY:=samra-staging}"
 : "${SAMRA_GCP_OPERATOR_ACCOUNT:=}"
@@ -57,7 +57,7 @@ IMAGE_SECURITY_EVIDENCE_DIR="${PUBLICATION_EVIDENCE_DIR}/security"
 TRIVY_VERSION="0.70.0"
 
 [[ "${PROJECT_ID}" == "samra-pay-staging" ]] || { echo "STOP: project must be samra-pay-staging" >&2; exit 1; }
-[[ "${ORGANIZATION_ID}" == "614833350075" ]] || { echo "STOP: organization must be 614833350075" >&2; exit 1; }
+[[ "${ORGANIZATION_ID}" == "993968777863" ]] || { echo "STOP: organization must be 993968777863" >&2; exit 1; }
 [[ "${REGION}" == "us-east4" ]] || { echo "STOP: region must be us-east4" >&2; exit 1; }
 [[ "${REPOSITORY}" == "samra-staging" ]] || { echo "STOP: repository must be samra-staging" >&2; exit 1; }
 

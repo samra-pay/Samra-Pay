@@ -31,7 +31,7 @@ export function validateComingSoonLaunch(contract = readComingSoonLaunch()) {
       "foundation-and-data-foundation-applied-verified-deployment-not-applied" &&
       contract.productionBoundary.projectId === "samra-pay-production" &&
       contract.productionBoundary.projectNumber === "382465561715" &&
-      contract.productionBoundary.organizationId === "614833350075" &&
+      contract.productionBoundary.organizationId === "993968777863" &&
       contract.productionBoundary.region === "us-east4" &&
       contract.productionBoundary.dataClassification === "customer-pii" &&
       contract.productionBoundary.billingAccountSourceProjectId ===

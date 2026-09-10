@@ -98,6 +98,20 @@ jobs:
       - name: Validate Google Cloud portability contracts
         run: pnpm run test:gcp-platform
 
+      - name: Validate Terraform foundation without cloud credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform_dir="${RUNNER_TEMP}/samra-terraform"
+          mkdir -p "$terraform_dir"
+          curl --fail --silent --show-error --location \
+            https://releases.hashicorp.com/terraform/1.14.7/terraform_1.14.7_linux_amd64.zip \
+            -o "$terraform_dir/terraform.zip"
+          echo "e8bbcefea8015156e04e2a325cde37a0b2fb761728bda548e2fe3b8ad7c18c96  $terraform_dir/terraform.zip" | sha256sum --check
+          unzip -q "$terraform_dir/terraform.zip" -d "$terraform_dir"
+          export PATH="$terraform_dir:$PATH"
+          bash deploy/gcp/terraform/validate.sh
+
       - name: Validate static site preview controls
         run: node --test deploy/preview/*.test.mjs
 

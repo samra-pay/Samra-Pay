@@ -10,7 +10,7 @@ if [[ "${MODE}" != "--plan" && "${MODE}" != "--review" && "${MODE}" != "--apply"
 fi
 
 : "${SAMRA_GCP_PROJECT_ID:=samra-pay-staging}"
-: "${SAMRA_GCP_ORGANIZATION_ID:=614833350075}"
+: "${SAMRA_GCP_ORGANIZATION_ID:=993968777863}"
 : "${SAMRA_GCP_OPERATOR_ACCOUNT:=}"
 : "${SAMRA_GCP_EXPECTED_SHA:=$(git -C "${ROOT_DIR}" rev-parse HEAD)}"
 : "${SAMRA_GCP_BUILD_VERIFICATION_APPLY:=}"
@@ -24,7 +24,7 @@ REQUIRED_SERVICE_AGENT_ROLE="roles/cloudbuild.serviceAgent"
 AUTHORIZATION="AUTHORIZED_STAGING_BUILD_VERIFICATION"
 
 [[ "${PROJECT_ID}" == "samra-pay-staging" ]] || { echo "STOP: project must be samra-pay-staging" >&2; exit 1; }
-[[ "${ORGANIZATION_ID}" == "614833350075" ]] || { echo "STOP: organization must be 614833350075" >&2; exit 1; }
+[[ "${ORGANIZATION_ID}" == "993968777863" ]] || { echo "STOP: organization must be 993968777863" >&2; exit 1; }
 
 if [[ "${MODE}" == "--plan" ]]; then
   cat <<PLAN

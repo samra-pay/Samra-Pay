@@ -164,7 +164,7 @@ test("permits only the keyless deployer or reviewed human for read-only review",
   const base = {
     SAMRA_GCP_PROJECT_ID: "samra-pay-staging",
     SAMRA_GCP_PROJECT_NUMBER: "934122615631",
-    SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+    SAMRA_GCP_ORGANIZATION_ID: "993968777863",
     SAMRA_GCP_REGION: "us-east4",
   };
   for (const operator of [
@@ -338,7 +338,7 @@ test("plans deployment and federation offline before any cloud command", () => {
     ...process.env,
     SAMRA_GCP_PROJECT_ID: "samra-pay-staging",
     SAMRA_GCP_PROJECT_NUMBER: "934122615631",
-    SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+    SAMRA_GCP_ORGANIZATION_ID: "993968777863",
     SAMRA_GCP_REGION: "us-east4",
     SAMRA_GCP_OPERATOR_ACCOUNT: "operator@davidhaile.com",
     SAMRA_GCP_EXPECTED_SHA: sha,

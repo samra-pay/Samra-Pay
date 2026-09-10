@@ -26,7 +26,7 @@ fs.appendFileSync(process.env.SAMRA_TEST_CLOUD_CALLS, JSON.stringify(args) + '\\
 if (args.join(' ') === 'config get-value account') console.log('operator@davidhaile.com');
 else if (args.join(' ') === 'config get-value project') console.log('samra-pay-staging');
 else if (args[0] === 'projects' && args[1] === 'describe')
-  console.log(args.includes('--format=value(projectNumber)') ? '934122615631' : '614833350075');
+  console.log(args.includes('--format=value(projectNumber)') ? '934122615631' : '993968777863');
 else if (args.slice(0, 4).join(' ') === 'run services describe samra-api') {
   console.error('Synthetic API service is missing'); process.exit(1);
 } else { console.error('Unexpected cloud command'); process.exit(98); }

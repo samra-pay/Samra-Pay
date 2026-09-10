@@ -424,7 +424,7 @@ export function validateRuntimeReviewEnvironment(
   const validated = validateStagingRuntime(contract);
   const required = {
     SAMRA_GCP_PROJECT_ID: "samra-pay-staging",
-    SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+    SAMRA_GCP_ORGANIZATION_ID: "993968777863",
     SAMRA_GCP_REGION: "us-east4",
   };
   for (const [key, expected] of Object.entries(required)) {

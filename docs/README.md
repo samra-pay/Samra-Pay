@@ -170,6 +170,8 @@ a separate prerequisite; scenarios and templates are not executed user evidence.
 
 ### Cloud and delivery
 
+- [Terraform adoption, state protection and security acceptance](../deploy/gcp/terraform/README.md) — prepared; live plan and state bootstrap pending.
+
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)
 - [Public and product surface boundary](architecture/public-product-surface-boundary.md)
 - [Repository merge controls](operations/repository-merge-controls.md)

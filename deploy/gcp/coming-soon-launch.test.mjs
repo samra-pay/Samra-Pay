@@ -19,7 +19,7 @@ const productionReview = await readFile(
 const reviewEnvironment = {
   SAMRA_GCP_PROJECT_ID: "samra-pay-production",
   SAMRA_GCP_PROJECT_NUMBER: "382465561715",
-  SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+  SAMRA_GCP_ORGANIZATION_ID: "993968777863",
   SAMRA_GCP_REGION: "us-east4",
   SAMRA_GCP_OPERATOR_ACCOUNT: "me@davidhaile.com",
   SAMRA_GCP_EXPECTED_SHA: "a".repeat(40),
@@ -77,7 +77,7 @@ test("validates exact production review inputs without authorizing a change", ()
     {
       projectId: "samra-pay-production",
       projectNumber: "382465561715",
-      organizationId: "614833350075",
+      organizationId: "993968777863",
       region: "us-east4",
       operator: "me@davidhaile.com",
       expectedSha: "a".repeat(40),
@@ -135,7 +135,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
         projectId: "samra-pay-production",
         projectNumber: "382465561715",
         lifecycleState: "ACTIVE",
-        parent: { type: "organization", id: "614833350075" },
+        parent: { type: "organization", id: "993968777863" },
         labels: {
           environment: "production",
           application: "samra-pay",
@@ -147,7 +147,7 @@ test("validates exact observed project, billing, and project-scoped budget", () 
     {
       projectId: "samra-pay-production",
       projectNumber: "382465561715",
-      organizationId: "614833350075",
+      organizationId: "993968777863",
       dataClassification: "customer-pii",
     },
   );
@@ -226,7 +226,7 @@ test("rejects project drift, disabled billing, and broad or mismatched budgets",
           projectId: "samra-pay-production",
           projectNumber: "382465561715",
           lifecycleState: "ACTIVE",
-          parent: { type: "organization", id: "614833350075" },
+          parent: { type: "organization", id: "993968777863" },
           labels: {
             environment: "staging",
             application: "samra-pay",

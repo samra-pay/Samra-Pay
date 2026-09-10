@@ -27,7 +27,7 @@ Cloud or DNS state changed: no
 Confirmed production boundary:
   - Project ID: samra-pay-production
   - Project number: 382465561715 (independently verified)
-  - Organization: 614833350075
+  - Organization: 993968777863
   - Region: us-east4
   - Data classification: customer-pii
   - Monthly budget alert: USD 25 with 50%, 90%, and 100% notifications
