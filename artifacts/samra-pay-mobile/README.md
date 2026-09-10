@@ -3,22 +3,89 @@
 The Expo application has one portable API boundary. It does not infer its API
 from the Metro host, a browser location, or a device address.
 
+## Local development prerequisites
+
+Use Cursor with the repository's Node 24 and pnpm 11.19.0. Run
+`pnpm --filter @workspace/samra-pay-mobile run check:expo` before a native build.
+The check uses the installed SDK's compatibility metadata offline; it does not
+upgrade packages or suppress compatibility failures. CI runs the same check.
+
+The supported set remains Expo 54 / React Native 0.81 / React 19.1. Expo Clipboard
+8 belongs to this SDK; independently upgrading it to 57 does not upgrade the
+rest of the native application. React type packages are deduplicated at 19.1
+to match the actual React runtime and Expo expectation across the workspace.
+Review the existing Expo-major dependency PRs as one compatible upgrade, with
+installed iOS/Android acceptance, rather than merging modules independently.
+
+September 10 Mac inspection found Cursor, Node 24, Xcode 26.5 and an iOS 26.0
+simulator runtime. CocoaPods 1.17.0 installed all native dependencies successfully.
+Xcode rejected the simulator destination because its required iOS 26.5 platform
+is not installed; native compilation and simulator launch remain blocked on
+Xcode Settings → Components. Android Studio, its SDK/emulator and Java were not
+found. Docker Desktop exists but its engine was stopped at the latest check.
+These observations are dated prerequisites, not native user acceptance.
+
+Use separate Dev/Test native identifiers and Auth0 Native Application clients.
+Saved shared-web SPA clients are not substitutes. Native Auth0 configuration
+still needs an authenticated administrator session and exact client readback.
+The client uses the approved customer-web proxy origin; never embed Google
+service-account credentials or grant mobile users invocation of the private API.
+Tester passwords, recovery and consent remain under each tester's control.
+
+### Native environment selection
+
+| Environment         | Application ID (iOS and Android) | Auth0 callback scheme |
+| ------------------- | -------------------------------- | --------------------- |
+| `dev`               | `com.samrapay.mobile.dev`        | `samrapaydevauth`     |
+| `test`              | `com.samrapay.mobile.test`       | `samrapaytestauth`    |
+| `staging` (default) | `com.samrapay.mobile.staging`    | `samrapayauth`        |
+
+`native-environments.json` is shared by Expo build configuration and the runtime
+adapter so their callback schemes cannot diverge. `app.config.js` is the Expo 54
+discovery entry point for the existing CommonJS implementation. A `.cjs` file
+alone is not discovered by that SDK. Unknown targets, including production, fail
+closed. With no explicit target and disabled auth, the existing mock preview is
+unchanged. Dev/Test apps can be installed alongside staging.
+
+Build a local Dev mock preview after installing the matching Xcode platform:
+
+```sh
+EXPO_PUBLIC_SAMRA_ENVIRONMENT=dev EXPO_PUBLIC_SAMRA_DATA_MODE=mock \
+EXPO_PUBLIC_SAMRA_AUTH_MODE=disabled \
+pnpm --filter @workspace/samra-pay-mobile run ios
+```
+
+Use `run android` after Android tooling is installed. For real sign-in, provide
+the complete public configuration below, select `dev` or `test`, and rebuild the
+native app. Expo Go does not support `react-native-auth0`. Register callback and
+logout URLs for the selected scheme, domain and application ID:
+
+```text
+<scheme>://<domain>/ios/<application-id>/callback
+<scheme>://<domain>/android/<application-id>/callback
+```
+
+Mock preview success is separate from authenticated shared Test acceptance.
+Never promote a bundle compiled for Dev into Test or staging without rebuilding
+and recording its public configuration and exact source revision.
+
 ## Public build configuration
 
-| Variable                       | Required               | Meaning                                   |
-| ------------------------------ | ---------------------- | ----------------------------------------- |
-| `EXPO_PUBLIC_SAMRA_DATA_MODE`  | No                     | `mock` (default) or `api`                 |
-| `EXPO_PUBLIC_SAMRA_API_ORIGIN` | In API mode            | Exact public API origin, normally HTTPS   |
-| `EXPO_PUBLIC_SAMRA_AUTH_MODE`  | In API mode            | `disabled` (default) or `auth0-native`    |
-| `EXPO_PUBLIC_AUTH0_DOMAIN`     | In `auth0-native` mode | Auth0 tenant/custom-domain hostname only  |
-| `EXPO_PUBLIC_AUTH0_CLIENT_ID`  | In `auth0-native` mode | Public Auth0 Native Application client ID |
-| `EXPO_PUBLIC_AUTH0_AUDIENCE`   | In `auth0-native` mode | Exact HTTPS Samra API identifier          |
+| Variable                        | Required               | Meaning                                   |
+| ------------------------------- | ---------------------- | ----------------------------------------- |
+| `EXPO_PUBLIC_SAMRA_ENVIRONMENT` | No                     | `dev`, `test`, or `staging` (default)     |
+| `EXPO_PUBLIC_SAMRA_DATA_MODE`   | No                     | `mock` (default) or `api`                 |
+| `EXPO_PUBLIC_SAMRA_API_ORIGIN`  | In API mode            | Exact public API origin, normally HTTPS   |
+| `EXPO_PUBLIC_SAMRA_AUTH_MODE`   | In API mode            | `disabled` (default) or `auth0-native`    |
+| `EXPO_PUBLIC_AUTH0_DOMAIN`      | In `auth0-native` mode | Auth0 tenant/custom-domain hostname only  |
+| `EXPO_PUBLIC_AUTH0_CLIENT_ID`   | In `auth0-native` mode | Public Auth0 Native Application client ID |
+| `EXPO_PUBLIC_AUTH0_AUDIENCE`    | In `auth0-native` mode | Exact HTTPS Samra API identifier          |
 
 Example controlled staging bundle:
 
 ```sh
 EXPO_PUBLIC_SAMRA_DATA_MODE=api \
-EXPO_PUBLIC_SAMRA_API_ORIGIN=https://samra-api.example.run.app \
+EXPO_PUBLIC_SAMRA_API_ORIGIN=https://samra-customer-web.example.run.app \
 EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native \
 EXPO_PUBLIC_AUTH0_DOMAIN=samra-staging.us.auth0.com \
 EXPO_PUBLIC_AUTH0_CLIENT_ID=<public-native-client-id> \

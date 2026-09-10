@@ -1,7 +1,13 @@
 import { createRequire } from "node:module";
-import { describe, expect, it } from "vitest";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { loadMobileRuntimeConfig } from "../lib/runtime-config";
 
 const require = createRequire(import.meta.url);
+const expoRequire = createRequire(require.resolve("expo/package.json"));
+const { getConfig } = expoRequire("@expo/config");
+const projectRoot = fileURLToPath(new URL("../", import.meta.url));
+afterEach(() => vi.unstubAllEnvs());
 const dynamicConfig = require("../app.config.cjs") as (() => Record<
   string,
   unknown
@@ -26,6 +32,71 @@ const NATIVE_ENVIRONMENT = Object.freeze({
 });
 
 describe("mobile Expo Auth0 build boundary", () => {
+  it("loads the native boundary through Expo's actual config discovery", () => {
+    for (const [key, value] of Object.entries(NATIVE_ENVIRONMENT))
+      vi.stubEnv(key, value);
+    vi.stubEnv("EXPO_PUBLIC_SAMRA_ENVIRONMENT", "test");
+    const result = getConfig(projectRoot);
+    expect(result.dynamicConfigPath).toMatch(/app\.config\.js$/);
+    expect(result.exp.ios.bundleIdentifier).toBe("com.samrapay.mobile.test");
+    expect(result.exp.plugins).toContainEqual([
+      "react-native-auth0",
+      {
+        domain: NATIVE_ENVIRONMENT.EXPO_PUBLIC_AUTH0_DOMAIN,
+        customScheme: "samrapaytestauth",
+      },
+    ]);
+  });
+
+  it.each([
+    ["dev", "com.samrapay.mobile.dev", "samrapaydevauth"],
+    ["test", "com.samrapay.mobile.test", "samrapaytestauth"],
+  ])(
+    "keeps %s native callbacks aligned with the running client",
+    (target, id, scheme) => {
+      const environment = {
+        ...NATIVE_ENVIRONMENT,
+        EXPO_PUBLIC_SAMRA_ENVIRONMENT: target,
+        EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+        EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://proxy.example.test",
+      };
+      const config = resolveExpoConfig(environment);
+      expect(config.ios.bundleIdentifier).toBe(id);
+      expect(config.android.package).toBe(id);
+      expect(config.plugins).toContainEqual([
+        "react-native-auth0",
+        {
+          domain: NATIVE_ENVIRONMENT.EXPO_PUBLIC_AUTH0_DOMAIN,
+          customScheme: scheme,
+        },
+      ]);
+      expect(loadMobileRuntimeConfig(environment).auth).toMatchObject({
+        customScheme: scheme,
+      });
+    },
+  );
+
+  it("allows an isolated Dev native mock build without loading Auth0", () => {
+    const config = resolveExpoConfig({ EXPO_PUBLIC_SAMRA_ENVIRONMENT: "dev" });
+    expect(config.ios.bundleIdentifier).toBe("com.samrapay.mobile.dev");
+    expect(config.plugins).not.toContainEqual(
+      expect.arrayContaining(["react-native-auth0"]),
+    );
+  });
+
+  it.each(["production", "development", "__proto__"])(
+    "rejects unsupported native target %s",
+    (target) => {
+      const environment = { EXPO_PUBLIC_SAMRA_ENVIRONMENT: target };
+      expect(() => resolveExpoConfig(environment)).toThrow(
+        /must be dev, test, or staging/,
+      );
+      expect(() => loadMobileRuntimeConfig(environment)).toThrow(
+        /must be dev, test, or staging/,
+      );
+    },
+  );
+
   it("keeps the default Expo Go-compatible build free of native Auth0", () => {
     const config = resolveExpoConfig({});
     expect(config.plugins).not.toContainEqual(
