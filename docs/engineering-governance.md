@@ -82,3 +82,10 @@ index, not another delivery board.
 Do not infer these decisions from vendor access, a working fixture, a green
 workflow, or a historical approval. Refresh the specific evidence needed for
 the next authorized task.
+
+## Delivery process decision — 2026-09-09
+
+David requires [Develop → Test → Stage → Deploy](development-delivery.md) for
+all subsequent application work and the release of already-open PRs. Preserve
+merge and release ownership, exact-candidate evidence, synthetic isolation and
+the existing readiness gates. Environment availability must be verified separately.

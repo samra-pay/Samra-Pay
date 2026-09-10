@@ -207,3 +207,9 @@ depends on an unresolved decision; continue unaffected authorized work.
   request.
 - Historical evidence remains immutable but must be labeled when it no longer
   describes the current architecture.
+
+## Governing delivery sequence
+
+All application work follows [Develop → Test → Stage → Deploy](development-delivery.md).
+PR #213 implements remaining Dev/Test database and session controls; its existence
+is not evidence of cloud deployment or user acceptance.

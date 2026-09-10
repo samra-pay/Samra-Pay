@@ -70,3 +70,10 @@ broader credentials.
 - Update governing documentation in the same PR when behavior, configuration,
   decisions, or capability status changes. Keep historical evidence dated.
 - End with what changed, why, validation, and the next required decision.
+
+## Required delivery sequence
+
+All application work follows [Develop → Test → Stage → Deploy](docs/development-delivery.md).
+Use the shared Dev/Test targets for affected runtime acceptance; preserve
+protected main, existing staging gates, and separate production authorization.
+Record exact versions and observed results. A merged PR is not a deployed release.

@@ -128,3 +128,23 @@ test("operator requires matching synthetic settings and a dedicated environment-
       }),
     );
 });
+
+test("synthetic funding accepts bounded minor units and rejects real provider inputs", () => {
+  const funding = {
+    environment: "test",
+    operation: "fund-synthetic-account",
+    operatorAlias: "operator_fixture",
+    issuer: manifest.issuer,
+    subject: "auth0|fixture",
+    amountMinor: "50000",
+  };
+  assert.equal(
+    parseSharedTestManifest(funding).operation,
+    "fund-synthetic-account",
+  );
+  for (const amountMinor of ["0", "-1", "1.5", "100001", "0500", 50000])
+    assert.throws(() => parseSharedTestManifest({ ...funding, amountMinor }));
+  assert.throws(() =>
+    parseSharedTestManifest({ ...funding, provider: "crossmint" }),
+  );
+});
