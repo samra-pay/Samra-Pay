@@ -62,9 +62,17 @@ home directory, excluding credential values.
 
 ## September 10 verification status
 
-Policies and channels were saved and read back. Both Pino-level and ERROR drill
-logs were ingested. Incident-list queries returned no incident records and inbox
-receipt has not been confirmed. A final bounded drill followed the explicit
-`OPENED` notification setting. **Delivery remains unverified** until a matching
-incident and David's inbox acknowledgement are recorded. Do not close this
-operational prerequisite from configuration or log ingestion alone.
+Policies and channels were saved and read back. Harmless global drill logs were
+ingested. Final incident readback now confirms both policies opened an incident:
+
+| Environment | Incident | Open time (UTC) |
+| --- | --- | --- |
+| Dev | `0.ocgxpm7k624x` | 2026-09-10 16:17:38 |
+| Test | `0.ocgx8zbc7byk` | 2026-09-10 15:57:24 |
+
+Both incidents match the exact policy and global drill resource. The Test
+incident predates the final 16:16 drill; do not infer that the final configuration
+change caused it. Earlier empty incident-list responses did not establish an
+absence of an incident. **Cloud incident creation is verified; inbox delivery
+remains unverified** until David confirms receipt. See the
+[dated alert evidence](../../docs/operations/evidence/2026-09-10-dev-test-alerts.json).

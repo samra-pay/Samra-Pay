@@ -32,5 +32,5 @@ then repeat runtime access, auth redirects, private API denial, database TLS,
 secret grants and safe restart/stop proof. Preserve Production-last ordering.
 
 Human two-user sign-in, synthetic onboarding/ledger UAT and notification inbox
-delivery remain open. Local Docker ledger proof is separate. Native setup
+delivery remain open. Both native cloud alert incidents are verified. Local Docker ledger proof is separate. Native setup
 continues in #215. David retains merge and production authority.
