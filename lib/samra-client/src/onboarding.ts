@@ -323,7 +323,7 @@ const JOURNEY_COPY: Readonly<
     eyebrow: "Onboarding complete",
     title: "Your Samra account is ready",
     description:
-      "All required onboarding gates have been completed and financial capabilities may now be resolved by the server.",
+      "Your account setup is complete. Open your account to see the features available to you.",
     statusTone: "success",
   },
   restricted: {
@@ -374,6 +374,9 @@ function resolveJourneyStage(
   if (wallet?.state === "provisioning" || wallet?.state === "created") {
     return "wallet_provisioning";
   }
+  // A retained wallet snapshot must not hide the server's later activation.
+  // Restrictions and unresolved wallet results still take precedence.
+  if (onboarding.state === "activated") return "complete";
   if (wallet?.state === "ready" || onboarding.state === "wallet_ready") {
     return "wallet_ready";
   }
@@ -394,7 +397,6 @@ function resolveJourneyStage(
     if (identityCase.state === "error") return "identity_error";
     return "identity_pending";
   }
-  if (onboarding.state === "activated") return "complete";
   return "account_setup";
 }
 

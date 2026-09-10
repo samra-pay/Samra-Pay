@@ -3,9 +3,12 @@
 Status, September 10: the approved **Dev/Test Native client configuration is
 saved and read-back verified**. See the [dated public evidence](evidence/2026-09-10-native-dev-test-auth0.json)
 and [exact build configuration](../../artifacts/samra-pay-mobile/README.md).
-No installed native login or user acceptance has passed. The iOS build is blocked
-by the missing matching Xcode platform; Android tooling is absent. Shared cloud
-runtime sessions are paused while the separate environment task owns migration.
+No installed native login or user acceptance has passed. The matching iOS 26.5
+platform and the base Java/Android tools are now installed. iOS compilation is
+bounded by available disk space; Android still needs NDK, CMake and emulator
+packages. The organization migration and handoff are complete. Dev/Test remain
+paused pending the reviewed application rollout and participant setup. Track
+current build and participant results in [session #216](https://github.com/samra-pay/Samra-Pay/issues/216).
 
 The staging procedure below remains preparation only. The default code boundary
 is disabled. This runbook does not grant authorization beyond the explicitly
@@ -45,6 +48,13 @@ token, resolves the durable identity binding, and owns customer authorization,
 onboarding, KYC state, wallet state, financial capability, ledger, and audit
 truth. Mobile never accepts a customer ID, KYC state, wallet state, or balance
 as authority.
+
+Each mobile account session receives a separate customer query cache. Logout
+and failed current credentials clear cached queries and mutations and reset
+mounted screen state, including recipient and transfer drafts. Late results
+remain isolated in the old cache. A token lookup from an ended session cannot
+authorize a request or sign out a newer account. These local boundaries do not
+replace the server's identity binding and account authorization checks.
 
 ## Required inventory
 

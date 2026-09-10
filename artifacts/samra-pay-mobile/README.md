@@ -17,14 +17,13 @@ to match the actual React runtime and Expo expectation across the workspace.
 Review the existing Expo-major dependency PRs as one compatible upgrade, with
 installed iOS/Android acceptance, rather than merging modules independently.
 
-September 10 Mac inspection found Cursor, Node 24, Xcode 26.5 and an iOS 26.0
-simulator runtime. CocoaPods 1.17.0 installed all native dependencies successfully.
-Xcode rejected the simulator destination because its required iOS 26.5 platform
-is not installed; native compilation and simulator launch remain blocked on
-Xcode Settings → Components. Android Studio, its SDK/emulator and Java were not
-found. Docker subsequently ran the separate local PostgreSQL/API stack and
-synthetic ledger checks; that result does not establish native compilation.
-These observations are dated prerequisites, not native user acceptance.
+September 10 Mac setup includes Node 24, Xcode 26.5, the matching iOS 26.5
+simulator platform, and installed CocoaPods dependencies. Java 17, Android API
+36, Build Tools 36 and ADB are installed; Android NDK, CMake and emulator
+packages remain pending. iOS compilation is bounded by available disk space.
+No installed native login or participant acceptance has passed. Track the
+dated build results and remaining prerequisites in
+[session #216](https://github.com/samra-pay/Samra-Pay/issues/216).
 
 Use separate Dev/Test native identifiers and Auth0 Native Application clients.
 Saved shared-web SPA clients are not substitutes. On September 10, the approved
@@ -112,7 +111,8 @@ pnpm --filter @workspace/samra-pay-mobile run build
 
 For an installed Test client, use the verified public configuration below after
 the Xcode platform is available and the Test runtime owner opens a bounded
-session. The shared runtimes remain paused during the separate cloud migration.
+session. The organization migration is complete; shared runtimes remain paused
+pending the reviewed application rollout and participant setup.
 This command builds and launches locally; it does not activate a cloud session:
 
 ```sh
