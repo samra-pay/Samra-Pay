@@ -18,7 +18,8 @@
     "bootstrap": "samra-db-bootstrap-dev-bznhp",
     "migrate": "samra-db-migrate-dev-xwhh7",
     "audit-runtime": "samra-db-audit-runtime-dev-lw4lx",
-    "audit-reader": "samra-db-audit-reader-dev-7j57f"
+    "audit-reader": "samra-db-audit-reader-dev-7j57f",
+    "drain": "samra-db-drain-dev-nz4nn"
   },
   "databaseJobsResult": "all-passed",
   "secretVersions": {
@@ -53,7 +54,7 @@
   },
   "browserCheck": "Login route rendered invitation notice and redirected to Auth0 application Samra One - Web - Development; no credentials entered.",
   "apiReadiness": "passed-on-recorded-revision",
-  "sessionShutdownRestart": "not-yet-run",
+  "sessionShutdownRestart": "drain-passed-shutdown-in-progress",
   "functionalAcceptance": false,
   "testEnvironment": "not-activated",
   "remaining": [
@@ -66,5 +67,13 @@
     "combinedMonthlyPlanningUsd": 50,
     "hardCap": false
   },
-  "productionChanges": false
+  "productionChanges": false,
+  "protectedMainMerge": {
+    "pr": 213,
+    "commit": "58122e04efcd706f1b6b79d62444da1fe192f3de",
+    "mergedAt": "2026-09-10T15:06:28Z",
+    "includesAppSourceAsParent": true,
+    "treeMatchesAppSource": true
+  },
+  "sessionOperatorSourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc"
 }
