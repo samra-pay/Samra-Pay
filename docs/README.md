@@ -22,25 +22,34 @@ verified the two existing providers. The September 6 [controller record](operati
 adds verified promotion/rollback, zero-traffic and image-verifier IAM foundations,
 the missing migration environment and a dated backup-freshness observation.
 Migration, revision-probe and operational acceptance remain open. The release
-freeze remains active pending the remaining cutover and
-release evidence.
+freeze remains active for the gated Staging/Production releases pending the
+remaining cutover and release evidence. Shared Dev/Test follows the separately
+authorized delivery process below.
 
-## Current delivery priority: shared Dev and Test
+## Current delivery priority: local Dev and shared Test
 
-David confirmed on 2026-09-09 that both environments must be shared cloud
-runtimes. Local Compose is optional developer tooling, not delivery of shared
-Dev. The [environment plan](../deploy/gcp/dev-test-environments.md) records the
-two isolated projects, verified $50 combined budget, private PostgreSQL instances
-(currently stopped), and remaining runtime/identity/account-provisioning work.
-Both environments now have verified build IAM and successful API/customer-web/
-migration image publication; see the dated
-[build read-back](operations/evidence/2026-09-09-dev-test-build-publication.json).
-These initial images are pinned to the earlier source recorded there and are
-not the final tester-setup candidate. Neither environment is usable yet. See the dated
-[foundation read-back](operations/evidence/2026-09-09-dev-test-foundation.json).
-The [project read-back](operations/evidence/2026-09-09-dev-test-projects.json)
-proves project creation only. Delivery requires actual URLs and demonstrated
-login, account isolation, synthetic-money movement and ledger results.
+Use local Mac development for the daily build/test loop and shared Test for
+stable invited-user acceptance. Shared Cloud Dev remains available for bounded
+integration sessions. Both isolated cloud environments are deployed and passed
+readiness, database privilege checks, login redirects, anonymous data denials,
+and restart/shutdown checks. They are paused with data retained under the
+combined $50 planning allowance. See the [environment inventory](../deploy/gcp/dev-test-environments.md),
+[Dev evidence](operations/evidence/2026-09-10-dev-runtime-activation.json) and
+[Test evidence](operations/evidence/2026-09-10-test-runtime-activation.json).
+
+The existing Dev/Test projects now belong to company organization `993968777863`;
+the project IDs, application revisions and billing account were preserved. The
+[September 10 handoff](operations/dev-test-migration-handoff-2026-09-10.md) records
+the post-move checks and returned runtime control.
+
+Human sign-in, account isolation and synthetic ledger UAT remain unverified.
+The separate Auth0 Native clients and callbacks are saved and read back in
+[PR #215](https://github.com/samra-pay/Samra-Pay/pull/215), now merged. iOS 26.5 and
+base Android tools are installed; native compilation and installed-device
+acceptance remain incomplete. [PR #217](https://github.com/samra-pay/Samra-Pay/pull/217)
+fixes synthetic funded-account activation and updates test consent notices; its
+application changes still need Dev/Test deployment and participant acceptance.
+Saved runtime/error-alert configuration is not acceptance or production activation.
 
 ## Active milestone: Alpha Release 1
 
@@ -211,5 +220,6 @@ depends on an unresolved decision; continue unaffected authorized work.
 ## Governing delivery sequence
 
 All application work follows [Develop → Test → Stage → Deploy](development-delivery.md).
-PR #213 implements remaining Dev/Test database and session controls; its existence
-is not evidence of cloud deployment or user acceptance.
+PR #213 is merged. PR #214 records the actual Dev/Test deployment and session
+proof. Follow the dated evidence for runtime state; human acceptance remains
+a separate gate.

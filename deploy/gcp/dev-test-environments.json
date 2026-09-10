@@ -1,9 +1,11 @@
 {
   "version": 1,
-  "status": "foundations-created-runtime-pending",
+  "status": "runtimes-deployed-paused-human-acceptance-pending",
   "sourceBaseline": "1c2d6853385c7cda3dea94e4131b0233c53f7c35",
   "owner": "David Haile",
   "organizationIdFromExistingFoundation": "614833350075",
+  "currentOrganizationId": "993968777863",
+  "organizationReadback": "docs/operations/evidence/2026-09-10-dev-test-handoff-readback.json",
   "region": "us-east4",
   "environments": {
     "dev": {
@@ -29,7 +31,7 @@
         ],
         "activationPolicy": "NEVER",
         "observedState": "STOPPED",
-        "schemaMigrated": false
+        "schemaMigrated": true
       },
       "network": {
         "name": "samra-dev-vpc",
@@ -91,7 +93,7 @@
         "maxInstances": 1,
         "customerDataMode": "api",
         "apiProxyAuth": "cloud-run-iam",
-        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary",
+        "browserIngressDecision": "public-login-shell-private-api-auth0-protected-data",
         "runtimeEnvironment": {
           "SAMRA_PUBLIC_DATA_MODE": "api",
           "SAMRA_PUBLIC_AUTH0_DOMAIN": "dev-40h1kaj5488jqctu.us.auth0.com",
@@ -129,12 +131,12 @@
       "alertThresholdsPercent": [50, 80, 100],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
-      "deploymentBlocked": true,
+      "deploymentBlocked": false,
       "projectNumber": "829811168658",
       "billingEnabled": true,
       "initialRuntime": "shared-cloud-run",
       "composeFile": "deploy/dev/compose.yaml",
-      "sharedLogin": false,
+      "sharedLogin": true,
       "cloudDatabaseCount": 1,
       "plannedCloudDatabaseCount": 1,
       "plannedSharedLogin": true,
@@ -142,7 +144,7 @@
       "budgetScope": "combined-dev-and-test",
       "plannedMonthlySessionHours": 150,
       "sessionControl": {
-        "status": "implementation-required-before-runtime",
+        "status": "start-stop-restart-stop-verified",
         "outsideSessions": "stop database; close app access and stop API after draining pending work",
         "persistentDataRetained": true,
         "stopRequiresDrainedTransfers": true,
@@ -157,7 +159,10 @@
         "sourceBucket": "gs://samra-pay-dev_cloudbuild",
         "config": "deploy/gcp/cloudbuild.dev-test.yaml",
         "evidence": "docs/operations/evidence/2026-09-09-dev-test-build-publication.json"
-      }
+      },
+      "functionalAcceptance": false,
+      "sharedLoginStatus": "auth0-redirect-verified-no-human-login",
+      "runtimeEvidence": "docs/operations/evidence/2026-09-10-dev-runtime-activation.json"
     },
     "test": {
       "projectId": "samra-pay-test",
@@ -183,7 +188,7 @@
         ],
         "activationPolicy": "NEVER",
         "observedState": "STOPPED",
-        "schemaMigrated": false
+        "schemaMigrated": true
       },
       "network": {
         "name": "samra-test-vpc",
@@ -245,7 +250,7 @@
         "maxInstances": 1,
         "customerDataMode": "api",
         "apiProxyAuth": "cloud-run-iam",
-        "browserIngressDecision": "pending-reviewed-test-URL-and-access-boundary",
+        "browserIngressDecision": "public-login-shell-private-api-auth0-protected-data",
         "runtimeEnvironment": {
           "SAMRA_PUBLIC_DATA_MODE": "api",
           "SAMRA_PUBLIC_AUTH0_DOMAIN": "dev-40h1kaj5488jqctu.us.auth0.com",
@@ -283,13 +288,13 @@
       "alertThresholdsPercent": [50, 80, 100],
       "budgetType": "alerts-only-not-a-hard-cap",
       "initialReviewAfterDays": 7,
-      "deploymentBlocked": true,
+      "deploymentBlocked": false,
       "projectNumber": "378050809796",
       "billingEnabled": true,
       "budgetScope": "combined-dev-and-test",
       "plannedMonthlySessionHours": 50,
       "sessionControl": {
-        "status": "implementation-required-before-runtime",
+        "status": "start-stop-restart-stop-verified",
         "outsideSessions": "stop database; close app access and stop API after draining pending work",
         "persistentDataRetained": true,
         "stopRequiresDrainedTransfers": true,
@@ -305,7 +310,11 @@
         "sourceBucket": "gs://samra-pay-test_cloudbuild",
         "config": "deploy/gcp/cloudbuild.dev-test.yaml",
         "evidence": "docs/operations/evidence/2026-09-09-dev-test-build-publication.json"
-      }
+      },
+      "functionalAcceptance": false,
+      "sharedLogin": true,
+      "sharedLoginStatus": "auth0-redirect-verified-no-human-login",
+      "runtimeEvidence": "docs/operations/evidence/2026-09-10-test-runtime-activation.json"
     },
     "staging": {
       "projectId": "samra-pay-staging",
@@ -349,5 +358,6 @@
     "forecastSpendThresholds": [1.0],
     "hardCap": false,
     "status": "created-readback-verified-2026-09-09"
-  }
+  },
+  "observedAt": "2026-09-10"
 }

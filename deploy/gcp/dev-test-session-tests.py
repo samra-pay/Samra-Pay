@@ -23,6 +23,8 @@ class Sessions(unittest.TestCase):
                 'status': {'latestReadyRevisionName': name + '-00001', 'traffic': [{'percent': 100, 'revisionName': name + '-00001'}]},
             }
             self.receipt['services'][key] = copy.deepcopy(self.services[name])
+        self.services['samra-customer-web-test']['metadata']['annotations']['run.googleapis.com/invoker-iam-disabled'] = 'true'
+        self.invoker_policy = {'bindings': [{'role': 'roles/run.invoker', 'members': ['serviceAccount:samra-customer-web-test@samra-pay-test.iam.gserviceaccount.com']}]}
         self.calls = []
         self.policy = 'ALWAYS'
         self.drained = False
@@ -31,6 +33,8 @@ class Sessions(unittest.TestCase):
         self.calls.append(args)
         if args[:3] == ('run', 'services', 'describe'):
             return copy.deepcopy(self.services[args[3]])
+        if args[:3] == ('run', 'services', 'get-iam-policy'):
+            return copy.deepcopy(self.invoker_policy)
         if args[:3] == ('run', 'services', 'update'):
             mode = args[-1].split('=')[1]
             self.services[args[3]]['metadata']['annotations']['run.googleapis.com/manualInstanceCount'] = mode
@@ -47,9 +51,9 @@ class Sessions(unittest.TestCase):
         self.assertFalse(any(c[:4] == ('run', 'services', 'update', 'samra-api-test') for c in self.calls))
         self.drained = True
 
-    def run_session(self, action, drain=None, ready=None):
+    def run_session(self, action, drain=None, ready=None, web_ready=None):
         with patch.object(activation, 'gcloud', side_effect=self.cloud), patch.object(activation.time, 'sleep') as sleep:
-            activation.control_session(action, 'test', {'projectNumber': '378050809796'}, self.receipt, lambda: None, drain or self.drain, ready or (lambda *_: None))
+            activation.control_session(action, 'test', {'projectNumber': '378050809796'}, self.receipt, lambda: None, drain or self.drain, ready or (lambda *_: None), web_ready or (lambda *_: None))
             if action == 'stop': sleep.assert_called_once_with(65)
 
     def test_successful_stop_closes_drains_then_stops_compute(self):
@@ -77,6 +81,39 @@ class Sessions(unittest.TestCase):
             self.assertEqual(self.services['samra-customer-web-test']['metadata']['annotations']['run.googleapis.com/manualInstanceCount'], '0')
         self.run_session('start', ready=ready)
         self.assertEqual(self.receipt['sessions'][-1]['status'], 'passed')
+
+    def test_missing_public_shell_setting_blocks_start_with_web_closed(self):
+        del self.services['samra-customer-web-test']['metadata']['annotations']['run.googleapis.com/invoker-iam-disabled']
+        with self.assertRaisesRegex(AssertionError, 'login shell'):
+            self.run_session('start')
+        self.assertEqual(self.services['samra-customer-web-test']['metadata']['annotations']['run.googleapis.com/manualInstanceCount'], '0')
+        self.assertFalse(any(c[:2] == ('sql', 'instances') for c in self.calls))
+
+    def test_web_http_failure_closes_shell_and_records_blocker(self):
+        def fail(url):
+            self.assertEqual(url, 'https://samra-customer-web-test-378050809796.us-east4.run.app')
+            raise RuntimeError('HTTP 403')
+        with self.assertRaises(RuntimeError): self.run_session('start', web_ready=fail)
+        self.assertEqual(self.services['samra-customer-web-test']['metadata']['annotations']['run.googleapis.com/manualInstanceCount'], '0')
+        self.assertEqual(self.receipt['sessions'][-1]['status'], 'blocked-recovery-required')
+        self.assertEqual(self.services['samra-api-test']['metadata']['annotations']['run.googleapis.com/manualInstanceCount'], '1')
+        self.assertEqual(self.policy, 'ALWAYS')
+
+    def test_public_api_blocks_start(self):
+        self.services['samra-api-test']['metadata']['annotations']['run.googleapis.com/invoker-iam-disabled'] = 'true'
+        with self.assertRaisesRegex(AssertionError, 'API must enforce'):
+            self.run_session('start')
+
+    def test_unexpected_or_conditional_api_invocation_blocks_start(self):
+        for member in ['allUsers', 'allAuthenticatedUsers', 'user:synthetic@example.invalid']:
+            with self.subTest(member=member):
+                self.invoker_policy['bindings'][0]['members'].append(member)
+                with self.assertRaisesRegex(AssertionError, 'invocation access'):
+                    self.run_session('start')
+                self.invoker_policy['bindings'][0]['members'].pop()
+        self.invoker_policy['bindings'][0]['condition'] = {'expression': 'false'}
+        with self.assertRaisesRegex(AssertionError, 'invocation access'):
+            self.run_session('start')
 
     def test_tagged_traffic_rejected_before_mutation(self):
         self.services['samra-customer-web-test']['status']['traffic'][0]['tag'] = 'preview'

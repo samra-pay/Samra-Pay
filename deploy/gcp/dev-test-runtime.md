@@ -57,18 +57,34 @@ customer web service identity may invoke its environment's API. The web shell
 is reachable for login; all customer API data requires Auth0 plus Samra admission.
 Never make the API public or grant testers direct API invocation.
 
+The web shell uses Cloud Run's `--no-invoker-iam-check` setting, which Google
+supports for public services under domain-restricted IAM sharing. The API keeps
+its IAM check enabled and grants invocation only to its own web identity. Do not
+change organization sharing policies. The operator reads these settings and API
+bindings back before reporting deployment success or starting a session. The
+older `--allow-unauthenticated` flag can leave a service private while returning
+success with a warning; this was observed in Dev on September 10. See
+[Google's public-service guidance](https://docs.cloud.google.com/run/docs/authenticating/public).
+
 Use configuration in `dev-test-environments.json`; all three provider modes
 remain fake, internal operations stay disabled, and only the exact frontend
 origin is allowed. API CPU remains allocated while one manually scaled instance
 runs, so the existing synthetic worker can finish asynchronous work. Both services
 are deployed at manual scale zero. An explicit `start` opens the session only
 after the API passes readiness on the recorded revision.
+The login route must then return HTTP 200 HTML anonymously. A failed web probe
+closes the shell again and records a blocker, leaving API/database available for
+safe recovery. This probe does not claim an authenticated customer journey passed.
 
 Start: database ready, API manual scale one and readiness verified, then web.
 Stop: web manual scale zero, allow in-flight requests to finish, run `drain`
 using the read-only role, API manual scale zero, database activation NEVER.
 A failed drain leaves API/database running for recovery and records a blocker;
 never clear queues or alter transfers to force a shutdown. Record session hours.
+
+Native [runtime error alerts](dev-test-monitoring.md) notify David at the
+confirmed support inbox. Check the matching cloud incident and obtain inbox
+acknowledgement during acceptance; a saved policy alone is not a passed drill.
 
 The controller checks recorded image digests and revisions before changing
 scaling. It rejects split traffic and revision tags because manual zero does not
