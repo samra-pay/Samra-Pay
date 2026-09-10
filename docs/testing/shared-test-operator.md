@@ -156,6 +156,14 @@ server authorization. A ready wallet alone does not show this completed-account
 action. Confirm the displayed synthetic balance and return after logout using
 the same account; do not infer either result from the operator receipt.
 
+For the account-isolation case, sign out of account A and sign in as account B
+on the same device. Check that A's cached account, wallet, activity and recipient
+drafts never appear for B, including after delayed requests complete. Web and
+native replace their customer query cache between sessions. Native also resets
+mounted screen state and rejects obsolete token lookups; a failed Auth0 logout
+still closes local access. Local mocked-provider tests cover these transitions,
+but each installed client still requires actual participant verification.
+
 It does not accept customer or wallet consent, create a provider wallet, or claim
 real KYC approval. Additional top-ups/resetting balances require a reviewed fixture
 change. Do not write directly to materialized balances.
