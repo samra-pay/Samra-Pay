@@ -1,31 +1,35 @@
 # Separate Dev, Test, Staging and Production
 
-Status: Dev and Test projects created and read back on 2026-09-09; billing
-linked and combined $50 monthly budget verified. Private PostgreSQL instances
-and databases are created; both instances are STOPPED with activation NEVER.
-Auth0 Dev/Test clients, distinct audiences and exact callback/logout origins are saved and read back.
-Build-only IAM is applied and both projects successfully published the API,
-customer web and migration images from `ed2f4459d82434949ac72111f80c1840b168a165`.
-See the [image publication read-back](../../docs/operations/evidence/2026-09-09-dev-test-build-publication.json).
-These initial images predate the integration of tester setup from PR #211;
-user testing requires a final reviewed candidate containing that setup.
-Schema migrations, credentials and application deployments are pending. No usable app URL is claimed.
-See the [Auth0 read-back](../../docs/operations/evidence/2026-09-09-dev-test-auth0.json).
+Status September 10: both isolated runtimes are deployed with private migrated
+PostgreSQL, least-privilege roles and numbered secret versions. Both passed
+readiness, public login shell, actual Auth0 redirect, anonymous data denial,
+private API denial and start → stop → restart → stop. They are currently paused
+with data retained under the $50 combined monthly planning allowance.
+
+[Dev evidence](../../docs/operations/evidence/2026-09-10-dev-runtime-activation.json)
+and [Test evidence](../../docs/operations/evidence/2026-09-10-test-runtime-activation.json)
+record identical application image digests, exact source, job executions and
+session times. Real tester login, account isolation, synthetic transactions and
+ledger acceptance remain pending. [Native error alerts](dev-test-monitoring.md)
+are configured; matching logs alone do not prove inbox delivery.
+
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
 Dated [foundation read-back](../../docs/operations/evidence/2026-09-09-dev-test-foundation.json).
 Local backend implementation: [Dev Compose](../dev/README.md).
 
 ## Delivery order
 
-1. Shared Dev: independent GCP project/database, authenticated customer web and
-   fake providers for daily development. The local Compose stack is optional.
+1. Local Mac Dev: primary daily build/test loop in Cursor using the existing
+   Compose and native clients. Shared Cloud Dev provides bounded integration
+   sessions when cloud/Auth0 behavior needs verification.
 2. Shared Test/UAT: separate project/database and Auth0 client/audience, invited
    synthetic testers and stable, exact-revision user sessions.
 3. Staging: preserve production-like exact-candidate release rehearsal.
 4. Production: preserve existing approval and readiness gates.
 
-David corrected the local-only Dev assumption on 2026-09-09. Both shared
-runtimes are the active delivery priority. Dev project `samra-pay-dev`
+Both shared runtimes were requested on September 9 and activated September 10.
+The September 10 delivery priority makes local Mac development primary while
+retaining stable shared Test and optional bounded Cloud Dev. Dev project `samra-pay-dev`
 (`829811168658`) and Test project `samra-pay-test` (`378050809796`) were created
 in existing organization `614833350075`, then read back as ACTIVE with separate
 environment labels and synthetic data classification. Both now have billing

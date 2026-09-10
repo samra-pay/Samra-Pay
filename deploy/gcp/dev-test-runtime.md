@@ -82,6 +82,10 @@ using the read-only role, API manual scale zero, database activation NEVER.
 A failed drain leaves API/database running for recovery and records a blocker;
 never clear queues or alter transfers to force a shutdown. Record session hours.
 
+Native [runtime error alerts](dev-test-monitoring.md) notify David at the
+confirmed support inbox. Check the matching cloud incident and obtain inbox
+acknowledgement during acceptance; a saved policy alone is not a passed drill.
+
 The controller checks recorded image digests and revisions before changing
 scaling. It rejects split traffic and revision tags because manual zero does not
 disable tagged URLs. See [Cloud Run manual scaling](https://docs.cloud.google.com/run/docs/configuring/services/manual-scaling).

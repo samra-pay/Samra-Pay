@@ -1,12 +1,15 @@
 # Open work delivery inventory — 2026-09-10
 
 Owner: David Haile. Live GitHub open-PR inventory inspected September 10.
+PR #213 merged at 15:06 UTC; its runtime source is unchanged in protected main.
+PR #214 carries the access correction and dated activation evidence.
 This assigns the next required acceptance path; it does not assert existing PR
 contents were fully reviewed, merged, deployed or accepted.
 
 | Open PRs | Affected work | Next delivery requirement |
 | --- | --- | --- |
-| #213 | Shared Dev/Test runtimes, fixtures and delivery process | Dev private database/privilege/session proof, then reviewed Test deployment and real two-user acceptance |
+| #214 (follows merged #213) | Shared Dev/Test access verification and activation evidence | Preserve exact image/operator versions; deployment/session proof completed; real two-user acceptance and alert delivery remain |
+| #215 | Native SDK compatibility and Dev/Test callback isolation | Local custom build, installed Dev/Test auth acceptance, then staging; no Expo-major upgrade |
 | #194 | Returning customer account access | Rebase/review current main; Dev login/resume/logout; Test repeat login, isolation and pending KYC |
 | #190 | Persona hosted inquiry | Synthetic Dev/Test onboarding first; real Persona activation remains blocked on company/provider prerequisites |
 | #193, #156 | Personal funding and customer-controlled wallets | Dev/Test idempotency, provider-failure and ownership tests; production provider acceptance and separate funding authorization remain required |
@@ -23,3 +26,5 @@ contents were fully reviewed, merged, deployed or accepted.
 All application candidates then pass the existing Staging rehearsal and separate
 Production authorization. No PR in this inventory is implicitly approved to merge.
 Keep the existing GitHub issues/Project and user-test scenarios as the record.
+
+The first facilitated session is tracked in [issue #216](https://github.com/samra-pay/Samra-Pay/issues/216). Participant execution is blocked until the two testers and private sign-in are available; preserve failures and append retests.

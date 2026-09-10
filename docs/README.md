@@ -25,22 +25,21 @@ Migration, revision-probe and operational acceptance remain open. The release
 freeze remains active pending the remaining cutover and
 release evidence.
 
-## Current delivery priority: shared Dev and Test
+## Current delivery priority: local Dev and shared Test
 
-David confirmed on 2026-09-09 that both environments must be shared cloud
-runtimes. Local Compose is optional developer tooling, not delivery of shared
-Dev. The [environment plan](../deploy/gcp/dev-test-environments.md) records the
-two isolated projects, verified $50 combined budget, private PostgreSQL instances
-(currently stopped), and remaining runtime/identity/account-provisioning work.
-Both environments now have verified build IAM and successful API/customer-web/
-migration image publication; see the dated
-[build read-back](operations/evidence/2026-09-09-dev-test-build-publication.json).
-These initial images are pinned to the earlier source recorded there and are
-not the final tester-setup candidate. Neither environment is usable yet. See the dated
-[foundation read-back](operations/evidence/2026-09-09-dev-test-foundation.json).
-The [project read-back](operations/evidence/2026-09-09-dev-test-projects.json)
-proves project creation only. Delivery requires actual URLs and demonstrated
-login, account isolation, synthetic-money movement and ledger results.
+Use local Mac development for the daily build/test loop and shared Test for
+stable invited-user acceptance. Shared Cloud Dev remains available for bounded
+integration sessions. Both isolated cloud environments are deployed and passed
+readiness, database privilege checks, login redirects, anonymous data denials,
+and restart/shutdown checks. They are paused with data retained under the
+combined $50 planning allowance. See the [environment inventory](../deploy/gcp/dev-test-environments.md),
+[Dev evidence](operations/evidence/2026-09-10-dev-runtime-activation.json) and
+[Test evidence](operations/evidence/2026-09-10-test-runtime-activation.json).
+
+Human sign-in, account isolation and synthetic ledger UAT remain unverified.
+Native mobile also requires compatible local platform tooling and configured
+Auth0 Native clients. Saved runtime/error-alert configuration is not acceptance
+or production activation.
 
 ## Active milestone: Alpha Release 1
 
@@ -211,5 +210,6 @@ depends on an unresolved decision; continue unaffected authorized work.
 ## Governing delivery sequence
 
 All application work follows [Develop → Test → Stage → Deploy](development-delivery.md).
-PR #213 implements remaining Dev/Test database and session controls; its existence
-is not evidence of cloud deployment or user acceptance.
+PR #213 is merged. PR #214 records the actual Dev/Test deployment and session
+proof. Follow the dated evidence for runtime state; human acceptance remains
+a separate gate.

@@ -39,8 +39,8 @@ test("Dev explicitly migrates and seeds before the persistent API starts", () =>
   assert.match(workflow, /run: bash deploy\/dev\/smoke.sh/);
   assert.equal(workflow.match(/"deploy\/dev\/\*\*"/g)?.length, 2);
 });
-test("shared Test is isolated, authenticated, fake-provider only and not activated", () => {
-  assert.equal(plan.status, "foundations-created-runtime-pending");
+test("shared Test is isolated, authenticated, fake-provider only with human acceptance still pending", () => {
+  assert.equal(plan.status, "runtimes-deployed-paused-human-acceptance-pending");
   const envs = plan.environments;
   assert.equal(new Set(Object.values(envs).map((e) => e.projectId)).size, 4);
   assert.equal(envs.dev.cloudDatabaseCount, 1);
@@ -59,7 +59,9 @@ test("shared Test is isolated, authenticated, fake-provider only and not activat
   }
   assert.equal(plan.budget.amountUsd, 50);
   assert.equal(plan.budget.hardCap, false);
-  assert.equal(envs.test.deploymentBlocked, true);
+  assert.equal(envs.test.deploymentBlocked, false);
+  assert.equal(envs.test.functionalAcceptance, false);
+  assert.equal(envs.dev.functionalAcceptance, false);
   assert.equal(envs.test.database.publicIp, false);
   assert.equal(envs.test.api.customerAuthentication, "auth0");
   assert.equal(envs.test.api.runtimeEnvironment.NODE_ENV, "production");

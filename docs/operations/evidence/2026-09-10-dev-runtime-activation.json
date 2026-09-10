@@ -19,7 +19,7 @@
     "migrate": "samra-db-migrate-dev-xwhh7",
     "audit-runtime": "samra-db-audit-runtime-dev-lw4lx",
     "audit-reader": "samra-db-audit-reader-dev-7j57f",
-    "drain": "samra-db-drain-dev-nz4nn"
+    "drain": "samra-db-drain-dev-d6b2r"
   },
   "databaseJobsResult": "all-passed",
   "secretVersions": {
@@ -50,18 +50,22 @@
     "webRoot": 200,
     "publicRuntimeConfig": 200,
     "onboardingWithoutAuth0": 401,
-    "directApiWithoutCloudIam": 403
+    "directApiWithoutCloudIam": 403,
+    "login": 200,
+    "meWithoutAuth0": 401,
+    "accountsWithoutAuth0": 401,
+    "activityWithoutAuth0": 401,
+    "beneficiariesWithoutAuth0": 401,
+    "transfersWithoutAuth0": 401
   },
   "browserCheck": "Login route rendered invitation notice and redirected to Auth0 application Samra One - Web - Development; no credentials entered.",
   "apiReadiness": "passed-on-recorded-revision",
-  "sessionShutdownRestart": "drain-passed-shutdown-in-progress",
+  "sessionShutdownRestart": "start-stop-restart-stop-passed",
   "functionalAcceptance": false,
-  "testEnvironment": "not-activated",
+  "testEnvironment": "deployed-session-controls-passed-human-acceptance-pending",
   "remaining": [
-    "Safe shutdown and restart drill",
     "Real two-user login, consent, synthetic KYC/wallet, ledger and recovery acceptance",
-    "Test activation and acceptance",
-    "Operational alert drill and cost review"
+    "Operational alert delivery drill and cost review"
   ],
   "costBoundary": {
     "combinedMonthlyPlanningUsd": 50,
@@ -75,5 +79,38 @@
     "includesAppSourceAsParent": true,
     "treeMatchesAppSource": true
   },
-  "sessionOperatorSourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc"
+  "sessionOperatorSourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc",
+  "sessions": [
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T14:53:00.660630+00:00",
+      "finishedAt": "2026-09-10T14:53:58.923952+00:00",
+      "status": "passed-api-only-web-defect-found-separately"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:07:33.258681+00:00",
+      "finishedAt": "2026-09-10T15:10:00.080853+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T15:13:25.699402+00:00",
+      "finishedAt": "2026-09-10T15:19:55.106145+00:00",
+      "status": "passed-api-and-login-shell"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:22:53.585876+00:00",
+      "finishedAt": "2026-09-10T15:25:38.050401+00:00",
+      "status": "passed"
+    }
+  ],
+  "pausedReadback": {
+    "databaseState": "STOPPED",
+    "activationPolicy": "NEVER",
+    "apiManualInstances": 0,
+    "webManualInstances": 0,
+    "revisionsUnchanged": true
+  }
 }

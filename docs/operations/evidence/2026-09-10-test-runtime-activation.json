@@ -1,0 +1,116 @@
+{
+  "appSourceSha": "836f76bd368e9d81c633d7483e48b907c42ef775",
+  "images": {
+    "api": "sha256:d6041d74b9728b53bdef8136679e15ff1730d79fcd12bfc9ec5250937ed6966c",
+    "customer-web": "sha256:d18308bb633bc28aafd45d00cc9d10ee1062b38680fb47bc72eedd93fd9f1f1e",
+    "migrations": "sha256:008c9d4fea6831cd7c46f6cc3c0c95122b1cab83cd6a26f74c4356dfb97d6f46"
+  },
+  "secretVersions": {
+    "ca": "1",
+    "migration": "1",
+    "runtime": "1",
+    "audit": "1",
+    "bootstrap": "1"
+  },
+  "bootstrapRetired": {
+    "databaseUserDeleted": true,
+    "serviceAccountDisabled": true,
+    "setupSecretDisabled": true,
+    "readbackPassed": true
+  },
+  "apiReadiness": "passed-on-recorded-revision",
+  "functionalAcceptance": false,
+  "costBoundary": {
+    "combinedMonthlyPlanningUsd": 50,
+    "hardCap": false
+  },
+  "productionChanges": false,
+  "protectedMainMerge": {
+    "pr": 213,
+    "commit": "58122e04efcd706f1b6b79d62444da1fe192f3de",
+    "mergedAt": "2026-09-10T15:06:28Z",
+    "includesAppSourceAsParent": true,
+    "treeMatchesAppSource": true
+  },
+  "sessionOperatorSourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc",
+  "status": "test-deployed-auth0-redirect-verified-human-acceptance-pending",
+  "project": "samra-pay-test",
+  "region": "us-east4",
+  "imagePromotion": {
+    "method": "identical-digest-copy-from-dev-no-rebuild",
+    "migrationCopyBuild": "7f6a1c7e-ae7f-414b-8214-d484958e3ea6",
+    "status": "SUCCESS",
+    "finishTime": "2026-09-10T15:21:04.452368Z"
+  },
+  "databaseJobs": {
+    "bootstrap": "samra-db-bootstrap-test-7ms2q",
+    "migrate": "samra-db-migrate-test-trwkt",
+    "audit-runtime": "samra-db-audit-runtime-test-hwphz",
+    "audit-reader": "samra-db-audit-reader-test-lnkl9",
+    "drain": "samra-db-drain-test-7lk45"
+  },
+  "databaseJobsResult": "all-passed",
+  "revisions": {
+    "api": "samra-api-test-00001-rpd",
+    "customer-web": "samra-customer-web-test-00001-vjl"
+  },
+  "webEntry": "https://samra-customer-web-test-378050809796.us-east4.run.app/login",
+  "httpChecks": {
+    "observedAt": "2026-09-10T15:46:11.942023Z",
+    "login": 200,
+    "publicRuntimeConfig": 200,
+    "onboardingWithoutAuth0": 401,
+    "meWithoutAuth0": 401,
+    "accountsWithoutAuth0": 401,
+    "activityWithoutAuth0": 401,
+    "beneficiariesWithoutAuth0": 401,
+    "transfersWithoutAuth0": 401,
+    "directApiWithoutCloudIam": 403
+  },
+  "browserCheck": "Actual Auth0 form for Samra One - Web - Test rendered email/password, recovery and signup; no credentials entered.",
+  "restartHttpChecks": {
+    "observedAt": "2026-09-10T15:57:48.446793Z",
+    "login": 200,
+    "onboardingWithoutAuth0": 401,
+    "accountsWithoutAuth0": 401
+  },
+  "sessionShutdownRestart": "start-stop-restart-stop-passed",
+  "pausedReadback": {
+    "source": "independent gcloud SQL and Cloud Run readback after final operator stop",
+    "databaseState": "STOPPED",
+    "activationPolicy": "NEVER",
+    "apiManualInstances": 0,
+    "webManualInstances": 0,
+    "revisionsUnchanged": true
+  },
+  "remaining": [
+    "Real two-user login, consent, synthetic KYC/wallet, ledger and recovery acceptance",
+    "Operational alert delivery drill and cost review"
+  ],
+  "sessions": [
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T15:43:11.091281+00:00",
+      "finishedAt": "2026-09-10T15:44:19.150330+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:47:16.791468+00:00",
+      "finishedAt": "2026-09-10T15:50:02.995936+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T15:50:51.483806+00:00",
+      "finishedAt": "2026-09-10T15:57:21.625860+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:58:15.967017+00:00",
+      "finishedAt": "2026-09-10T16:01:05.275892+00:00",
+      "status": "passed"
+    }
+  ]
+}
