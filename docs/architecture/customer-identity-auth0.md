@@ -4,8 +4,12 @@ Status: Auth0 is the locked Alpha customer-authentication vendor. The durable
 backend, customer-web, and native-mobile boundaries are implemented and
 disabled by default. Development tenant/application registrations exist; the
 2026-09-07 [web activation read-back](../operations/web-auth0-entry-activation.md#auth0-first-read-back--2026-09-07)
-found the web callback/logout/origin lists empty. A connected customer runtime,
-live account journey and custom native build remain unverified.
+found the web callback/logout/origin lists empty. That historical observation is
+superseded for Dev/Test by the September 9 [web client evidence](../operations/evidence/2026-09-09-dev-test-auth0.json)
+and September 10 [Native client evidence](../operations/evidence/2026-09-10-native-dev-test-auth0.json).
+The two Native clients now have distinct application identifiers, exact
+callback/logout URLs and matching API user grants. Saved configuration does not
+prove a completed login, account journey, or installed native build.
 
 ## Decision
 
