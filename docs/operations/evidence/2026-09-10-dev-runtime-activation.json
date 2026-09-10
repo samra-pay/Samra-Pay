@@ -1,0 +1,70 @@
+{
+  "status": "dev-deployed-auth0-redirect-verified-human-acceptance-pending",
+  "appSourceSha": "836f76bd368e9d81c633d7483e48b907c42ef775",
+  "archiveSha256": "0b430175a1e2c4114549fcdd1eeae01e648daf6669e9e2f10f8b211fbf9c23c2",
+  "project": "samra-pay-dev",
+  "region": "us-east4",
+  "build": {
+    "id": "8169ca40-1bd9-4567-944e-64127be07664",
+    "status": "SUCCESS",
+    "finishTime": "2026-09-10T14:36:56.435544Z"
+  },
+  "images": {
+    "api": "sha256:d6041d74b9728b53bdef8136679e15ff1730d79fcd12bfc9ec5250937ed6966c",
+    "customer-web": "sha256:d18308bb633bc28aafd45d00cc9d10ee1062b38680fb47bc72eedd93fd9f1f1e",
+    "migrations": "sha256:008c9d4fea6831cd7c46f6cc3c0c95122b1cab83cd6a26f74c4356dfb97d6f46"
+  },
+  "databaseJobs": {
+    "bootstrap": "samra-db-bootstrap-dev-bznhp",
+    "migrate": "samra-db-migrate-dev-xwhh7",
+    "audit-runtime": "samra-db-audit-runtime-dev-lw4lx",
+    "audit-reader": "samra-db-audit-reader-dev-7j57f"
+  },
+  "databaseJobsResult": "all-passed",
+  "secretVersions": {
+    "ca": "1",
+    "migration": "1",
+    "runtime": "1",
+    "audit": "1",
+    "bootstrap": "1"
+  },
+  "bootstrapRetired": {
+    "databaseUserDeleted": true,
+    "serviceAccountDisabled": true,
+    "setupSecretDisabled": true,
+    "readbackPassed": true
+  },
+  "revisions": {
+    "api": "samra-api-dev-00001-wss",
+    "customer-web": "samra-customer-web-dev-00001-6pg"
+  },
+  "webEntry": "https://samra-customer-web-dev-829811168658.us-east4.run.app/login",
+  "initialWebFailure": {
+    "httpStatus": 403,
+    "cause": "Domain-restricted IAM sharing prevented allUsers grant; CLI deployment returned success without that grant.",
+    "resolution": "Only customer web uses supported no-invoker-iam-check setting. Organization policy unchanged.",
+    "settingReadback": true
+  },
+  "httpChecks": {
+    "webRoot": 200,
+    "publicRuntimeConfig": 200,
+    "onboardingWithoutAuth0": 401,
+    "directApiWithoutCloudIam": 403
+  },
+  "browserCheck": "Login route rendered invitation notice and redirected to Auth0 application Samra One - Web - Development; no credentials entered.",
+  "apiReadiness": "passed-on-recorded-revision",
+  "sessionShutdownRestart": "not-yet-run",
+  "functionalAcceptance": false,
+  "testEnvironment": "not-activated",
+  "remaining": [
+    "Safe shutdown and restart drill",
+    "Real two-user login, consent, synthetic KYC/wallet, ledger and recovery acceptance",
+    "Test activation and acceptance",
+    "Operational alert drill and cost review"
+  ],
+  "costBoundary": {
+    "combinedMonthlyPlanningUsd": 50,
+    "hardCap": false
+  },
+  "productionChanges": false
+}

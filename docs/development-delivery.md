@@ -41,6 +41,10 @@ iOS/Android build. Public site previews are useful for review but are not shared
 customer Test environments. Existing public-site delivery still needs affected
 preview/Test evidence and its separate production release approval.
 
+The [September 10 open-work inventory](operations/open-work-delivery-2026-09-10.md)
+maps existing PRs to their next acceptance requirements. Refresh each PR's state
+before acting; the inventory is not merge or deployment approval.
+
 ## Isolation, fixtures, and operations
 
 Dev and Test use separate GCP projects, databases, service identities, Auth0
