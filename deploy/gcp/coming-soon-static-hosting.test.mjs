@@ -14,7 +14,7 @@ const TOPIC_ID = "244e46ec-7cda-4cf2-8e6e-1e13093125ab";
 const validEnvironment = {
   SAMRA_GCP_PROJECT_ID: "samra-pay-production",
   SAMRA_GCP_PROJECT_NUMBER: "382465561715",
-  SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+  SAMRA_GCP_ORGANIZATION_ID: "993968777863",
   SAMRA_GCP_OPERATOR_ACCOUNT: "me@davidhaile.com",
   SAMRA_GCP_EXPECTED_SHA: "a".repeat(40),
   SAMRA_RESEND_SEGMENT_ID: SEGMENT_ID,
@@ -95,7 +95,7 @@ test("requires exact production identity, SHA, segment, topic, and apply sentine
   assert.deepEqual(validateStaticHostingEnvironment(validEnvironment), {
     projectId: "samra-pay-production",
     projectNumber: "382465561715",
-    organizationId: "614833350075",
+    organizationId: "993968777863",
     operator: "me@davidhaile.com",
     expectedSha: "a".repeat(40),
     segmentId: SEGMENT_ID,

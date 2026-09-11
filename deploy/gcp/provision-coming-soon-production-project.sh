@@ -12,7 +12,7 @@ fi
 
 PROJECT_ID="samra-pay-production"
 PROJECT_NAME="Samra Pay Production"
-ORGANIZATION_ID="614833350075"
+ORGANIZATION_ID="993968777863"
 SOURCE_BILLING_PROJECT_ID="samra-pay-staging"
 PROJECT_LABELS="environment=production,application=samra-pay,data_classification=customer-pii"
 BUDGET_DISPLAY_NAME="Samra Pay production monthly budget"
@@ -35,7 +35,7 @@ Cloud state read: no
 Cloud or DNS state changed: no
 
 An authorized apply is limited to three resumable actions:
-  1. create samra-pay-production under organization 614833350075 with the
+  1. create samra-pay-production under organization 993968777863 with the
      exact production/customer-pii labels and no automatic Cloud APIs;
   2. link only the open billing account already attached to
      samra-pay-staging, without moving an existing different billing link; and

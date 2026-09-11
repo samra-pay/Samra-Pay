@@ -36,7 +36,7 @@ test("requires exact source, staging boundary, immutable registry, and keyless b
     "source commit does not match the reviewed SHA",
     "source working tree is not clean",
     "project must be samra-pay-staging",
-    "organization must be 614833350075",
+    "organization must be 993968777863",
     "region must be us-east4",
     "repository must be samra-staging",
     "project label ${key} drifted",

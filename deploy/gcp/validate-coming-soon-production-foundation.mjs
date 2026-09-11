@@ -85,7 +85,7 @@ export function validateComingSoonProductionFoundation(
   assert(
     boundary.projectId === "samra-pay-production" &&
       boundary.projectNumber === "382465561715" &&
-      boundary.organizationId === "614833350075" &&
+      boundary.organizationId === "993968777863" &&
       boundary.region === "us-east4" &&
       boundary.dataClassification === "customer-pii" &&
       boundary.monthlyBudgetUsd === 25 &&
@@ -364,7 +364,7 @@ export function validateProductionFoundationActivationEnvironment(
   const expected = {
     projectId: "samra-pay-production",
     projectNumber: "382465561715",
-    organizationId: "614833350075",
+    organizationId: "993968777863",
     region: "us-east4",
     operator: "me@davidhaile.com",
     dataClassification: "customer-pii",

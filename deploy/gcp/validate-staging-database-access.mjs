@@ -46,7 +46,7 @@ export function validateStagingDatabaseAccess(
   }
   if (
     contract.project.id !== "samra-pay-staging" ||
-    contract.project.organizationId !== "614833350075" ||
+    contract.project.organizationId !== "993968777863" ||
     contract.project.region !== "us-east4"
   ) {
     throw new Error("The reviewed project, organization, and region changed");

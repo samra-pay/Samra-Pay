@@ -406,7 +406,7 @@ export function validateProductionDataActivationEnvironment(
   const expected = {
     projectId: "samra-pay-production",
     projectNumber: "382465561715",
-    organizationId: "614833350075",
+    organizationId: "993968777863",
     region: "us-east4",
     operator: "me@davidhaile.com",
     dataClassification: "customer-pii",

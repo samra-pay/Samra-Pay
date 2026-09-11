@@ -1,5 +1,11 @@
 # Google Cloud staging and portability foundation
 
+Current parent: `samrapay.com` (`993968777863`) for Dev, Test, Staging and
+Production. The September 10 organization move preserves the existing billing
+account. Active deployment guards now check the company parent; dated evidence
+retains its original observed parent. See the [Terraform adoption and security
+runbook](terraform/README.md). Terraform adoption is prepared, not applied.
+
 Google Cloud is the locked Alpha hosting and database platform. This directory
 contains reviewed contracts, tests, container definitions, and guarded scripts
 for separately authorized staging phases. GitHub remains the source of truth;
@@ -141,7 +147,7 @@ unverified application activation.
 
 `staging-foundation.json` records the first bounded Google Cloud target:
 
-- project `samra-pay-staging` under organization `614833350075`;
+- project `samra-pay-staging` under organization `993968777863`;
 - region `us-east4` (Northern Virginia);
 - synthetic staging data only;
 - a $50 monthly budget alert;

@@ -66,7 +66,7 @@ export function validateStagingDatabase(contract = readStagingDatabase()) {
   }
   if (
     !ORGANIZATION_ID.test(project.organizationId) ||
-    project.organizationId !== "614833350075" ||
+    project.organizationId !== "993968777863" ||
     !REGION.test(project.region) ||
     project.region !== "us-east4"
   ) {

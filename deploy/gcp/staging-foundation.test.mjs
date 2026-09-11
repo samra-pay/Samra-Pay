@@ -18,7 +18,7 @@ test("locks one review-only synthetic staging identity", () => {
     schemaVersion: 1,
     status: "validated",
     projectId: "samra-pay-staging",
-    organizationId: "614833350075",
+    organizationId: "993968777863",
     region: "us-east4",
     repository: "samra-staging",
     budgetAlertUsd: 50,
@@ -30,7 +30,7 @@ test("locks one review-only synthetic staging identity", () => {
   assert.deepEqual(
     validateFoundationEnvironment({
       SAMRA_GCP_PROJECT_ID: "samra-pay-staging",
-      SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+      SAMRA_GCP_ORGANIZATION_ID: "993968777863",
       SAMRA_GCP_REGION: "us-east4",
       SAMRA_GCP_OPERATOR_ACCOUNT: "operator@davidhaile.com",
     }).operator,
@@ -41,7 +41,7 @@ test("locks one review-only synthetic staging identity", () => {
 test("rejects project, organization, region, and operator drift", () => {
   const valid = {
     SAMRA_GCP_PROJECT_ID: "samra-pay-staging",
-    SAMRA_GCP_ORGANIZATION_ID: "614833350075",
+    SAMRA_GCP_ORGANIZATION_ID: "993968777863",
     SAMRA_GCP_REGION: "us-east4",
     SAMRA_GCP_OPERATOR_ACCOUNT: "operator@davidhaile.com",
   };
