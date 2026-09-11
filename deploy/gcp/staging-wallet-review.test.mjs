@@ -24,7 +24,7 @@ const build = (readCommittedFile = read) =>
 test("packet records source restrictions without claiming cloud readiness", () => {
   const packet = build();
   assert.equal(packet.candidateSha, candidateSha);
-  assert.equal(packet.migrations.length, 19);
+  assert.equal(packet.migrations.length, 20);
   assert.equal(
     packet.observedRepositoryControls.apiDeploymentStatus,
     "requires-governed-migration-evidence",
@@ -59,7 +59,7 @@ test("source and migration hashes change when committed migration bytes change",
   const after = build(
     (path) =>
       read(path) +
-      (path.endsWith("0018_alpha_release_admission.sql")
+      (path.endsWith("0019_verified_marketing_leads.sql")
         ? "\n-- reviewed amendment\n"
         : ""),
   );
@@ -79,7 +79,7 @@ test("rejects missing, empty, reordered and path-traversing migrations", () => {
   assert.throws(
     () =>
       build((path) =>
-        path.endsWith("0018_alpha_release_admission.sql") ? "" : read(path),
+        path.endsWith("0019_verified_marketing_leads.sql") ? "" : read(path),
       ),
     /empty/,
   );

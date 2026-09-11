@@ -224,6 +224,9 @@ jobs:
       - name: Apply explicit test migrations
         run: pnpm --filter @workspace/db run test:migrate
 
+      - name: Verify marketing lead confirmation and consent lifecycle
+        run: pnpm --filter @workspace/db run test:marketing-leads:postgres
+
       - name: Prepare JUnit results directory
         run: mkdir -p artifacts/api-server/test-results
 
