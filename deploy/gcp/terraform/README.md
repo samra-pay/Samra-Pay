@@ -96,9 +96,17 @@ do not describe bucket separation as isolation from project administrators.
 ## Project adoption: Dev first
 
 Run with the reviewed current source and an existing authenticated account.
-The audit reads project and billing metadata only; it does not read credentials,
+The audit reads project, billing and default-network metadata; it does not read credentials,
 secret values, database data or Terraform state. It refuses wrong project IDs,
 numbers, organization, disabled billing and stale snapshots.
+
+The September 10 evening Cloud Shell audit found a default network in all four
+projects. Each retains enabled default SSH (22), RDP (3389) and ICMP rules from
+`0.0.0.0/0`. No Compute Engine VMs were listed; each Cloud SQL instance uses its
+dedicated `samra-<environment>-vpc`. This does not prove that every managed-service
+dependency is absent. The adoption audit deliberately blocks on these networks.
+Review all dependencies and remediate in a separate approved change before
+adoption; do not bypass this check or delete networks during an import.
 
 ```sh
 umask 077
@@ -131,6 +139,22 @@ GitHub environments and separate scoped deployment identities before automated
 apply is enabled.
 
 ## Security and operations acceptance
+
+Read-only Cloud Shell verification on September 10 evening (September 11 UTC)
+confirmed company parent/billing links for all four projects; private SQL IPs,
+`ENCRYPTED_ONLY`, backups/PITR and deletion protection; and stopped Dev/Test SQL.
+Effective `iam.managed.disableServiceAccountKeyCreation`,
+`iam.disableServiceAccountKeyUpload` and
+`iam.automaticIamGrantsForDefaultServiceAccounts` were enforced in all four.
+No user-managed keys were returned for 7 Dev, 7 Test, 15 Staging and 9 Production
+service accounts. These are point-in-time configuration observations, not a
+restore test or comprehensive access audit.
+
+Budgets were freshly read as $50 combined Dev/Test, $50 Staging and $25 Production.
+All include credits and have no Pub/Sub cutoff configuration; they are alerts,
+not spending limits. Review gross-spend visibility and alert delivery. Only
+Cloud Build buckets were listed in these projects; proposed state buckets have
+not been created. No cloud configuration was changed by this verification.
 
 The following are explicit remaining verification/implementation gates, not
 claims of saved configuration:
