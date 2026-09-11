@@ -12,6 +12,8 @@ import {
   AlphaAccessDeniedError,
   AlphaAdmissionRequiredError,
   PostgresCustomerIdentityCaseStore,
+  PostgresCustomerWalletStore,
+  ALPHA_WALLET_PROVISIONING_DISCLOSURE,
   PostgresCustomerFunnelStore,
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerIdentityConflictError,
@@ -20,7 +22,17 @@ import {
 } from "@workspace/db";
 import type { ProviderEvent } from "@workspace/remittance";
 import { DemoRuntime } from "../src/domain/demo-runtime";
+import {
+  CustomerWalletProvisioningService,
+  DeterministicFakeCrossmintAdapter,
+} from "../src/domain/customer-wallet";
+import { Auth0CustomerActorResolver } from "../src/domain/customer-auth";
+import type { Request } from "express";
 import { PostgresReconciliationStore } from "../src/domain/postgres-reconciliation";
+import {
+  parseSharedTestManifest,
+  runSharedTestOperation,
+} from "../../../lib/db/src/shared-test-operator";
 
 const connectionString = process.env["TEST_DATABASE_URL"];
 if (!connectionString) {
@@ -93,6 +105,505 @@ async function onboardingPersistenceCounts(
 
 test.after(async () => {
   await Promise.all(connections.map((connection) => connection.pool.end()));
+});
+
+test("shared synthetic operator previews roll back, binds two invitations, and applies only admitted fake identity decisions", async () => {
+  const { context } = createRuntime();
+  // Roll back this entire fixture so the existing lifetime admission tests start closed.
+  const rollback = new Error("operator fixture complete");
+  await assert.rejects(
+    context.run(async () => {
+      const issuer = `https://${randomUUID()}.operator.samra.test/`;
+      const subject = `auth0|${randomUUID()}`;
+      const otherSubject = `auth0|${randomUUID()}`;
+      const manifest = parseSharedTestManifest({
+        environment: "test",
+        operation: "invite",
+        operatorAlias: "operator_fixture",
+        issuer,
+        admissionLimit: 5,
+        subjects: [subject, otherSubject],
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      });
+      const counts = async () =>
+        (
+          await context.query().query(
+            `SELECT (SELECT count(*)::int FROM samra_core.alpha_invitations) AS invitations,
+              (SELECT count(*)::int FROM samra_core.customers) AS customers,
+              (SELECT count(*)::int FROM samra_core.audit_events) AS audits,
+              (SELECT admission_limit FROM samra_core.alpha_release_controls) AS admission_limit`,
+          )
+        ).rows[0];
+      const before = await counts();
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...manifest, environment: "dev" },
+          true,
+        ),
+        /connected database/,
+      );
+      assert.equal(
+        (await runSharedTestOperation(context, manifest)).applied,
+        false,
+      );
+      assert.deepEqual(await counts(), before);
+      await runSharedTestOperation(context, manifest, true);
+      const applied = await counts();
+      assert.equal(applied.invitations, 2);
+      assert.equal(applied.customers, before.customers);
+      assert.equal(applied.admission_limit, 5);
+      await runSharedTestOperation(context, manifest, true);
+      assert.deepEqual(await counts(), applied);
+      if (manifest.operation !== "invite")
+        throw new Error("Expected invitation fixture");
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...manifest, subjects: [subject, "auth0|replacement"] },
+          true,
+        ),
+        /Existing invitations differ/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...manifest, expiresAt: new Date(Date.now() - 1000).toISOString() },
+          true,
+        ),
+        /expiry/,
+      );
+      const onboarding = new PostgresCustomerOnboardingStore(
+        context,
+        new PostgresAlphaAccessStore(context),
+      );
+      await assert.rejects(
+        onboarding.startAuth0Onboarding({
+          issuer,
+          subject: "auth0|uninvited",
+          idempotencyKey: "operator-uninvited-fixture",
+        }),
+        AlphaAccessDeniedError,
+      );
+      assert.equal(
+        (
+          await onboarding.startAuth0Onboarding({
+            issuer,
+            subject,
+            idempotencyKey: "operator-start-fixture",
+          })
+        ).snapshot.state,
+        "consent_pending",
+      );
+      const store = new PostgresCustomerIdentityCaseStore(context);
+      await assert.rejects(
+        store.prepareAuth0IdentityCase({
+          issuer,
+          subject,
+          idempotencyKey: "operator-before-consent-fixture",
+        }),
+      );
+      await onboarding.recordAuth0ConsentBundle({
+        issuer,
+        subject,
+        idempotencyKey: "operator-consent-fixture",
+        bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+        locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+        decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+          (document) => ({
+            consentType: document.consentType,
+            documentVersion: document.documentVersion,
+            decision: "accepted" as const,
+          }),
+        ),
+      });
+      const prepared = await store.prepareAuth0IdentityCase({
+        issuer,
+        subject,
+        idempotencyKey: "operator-inquiry-fixture",
+      });
+      const identityCaseId = prepared.snapshot.identityCaseId;
+      await store.attachProviderInquiry({
+        identityCaseId,
+        providerRequestKey: prepared.providerRequestKey,
+        providerInquiryRef: `inq_fake_${randomUUID()}`,
+      });
+      const decision = parseSharedTestManifest({
+        environment: "test",
+        operation: "identity-decision",
+        operatorAlias: "operator_fixture",
+        issuer,
+        subject,
+        identityCaseId,
+        decision: "approved",
+        commandId: "synthetic_operator_decision_fixture",
+      });
+      if (decision.operation !== "identity-decision")
+        throw new Error("Expected decision fixture");
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...decision, subject: otherSubject },
+          true,
+        ),
+        /admitted, active/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          {
+            ...decision,
+            identityCaseId: `identity_case_${randomUUID().replaceAll("-", "")}`,
+          },
+          true,
+        ),
+        /does not belong/,
+      );
+      const funding = parseSharedTestManifest({
+        environment: "test",
+        operation: "fund-synthetic-account",
+        operatorAlias: "operator_fixture",
+        issuer,
+        subject,
+        amountMinor: "50000",
+      });
+      await assert.rejects(
+        runSharedTestOperation(context, funding, true),
+        /Approved simulated identity/,
+      );
+      const beforeDecision = await counts();
+      await runSharedTestOperation(context, decision);
+      assert.equal(
+        (await store.getAuth0IdentityCase({ issuer, subject })).state,
+        "pending",
+      );
+      assert.deepEqual(await counts(), beforeDecision);
+      assert.match(
+        (await runSharedTestOperation(context, decision, true)).result,
+        /approved; applied/,
+      );
+      assert.equal(
+        (await onboarding.getAuth0Onboarding({ issuer, subject })).state,
+        "identity_approved",
+      );
+      assert.match(
+        (await runSharedTestOperation(context, decision, true)).result,
+        /replayed/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...decision, decision: "declined" },
+          true,
+        ),
+        /different evidence/,
+      );
+      assert.equal(
+        (await store.getAuth0IdentityCase({ issuer, subject })).state,
+        "approved",
+      );
+      const customerId = (
+        await context
+          .query()
+          .query<{ customer_id: string }>(
+            "SELECT customer_id FROM samra_core.customer_auth_identities WHERE issuer=$1 AND subject=$2",
+            [issuer, subject],
+          )
+      ).rows[0]!.customer_id;
+      const accountRef = `synthetic_usd_${customerId.replaceAll("-", "")}`;
+      await assert.rejects(
+        runSharedTestOperation(context, funding, true),
+        /ready, consented synthetic wallet/,
+      );
+      const actorResolver = new Auth0CustomerActorResolver(
+        new PostgresCustomerIdentityStore(context),
+        issuer,
+      );
+      const request = {
+        auth: { payload: { iss: issuer, sub: subject } },
+      } as Request;
+      await assert.rejects(actorResolver.resolve(request), /onboarding/);
+      const wallets = new CustomerWalletProvisioningService({
+        store: new PostgresCustomerWalletStore(context),
+        provider: new DeterministicFakeCrossmintAdapter(),
+      });
+      await wallets.startAuth0Wallet({
+        issuer,
+        subject,
+        idempotencyKey: "operator-wallet-fixture",
+        consent: {
+          bundleVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.bundleVersion,
+          documentVersion: ALPHA_WALLET_PROVISIONING_DISCLOSURE.documentVersion,
+          locale: ALPHA_WALLET_PROVISIONING_DISCLOSURE.locale,
+          decision: "accepted",
+        },
+      });
+      const beforeFunding = await onboarding.getAuth0Onboarding({
+        issuer,
+        subject,
+      });
+      await runSharedTestOperation(context, funding);
+      assert.deepEqual(
+        await onboarding.getAuth0Onboarding({ issuer, subject }),
+        beforeFunding,
+      );
+      assert.equal(
+        (
+          await context
+            .query()
+            .query(
+              "SELECT 1 FROM samra_core.product_accounts WHERE external_ref=$1",
+              [accountRef],
+            )
+        ).rowCount,
+        0,
+      );
+      await runSharedTestOperation(context, funding, true);
+      const activated = await onboarding.getAuth0Onboarding({
+        issuer,
+        subject,
+      });
+      assert.equal(activated.state, "activated");
+      assert.equal(activated.version, beforeFunding.version + 2);
+      assert.equal(
+        (await actorResolver.resolve(request)).id,
+        activated.customerId,
+      );
+      assert.equal(
+        (await wallets.getAuth0Wallet({ issuer, subject })).state,
+        "ready",
+      );
+      const fundedCounts = await counts();
+      const ledger = new PostgresLedgerControl(context);
+      assert.equal(
+        (await ledger.getCustomerBalance(accountRef)).availableMinor,
+        50000n,
+      );
+      await runSharedTestOperation(context, funding, true);
+      assert.deepEqual(
+        await onboarding.getAuth0Onboarding({ issuer, subject }),
+        activated,
+      );
+      assert.deepEqual(await counts(), fundedCounts);
+      assert.equal(
+        (await ledger.getCustomerBalance(accountRef)).availableMinor,
+        50000n,
+      );
+      if (funding.operation !== "fund-synthetic-account")
+        throw new Error("Expected funding fixture");
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...funding, amountMinor: "60000" },
+          true,
+        ),
+      );
+      assert.equal(
+        (await ledger.getCustomerBalance(accountRef)).availableMinor,
+        50000n,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...funding, subject: otherSubject },
+          true,
+        ),
+        /admitted, active/,
+      );
+      const audits = JSON.stringify(
+        (
+          await context
+            .query()
+            .query(
+              "SELECT metadata, actor_id FROM samra_core.audit_events WHERE entity_type = 'synthetic_test_setup'",
+            )
+        ).rows,
+      );
+      assert.equal(audits.includes(subject), false);
+      assert.equal(audits.includes(otherSubject), false);
+      assert.match(audits, /operator_fixture/);
+      // The second admitted tester cannot target the first case or simulate a real inquiry.
+      await onboarding.startAuth0Onboarding({
+        issuer,
+        subject: otherSubject,
+        idempotencyKey: "operator-second-start-fixture",
+      });
+      await onboarding.recordAuth0ConsentBundle({
+        issuer,
+        subject: otherSubject,
+        idempotencyKey: "operator-second-consent-fixture",
+        bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+        locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+        decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map(
+          (document) => ({
+            consentType: document.consentType,
+            documentVersion: document.documentVersion,
+            decision: "accepted" as const,
+          }),
+        ),
+      });
+      const otherCase = await store.prepareAuth0IdentityCase({
+        issuer,
+        subject: otherSubject,
+        idempotencyKey: "operator-second-inquiry-fixture",
+      });
+      await store.attachProviderInquiry({
+        identityCaseId: otherCase.snapshot.identityCaseId,
+        providerRequestKey: otherCase.providerRequestKey,
+        providerInquiryRef: `inq_non_synthetic_${randomUUID()}`,
+      });
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          { ...decision, subject: otherSubject },
+          true,
+        ),
+        /does not belong/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(
+          context,
+          {
+            ...decision,
+            subject: otherSubject,
+            identityCaseId: otherCase.snapshot.identityCaseId,
+            commandId: "synthetic_operator_second_fixture",
+          },
+          true,
+        ),
+        /required for non-synthetic/,
+      );
+      assert.equal(
+        (await store.getAuth0IdentityCase({ issuer, subject: otherSubject }))
+          .state,
+        "pending",
+      );
+      await context
+        .query()
+        .query(
+          "UPDATE samra_core.alpha_invitations SET revoked_at = now() WHERE issuer = $1 AND subject = $2",
+          [issuer, subject],
+        );
+      await assert.rejects(
+        runSharedTestOperation(context, decision, true),
+        /admitted, active/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(context, funding, true),
+        /admitted, active/,
+      );
+      await assert.rejects(
+        runSharedTestOperation(context, manifest, true),
+        /reactivation/,
+      );
+      throw rollback;
+    }),
+    (error) => error === rollback,
+  );
+});
+
+test("updated consent notices preserve v1 receipt replay but reject new v1 commands", async () => {
+  const { context } = createRuntime();
+  const rollback = new Error("historical receipt fixture complete");
+  await assert.rejects(
+    context.run(async () => {
+      const issuer = `https://${randomUUID()}.consent.samra.test/`;
+      const subject = `auth0|${randomUUID()}`;
+      const store = new PostgresCustomerOnboardingStore(context);
+      const { snapshot } = await store.startAuth0Onboarding({
+        issuer,
+        subject,
+        idempotencyKey: "historical-consent-start",
+      });
+      const bundle = {
+        ...snapshot.consentBundle,
+        bundleVersion: "alpha-non-production-v1",
+        documents: snapshot.consentBundle.documents.map((d) => ({
+          ...d,
+          documentVersion: "alpha-non-production-v1",
+        })),
+      };
+      const decisions = bundle.documents
+        .map((d) => ({
+          consentType: d.consentType,
+          documentVersion: d.documentVersion,
+          decision: "accepted" as const,
+        }))
+        .sort((a, b) => a.consentType.localeCompare(b.consentType));
+      const input = {
+        issuer,
+        subject,
+        idempotencyKey: "historical-consent-receipt",
+        bundleVersion: bundle.bundleVersion,
+        locale: bundle.locale,
+        decisions,
+      };
+      const priorSnapshot = {
+        ...snapshot,
+        state: "identity_in_progress",
+        latestCompletedStep: "required_consents",
+        version: 2,
+        consentBundle: bundle,
+      };
+      const requestHash = sha256(
+        JSON.stringify({
+          bundleVersion: bundle.bundleVersion,
+          locale: bundle.locale,
+          decisions,
+        }),
+      );
+      // A retained pre-upgrade response fixture; no existing receipt is rewritten.
+      await context.query().query(
+        `INSERT INTO samra_core.idempotency_records
+       (scope,idempotency_key,request_hash,state,resource_type,resource_id,response_status,response_body,completed_at,expires_at)
+       VALUES ($1,$2,$3,'succeeded','customer_onboarding',$4,200,$5::jsonb,now(),now()+interval '10 years')`,
+        [
+          `${snapshot.customerId}:onboarding-consents`,
+          sha256(input.idempotencyKey),
+          requestHash,
+          snapshot.onboardingId,
+          JSON.stringify(priorSnapshot),
+        ],
+      );
+      const replay = await store.recordAuth0ConsentBundle(input);
+      assert.equal(replay.replayed, true);
+      assert.deepEqual(replay.snapshot, priorSnapshot);
+      await assert.rejects(
+        store.recordAuth0ConsentBundle({
+          ...input,
+          idempotencyKey: "unrecorded-v1-command",
+        }),
+        /not current/,
+      );
+      await assert.rejects(
+        store.recordAuth0ConsentBundle({
+          ...input,
+          decisions: decisions.map((d) => ({
+            ...d,
+            decision: "declined" as const,
+          })),
+        }),
+        /different consent decisions/,
+      );
+      assert.equal(
+        (await store.getAuth0Onboarding({ issuer, subject })).state,
+        "consent_pending",
+      );
+      assert.equal(
+        (
+          await context
+            .query()
+            .query(
+              "SELECT count(*)::int AS n FROM samra_core.customer_consents WHERE onboarding_id=$1",
+              [snapshot.onboardingId],
+            )
+        ).rows[0].n,
+        0,
+      );
+      throw rollback;
+    }),
+    (error) => error === rollback,
+  );
 });
 
 test("customer funnel attribution is append-only, concurrent, privacy-safe, and derives the five-send milestone only from durable transfers", async () => {

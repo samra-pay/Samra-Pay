@@ -22,8 +22,34 @@ verified the two existing providers. The September 6 [controller record](operati
 adds verified promotion/rollback, zero-traffic and image-verifier IAM foundations,
 the missing migration environment and a dated backup-freshness observation.
 Migration, revision-probe and operational acceptance remain open. The release
-freeze remains active pending the remaining cutover and
-release evidence.
+freeze remains active for the gated Staging/Production releases pending the
+remaining cutover and release evidence. Shared Dev/Test follows the separately
+authorized delivery process below.
+
+## Current delivery priority: local Dev and shared Test
+
+Use local Mac development for the daily build/test loop and shared Test for
+stable invited-user acceptance. Shared Cloud Dev remains available for bounded
+integration sessions. Both isolated cloud environments are deployed and passed
+readiness, database privilege checks, login redirects, anonymous data denials,
+and restart/shutdown checks. They are paused with data retained under the
+combined $50 planning allowance. See the [environment inventory](../deploy/gcp/dev-test-environments.md),
+[Dev evidence](operations/evidence/2026-09-10-dev-runtime-activation.json) and
+[Test evidence](operations/evidence/2026-09-10-test-runtime-activation.json).
+
+The existing Dev/Test projects now belong to company organization `993968777863`;
+the project IDs, application revisions and billing account were preserved. The
+[September 10 handoff](operations/dev-test-migration-handoff-2026-09-10.md) records
+the post-move checks and returned runtime control.
+
+Human sign-in, account isolation and synthetic ledger UAT remain unverified.
+The separate Auth0 Native clients and callbacks are saved and read back in
+[PR #215](https://github.com/samra-pay/Samra-Pay/pull/215), now merged. iOS 26.5 and
+base Android tools are installed; native compilation and installed-device
+acceptance remain incomplete. [PR #217](https://github.com/samra-pay/Samra-Pay/pull/217)
+fixes synthetic funded-account activation and updates test consent notices; its
+application changes still need Dev/Test deployment and participant acceptance.
+Saved runtime/error-alert configuration is not acceptance or production activation.
 
 ## Active milestone: Alpha Release 1
 
@@ -144,6 +170,8 @@ a separate prerequisite; scenarios and templates are not executed user evidence.
 
 ### Cloud and delivery
 
+- [Terraform adoption, state protection and security acceptance](../deploy/gcp/terraform/README.md) — prepared; live plan and state bootstrap pending.
+
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)
 - [Public and product surface boundary](architecture/public-product-surface-boundary.md)
 - [Repository merge controls](operations/repository-merge-controls.md)
@@ -190,3 +218,10 @@ depends on an unresolved decision; continue unaffected authorized work.
   request.
 - Historical evidence remains immutable but must be labeled when it no longer
   describes the current architecture.
+
+## Governing delivery sequence
+
+All application work follows [Develop → Test → Stage → Deploy](development-delivery.md).
+PR #213 is merged. PR #214 records the actual Dev/Test deployment and session
+proof. Follow the dated evidence for runtime state; human acceptance remains
+a separate gate.

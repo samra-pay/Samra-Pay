@@ -62,3 +62,15 @@ gha-creds-*.json
 *.pfx
 firebase-adminsdk-*.json
 service-account*.json
+
+# Terraform state and saved plans can contain credentials or other sensitive values.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.json
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+/deploy/gcp/terraform/bootstrap/backend.tf

@@ -1,0 +1,79 @@
+{
+  "recordedAt": "2026-09-10T20:13:23.040Z",
+  "scope": "Dev/Test metadata and retained-receipt readback; no deployment, secret-value access or participant execution",
+  "sources": {
+    "live": "Read-only gcloud projects/SQL/Cloud Run metadata preflight on 2026-09-10",
+    "retainedReceipts": "/home/me/samra-dev-test-operations",
+    "migrationOwnerRecord": "Environment set up task, migration-result.md and /home/me/samra-org-migration-20260910/final-environment-audit.json"
+  },
+  "applicationSourceSha": "836f76bd368e9d81c633d7483e48b907c42ef775",
+  "controller": {
+    "sourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc",
+    "sha256": "e497ff183148d0db47439b78173528ac092225ef4f1301909fb7cddaf011f5b2",
+    "path": "/home/me/samra-dev-test-operations/operator-fe9062d/activate-dev-test.py",
+    "verification": "Matched against retained controller bytes and the migration-owner record"
+  },
+  "environments": {
+    "dev": {
+      "projectId": "samra-pay-dev",
+      "projectNumber": "829811168658",
+      "organizationId": "993968777863",
+      "sqlState": "STOPPED",
+      "activationPolicy": "NEVER",
+      "apiRevision": "samra-api-dev-00001-wss",
+      "webRevision": "samra-customer-web-dev-00001-6pg",
+      "apiManualInstances": 0,
+      "webManualInstances": 0
+    },
+    "test": {
+      "projectId": "samra-pay-test",
+      "projectNumber": "378050809796",
+      "organizationId": "993968777863",
+      "sqlState": "STOPPED",
+      "activationPolicy": "NEVER",
+      "apiRevision": "samra-api-test-00001-rpd",
+      "webRevision": "samra-customer-web-test-00001-vjl",
+      "apiManualInstances": 0,
+      "webManualInstances": 0
+    }
+  },
+  "retainedReceiptBindings": {
+    "sourceAndImagesMatched": true,
+    "bootstrapRetired": true,
+    "versions": {
+      "ca": "1",
+      "migration": "1",
+      "runtime": "1",
+      "audit": "1",
+      "bootstrap": "1"
+    },
+    "bootstrapVersionStatus": "historical disabled setup version; not reusable credentials"
+  },
+  "migrationOwnerReported": {
+    "postMoveDevTestStartReadinessDrainStop": "passed",
+    "runtimeControlReturned": true,
+    "projectNumbersAndBillingPreserved": true,
+    "billingAccount": "01196E-DFC16E-433E6C",
+    "temporaryDestinationGrantsRemaining": 5,
+    "cleanupApproval": "pending in migration-owner task; do not retry",
+    "temporaryGrantsExpiry": "2026-09-11T03:59:59Z"
+  },
+  "participantAcceptance": false,
+  "nativeInstalledAcceptance": false,
+  "notificationInboxReceiptConfirmed": false,
+  "nextApplicationCandidate": {
+    "pr": 217,
+    "sourceSha": "d4ec932c8ee9fdf19f24bac535153b294e7ea40a",
+    "localTestsPassed": 504,
+    "prChecks": "passed",
+    "deployed": false,
+    "protectedMainMerge": {
+      "commit": "f2536413799d3c23e1fdd32248964f5b36fe2d4f",
+      "mergedAt": "2026-09-10T20:16:43Z",
+      "requiredCiRun": 34524689887,
+      "requiredSecurityRun": 34524689898,
+      "result": "passed"
+    }
+  },
+  "productionActivation": false
+}

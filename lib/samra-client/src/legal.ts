@@ -24,7 +24,7 @@ export const SAMRA_LEGAL_PATHS: Readonly<Record<SamraLegalKind, string>> =
     "electronic-communications": "/electronic-communications",
   });
 
-const LAST_UPDATED = "August 19, 2026";
+const LAST_UPDATED = "September 10, 2026";
 const DISCLAIMER =
   "This document governs only the non-production Samra Pay alpha and is not a substitute for final customer agreements.";
 
@@ -35,11 +35,11 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
       eyebrow: "Privacy notice",
       title: "How the Samra Pay alpha handles information.",
       intro:
-        "This notice describes the current non-production alpha. It does not authorize collection of real identity documents, live provider data, or production customer information.",
+        "This notice describes the non-production alpha. Invited shared Dev/Test participants use Auth0 to register, sign in and recover access. Do not submit real identity documents or financial details.",
       sections: [
         {
           title: "Current data boundary",
-          body: "The connected alpha uses synthetic identifiers and Samra-owned onboarding, consent, identity-state, audit, and acquisition records. Live Auth0, Persona, wallet, bank-funding, and payment-provider connections are not enabled.",
+          body: "Auth0 processes the sign-in information you provide, including your email address and credentials. Samra links the Auth0 identity reference to your test account and records onboarding, consent and audit events. Product profiles, identity decisions, wallets, balances and transfers in shared Dev/Test are synthetic. Keep passwords, tokens and personal details out of test reports and application logs.",
         },
         {
           title: "Acquisition measurement",
@@ -56,7 +56,7 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
       eyebrow: "Terms of Service",
       title: "Clear boundaries for the Samra Pay alpha.",
       intro:
-        "The current experience is a non-production product alpha. It does not open an account or wallet, extend credit, move money, complete identity verification, or provide a financial service.",
+        "Shared Dev/Test creates test account and synthetic wallet records. It does not open a bank account or production wallet, extend credit, move real money, or complete real identity verification.",
       sections: [
         {
           title: "Synthetic experience",
@@ -64,7 +64,7 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
         },
         {
           title: "No provider promise",
-          body: "References to Auth0, Persona, Crossmint, Rain, Cybrid, Bridge, banks, networks, or payment rails describe proposed or isolated technical boundaries unless a separate executed agreement and live configuration are explicitly confirmed.",
+          body: "Auth0 handles invited Dev/Test authentication. Identity decisions, wallets and payments in shared Dev/Test are simulated. Provider names and successful tests do not establish production availability or financial eligibility.",
         },
         {
           title: "Final agreements required",
@@ -75,13 +75,13 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
     "electronic-communications": legalDocument({
       kind: "electronic-communications",
       eyebrow: "Electronic Communications",
-      title: "Electronic delivery is not active in this alpha.",
+      title: "Test consent and authentication messages.",
       intro:
-        "This alpha records a synthetic consent decision so the onboarding state machine can be tested. It does not enroll a real person in electronic delivery.",
+        "This alpha records your non-production consent decision for testing. It does not enroll you in production financial notices or marketing.",
       sections: [
         {
-          title: "No delivery channel enabled",
-          body: "No production email, SMS, push-notification, or document-delivery provider is configured by this alpha. The current consent record does not cause a notice to be sent.",
+          title: "Authentication messages",
+          body: "Auth0 may send registration, verification or account-recovery messages through its managed flows. Recording this test consent does not activate financial email, SMS, push notifications or document delivery.",
         },
         {
           title: "Evidence boundary",

@@ -1,0 +1,35 @@
+{
+  "status": "cloud-incidents-verified-inbox-acknowledgement-pending",
+  "recipient": "david@samrapay.com",
+  "recipientAuthorized": true,
+  "owner": "David Haile",
+  "notificationPrompts": [
+    "OPENED"
+  ],
+  "notificationRateLimitSeconds": 300,
+  "autoCloseSeconds": 1800,
+  "inboxReceiptConfirmed": false,
+  "productionReadiness": false,
+  "environments": {
+    "dev": {
+      "policy": "projects/samra-pay-dev/alertPolicies/15534038861523532220",
+      "channel": "projects/samra-pay-dev/notificationChannels/13897251972279420892",
+      "incident": "projects/samra-pay-dev/alerts/0.ocgxpm7k624x",
+      "incidentState": "OPEN",
+      "openTime": "2026-09-10T16:17:38Z",
+      "resourceType": "global",
+      "finalDrillAt": "2026-09-10T16:16:45.931248+00:00",
+      "exactPolicyMatched": true
+    },
+    "test": {
+      "policy": "projects/samra-pay-test/alertPolicies/15046887376863339978",
+      "channel": "projects/samra-pay-test/notificationChannels/13983279501113670307",
+      "incident": "projects/samra-pay-test/alerts/0.ocgx8zbc7byk",
+      "incidentState": "OPEN",
+      "openTime": "2026-09-10T15:57:24Z",
+      "resourceType": "global",
+      "finalDrillAt": "2026-09-10T16:16:46.078961+00:00",
+      "exactPolicyMatched": true
+    }
+  }
+}

@@ -57,6 +57,8 @@ const WALLET_STATES = new Set([
   "wallet_consent_pending",
   "wallet_provisioning",
   "wallet_ready",
+  "funding_ready",
+  "activated",
   "restricted",
 ]);
 
@@ -421,6 +423,14 @@ export default function CustomerOnboardingPage() {
             Retry wallet setup
           </PrimaryAction>
         </div>
+      );
+    }
+
+    if (journey.stage === "complete") {
+      return (
+        <Button asChild className="min-h-11 w-full">
+          <Link href="/session">Open your account</Link>
+        </Button>
       );
     }
 

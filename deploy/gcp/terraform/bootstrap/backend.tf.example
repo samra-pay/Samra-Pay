@@ -1,0 +1,8 @@
+# After bootstrap, copy to backend.tf, run init -migrate-state, then verify the
+# remote state before retiring the protected local recovery copy.
+terraform {
+  backend "gcs" {
+    bucket = "samra-pay-bootstrap-tfstate-382465561715"
+    prefix = "bootstrap"
+  }
+}

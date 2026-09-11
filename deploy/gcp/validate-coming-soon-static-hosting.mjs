@@ -140,7 +140,7 @@ export function validateComingSoonStaticHosting(
   assert(
     boundary.projectId === "samra-pay-production" &&
       boundary.projectNumber === "382465561715" &&
-      boundary.organizationId === "614833350075" &&
+      boundary.organizationId === "993968777863" &&
       boundary.operator === "me@davidhaile.com" &&
       boundary.region === "us-east4" &&
       boundary.dataClassification === "email-marketing-contact" &&

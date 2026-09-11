@@ -1,9 +1,28 @@
 # Mobile Auth0 native activation
 
-Status: preparation only. The code boundary is implemented and disabled by
-default. This runbook does not authorize an Auth0 tenant change, custom native
-build, tester distribution, signed-token test, vendor traffic, customer data,
-Cloud Run traffic, production release, or Replit change.
+Status, September 10: the approved **Dev/Test Native client configuration is
+saved and read-back verified**. See the [dated public evidence](evidence/2026-09-10-native-dev-test-auth0.json)
+and [exact build configuration](../../artifacts/samra-pay-mobile/README.md).
+No installed native login or user acceptance has passed. The matching iOS 26.5
+platform and the base Java/Android tools are now installed. iOS compilation is
+bounded by available disk space; Android still needs NDK, CMake and emulator
+packages. The organization migration and handoff are complete. Dev/Test remain
+paused pending the reviewed application rollout and participant setup. Track
+current build and participant results in [session #216](https://github.com/samra-pay/Samra-Pay/issues/216).
+
+The staging procedure below remains preparation only. The default code boundary
+is disabled. This runbook does not grant authorization beyond the explicitly
+approved Dev/Test configuration or authorize production activation.
+
+Dev reuses `NbcuUH99abGjdE7gkKBY9wjfniE8e4r9`; its old staging callbacks have
+been replaced with `com.samrapay.mobile.dev` / `samrapaydevauth`. Test uses the
+separate Native client `dFM0ZxzcQoQ6Ppj7KrgOxx70M9KSkk5K`, application ID
+`com.samrapay.mobile.test`, and scheme `samrapaytestauth`. Each has only its
+matching Samra API user grant. Test is password-only; Dev preserves password
+and Google. Both allow only Authorization Code, with no refresh-token or
+machine access grant. The native SDK still supplies PKCE and requests `openid`
+only. A completed token exchange remains part of installed-device acceptance;
+the dashboard did not separately expose token-endpoint authentication method.
 
 ## Locked boundary
 
@@ -30,6 +49,13 @@ onboarding, KYC state, wallet state, financial capability, ledger, and audit
 truth. Mobile never accepts a customer ID, KYC state, wallet state, or balance
 as authority.
 
+Each mobile account session receives a separate customer query cache. Logout
+and failed current credentials clear cached queries and mutations and reset
+mounted screen state, including recipient and transfer drafts. Late results
+remain isolated in the old cache. A token lookup from an ended session cannot
+authorize a request or sign out a newer account. These local boundaries do not
+replace the server's identity binding and account authorization checks.
+
 ## Required inventory
 
 Record and approve all of the following before building:
@@ -50,7 +76,7 @@ Record and approve all of the following before building:
    device inventory, expiration date, and rollback owner.
 
 No client secret belongs in the mobile application, GitHub, EAS public
-configuration, Firebase, Qase, screenshots, or support records.
+configuration, Firebase, screenshots, or support records.
 
 ## Build gate
 
@@ -72,8 +98,10 @@ Git commit. Do not overwrite the Expo Go-compatible mock preview.
 
 ## Zero-traffic test gate
 
-Use disposable synthetic identities only. Capture no raw token or Auth0 subject
-in screenshots, logs, Qase, or audit metadata. Prove:
+Use approved tester identities with synthetic Samra data only. Capture no raw
+token or Auth0 subject in screenshots, logs, GitHub evidence, or audit metadata.
+Use the [user-testing procedure](../testing/user-testing.md) and existing
+two-user session #216 for Dev/Test. Prove:
 
 1. Universal Login succeeds on one iOS and one Android target;
 2. cancel, provider error, network loss, and invalid callback return a safe

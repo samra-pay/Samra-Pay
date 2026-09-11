@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-09-10T16:13:35.832082+00:00",
+  "sourceSha": "58122e04efcd706f1b6b79d62444da1fe192f3de",
+  "scope": "local-synthetic-auth-disabled",
+  "dockerVersion": "29.7.2",
+  "composeProject": "samra-dev",
+  "entry": "http://127.0.0.1:18084/api/readyz",
+  "allProviders": "fake",
+  "database": "local persistent PostgreSQL 16",
+  "migrationAndSeed": "passed",
+  "transferStatus": "completed",
+  "sendAmountMinor": "1000",
+  "quotedFeeMinor": "300",
+  "quotedTotalDebitMinor": "1300",
+  "beforeBalanceMinor": "425000",
+  "afterBalanceMinor": "423700",
+  "duplicateSameTransfer": true,
+  "restartPreservedAccountAndTransfer": true,
+  "balanceDeltaMatchesQuote": true,
+  "unbalancedJournalCount": 0,
+  "invalidAvailableBalanceCount": 0,
+  "holds": {
+    "captured": 1
+  },
+  "humanLoginAcceptance": false,
+  "sharedTestAcceptance": false,
+  "runtimeState": "running-loopback-only",
+  "dataRetained": true
+}

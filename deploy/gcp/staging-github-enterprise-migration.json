@@ -43,7 +43,11 @@
     "recoveryCodesGeneratedAndViewed": true,
     "recoveryCodesExternalStorageVerified": true,
     "verifiedRecoveryEmailConfigured": true,
-    "teams": ["developers", "platform-admins", "staging-approvers"],
+    "teams": [
+      "developers",
+      "platform-admins",
+      "staging-approvers"
+    ],
     "recoveryCodesExternalStorageEvidence": "user-attestation-2026-09-05"
   },
   "governance": {
@@ -108,7 +112,9 @@
     ]
   },
   "operationalReferences": {
-    "scanRoots": ["."],
+    "scanRoots": [
+      "."
+    ],
     "currentAuthorityFiles": [
       ".github/workflows/production-foundation-preflight.yml",
       ".github/workflows/public-site-preview-publish.yml",
@@ -119,6 +125,7 @@
       ".github/workflows/staging-verification-probe.yml",
       ".github/workflows/staging-zero-traffic-deployment.yml",
       "artifacts/api-server/test/weekly-backup-restore.test.ts",
+      "artifacts/samra-pay-mobile/README.md",
       "deploy/gcp/README.md",
       "deploy/gcp/activate-production-foundation-preflight.sh",
       "deploy/gcp/activate-staging-github-federation.sh",
@@ -181,6 +188,7 @@
       "docs/README.md",
       "docs/architecture/alpha-release-1.md",
       "docs/architecture/optional-qase-reporting.md",
+      "docs/development-delivery.md",
       "docs/engineering-governance.md",
       "docs/notion-reporting.md",
       "docs/notion-ticket-sync.md",
@@ -192,6 +200,8 @@
       "docs/operations/evidence/2026-09-06-staging-controller-foundations.json",
       "docs/operations/github-authority-cutover-review.md",
       "docs/operations/github-enterprise-control-plane-migration.md",
+      "docs/operations/mobile-auth0-native-activation.md",
+      "docs/operations/open-work-delivery-2026-09-10.md",
       "docs/operations/repository-merge-controls.md",
       "docs/operations/staging-migrations.md",
       "docs/operations/staging-release-control-plane.md",
@@ -312,7 +322,11 @@
         "recoveryCodesGeneratedAndViewed": true,
         "recoveryCodesExternalStorageVerified": false,
         "verifiedRecoveryEmailConfigured": true,
-        "teams": ["developers", "platform-admins", "staging-approvers"]
+        "teams": [
+          "developers",
+          "platform-admins",
+          "staging-approvers"
+        ]
       },
       "blockingGates": [
         "paid-enterprise-activation",

@@ -1,0 +1,51 @@
+{
+  "date": "2026-09-09",
+  "status": "both-builds-succeeded-six-images-read-back",
+  "sourceSha": "ed2f4459d82434949ac72111f80c1840b168a165",
+  "githubArchiveSha256": "e7ed7d655b4b26021a673b888c57c7de3a41ebb960a54a5610c5cd9101175ef9",
+  "sourceVerification": "Fetched the exact commit archive from the private GitHub repository and verified the same SHA-256 in the owner Cloud Shell before extraction and submission.",
+  "operator": "me@davidhaile.com",
+  "buildIamEvidence": "docs/operations/evidence/2026-09-09-dev-test-build-iam.json",
+  "supersedesBuildBlocker": "docs/operations/evidence/2026-09-09-dev-test-image-publication.json",
+  "builds": {
+    "dev": {
+      "project": "samra-pay-dev",
+      "region": "us-east4",
+      "serviceAccount": "samra-build-dev@samra-pay-dev.iam.gserviceaccount.com",
+      "id": "77148997-df6d-4830-8585-75dd68eacf7a",
+      "status": "SUCCESS",
+      "finishTime": "2026-09-09T17:52:09.801187Z",
+      "sourceObject": "gs://samra-pay-dev_cloudbuild/source/1788975917.98518-1fec53098ba24c1eba7c606ad5e7d1c6.tgz",
+      "sourceGeneration": "1788975970557971",
+      "images": {
+        "api": "us-east4-docker.pkg.dev/samra-pay-dev/samra-dev/samra-api@sha256:4114269cb239046dd6cea778cb58465e421e2b56812443d05c79bf27c7793ace",
+        "customer-web": "us-east4-docker.pkg.dev/samra-pay-dev/samra-dev/samra-customer-web@sha256:f8b44d0f22a6a9cbd53ced52133922bae5e9365717c3ab7d7d8644f658a98399",
+        "migrations": "us-east4-docker.pkg.dev/samra-pay-dev/samra-dev/samra-migrations@sha256:c8ebf4c1d3b164d54794e834c42744af753758d782ee74100d7ab9529a35d31f"
+      }
+    },
+    "test": {
+      "project": "samra-pay-test",
+      "region": "us-east4",
+      "serviceAccount": "samra-build-test@samra-pay-test.iam.gserviceaccount.com",
+      "id": "a8b725f8-c53a-4bd5-b401-514c95cec3b2",
+      "status": "SUCCESS",
+      "finishTime": "2026-09-09T17:59:03.309746Z",
+      "sourceObject": "gs://samra-pay-test_cloudbuild/source/1788976210.572728-41b8a56520eb424e9f40a5350c77941c.tgz",
+      "sourceGeneration": "1788976269706970",
+      "images": {
+        "api": "us-east4-docker.pkg.dev/samra-pay-test/samra-test/samra-api@sha256:7dd064c3ffa437dc13f3df8adc37697e42c713367e0dfa94f316e597dd5f6b6a",
+        "customer-web": "us-east4-docker.pkg.dev/samra-pay-test/samra-test/samra-customer-web@sha256:e5bd01a40c066a58445a607bfeeffd6f1ccdc97a9a41afd62b4aad621b158788",
+        "migrations": "us-east4-docker.pkg.dev/samra-pay-test/samra-test/samra-migrations@sha256:dea3dbeeb890b46da6072867480ed71bf3e01841dea288ea72c55dd05b6e2258"
+      }
+    }
+  },
+  "runtimeReadback": {
+    "dev": { "databaseState": "STOPPED", "activationPolicy": "NEVER", "publicDatabaseIp": false, "sslMode": "ENCRYPTED_ONLY", "cloudRunServices": [], "secretResources": [] },
+    "test": { "databaseState": "STOPPED", "activationPolicy": "NEVER", "publicDatabaseIp": false, "sslMode": "ENCRYPTED_ONLY", "cloudRunServices": [], "secretResources": [] }
+  },
+  "runtimeDeployed": false,
+  "migrationsExecuted": false,
+  "usableTestUrl": false,
+  "acceptance": "Cloud build and registry publication only. These images predate the integration of PR #211; a final reviewed candidate must include tester setup before user testing. Login, database roles/TLS/migrations, deployment, admission and session-control acceptance remain open.",
+  "combinedMonthlyBudgetUsd": 50
+}

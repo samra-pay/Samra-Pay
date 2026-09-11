@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-09",
+  "status": "source-uploaded-build-identity-grants-pending",
+  "sourceSha": "9f19262da55cd775ec21de40d8cf0fe62f4e1f9c",
+  "githubArchiveSha256": "c1deed681b810f89303285f103db0ee009c8cdb72548f3772d71cec814cd0d1d",
+  "submittedSourceObject": "gs://samra-pay-dev_cloudbuild/source/1788969789.292258-39d29a537eee49bea2fc515abb02d78c.tgz",
+  "sourceFiles": 1298,
+  "uncompressedSourceMiB": 54.9,
+  "attempt": {
+    "project": "samra-pay-dev",
+    "region": "us-east4",
+    "serviceAccount": "829811168658@cloudbuild.gserviceaccount.com",
+    "result": "INVALID_ARGUMENT: legacy service account cannot be explicitly selected; a user-managed service account is required",
+    "buildId": null,
+    "imagesPublished": false
+  },
+  "preparedBuildAccounts": [
+    "samra-build-dev@samra-pay-dev.iam.gserviceaccount.com",
+    "samra-build-test@samra-pay-test.iam.gserviceaccount.com"
+  ],
+  "observedProjectGrantsForPreparedAccounts": [],
+  "proposedGrants": {
+    "sourceBucket": "roles/storage.objectViewer on only the corresponding project_cloudbuild bucket",
+    "imageRegistry": "roles/artifactregistry.writer on only samra-dev or samra-test in its project",
+    "buildLogs": "roles/logging.logWriter on only the corresponding Dev/Test project"
+  },
+  "iamApplyScript": "deploy/gcp/configure-dev-test-build-iam.sh",
+  "iamApprovalStatus": "pending action-time browser confirmation",
+  "runtimeDeployed": false,
+  "databaseCompute": "Dev/Test STOPPED / NEVER during audit",
+  "combinedMonthlyBudgetUsd": 50
+}
