@@ -44,6 +44,13 @@ release, start a paused database, reset manual scaling or change secret versions
 Before each future adoption, remove the previous writer for the exact fields
 being transferred and prove a no-change plan.
 
+Project configuration disables automatic default-network creation. The pinned
+provider imports its creation-only `auto_create_network` flag as true regardless
+of actual networks, so only that field is ignored during adoption. The separate
+live metadata audit rejects any existing default network; it must be reviewed
+and remediated independently, never deleted as an import side effect. This is
+not a general drift exemption for project labels, organization or billing.
+
 ## Local verification and CI
 
 Terraform is pinned to 1.14.7 and the Google provider to 7.41.0. Commit all

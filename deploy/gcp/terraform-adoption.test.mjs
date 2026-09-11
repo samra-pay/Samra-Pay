@@ -47,6 +47,7 @@ test("blocks mutations, incomplete checks, cross-project adoption and deletion e
 test("snapshot rejects stale, disabled-billing and source-organization inventory", () => {
   const now = Date.now();
   const inventory = {
+    defaultNetworks: [],
     observedAt: new Date(now).toISOString(),
     project: { projectId: "samra-pay-dev", projectNumber: "829811168658", name: "Samra Pay Development",
       parent: { type: "organization", id: "993968777863" }, lifecycleState: "ACTIVE", labels: { environment: "dev" } },
@@ -58,6 +59,8 @@ test("snapshot rejects stale, disabled-billing and source-organization inventory
     i => { i.project.parent.id = "614833350075"; },
     i => { i.billing.billingEnabled = false; },
     i => { i.project.lifecycleState = "DELETE_REQUESTED"; },
+    i => { i.defaultNetworks = [{ name: "default" }]; },
+    i => { delete i.defaultNetworks; },
   ]) {
     const i = structuredClone(inventory); mutate(i);
     assert.throws(() => validateInventory(i, "dev", now));

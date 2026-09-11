@@ -16,9 +16,10 @@ export function validateInventory(inventory, environment, now = Date.now()) {
       p?.projectId !== expected[0] || String(p?.projectNumber) !== expected[1] ||
       p?.parent?.type !== "organization" || p?.parent?.id !== "993968777863" ||
       p?.lifecycleState !== "ACTIVE" || !p?.name ||
+      !Array.isArray(inventory.defaultNetworks) || inventory.defaultNetworks.length !== 0 ||
       inventory.billing?.billingEnabled !== true ||
       inventory.billing?.billingAccountName !== "billingAccounts/01196E-DFC16E-433E6C") {
-    throw new Error("Fresh inventory must match the exact active project, company parent and billing account");
+    throw new Error("Fresh inventory must match the exact active project, company parent, billing account and absence of a default network");
   }
   return { project_name: p.name, project_labels: p.labels ?? {} };
 }

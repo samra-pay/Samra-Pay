@@ -17,6 +17,7 @@ const inventory = {
   observedAt: new Date().toISOString(),
   project: read(["projects", "describe", project]),
   billing: read(["billing", "projects", "describe", project]),
+  defaultNetworks: read(["compute", "networks", "list", "--filter=name=default"]),
 };
 const variables = validateInventory(inventory, environment);
 const output = resolve(destination);
