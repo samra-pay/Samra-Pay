@@ -1,0 +1,36 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "test": "node --import tsx --test src/*.test.ts",
+    "staging:access": "node --import tsx src/staging-database-access-cli.ts",
+    "test:staging-access": "node --import tsx --test src/staging-database-access-integration.ts",
+    "test:staging-access:junit": "node ../../artifacts/api-server/test/run-with-junit.mjs ../../artifacts/api-server/test-results/staging-database-access.xml 'Staging database least-privilege access' src/staging-database-access-integration.ts",
+    "test:migrate": "node --import tsx src/test-migrate.ts",
+    "test:seed": "node --import tsx src/test-seed.ts",
+    "workforce:provision": "node --import tsx src/workforce-provision.ts",
+    "shared-test:operate": "node --import tsx src/shared-test-operator-cli.ts",
+    "test:marketing-leads:postgres": "node --import tsx --test src/marketing-leads.postgres.ts && node --import tsx --test src/marketing-flow.postgres.mjs"
+  },
+  "dependencies": {
+    "@workspace/remittance": "workspace:*",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "catalog:",
+    "drizzle-zod": "^0.8.3",
+    "pg": "^8.22.0",
+    "tsx": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "^8.20.0"
+  }
+}
