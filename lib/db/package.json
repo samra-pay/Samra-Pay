@@ -18,7 +18,7 @@
     "test:seed": "node --import tsx src/test-seed.ts",
     "workforce:provision": "node --import tsx src/workforce-provision.ts",
     "shared-test:operate": "node --import tsx src/shared-test-operator-cli.ts",
-    "test:marketing-leads:postgres": "node ../../artifacts/api-server/test/run-with-junit.mjs ../../artifacts/api-server/test-results/postgres-persistence.xml \"PostgreSQL persistence\" src/marketing-persistence.postgres.test.ts"
+    "test:marketing-leads:postgres": "node ../../artifacts/api-server/test/run-with-junit.mjs ../../artifacts/api-server/test-results/postgres-persistence.xml \"PostgreSQL persistence\" src/marketing-leads.postgres.ts"
   },
   "dependencies": {
     "@workspace/remittance": "workspace:*",
