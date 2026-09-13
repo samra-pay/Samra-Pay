@@ -1,6 +1,6 @@
 # Verified marketing leads
 
-Status: prepared repository and HTTP adapter; not mounted, migrated to cloud, or activated. This change does not send email or upload audience data by itself.
+Status: foundation extended by the [marketing activation build](marketing-activation-build.md), including form wiring, signed webhooks, preference capabilities, Resend contact sync and advertising adapters. Not migrated to cloud or activated. The remaining paragraphs describe the original foundation scope; the activation-build document governs current integration status.
 
 ## Implemented boundary
 

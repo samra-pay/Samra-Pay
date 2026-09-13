@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import test from "node:test";
 import pg from "pg";
+import { PostgresMarketingActivationStore } from "./postgres-marketing-activation";
 import { PostgresPersistenceContext } from "./postgres-persistence";
 import {
   MarketingLeadTokenKeys,
@@ -16,10 +17,9 @@ if (!connectionString)
   );
 const pool = new pg.Pool({ connectionString, max: 8 });
 const keys = new MarketingLeadTokenKeys({ v1: randomBytes(32) }, "v1");
-const store = new PostgresMarketingLeadStore(
-  new PostgresPersistenceContext(pool),
-  keys,
-);
+const context = new PostgresPersistenceContext(pool);
+const store = new PostgresMarketingLeadStore(context, keys);
+const activation = new PostgresMarketingActivationStore(context, store);
 const input = {
   email: "reader@example.test",
   emailConsent: true as const,
@@ -36,7 +36,7 @@ const input = {
 };
 async function reset() {
   await pool.query(
-    "TRUNCATE samra_core.marketing_audience_removals,samra_core.marketing_lead_permissions,samra_core.marketing_lead_challenges,samra_core.marketing_lead_requests,samra_core.marketing_lead_profiles CASCADE",
+    "TRUNCATE samra_core.marketing_email_suppressions,samra_core.marketing_provider_events,samra_core.marketing_request_limits,samra_core.marketing_audience_removals,samra_core.marketing_lead_permissions,samra_core.marketing_lead_challenges,samra_core.marketing_lead_requests,samra_core.marketing_lead_profiles CASCADE",
   );
 }
 async function profile() {
@@ -340,6 +340,241 @@ test("verified marketing leads on PostgreSQL", async (t) => {
       );
       await assert.rejects(wrong.claimVerificationEmail(), /KEY_UNAVAILABLE/);
     });
+    await t.test(
+      "signed-event application deduplicates and never re-enables",
+      async () => {
+        await reset();
+        const m = await pending();
+        await store.confirm(m.token);
+        const event = {
+          id: "msg_synthetic_001",
+          payloadHash: "a".repeat(64),
+          type: "email.complained",
+          email: input.email,
+          reason: "complained" as const,
+        };
+        await activation.providerEvent(event);
+        await activation.providerEvent(event);
+        assert.equal((await profile()).email_active, false);
+        assert.equal(
+          (
+            await pool.query(
+              "SELECT count(*) FROM samra_core.marketing_provider_events",
+            )
+          ).rows[0].count,
+          "1",
+        );
+        await assert.rejects(
+          activation.providerEvent({ ...event, payloadHash: "b".repeat(64) }),
+          /CONFLICT/,
+        );
+      },
+    );
+    await t.test(
+      "provider suppression before signup prevents confirmation mail",
+      async () => {
+        await reset();
+        await activation.providerEvent({
+          id: "msg_before_signup",
+          payloadHash: "a".repeat(64),
+          type: "suppression.added",
+          email: input.email,
+          reason: "unsubscribed",
+        });
+        await store.register(input);
+        assert.equal(await store.claimVerificationEmail(), null);
+      },
+    );
+    await t.test(
+      "global request budgets are shared atomically across workers",
+      async () => {
+        await reset();
+        const results = await Promise.all(
+          Array.from({ length: 8 }, () =>
+            activation.allowRequest("register", 3),
+          ),
+        );
+        assert.equal(results.filter(Boolean).length, 3);
+      },
+    );
+    await t.test(
+      "audience adds require confirmation; pending add completes before withdrawal removal",
+      async () => {
+        await reset();
+        await store.register({ ...input, adsConsent: true });
+        const calls: boolean[] = [];
+        const adapter = {
+          submit: async ({ member }: { email: string; member: boolean }) => {
+            calls.push(member);
+            return { state: "pending" as const, requestId: "request-1" };
+          },
+          status: async () => "accepted" as const,
+        };
+        assert.equal(
+          (await activation.runAudience("google", adapter)).processed,
+          false,
+        );
+        const m = await store.claimVerificationEmail();
+        assert.ok(m);
+        await store.confirm(m.token, true);
+        await activation.runAudience("google", adapter);
+        await store.withdrawAdvertising(
+          (await profile()).contact_id,
+          "withdraw-before-complete",
+        );
+        await pool.query(
+          "UPDATE samra_core.marketing_audience_sync SET next_attempt_at=now()-interval '1 minute'",
+        );
+        await activation.runAudience("google", adapter);
+        assert.deepEqual(calls, [true]);
+        await pool.query(
+          "UPDATE samra_core.marketing_audience_sync SET next_attempt_at=now()-interval '1 minute'",
+        );
+        await activation.runAudience("google", adapter);
+        assert.deepEqual(calls, [true, false]);
+      },
+    );
+    await t.test(
+      "ambiguous upload blocks automatic replay and exposes operational backlog",
+      async () => {
+        await reset();
+        await store.register({ ...input, adsConsent: true });
+        const m = await store.claimVerificationEmail();
+        assert.ok(m);
+        await store.confirm(m.token, true);
+        let calls = 0;
+        const adapter = {
+          submit: async () => {
+            calls++;
+            throw new Error("synthetic timeout");
+          },
+          status: async () => "accepted" as const,
+        };
+        await activation.runAudience("meta", adapter);
+        await activation.runAudience("meta", adapter);
+        assert.equal(calls, 1);
+        const metrics = await activation.metrics();
+        assert.equal(
+          metrics.pending.find((r) => r.destination === "meta")?.state,
+          "uncertain",
+        );
+      },
+    );
+    await t.test(
+      "concurrent audience workers submit once and recheck consent",
+      async () => {
+        await reset();
+        await store.register({ ...input, adsConsent: true });
+        const m = await store.claimVerificationEmail();
+        assert.ok(m);
+        await store.confirm(m.token, true);
+        let calls = 0;
+        const adapter = {
+          submit: async () => {
+            calls++;
+            return { state: "accepted" as const, requestId: "receipt-1" };
+          },
+          status: async () => "accepted" as const,
+        };
+        await Promise.all([
+          activation.runAudience("meta", adapter),
+          activation.runAudience("meta", adapter),
+        ]);
+        assert.equal(calls, 1);
+        await store.withdrawAdvertising(
+          (await profile()).contact_id,
+          "withdraw-concurrent-1",
+        );
+        await pool.query(
+          "UPDATE samra_core.marketing_audience_sync SET next_attempt_at=now()-interval '1 minute'",
+        );
+        const submitted: boolean[] = [];
+        await activation.runAudience("meta", {
+          ...adapter,
+          submit: async ({ member }) => {
+            submitted.push(member);
+            return { state: "accepted", requestId: "remove-1" };
+          },
+        });
+        assert.deepEqual(submitted, [false]);
+      },
+    );
+    await t.test(
+      "Resend sync follows email permission independently of advertising",
+      async () => {
+        await reset();
+        const m = await pending();
+        await store.confirm(m.token, false);
+        const calls: boolean[] = [];
+        const adapter = {
+          submit: async ({ member }: { email: string; member: boolean }) => {
+            calls.push(member);
+            return { state: "accepted" as const, requestId: "resend-contact" };
+          },
+          status: async () => "accepted" as const,
+        };
+        await activation.runAudience("resend", adapter);
+        assert.deepEqual(calls, [true]);
+        await store.withdraw(
+          (await profile()).contact_id,
+          "unsubscribed",
+          "full-unsubscribe-resend",
+        );
+        await pool.query(
+          "UPDATE samra_core.marketing_audience_sync SET next_attempt_at=now()-interval '1 minute'",
+        );
+        await activation.runAudience("resend", adapter);
+        assert.deepEqual(calls, [true, false]);
+      },
+    );
+    await t.test(
+      "uncertain outcome reconciliation is revision-bound and recorded immutably",
+      async () => {
+        await reset();
+        await store.register({ ...input, adsConsent: true });
+        const m = await store.claimVerificationEmail();
+        assert.ok(m);
+        await store.confirm(m.token, true);
+        await activation.runAudience("meta", {
+          submit: async () => {
+            throw new Error("synthetic timeout");
+          },
+          status: async () => "accepted",
+        });
+        const id = (await profile()).contact_id;
+        await assert.rejects(
+          activation.reconcileAudience({
+            contactId: id,
+            destination: "meta",
+            submittedRevision: 2,
+            disposition: "accepted",
+            evidenceDigest: "a".repeat(64),
+          }),
+          /STALE/,
+        );
+        await activation.reconcileAudience({
+          contactId: id,
+          destination: "meta",
+          submittedRevision: 1,
+          disposition: "accepted",
+          evidenceDigest: "a".repeat(64),
+        });
+        assert.equal(
+          (
+            await pool.query(
+              "SELECT state FROM samra_core.marketing_audience_sync WHERE destination='meta'",
+            )
+          ).rows[0].state,
+          "idle",
+        );
+        await assert.rejects(
+          pool.query(
+            "DELETE FROM samra_core.marketing_audience_reconciliations",
+          ),
+          /append-only/,
+        );
+      },
+    );
     assert.deepEqual(
       safeLeadAttribution({
         source: "customer@email.test",

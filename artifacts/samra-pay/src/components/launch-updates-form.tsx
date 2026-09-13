@@ -1,8 +1,21 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
 
+import {
+  verifiedLeadsEnabled,
+  registerVerifiedLead,
+  leadAttribution,
+} from "@/lib/verified-marketing-leads";
+import {
+  readAnalyticsChoice,
+  privacySignalEnabled,
+} from "@/lib/public-analytics";
+
 export function LaunchUpdatesForm() {
+  const verified = verifiedLeadsEnabled();
+  const [adsConsent, setAdsConsent] = useState(false);
+  const pending = useRef<{ fingerprint: string; key: string } | null>(null);
   const { language, text } = usePublicLanguage();
   const fieldId = useId();
   const [email, setEmail] = useState("");
@@ -30,12 +43,36 @@ export function LaunchUpdatesForm() {
     setServiceError(false);
     setStatus("submitting");
     try {
-      const { subscribePublicWaitlist } = await import("@/lib/public-waitlist");
-      await subscribePublicWaitlist({
-        email: address,
-        locale: language,
-        website,
-      });
+      if (verified) {
+        const attribution = leadAttribution(
+          new URL(window.location.href),
+          readAnalyticsChoice() === "granted",
+        );
+        const payload = {
+          email: address,
+          locale: language,
+          website,
+          adsConsent: adsConsent && !privacySignalEnabled(),
+          attribution,
+        };
+        const fingerprint = JSON.stringify(payload);
+        if (pending.current?.fingerprint !== fingerprint)
+          pending.current = { fingerprint, key: crypto.randomUUID() };
+        await registerVerifiedLead({
+          ...payload,
+          idempotencyKey: pending.current.key,
+        });
+        pending.current = null;
+      } else {
+        const { subscribePublicWaitlist } =
+          await import("@/lib/public-waitlist");
+        await subscribePublicWaitlist({
+          email: address,
+          locale: language,
+          website,
+        });
+      }
+      setAdsConsent(false);
       setEmail("");
       setConsent(false);
       setWebsite("");
@@ -61,8 +98,12 @@ export function LaunchUpdatesForm() {
             <p>
               {text(
                 localized(
-                  "You're on the pre-launch list. We'll keep you informed.",
-                  "በቅድመ ማስጀመሪያ ዝርዝሩ ውስጥ ገብተዋል። መረጃ እናደርስዎታለን።",
+                  verified
+                    ? "Request received. If eligible, you'll receive an email to confirm your choice."
+                    : "You're on the pre-launch list. We'll keep you informed.",
+                  verified
+                    ? "ጥያቄዎ ደርሷል። ተገቢ ከሆነ፣ ምርጫዎን ለማረጋገጥ ኢሜይል ይደርስዎታል።"
+                    : "በቅድመ ማስጀመሪያ ዝርዝሩ ውስጥ ገብተዋል። መረጃ እናደርስዎታለን።",
                 ),
               )}
             </p>
@@ -149,6 +190,28 @@ export function LaunchUpdatesForm() {
               )}
             </span>
           </label>
+          {verified && !privacySignalEnabled() && (
+            <label
+              className="launch-updates-consent"
+              htmlFor={`${fieldId}-ads`}
+            >
+              <input
+                id={`${fieldId}-ads`}
+                type="checkbox"
+                checked={adsConsent}
+                disabled={status === "submitting"}
+                onChange={(event) => setAdsConsent(event.target.checked)}
+              />
+              <span>
+                {text(
+                  localized(
+                    "Optional: share my email with Meta and Google to match my account for personalized Samra Pay ads. I can withdraw this separately from email updates.",
+                    "አማራጭ፦ ለእኔ የተዘጋጁ የSamra Pay ማስታወቂያዎችን ለማሳየት ኢሜይሌ ከMeta እና Google ጋር እንዲጋራ እፈቅዳለሁ። ይህን ፈቃድ ከኢሜይል መረጃ ለይቼ ማቋረጥ እችላለሁ።",
+                  ),
+                )}
+              </span>
+            </label>
+          )}
           {error && (
             <p
               className="launch-updates-error"

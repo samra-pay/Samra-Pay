@@ -93,6 +93,8 @@ explicit approval for that scope. None of these states implies another.
 | Merge protection    | Required-check contracts and CODEOWNERS                                                                                                | Ruleset `22344977` enforced after the Sept 5 organization transfer; exact checks, PR, queue, no force-push/deletion or bypass          | Keep exact-candidate checks and current settings evidence; source/cloud authority cutover remains pending                                                                                                                |
 | Operations          | Portal, workforce controls, cases, incident runbooks and synthetic recovery rehearsal                                                  | Staffed coverage, live monitoring, cloud restore and service targets not established                                                   | [Operational readiness](operations/operational-readiness.md)                                                                                                                                                             |
 
+See the [verified marketing activation build](operations/marketing-activation-build.md) for the September 9 code-only lead, consent, Resend and audience-sync additions; these are not a deployed capability.
+
 ## Evidence and next verification
 
 - **GitHub, checked 2026-09-05:** local and remote `main` matched the baseline.
