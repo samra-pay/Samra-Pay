@@ -172,3 +172,34 @@ describe("launch updates waitlist", () => {
     );
   });
 });
+
+describe("verified signup release setting", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("keeps advertising unchecked and reports acceptance without claiming confirmation", async () => {
+    vi.stubEnv("VITE_SAMRA_VERIFIED_LEADS_ENABLED", "true");
+    fetchSpy.mockResolvedValue(
+      Response.json({ accepted: true }, { status: 202 }),
+    );
+    await render();
+    const boxes = host.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    expect(boxes.length).toBe(2);
+    expect(boxes[1].checked).toBe(false);
+    await enter(email(), "reader@example.test");
+    await act(async () => boxes[0].click());
+    await submit();
+    expect(fetchSpy.mock.calls[0][0]).toBe("/api/v1/marketing-leads");
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body)).toMatchObject({
+      emailConsent: true,
+      adsConsent: false,
+    });
+    expect(host.textContent).toContain("Request received");
+  });
+  it("keeps advertising unavailable when Global Privacy Control is active", async () => {
+    vi.stubEnv("VITE_SAMRA_VERIFIED_LEADS_ENABLED", "true");
+    vi.stubGlobal("navigator", { globalPrivacyControl: true });
+    await render();
+    expect(host.querySelectorAll('input[type="checkbox"]').length).toBe(1);
+  });
+});

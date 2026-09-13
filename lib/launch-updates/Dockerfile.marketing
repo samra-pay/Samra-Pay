@@ -1,0 +1,15 @@
+# Repository-root context; prepared runtime only. No migration or vendor call at build time.
+FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS build
+WORKDIR /workspace
+RUN corepack enable
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @workspace/launch-updates build
+FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
+WORKDIR /app
+COPY --from=build --chown=node:node /workspace/lib/launch-updates/dist/marketing-entry.mjs ./marketing-entry.mjs
+ENV NODE_ENV=production
+ENV SAMRA_MARKETING_MODE=disabled
+USER node
+ENTRYPOINT ["node","./marketing-entry.mjs"]
+CMD ["server"]

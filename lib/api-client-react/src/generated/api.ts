@@ -24,6 +24,7 @@ import type {
   Beneficiary,
   BindCustomerAcquisitionSessionRequest,
   CancelOperationsTransferRequest,
+  ConfirmMarketingLeadRequest,
   ConflictProblemResponse,
   CreateBeneficiaryRequest,
   CreateOperationsCaseRequest,
@@ -48,6 +49,9 @@ import type {
   ListOperationsReconciliationExceptionsParams,
   ListOperationsTransfersParams,
   ListRemittanceTransfersParams,
+  MarketingAcceptance,
+  MarketingConfirmation,
+  MarketingPreferenceRequest,
   NotFoundProblemResponse,
   OperationsAuditEvent,
   OperationsCase,
@@ -62,6 +66,7 @@ import type {
   RecordCustomerAcquisitionEventRequest,
   RemittanceOptions,
   RemittanceQuote,
+  ResendMarketingEvent,
   ResolveOperationsReconciliationExceptionRequest,
   RunReconciliationRequest,
   SelectScenarioRequest,
@@ -75,6 +80,7 @@ import type {
   UpdateBeneficiaryRequest,
   UpdateOperationsCaseRequest,
   ValidationProblemResponse,
+  VerifiedMarketingLeadRequest,
   WaitlistSubscriptionReceipt,
   WorkforceLoginRequest,
   WorkforceSession,
@@ -433,6 +439,358 @@ export const useRecordCustomerAcquisitionEvent = <
   TContext
 > => {
   return useMutation(getRecordCustomerAcquisitionEventMutationOptions(options));
+};
+
+export const getRegisterVerifiedMarketingLeadUrl = () => {
+  return `/api/v1/marketing-leads`;
+};
+
+/**
+ * @summary Request email ownership confirmation; receipt does not grant email or advertising permission
+ */
+export const registerVerifiedMarketingLead = async (
+  verifiedMarketingLeadRequest: VerifiedMarketingLeadRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<MarketingAcceptance> => {
+  return customFetch<MarketingAcceptance>(
+    getRegisterVerifiedMarketingLeadUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(verifiedMarketingLeadRequest),
+    },
+  );
+};
+
+export const getRegisterVerifiedMarketingLeadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerVerifiedMarketingLead>>,
+    TError,
+    { data: BodyType<VerifiedMarketingLeadRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerVerifiedMarketingLead>>,
+  TError,
+  { data: BodyType<VerifiedMarketingLeadRequest> },
+  TContext
+> => {
+  const mutationKey = ["registerVerifiedMarketingLead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerVerifiedMarketingLead>>,
+    { data: BodyType<VerifiedMarketingLeadRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerVerifiedMarketingLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterVerifiedMarketingLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerVerifiedMarketingLead>>
+>;
+export type RegisterVerifiedMarketingLeadMutationBody =
+  BodyType<VerifiedMarketingLeadRequest>;
+export type RegisterVerifiedMarketingLeadMutationError = ErrorType<void>;
+
+/**
+ * @summary Request email ownership confirmation; receipt does not grant email or advertising permission
+ */
+export const useRegisterVerifiedMarketingLead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerVerifiedMarketingLead>>,
+    TError,
+    { data: BodyType<VerifiedMarketingLeadRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerVerifiedMarketingLead>>,
+  TError,
+  { data: BodyType<VerifiedMarketingLeadRequest> },
+  TContext
+> => {
+  return useMutation(getRegisterVerifiedMarketingLeadMutationOptions(options));
+};
+
+export const getConfirmMarketingLeadUrl = () => {
+  return `/api/v1/marketing-leads/confirm`;
+};
+
+/**
+ * @summary Confirm email ownership using an expiring bearer token and optional advertising choice
+ */
+export const confirmMarketingLead = async (
+  confirmMarketingLeadRequest: ConfirmMarketingLeadRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<MarketingConfirmation> => {
+  return customFetch<MarketingConfirmation>(getConfirmMarketingLeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(confirmMarketingLeadRequest),
+  });
+};
+
+export const getConfirmMarketingLeadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmMarketingLead>>,
+    TError,
+    { data: BodyType<ConfirmMarketingLeadRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmMarketingLead>>,
+  TError,
+  { data: BodyType<ConfirmMarketingLeadRequest> },
+  TContext
+> => {
+  const mutationKey = ["confirmMarketingLead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmMarketingLead>>,
+    { data: BodyType<ConfirmMarketingLeadRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return confirmMarketingLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmMarketingLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmMarketingLead>>
+>;
+export type ConfirmMarketingLeadMutationBody =
+  BodyType<ConfirmMarketingLeadRequest>;
+export type ConfirmMarketingLeadMutationError = ErrorType<void>;
+
+/**
+ * @summary Confirm email ownership using an expiring bearer token and optional advertising choice
+ */
+export const useConfirmMarketingLead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmMarketingLead>>,
+    TError,
+    { data: BodyType<ConfirmMarketingLeadRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmMarketingLead>>,
+  TError,
+  { data: BodyType<ConfirmMarketingLeadRequest> },
+  TContext
+> => {
+  return useMutation(getConfirmMarketingLeadMutationOptions(options));
+};
+
+export const getWithdrawMarketingPermissionUrl = () => {
+  return `/api/v1/marketing-leads/preferences`;
+};
+
+/**
+ * @summary Withdraw permission using an email-delivered purpose-limited bearer capability
+ */
+export const withdrawMarketingPermission = async (
+  marketingPreferenceRequest: MarketingPreferenceRequest,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<MarketingAcceptance> => {
+  return customFetch<MarketingAcceptance>(getWithdrawMarketingPermissionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(marketingPreferenceRequest),
+  });
+};
+
+export const getWithdrawMarketingPermissionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawMarketingPermission>>,
+    TError,
+    { data: BodyType<MarketingPreferenceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawMarketingPermission>>,
+  TError,
+  { data: BodyType<MarketingPreferenceRequest> },
+  TContext
+> => {
+  const mutationKey = ["withdrawMarketingPermission"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawMarketingPermission>>,
+    { data: BodyType<MarketingPreferenceRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return withdrawMarketingPermission(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawMarketingPermissionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawMarketingPermission>>
+>;
+export type WithdrawMarketingPermissionMutationBody =
+  BodyType<MarketingPreferenceRequest>;
+export type WithdrawMarketingPermissionMutationError = ErrorType<void>;
+
+/**
+ * @summary Withdraw permission using an email-delivered purpose-limited bearer capability
+ */
+export const useWithdrawMarketingPermission = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawMarketingPermission>>,
+    TError,
+    { data: BodyType<MarketingPreferenceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawMarketingPermission>>,
+  TError,
+  { data: BodyType<MarketingPreferenceRequest> },
+  TContext
+> => {
+  return useMutation(getWithdrawMarketingPermissionMutationOptions(options));
+};
+
+export const getReceiveMarketingResendWebhookUrl = () => {
+  return `/api/v1/marketing-leads/resend-webhook`;
+};
+
+/**
+ * Requires svix-id, svix-timestamp and svix-signature headers verified with the endpoint secret. Deduplicates signed events and only reduces permissions. No raw event payload is retained.
+ * @summary Receive raw-body Svix-signed Resend events
+ */
+export const receiveMarketingResendWebhook = async (
+  resendMarketingEvent: ResendMarketingEvent,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<void> => {
+  return customFetch<void>(getReceiveMarketingResendWebhookUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resendMarketingEvent),
+  });
+};
+
+export const getReceiveMarketingResendWebhookMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveMarketingResendWebhook>>,
+    TError,
+    { data: BodyType<ResendMarketingEvent> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof receiveMarketingResendWebhook>>,
+  TError,
+  { data: BodyType<ResendMarketingEvent> },
+  TContext
+> => {
+  const mutationKey = ["receiveMarketingResendWebhook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof receiveMarketingResendWebhook>>,
+    { data: BodyType<ResendMarketingEvent> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return receiveMarketingResendWebhook(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveMarketingResendWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveMarketingResendWebhook>>
+>;
+export type ReceiveMarketingResendWebhookMutationBody =
+  BodyType<ResendMarketingEvent>;
+export type ReceiveMarketingResendWebhookMutationError = ErrorType<void>;
+
+/**
+ * @summary Receive raw-body Svix-signed Resend events
+ */
+export const useReceiveMarketingResendWebhook = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveMarketingResendWebhook>>,
+    TError,
+    { data: BodyType<ResendMarketingEvent> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof receiveMarketingResendWebhook>>,
+  TError,
+  { data: BodyType<ResendMarketingEvent> },
+  TContext
+> => {
+  return useMutation(getReceiveMarketingResendWebhookMutationOptions(options));
 };
 
 export const getSubscribeWaitlistUrl = () => {

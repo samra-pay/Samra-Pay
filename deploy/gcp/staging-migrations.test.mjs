@@ -122,7 +122,7 @@ function manifest() {
 }
 
 test("migration history must match the full ordered source prefix, including hashes", () => {
-  assert.equal(history.length, 20);
+  assert.equal(history.length, 21);
   assert.deepEqual(verifyHistory([], catalog), []);
   for (const changed of [
     rows.slice(1),

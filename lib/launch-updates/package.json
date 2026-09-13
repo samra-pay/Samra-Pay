@@ -8,6 +8,16 @@
     "./verified-leads": "./src/verified-lead-service.mjs"
   },
   "scripts": {
-    "test": "node --test src/*.test.mjs"
+    "test": "node --test src/*.test.mjs",
+    "marketing": "node --import tsx src/marketing-entry.mjs",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "svix": "2.3.0",
+    "@workspace/db": "workspace:*",
+    "tsx": "catalog:"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.3"
   }
 }
