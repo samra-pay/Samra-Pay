@@ -12,10 +12,12 @@ configuration blockers and staged acceptance.
 ## Decision
 
 The Alpha vendor stack is Auth0 for customer authentication, Persona for KYC,
-and Crossmint for creation of a USDC wallet. Samra Pay owns the customer,
-onboarding state, consent evidence, authorization, provider mappings,
-transactions, double-entry ledger, balances, audit history, reconciliation,
-support record, and acquisition attribution.
+and Crossmint for wallet creation intended for a future approved USDC
+asset/network configuration. The current staging request creates only a generic
+EVM smart-wallet resource and does not select or verify an exact token contract
+or chain. Samra Pay owns the customer, onboarding state, consent evidence,
+authorization, provider mappings, transactions, double-entry ledger, balances,
+audit history, reconciliation, support record, and acquisition attribution.
 
 Crossmint is not the bank-funding or Ethiopia-payout decision. The architecture
 must not imply Plaid compatibility, bank-funded Crossmint transactions, a live
@@ -53,7 +55,7 @@ flowchart TB
   mobile --> auth0
   auth0 -. verified access token .-> api
   adapters -. KYC case .-> persona[Persona]
-  adapters -. USDC wallet .-> crossmint[Crossmint]
+  adapters -. EVM wallet intended for USDC .-> crossmint[Crossmint]
   adapters -. later replacement evaluation .-> alternatives[Cybrid / Rain / Bridge]
   transfer -. unresolved .-> funding[Funding rail]
   transfer -. unresolved .-> payout[Ethiopia payout rail]
@@ -68,16 +70,16 @@ grant customer capability or post a ledger journal by themselves.
 
 ## Capability ownership
 
-| Capability | Authority | Samra retains |
-| --- | --- | --- |
-| Authentication | Auth0 authenticates a configured subject | Customer mapping, lifecycle, authorization, audit |
-| KYC evidence | Persona may collect and evaluate evidence | Case ID, normalized state, capability gate, appeal/support state |
-| USDC wallet | Crossmint may create and operate the Alpha wallet | Internal wallet ID, customer link, state, provider mapping, ledger |
-| Funding | Unresolved provider | Funding intent, idempotency, transaction and ledger state |
-| Ethiopia payout | Unresolved provider | Transfer state, payout instruction, evidence, reconciliation |
-| Balance | Samra ledger only | Journals, postings, holds, projection, reconciliation |
-| Testing evidence | GitHub Actions and user-test issues | Release decision, exact SHA, evidence retention |
-| Runtime and data | Google Cloud | Source, configuration contracts, access policy, database schema |
+| Capability               | Authority                                                                                  | Samra retains                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Authentication           | Auth0 authenticates a configured subject                                                   | Customer mapping, lifecycle, authorization, audit                  |
+| KYC evidence             | Persona may collect and evaluate evidence                                                  | Case ID, normalized state, capability gate, appeal/support state   |
+| Wallet intended for USDC | Crossmint may create and operate the Alpha wallet under an approved asset/network contract | Internal wallet ID, customer link, state, provider mapping, ledger |
+| Funding                  | Unresolved provider                                                                        | Funding intent, idempotency, transaction and ledger state          |
+| Ethiopia payout          | Unresolved provider                                                                        | Transfer state, payout instruction, evidence, reconciliation       |
+| Balance                  | Samra ledger only                                                                          | Journals, postings, holds, projection, reconciliation              |
+| Testing evidence         | GitHub Actions and user-test issues                                                        | Release decision, exact SHA, evidence retention                    |
+| Runtime and data         | Google Cloud                                                                               | Source, configuration contracts, access policy, database schema    |
 
 Automated release and staging evidence follow the
 [GitHub user-testing decision](../testing/user-testing.md). GitHub retains
@@ -102,6 +104,10 @@ mandatory exact-revision checks and evidence regardless of reporting availabilit
 
 ## Vendor portability rules
 
+The [provider-portability and Samra control-plane decision](provider-portability.md)
+is the governing standard. The rules below are its Alpha-specific minimum, not
+a complete migration or provider-exit plan.
+
 - Internal IDs are Samra-generated UUIDs; vendor IDs are opaque mappings.
 - Frontend contracts expose normalized Samra states, never vendor payloads.
 - Every create or command uses a stable Samra idempotency reference.
@@ -116,11 +122,14 @@ mandatory exact-revision checks and evidence regardless of reporting availabilit
 
 ## Crossmint Alpha boundary
 
-The Alpha contract is limited to an approved USDC wallet configuration and the
+The Alpha product intent is an approved USDC wallet configuration and the
 minimum lifecycle needed to create, retrieve, suspend, and observe that wallet.
-The exact network, custody model, recovery model, transaction permissions,
-fees, limits, sanctions responsibilities, webhook authentication, and customer
-disclosures must be confirmed before a live credential is introduced.
+The current creation-only staging adapter does not establish that configuration:
+it requests a generic EVM smart wallet without selecting or validating a token
+contract or exact chain. The exact asset, network, custody model, recovery model,
+transaction permissions, fees, limits, sanctions responsibilities, webhook
+authentication, and customer disclosures must be confirmed before a live
+credential is introduced.
 
 Crossmint is not assumed to provide Plaid connectivity or bank-funded wallet
 transactions. Funding remains a separate capability and decision.

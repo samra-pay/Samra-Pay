@@ -320,6 +320,7 @@ export const StartCustomerOnboardingResponse = zod.object({
     "bank_matched",
     "wallet_consent_pending",
     "wallet_provisioning",
+    "wallet_control_setup",
     "wallet_ready",
     "funding_ready",
     "activated",
@@ -332,25 +333,29 @@ export const StartCustomerOnboardingResponse = zod.object({
   createdAt: zod.string().datetime({ offset: true }),
   updatedAt: zod.string().datetime({ offset: true }),
   nextAllowedActions: zod.array(zod.string()),
-  consentBundle: zod.object({
-    bundleVersion: zod.string(),
-    locale: zod.string(),
-    legalEffect: zod.enum(["non_production"]),
-    documents: zod
-      .array(
-        zod.object({
-          consentType: zod.enum([
-            "terms_of_service",
-            "privacy_notice",
-            "electronic_communications",
-          ]),
-          documentVersion: zod.string(),
-          required: zod.boolean(),
-        }),
-      )
-      .min(startCustomerOnboardingResponseConsentBundleDocumentsMin)
-      .max(startCustomerOnboardingResponseConsentBundleDocumentsMax),
-  }),
+  consentBundle: zod
+    .object({
+      bundleVersion: zod.string(),
+      locale: zod.string(),
+      legalEffect: zod.enum(["non_production"]),
+      documents: zod
+        .array(
+          zod.object({
+            consentType: zod.enum([
+              "terms_of_service",
+              "privacy_notice",
+              "electronic_communications",
+            ]),
+            documentVersion: zod.string(),
+            required: zod.boolean(),
+          }),
+        )
+        .min(startCustomerOnboardingResponseConsentBundleDocumentsMin)
+        .max(startCustomerOnboardingResponseConsentBundleDocumentsMax),
+    })
+    .describe(
+      "Current server-selected catalog to present, not proof that this customer accepted the current version. Durable acceptance evidence remains server-side; submit_required_consents in nextAllowedActions means the current bundle must be accepted before the later journey stage can continue.\n",
+    ),
 });
 
 /**
@@ -374,6 +379,7 @@ export const GetCustomerOnboardingResponse = zod.object({
     "bank_matched",
     "wallet_consent_pending",
     "wallet_provisioning",
+    "wallet_control_setup",
     "wallet_ready",
     "funding_ready",
     "activated",
@@ -386,25 +392,29 @@ export const GetCustomerOnboardingResponse = zod.object({
   createdAt: zod.string().datetime({ offset: true }),
   updatedAt: zod.string().datetime({ offset: true }),
   nextAllowedActions: zod.array(zod.string()),
-  consentBundle: zod.object({
-    bundleVersion: zod.string(),
-    locale: zod.string(),
-    legalEffect: zod.enum(["non_production"]),
-    documents: zod
-      .array(
-        zod.object({
-          consentType: zod.enum([
-            "terms_of_service",
-            "privacy_notice",
-            "electronic_communications",
-          ]),
-          documentVersion: zod.string(),
-          required: zod.boolean(),
-        }),
-      )
-      .min(getCustomerOnboardingResponseConsentBundleDocumentsMin)
-      .max(getCustomerOnboardingResponseConsentBundleDocumentsMax),
-  }),
+  consentBundle: zod
+    .object({
+      bundleVersion: zod.string(),
+      locale: zod.string(),
+      legalEffect: zod.enum(["non_production"]),
+      documents: zod
+        .array(
+          zod.object({
+            consentType: zod.enum([
+              "terms_of_service",
+              "privacy_notice",
+              "electronic_communications",
+            ]),
+            documentVersion: zod.string(),
+            required: zod.boolean(),
+          }),
+        )
+        .min(getCustomerOnboardingResponseConsentBundleDocumentsMin)
+        .max(getCustomerOnboardingResponseConsentBundleDocumentsMax),
+    })
+    .describe(
+      "Current server-selected catalog to present, not proof that this customer accepted the current version. Durable acceptance evidence remains server-side; submit_required_consents in nextAllowedActions means the current bundle must be accepted before the later journey stage can continue.\n",
+    ),
 });
 
 /**
@@ -476,6 +486,7 @@ export const SubmitCustomerConsentBundleResponse = zod.object({
     "bank_matched",
     "wallet_consent_pending",
     "wallet_provisioning",
+    "wallet_control_setup",
     "wallet_ready",
     "funding_ready",
     "activated",
@@ -488,25 +499,29 @@ export const SubmitCustomerConsentBundleResponse = zod.object({
   createdAt: zod.string().datetime({ offset: true }),
   updatedAt: zod.string().datetime({ offset: true }),
   nextAllowedActions: zod.array(zod.string()),
-  consentBundle: zod.object({
-    bundleVersion: zod.string(),
-    locale: zod.string(),
-    legalEffect: zod.enum(["non_production"]),
-    documents: zod
-      .array(
-        zod.object({
-          consentType: zod.enum([
-            "terms_of_service",
-            "privacy_notice",
-            "electronic_communications",
-          ]),
-          documentVersion: zod.string(),
-          required: zod.boolean(),
-        }),
-      )
-      .min(submitCustomerConsentBundleResponseConsentBundleDocumentsMin)
-      .max(submitCustomerConsentBundleResponseConsentBundleDocumentsMax),
-  }),
+  consentBundle: zod
+    .object({
+      bundleVersion: zod.string(),
+      locale: zod.string(),
+      legalEffect: zod.enum(["non_production"]),
+      documents: zod
+        .array(
+          zod.object({
+            consentType: zod.enum([
+              "terms_of_service",
+              "privacy_notice",
+              "electronic_communications",
+            ]),
+            documentVersion: zod.string(),
+            required: zod.boolean(),
+          }),
+        )
+        .min(submitCustomerConsentBundleResponseConsentBundleDocumentsMin)
+        .max(submitCustomerConsentBundleResponseConsentBundleDocumentsMax),
+    })
+    .describe(
+      "Current server-selected catalog to present, not proof that this customer accepted the current version. Durable acceptance evidence remains server-side; submit_required_consents in nextAllowedActions means the current bundle must be accepted before the later journey stage can continue.\n",
+    ),
 });
 
 /**
@@ -568,7 +583,7 @@ export const GetCustomerIdentityCaseResponse = zod.object({
 });
 
 /**
- * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
+ * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and sends the Samra-owned durable request key on the initial wallet-provider dispatch. An existing nonterminal staging record blocks another automatic dispatch until reconciliation. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
  * @summary Create or resume the Samra-owned customer wallet record
  */
 export const startCustomerWalletProvisioningHeaderIdempotencyKeyMin = 8;
@@ -581,18 +596,20 @@ export const StartCustomerWalletProvisioningHeader = zod.object({
     .max(startCustomerWalletProvisioningHeaderIdempotencyKeyMax),
 });
 
-export const StartCustomerWalletProvisioningBody = zod.object({
-  bundleVersion: zod.enum([
-    "alpha-wallet-non-production-v1",
-    "sandbox-customer-wallet-v1",
-  ]),
-  documentVersion: zod.enum([
-    "alpha-wallet-non-production-v1",
-    "sandbox-customer-wallet-v1",
-  ]),
-  locale: zod.literal("en-US"),
-  decision: zod.literal("accepted"),
-});
+export const StartCustomerWalletProvisioningBody = zod.union([
+  zod.object({
+    bundleVersion: zod.literal("alpha-wallet-non-production-v2"),
+    documentVersion: zod.literal("alpha-wallet-non-production-v2"),
+    locale: zod.literal("en-US"),
+    decision: zod.literal("accepted"),
+  }),
+  zod.object({
+    bundleVersion: zod.literal("sandbox-customer-wallet-v2"),
+    documentVersion: zod.literal("sandbox-customer-wallet-v2"),
+    locale: zod.literal("en-US"),
+    decision: zod.literal("accepted"),
+  }),
+]);
 
 export const startCustomerWalletProvisioningResponseWalletIdRegExp = new RegExp(
   "^wallet_[0-9a-f]{32}$",
@@ -602,13 +619,36 @@ export const StartCustomerWalletProvisioningResponse = zod.object({
   walletId: zod
     .string()
     .regex(startCustomerWalletProvisioningResponseWalletIdRegExp),
-  state: zod.enum(["created", "provisioning", "ready", "restricted", "error"]),
+  state: zod.enum([
+    "created",
+    "provisioning",
+    "customer_control_setup",
+    "ready",
+    "restricted",
+    "error",
+  ]),
   reasonFamily: zod.union([zod.string(), zod.null()]),
   provider: zod.enum(["crossmint"]),
-  asset: zod.enum(["USDC"]),
-  network: zod.union([zod.string(), zod.null()]),
-  custodyModel: zod.union([zod.string(), zod.null()]),
-  publicAddress: zod.union([zod.string(), zod.null()]),
+  asset: zod
+    .enum(["USDC"])
+    .describe(
+      "Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network.",
+    ),
+  network: zod
+    .union([zod.string(), zod.null()])
+    .describe(
+      "Provider-normalized chain family or synthetic marker. The current staging value `evm` is not evidence of an exact blockchain network.",
+    ),
+  custodyModel: zod
+    .union([zod.string(), zod.null()])
+    .describe(
+      "Normalized custody and customer-control model. It remains null until Samra has durable evidence that required signing and recovery controls are complete.",
+    ),
+  publicAddress: zod
+    .union([zod.string(), zod.null()])
+    .describe(
+      "Customer-visible address, exposed only for a ready wallet with completed control evidence; null for every non-ready state.",
+    ),
   configurationVersion: zod.enum([
     "crossmint-synthetic-v1",
     "crossmint-sandbox-evm-customer-email-v1",
@@ -630,13 +670,36 @@ export const getCustomerWalletResponseWalletIdRegExp = new RegExp(
 
 export const GetCustomerWalletResponse = zod.object({
   walletId: zod.string().regex(getCustomerWalletResponseWalletIdRegExp),
-  state: zod.enum(["created", "provisioning", "ready", "restricted", "error"]),
+  state: zod.enum([
+    "created",
+    "provisioning",
+    "customer_control_setup",
+    "ready",
+    "restricted",
+    "error",
+  ]),
   reasonFamily: zod.union([zod.string(), zod.null()]),
   provider: zod.enum(["crossmint"]),
-  asset: zod.enum(["USDC"]),
-  network: zod.union([zod.string(), zod.null()]),
-  custodyModel: zod.union([zod.string(), zod.null()]),
-  publicAddress: zod.union([zod.string(), zod.null()]),
+  asset: zod
+    .enum(["USDC"])
+    .describe(
+      "Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network.",
+    ),
+  network: zod
+    .union([zod.string(), zod.null()])
+    .describe(
+      "Provider-normalized chain family or synthetic marker. The current staging value `evm` is not evidence of an exact blockchain network.",
+    ),
+  custodyModel: zod
+    .union([zod.string(), zod.null()])
+    .describe(
+      "Normalized custody and customer-control model. It remains null until Samra has durable evidence that required signing and recovery controls are complete.",
+    ),
+  publicAddress: zod
+    .union([zod.string(), zod.null()])
+    .describe(
+      "Customer-visible address, exposed only for a ready wallet with completed control evidence; null for every non-ready state.",
+    ),
   configurationVersion: zod.enum([
     "crossmint-synthetic-v1",
     "crossmint-sandbox-evm-customer-email-v1",
@@ -648,6 +711,55 @@ export const GetCustomerWalletResponse = zod.object({
   updatedAt: zod.string().datetime({ offset: true }),
   nextAllowedActions: zod.array(zod.string()),
 });
+
+/**
+ * Returns the server-selected, non-production wallet disclosure for the authenticated customer. Clients submit the returned versions to the provisioning endpoint; they do not select a provider or infer funding, remittance, or customer-control readiness.
+ * @summary Get the current wallet provisioning disclosure
+ */
+export const GetCustomerWalletDisclosureResponse = zod.union([
+  zod.object({
+    bundleVersion: zod.literal("alpha-wallet-non-production-v2"),
+    documentVersion: zod.literal("alpha-wallet-non-production-v2"),
+    locale: zod.literal("en-US"),
+    legalEffect: zod.literal("non_production"),
+    environment: zod.enum(["synthetic"]),
+    createsRealWallet: zod.literal(false),
+    customerControlSetupRequired: zod.literal(false),
+    fundingEnabled: zod.literal(false),
+    remittanceEnabled: zod.literal(false),
+    presentation: zod.object({
+      title: zod.literal("Create your synthetic USDC wallet record"),
+      body: zod.literal(
+        "This alpha step creates only a synthetic wallet record. It does not create a blockchain wallet, tokens, public address, balance, funding, remittance, transfers, withdrawals, or live financial access.",
+      ),
+      acceptanceLabel: zod.literal(
+        "I understand this creates only a synthetic wallet record",
+      ),
+      actionLabel: zod.literal("Create synthetic wallet"),
+    }),
+  }),
+  zod.object({
+    bundleVersion: zod.literal("sandbox-customer-wallet-v2"),
+    documentVersion: zod.literal("sandbox-customer-wallet-v2"),
+    locale: zod.literal("en-US"),
+    legalEffect: zod.literal("non_production"),
+    environment: zod.enum(["staging"]),
+    createsRealWallet: zod.literal(true),
+    customerControlSetupRequired: zod.literal(true),
+    fundingEnabled: zod.literal(false),
+    remittanceEnabled: zod.literal(false),
+    presentation: zod.object({
+      title: zod.literal("Create your Crossmint non-production EVM wallet"),
+      body: zod.literal(
+        "This creates a real, non-production Crossmint EVM wallet intended for future approved USDC use and associates it with your Samra account. Crossmint receives an opaque Samra customer reference and the configured tester recovery email for the wallet's email admin signer. Samra has not configured a token or on-chain asset for this wallet. Because this flow does not inspect on-chain holdings, it makes no claim that the address is empty; Samra does not recognize or present a wallet balance. Customer signing and recovery control have not been verified, so the wallet is not ready. Funding, remittance, transfers, withdrawals, and live financial access remain disabled.",
+      ),
+      acceptanceLabel: zod.literal(
+        "I understand Crossmint receives the configured tester recovery email; this flow does not prove the wallet is empty or customer-controlled, and Samra does not present a wallet balance",
+      ),
+      actionLabel: zod.literal("Create Crossmint test wallet"),
+    }),
+  }),
+]);
 
 /**
  * @summary List ledger-derived customer accounts
@@ -1554,7 +1666,7 @@ export const CancelRemittanceTransferResponse = zod.object({
 });
 
 /**
- * Available only when the backend is explicitly in demo/fake mode.
+ * Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
  * @summary Select and advance a deterministic fake-provider scenario
  */
 export const SelectDemoTransferScenarioParams = zod.object({
@@ -1676,7 +1788,7 @@ export const SelectDemoTransferScenarioResponse = zod.object({
 });
 
 /**
- * Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+ * Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
  * @summary Apply a deterministic fake Persona decision
  */
 export const advanceDemoCustomerIdentityPathIdentityCaseIdMin = 8;
@@ -1728,7 +1840,7 @@ export const AdvanceDemoCustomerIdentityResponse = zod.object({
 });
 
 /**
- * Available only when the backend is explicitly in demo/fake mode.
+ * Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
  * @summary Run deterministic fake-provider reconciliation
  */
 export const RunDemoReconciliationBody = zod.object({

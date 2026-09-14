@@ -38,6 +38,7 @@ import type {
   CustomerIdentityProviderEventResult,
   CustomerOnboarding,
   CustomerWallet,
+  CustomerWalletDisclosure,
   ExpiredProblemResponse,
   ForbiddenProblemResponse,
   GetOperationsCustomerFunnelParams,
@@ -1486,7 +1487,7 @@ export const getStartCustomerWalletProvisioningUrl = () => {
 };
 
 /**
- * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
+ * Records the current non-production wallet provisioning disclosure, enforces approved identity state, and sends the Samra-owned durable request key on the initial wallet-provider dispatch. An existing nonterminal staging record blocks another automatic dispatch until reconciliation. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
  * @summary Create or resume the Samra-owned customer wallet record
  */
 export const startCustomerWalletProvisioning = async (
@@ -1671,6 +1672,93 @@ export function useGetCustomerWallet<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCustomerWalletQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCustomerWalletDisclosureUrl = () => {
+  return `/api/v1/onboarding/wallet/disclosure`;
+};
+
+/**
+ * Returns the server-selected, non-production wallet disclosure for the authenticated customer. Clients submit the returned versions to the provisioning endpoint; they do not select a provider or infer funding, remittance, or customer-control readiness.
+ * @summary Get the current wallet provisioning disclosure
+ */
+export const getCustomerWalletDisclosure = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CustomerWalletDisclosure> => {
+  return customFetch<CustomerWalletDisclosure>(
+    getGetCustomerWalletDisclosureUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCustomerWalletDisclosureQueryKey = () => {
+  return [`/api/v1/onboarding/wallet/disclosure`] as const;
+};
+
+export const getGetCustomerWalletDisclosureQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerWalletDisclosure>>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerWalletDisclosure>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCustomerWalletDisclosureQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerWalletDisclosure>>
+  > = ({ signal }) =>
+    getCustomerWalletDisclosure({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerWalletDisclosure>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerWalletDisclosureQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerWalletDisclosure>>
+>;
+export type GetCustomerWalletDisclosureQueryError = ErrorType<
+  UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+>;
+
+/**
+ * @summary Get the current wallet provisioning disclosure
+ */
+
+export function useGetCustomerWalletDisclosure<
+  TData = Awaited<ReturnType<typeof getCustomerWalletDisclosure>>,
+  TError = ErrorType<
+    UnauthorizedProblemResponse | ForbiddenProblemResponse | UnavailableResponse
+  >,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerWalletDisclosure>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerWalletDisclosureQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -2977,7 +3065,7 @@ export const getSelectDemoTransferScenarioUrl = (transferId: string) => {
 };
 
 /**
- * Available only when the backend is explicitly in demo/fake mode.
+ * Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
  * @summary Select and advance a deterministic fake-provider scenario
  */
 export const selectDemoTransferScenario = async (
@@ -3072,7 +3160,7 @@ export const getAdvanceDemoCustomerIdentityUrl = (identityCaseId: string) => {
 };
 
 /**
- * Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+ * Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
  * @summary Apply a deterministic fake Persona decision
  */
 export const advanceDemoCustomerIdentity = async (
@@ -3194,7 +3282,7 @@ export const getRunDemoReconciliationUrl = () => {
 };
 
 /**
- * Available only when the backend is explicitly in demo/fake mode.
+ * Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
  * @summary Run deterministic fake-provider reconciliation
  */
 export const runDemoReconciliation = async (

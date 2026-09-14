@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { assertPostgresRuntimeReady } from "@workspace/db";
+import { loadApiRuntimeConfig } from "./config";
+import { requiresCustomerWalletControlSchema } from "./domain/create-demo-runtime";
 
 type ReadinessPool = Parameters<typeof assertPostgresRuntimeReady>[0];
 
@@ -61,4 +63,58 @@ test("PostgreSQL readiness rejects an incomplete migrated schema", async () => {
     assertPostgresRuntimeReady(pool),
     /schema is not ready; 1 required relation\(s\) are missing/,
   );
+});
+
+test("fake-provider shared Dev/Test rejects schema through 0020 and accepts current wallet controls", async () => {
+  for (const deployment of ["dev", "test"] as const) {
+    const config = loadApiRuntimeConfig({
+      NODE_ENV: "production",
+      SAMRA_RELEASE_PROFILE: "synthetic-shared",
+      SAMRA_DEPLOYMENT_ENVIRONMENT: deployment,
+      GOOGLE_CLOUD_PROJECT: `samra-pay-${deployment}`,
+      SAMRA_ALLOWED_ORIGINS: `https://${deployment}.example.test`,
+      SAMRA_BACKEND_MODE: "demo",
+      SAMRA_PROVIDER_MODE: "fake",
+      SAMRA_PERSISTENCE_MODE: "postgres",
+      SAMRA_CUSTOMER_AUTH_MODE: "auth0",
+      AUTH0_ISSUER_BASE_URL: `https://auth.${deployment}.example.test`,
+      AUTH0_AUDIENCE: `https://api.${deployment}.example.test`,
+      SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
+      SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: "fake",
+      SAMRA_RUN_WORKER: "true",
+      SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
+    });
+    assert.deepEqual(config.customerWalletProvider, { mode: "fake" });
+    assert.equal(requiresCustomerWalletControlSchema(config), true);
+
+    for (const walletControlsReady of [false, true]) {
+      let calls = 0;
+      const statements: string[] = [];
+      const pool = {
+        async query(sql: string) {
+          statements.push(sql);
+          calls++;
+          if (calls === 1) return { rows: [] };
+          if (calls === 2) return { rows: [{ ready: true }] };
+          return { rows: [{ ready: walletControlsReady }] };
+        },
+      } as unknown as ReadinessPool;
+
+      const readiness = assertPostgresRuntimeReady(pool, {
+        alphaReleaseAdmission: true,
+        customerWalletControls: requiresCustomerWalletControlSchema(config),
+      });
+      if (walletControlsReady) await readiness;
+      else {
+        await assert.rejects(
+          readiness,
+          /customer wallet control migration is not ready/,
+        );
+      }
+      assert.equal(calls, 3);
+      assert.match(statements[2]!, /customer_wallets_controlled_mutation/);
+      assert.match(statements[2]!, /customer_control_setup/);
+      assert.match(statements[2]!, /wallet_control_setup/);
+    }
+  }
 });

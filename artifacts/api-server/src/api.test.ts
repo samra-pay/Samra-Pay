@@ -69,18 +69,22 @@ function unusedIdentityVerificationService(): CustomerIdentityVerificationServic
   });
 }
 
-function unusedWalletProvisioningService(): CustomerWalletProvisioningService {
+function unusedWalletProvisioningService(
+  providerMode: "fake" | "crossmint-sandbox-customer" = "fake",
+): CustomerWalletProvisioningService {
   const notUsed = async (): Promise<never> => {
     throw new Error("not used by this test");
   };
   const store: CustomerWalletStore = {
     prepareAuth0Wallet: notUsed,
+    runAuthorizedProviderDispatch: notUsed,
     attachProviderWallet: notUsed,
     recordProviderStartFailure: notUsed,
     getAuth0Wallet: notUsed,
   };
   return new CustomerWalletProvisioningService({
     store,
+    providerMode,
     provider: new DeterministicFakeCrossmintAdapter(),
   });
 }
@@ -118,11 +122,11 @@ test("public waitlist records explicit consent idempotently and rejects extra tr
       website: "",
     };
     const headers = { "Idempotency-Key": "waitlist-command-001" };
-    const accepted = await request(
-      origin,
-      "/api/v1/waitlist/subscriptions",
-      { method: "POST", headers, body: input },
-    );
+    const accepted = await request(origin, "/api/v1/waitlist/subscriptions", {
+      method: "POST",
+      headers,
+      body: input,
+    });
     assert.equal(accepted.status, 202);
     assert.equal(accepted.body["accepted"], true);
     assert.equal(typeof accepted.body["acceptedAt"], "string");
@@ -199,6 +203,14 @@ test("production-style demo mode does not mount dev controls", async () => {
       });
       assert.equal(dev.status, 404);
       assert.equal(dev.body["code"], "NOT_FOUND");
+
+      const identityDecision = await request(
+        origin,
+        "/api/v1/dev/onboarding/identity/not-exposed/decision",
+        { method: "POST", body: { decision: "approved" } },
+      );
+      assert.equal(identityDecision.status, 404);
+      assert.equal(identityDecision.body["code"], "NOT_FOUND");
     },
   );
 });
@@ -1387,9 +1399,133 @@ async function withServer(
   }
 }
 
+test("wallet disclosure is authenticated and selected from the wallet runtime mode", async () => {
+  const issuer = "https://samra-wallet-disclosure.us.auth0.com/";
+  const authConfig: ApiRuntimeConfig = Object.freeze({
+    ...demoConfig,
+    persistenceMode: "postgres",
+    devControlsEnabled: false,
+    customerAuth: Object.freeze({
+      mode: "auth0",
+      issuerBaseUrl: issuer,
+      audience: "https://api.samrapay.test",
+      tokenSigningAlgorithm: "RS256",
+    }),
+    customerWalletProvider: Object.freeze({
+      mode: "crossmint-sandbox-customer",
+      apiKey: "test-only-not-a-provider-credential",
+      allowedCustomerId: "00000000-0000-4000-8000-000000000097",
+      recoveryEmail: "wallet-test@example.invalid",
+    }),
+  });
+  const notUsed = async (): Promise<never> => {
+    throw new Error("not used by this disclosure route test");
+  };
+  const runtime = new TestDemoRuntime({
+    customerAuthenticationMode: "auth0",
+    customerOnboardingStore: {
+      startAuth0Onboarding: notUsed,
+      getAuth0Onboarding: notUsed,
+      recordAuth0ConsentBundle: notUsed,
+    },
+    customerIdentityVerificationService: unusedIdentityVerificationService(),
+    customerWalletProvisioningService: unusedWalletProvisioningService(
+      "crossmint-sandbox-customer",
+    ),
+  });
+  const customerAccessTokenMiddleware: RequestHandler = (req, _res, next) => {
+    const authorization = req.header("authorization");
+    if (authorization !== "Bearer test:wallet-disclosure") {
+      next(new UnauthorizedError());
+      return;
+    }
+    req.auth = {
+      header: { alg: "RS256" },
+      payload: {
+        iss: issuer,
+        sub: "auth0|wallet-disclosure-subject",
+        aud: "https://api.samrapay.test",
+        exp: Math.floor(Date.now() / 1_000) + 300,
+      },
+      token: authorization.slice("Bearer ".length),
+    };
+    next();
+  };
+
+  await withServer(
+    authConfig,
+    runtime,
+    async (origin) => {
+      const unauthorized = await request(
+        origin,
+        "/api/v1/onboarding/wallet/disclosure",
+      );
+      assert.equal(unauthorized.status, 401);
+
+      const disclosure = await request(
+        origin,
+        "/api/v1/onboarding/wallet/disclosure",
+        { headers: { authorization: "Bearer test:wallet-disclosure" } },
+      );
+      assert.equal(disclosure.status, 200);
+      assert.deepEqual(disclosure.body, {
+        bundleVersion: "sandbox-customer-wallet-v2",
+        documentVersion: "sandbox-customer-wallet-v2",
+        locale: "en-US",
+        legalEffect: "non_production",
+        environment: "staging",
+        createsRealWallet: true,
+        customerControlSetupRequired: true,
+        fundingEnabled: false,
+        remittanceEnabled: false,
+        presentation: {
+          title: "Create your Crossmint non-production EVM wallet",
+          body: "This creates a real, non-production Crossmint EVM wallet intended for future approved USDC use and associates it with your Samra account. Crossmint receives an opaque Samra customer reference and the configured tester recovery email for the wallet's email admin signer. Samra has not configured a token or on-chain asset for this wallet. Because this flow does not inspect on-chain holdings, it makes no claim that the address is empty; Samra does not recognize or present a wallet balance. Customer signing and recovery control have not been verified, so the wallet is not ready. Funding, remittance, transfers, withdrawals, and live financial access remain disabled.",
+          acceptanceLabel:
+            "I understand Crossmint receives the configured tester recovery email; this flow does not prove the wallet is empty or customer-controlled, and Samra does not present a wallet balance",
+          actionLabel: "Create Crossmint test wallet",
+        },
+      });
+      assert.equal("provider" in disclosure.body, false);
+      assert.match(JSON.stringify(disclosure.body), /crossmint/iu);
+      assert.match(
+        JSON.stringify(disclosure.body),
+        /configured tester recovery email/iu,
+      );
+
+      const unexpectedAcceptanceField = await request(
+        origin,
+        "/api/v1/onboarding/wallet",
+        {
+          method: "POST",
+          headers: {
+            authorization: "Bearer test:wallet-disclosure",
+            "Idempotency-Key": "wallet-disclosure-extra-field-001",
+          },
+          body: {
+            bundleVersion: "sandbox-customer-wallet-v2",
+            documentVersion: "sandbox-customer-wallet-v2",
+            locale: "en-US",
+            decision: "accepted",
+            provider: "fake",
+          },
+        },
+      );
+      assert.equal(unexpectedAcceptanceField.status, 422);
+      assert.equal(unexpectedAcceptanceField.body["code"], "VALIDATION_ERROR");
+      assert.deepEqual(unexpectedAcceptanceField.body["fieldErrors"], {
+        provider: ["Unexpected field."],
+      });
+    },
+    { customerAccessTokenMiddleware },
+  );
+});
 
 test("enabled runtime cannot silently fall back to an in-memory ledger", () => {
   for (const persistenceMode of [undefined, "memory"] as const) {
-    assert.throws(() => createApp({ ...demoConfig, persistenceMode }), /requires SAMRA_PERSISTENCE_MODE=postgres/);
+    assert.throws(
+      () => createApp({ ...demoConfig, persistenceMode }),
+      /requires SAMRA_PERSISTENCE_MODE=postgres/,
+    );
   }
 });

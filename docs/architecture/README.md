@@ -2,7 +2,9 @@
 
 The [documentation index](../README.md) is the current product status. The
 [Alpha platform contract](./alpha-platform.md) governs vendor roles and trust
-boundaries.
+boundaries. The [provider-portability decision](./provider-portability.md)
+governs Samra control-plane ownership, capability adapters, migrations, and
+provider-exit acceptance.
 
 ## Purpose
 
@@ -12,9 +14,12 @@ events, reversals, reconciliation, audit evidence, and operational visibility
 before real funds or customer data are introduced.
 
 The Alpha north star uses Auth0 authentication, Persona KYC, and a
-Crossmint-created USDC wallet. Funding and Ethiopia payout rails remain
-unresolved. Legacy Rain, Caliza, and Chapa identifiers in synthetic fixtures or
-account codes are implementation history, not active vendor decisions.
+Crossmint-created wallet intended for a future approved USDC asset/network
+configuration. The current staging create request proves only a generic EVM
+smart-wallet resource; it does not select or verify an exact token contract or
+chain. Funding and Ethiopia payout rails remain unresolved. Legacy Rain, Caliza,
+and Chapa identifiers in synthetic fixtures or account codes are implementation
+history, not active vendor decisions.
 
 ## Ownership boundary
 
@@ -23,7 +28,7 @@ web / mobile / operations clients
   -> Auth0 access-token boundary where enabled
   -> /api/v1 Samra contract
   -> customer, onboarding, wallet, and remittance services
-  -> provider-neutral Auth0, Persona, Crossmint, funding, and payout adapters
+  -> Samra-owned capability boundaries with provider-specific adapters
   -> inbox / outbox and idempotency
   -> Samra double-entry ledger
   -> reconciliation, audit, and operations evidence
@@ -67,33 +72,33 @@ Funding, Ethiopia payout, and production financial capability remain blocked.
 
 ## Runtime modes
 
-| Variable                                | Values                                 | Default    | Purpose                                                                  |
-| --------------------------------------- | -------------------------------------- | ---------- | ------------------------------------------------------------------------ |
-| `SAMRA_BACKEND_MODE`                    | `disabled`, `demo`                     | `disabled` | Enables synthetic application routes                                     |
-| `SAMRA_PROVIDER_MODE`                   | `fake`                                 | `fake`     | Uses deterministic provider adapters                                     |
-| `SAMRA_CUSTOMER_WALLET_PROVIDER_MODE` | `fake`, `crossmint-sandbox-customer` | `fake` | Separate guarded customer wallet adapter; generic provider mode alone does not disable it |
-| `SAMRA_PERSISTENCE_MODE`                | `memory`, `postgres`                   | `memory`   | Selects persistence                                                      |
-| `SAMRA_RUN_WORKER`                      | `false`, `true`                        | `false`    | Runs synthetic workflow and outbox work                                  |
-| `SAMRA_INTERNAL_OPERATIONS_ENABLED`     | `false`, `true`                        | `false`    | Enables controlled operations APIs                                       |
-| `SAMRA_CUSTOMER_AUTH_MODE`              | `disabled`, `auth0`                    | `disabled` | Enables exact-issuer Auth0 access tokens                                 |
-| `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | `fake`, `persona-sandbox`              | `fake`     | Selects the credential-gated KYC adapter                                 |
-| `VITE_SAMRA_DATA_MODE`                  | `mock`, `api`                          | `mock`     | Selects customer-web data source                                         |
-| `VITE_AUTH0_DOMAIN`                     | Auth0 tenant or custom-domain hostname | none       | Required with customer-web API mode; hostname only                       |
-| `VITE_AUTH0_CLIENT_ID`                  | Public Auth0 SPA client ID             | none       | Required with customer-web API mode; never a client secret               |
-| `VITE_AUTH0_AUDIENCE`                   | Exact HTTPS Samra API identifier       | none       | Required with customer-web API mode and must match the API audience      |
-| `SAMRA_PUBLIC_AUTH0_DOMAIN`             | Auth0 tenant or custom-domain hostname | none       | Cloud Run public runtime mapping to `VITE_AUTH0_DOMAIN`                  |
-| `SAMRA_PUBLIC_AUTH0_CLIENT_ID`          | Public Auth0 SPA client ID             | none       | Cloud Run public runtime mapping; never a client secret                  |
-| `SAMRA_PUBLIC_AUTH0_AUDIENCE`           | Exact HTTPS Samra API identifier       | none       | Cloud Run public runtime mapping to the same API audience                |
-| `SAMRA_API_ORIGIN`                      | Exact HTTPS Cloud Run API origin       | none       | Customer-web same-origin proxy target; loopback HTTP only in development |
-| `SAMRA_API_SERVICE_AUTH_MODE`           | `disabled`, `cloud-run-iam`            | local only | Requires Cloud Run service identity for every non-loopback API target    |
-| `SAMRA_API_SERVICE_AUDIENCE`            | Exact HTTPS Cloud Run API origin       | none       | Audience for the customer-web service identity token                     |
-| `VITE_SAMRA_OPS_DATA_MODE`              | `mock`, `api`                          | `mock`     | Selects Operations Portal data source                                    |
-| `EXPO_PUBLIC_SAMRA_DATA_MODE`           | `mock`, `api`                          | `mock`     | Selects mobile data source                                               |
-| `EXPO_PUBLIC_SAMRA_API_ORIGIN`          | Exact HTTPS API origin                 | none       | Required with mobile API mode; origin only                               |
-| `EXPO_PUBLIC_SAMRA_AUTH_MODE`           | `disabled`, `auth0-native`             | `disabled` | Enables the native Auth0 boundary only in mobile API mode                |
-| `EXPO_PUBLIC_AUTH0_DOMAIN`              | Auth0 tenant/custom-domain hostname    | none       | Required for native Auth0; hostname only                                 |
-| `EXPO_PUBLIC_AUTH0_CLIENT_ID`           | Public Auth0 Native Application ID     | none       | Required for native Auth0; never a client secret                         |
-| `EXPO_PUBLIC_AUTH0_AUDIENCE`            | Exact HTTPS Samra API identifier       | none       | Required for native Auth0 and must match the API audience                |
+| Variable                                | Values                                 | Default    | Purpose                                                                                   |
+| --------------------------------------- | -------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| `SAMRA_BACKEND_MODE`                    | `disabled`, `demo`                     | `disabled` | Enables synthetic application routes                                                      |
+| `SAMRA_PROVIDER_MODE`                   | `fake`                                 | `fake`     | Uses deterministic provider adapters                                                      |
+| `SAMRA_CUSTOMER_WALLET_PROVIDER_MODE`   | `fake`, `crossmint-sandbox-customer`   | `fake`     | Separate guarded customer wallet adapter; generic provider mode alone does not disable it |
+| `SAMRA_PERSISTENCE_MODE`                | `memory`, `postgres`                   | `memory`   | Selects persistence                                                                       |
+| `SAMRA_RUN_WORKER`                      | `false`, `true`                        | `false`    | Runs synthetic workflow and outbox work                                                   |
+| `SAMRA_INTERNAL_OPERATIONS_ENABLED`     | `false`, `true`                        | `false`    | Enables controlled operations APIs                                                        |
+| `SAMRA_CUSTOMER_AUTH_MODE`              | `disabled`, `auth0`                    | `disabled` | Enables exact-issuer Auth0 access tokens                                                  |
+| `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | `fake`, `persona-sandbox`              | `fake`     | Selects the credential-gated KYC adapter                                                  |
+| `VITE_SAMRA_DATA_MODE`                  | `mock`, `api`                          | `mock`     | Selects customer-web data source                                                          |
+| `VITE_AUTH0_DOMAIN`                     | Auth0 tenant or custom-domain hostname | none       | Required with customer-web API mode; hostname only                                        |
+| `VITE_AUTH0_CLIENT_ID`                  | Public Auth0 SPA client ID             | none       | Required with customer-web API mode; never a client secret                                |
+| `VITE_AUTH0_AUDIENCE`                   | Exact HTTPS Samra API identifier       | none       | Required with customer-web API mode and must match the API audience                       |
+| `SAMRA_PUBLIC_AUTH0_DOMAIN`             | Auth0 tenant or custom-domain hostname | none       | Cloud Run public runtime mapping to `VITE_AUTH0_DOMAIN`                                   |
+| `SAMRA_PUBLIC_AUTH0_CLIENT_ID`          | Public Auth0 SPA client ID             | none       | Cloud Run public runtime mapping; never a client secret                                   |
+| `SAMRA_PUBLIC_AUTH0_AUDIENCE`           | Exact HTTPS Samra API identifier       | none       | Cloud Run public runtime mapping to the same API audience                                 |
+| `SAMRA_API_ORIGIN`                      | Exact HTTPS Cloud Run API origin       | none       | Customer-web same-origin proxy target; loopback HTTP only in development                  |
+| `SAMRA_API_SERVICE_AUTH_MODE`           | `disabled`, `cloud-run-iam`            | local only | Requires Cloud Run service identity for every non-loopback API target                     |
+| `SAMRA_API_SERVICE_AUDIENCE`            | Exact HTTPS Cloud Run API origin       | none       | Audience for the customer-web service identity token                                      |
+| `VITE_SAMRA_OPS_DATA_MODE`              | `mock`, `api`                          | `mock`     | Selects Operations Portal data source                                                     |
+| `EXPO_PUBLIC_SAMRA_DATA_MODE`           | `mock`, `api`                          | `mock`     | Selects mobile data source                                                                |
+| `EXPO_PUBLIC_SAMRA_API_ORIGIN`          | Exact HTTPS API origin                 | none       | Required with mobile API mode; origin only                                                |
+| `EXPO_PUBLIC_SAMRA_AUTH_MODE`           | `disabled`, `auth0-native`             | `disabled` | Enables the native Auth0 boundary only in mobile API mode                                 |
+| `EXPO_PUBLIC_AUTH0_DOMAIN`              | Auth0 tenant/custom-domain hostname    | none       | Required for native Auth0; hostname only                                                  |
+| `EXPO_PUBLIC_AUTH0_CLIENT_ID`           | Public Auth0 Native Application ID     | none       | Required for native Auth0; never a client secret                                          |
+| `EXPO_PUBLIC_AUTH0_AUDIENCE`            | Exact HTTPS Samra API identifier       | none       | Required for native Auth0 and must match the API audience                                 |
 
 Unknown values fail clearly. API mode never silently falls back to mock
 financial data.
@@ -102,6 +107,7 @@ financial data.
 
 - [Public and product surface boundary](./public-product-surface-boundary.md)
 - [Alpha platform and vendor boundary](./alpha-platform.md)
+- [Provider portability and Samra control-plane ownership](./provider-portability.md)
 - [Ledger](./ledger.md)
 - [Remittance](./remittance.md)
 - [Auth0 identity](./customer-identity-auth0.md)

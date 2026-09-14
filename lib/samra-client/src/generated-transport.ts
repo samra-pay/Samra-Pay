@@ -7,6 +7,7 @@ import {
   getCustomerIdentityCase,
   getCustomerOnboarding,
   getCustomerWallet,
+  getCustomerWalletDisclosure,
   getCurrentCustomer,
   getRemittanceOptions,
   getRemittanceTransfer,
@@ -33,12 +34,14 @@ import type {
   CustomerIdentityCaseSnapshot,
   CustomerIdentityProviderDecision,
   CustomerOnboardingSnapshot,
+  CustomerWalletDisclosure,
   CustomerWalletSnapshot,
   SamraOnboardingDemoControls,
   SamraOnboardingSource,
   StartCustomerWalletProvisioningInput,
   SubmitCustomerConsentBundleInput,
 } from "./onboarding";
+import { parseCustomerWalletDisclosure } from "./onboarding";
 
 function idempotencyHeaders(key: string): HeadersInit {
   return { "Idempotency-Key": key };
@@ -177,6 +180,10 @@ export class GeneratedSamraOnboardingSource
       if (isProblem(error, 404, "NOT_FOUND")) return null;
       throw error;
     }
+  }
+
+  async getWalletDisclosure(): Promise<CustomerWalletDisclosure> {
+    return parseCustomerWalletDisclosure(await getCustomerWalletDisclosure());
   }
 
   async startWalletProvisioning(

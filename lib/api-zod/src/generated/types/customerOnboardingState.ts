@@ -20,6 +20,7 @@ export const CustomerOnboardingState = {
   bank_matched: "bank_matched",
   wallet_consent_pending: "wallet_consent_pending",
   wallet_provisioning: "wallet_provisioning",
+  wallet_control_setup: "wallet_control_setup",
   wallet_ready: "wallet_ready",
   funding_ready: "funding_ready",
   activated: "activated",

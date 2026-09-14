@@ -24,7 +24,7 @@ export const SAMRA_LEGAL_PATHS: Readonly<Record<SamraLegalKind, string>> =
     "electronic-communications": "/electronic-communications",
   });
 
-const LAST_UPDATED = "September 10, 2026";
+const LAST_UPDATED = "September 14, 2026";
 const DISCLAIMER =
   "This document governs only the non-production Samra Pay alpha and is not a substitute for final customer agreements.";
 
@@ -35,11 +35,11 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
       eyebrow: "Privacy notice",
       title: "How the Samra Pay alpha handles information.",
       intro:
-        "This notice describes the non-production alpha. Invited shared Dev/Test participants use Auth0 to register, sign in and recover access. Do not submit real identity documents or financial details.",
+        "This notice describes the non-production alpha. Invited shared Dev/Test participants use Auth0 to register, sign in, and recover access. Do not submit real identity documents or financial details. Accepting this base notice does not authorize collection of production customer information or data for a separately enabled provider test.",
       sections: [
         {
           title: "Current data boundary",
-          body: "Auth0 processes the sign-in information you provide, including your email address and credentials. Samra links the Auth0 identity reference to your test account and records onboarding, consent and audit events. Product profiles, identity decisions, wallets, balances and transfers in shared Dev/Test are synthetic. Keep passwords, tokens and personal details out of test reports and application logs.",
+          body: "Auth0 processes the sign-in information you provide, including your email address and credentials. Samra links the Auth0 identity reference to your test account and records Samra-owned onboarding, consent, identity-state, audit, and acquisition evidence. Product profiles, identity decisions, wallets, balances, and transfers in shared Dev/Test are synthetic. Any separately enabled non-production identity or wallet provider test requires its own disclosure and controls. Bank funding and production payment-provider connections remain disabled. Keep passwords, tokens, and personal details out of test reports and application logs.",
         },
         {
           title: "Acquisition measurement",
@@ -56,15 +56,15 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
       eyebrow: "Terms of Service",
       title: "Clear boundaries for the Samra Pay alpha.",
       intro:
-        "Shared Dev/Test creates test account and synthetic wallet records. It does not open a bank account or production wallet, extend credit, move real money, or complete real identity verification.",
+        "Shared Dev/Test creates test account and synthetic wallet records. Accepting these Terms does not itself open an account or wallet, extend credit, move real money, complete real identity verification, or provide a financial service. The shared records are not a bank account or production wallet. A separately disclosed non-production wallet test may create an isolated provider resource without enabling financial capability.",
       sections: [
         {
           title: "Synthetic experience",
-          body: "Quotes, balances, transfers, identity decisions, timelines, reports, and operational views are synthetic test evidence. They do not establish eligibility, approval, settlement, ownership of funds, or service availability.",
+          body: "Displayed quotes, balances, transfers, timelines, reports, and operational views are synthetic test evidence. A separately disclosed identity decision or wallet resource still does not establish eligibility, settlement, ownership of funds, a customer balance, or service availability.",
         },
         {
           title: "No provider promise",
-          body: "Auth0 handles invited Dev/Test authentication. Identity decisions, wallets and payments in shared Dev/Test are simulated. Provider names and successful tests do not establish production availability or financial eligibility.",
+          body: "Auth0 handles invited Dev/Test authentication. Identity decisions, wallets, and payments in shared Dev/Test are simulated. References to Persona, Crossmint, Rain, Cybrid, Bridge, banks, networks, or payment rails describe proposed or isolated technical boundaries unless a separate executed agreement and live configuration are explicitly confirmed. Provider names and successful tests do not establish production availability or financial eligibility.",
         },
         {
           title: "Final agreements required",
@@ -81,7 +81,7 @@ const DOCUMENTS: Readonly<Record<SamraLegalKind, SamraLegalDocument>> =
       sections: [
         {
           title: "Authentication messages",
-          body: "Auth0 may send registration, verification or account-recovery messages through its managed flows. Recording this test consent does not activate financial email, SMS, push notifications or document delivery.",
+          body: "Auth0 may send registration, verification, or account-recovery messages through its managed flows. No production financial email, SMS, push-notification, or document-delivery provider is configured by this alpha. Recording this test consent does not activate those delivery channels.",
         },
         {
           title: "Evidence boundary",

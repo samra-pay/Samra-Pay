@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
+/**
+ * Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network.
+ */
 export type CustomerWalletAsset =
   (typeof CustomerWalletAsset)[keyof typeof CustomerWalletAsset];
 

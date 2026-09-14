@@ -20,5 +20,6 @@ export interface CustomerOnboarding {
   createdAt: string;
   updatedAt: string;
   nextAllowedActions: string[];
+  /** Current server-selected catalog to present, not proof that this customer accepted the current version. Durable acceptance evidence remains server-side; submit_required_consents in nextAllowedActions means the current bundle must be accepted before the later journey stage can continue. */
   consentBundle: CustomerConsentBundle;
 }

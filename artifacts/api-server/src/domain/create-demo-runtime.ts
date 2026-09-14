@@ -34,6 +34,15 @@ import {
   DeterministicFakeCrossmintAdapter,
 } from "./customer-wallet";
 
+export function requiresCustomerWalletControlSchema(
+  config: Pick<ApiRuntimeConfig, "releaseProfile" | "customerWalletProvider">,
+): boolean {
+  return (
+    config.releaseProfile === "synthetic-shared" ||
+    config.customerWalletProvider?.mode === "crossmint-sandbox-customer"
+  );
+}
+
 export function createConfiguredDemoRuntime(
   config: ApiRuntimeConfig,
 ): DemoRuntime {
@@ -123,6 +132,7 @@ export function createConfiguredDemoRuntime(
       config.customerAuth.mode === "auth0"
         ? new CustomerWalletProvisioningService({
             store: customerWalletStore,
+            providerMode: walletConfig.mode,
             provider:
               walletConfig.mode === "crossmint-sandbox-customer"
                 ? new CrossmintCustomerSandboxAdapter(walletConfig)
@@ -136,8 +146,7 @@ export function createConfiguredDemoRuntime(
         alphaReleaseAdmission:
           config.releaseProfile === "alpha-release-1" ||
           config.releaseProfile === "synthetic-shared",
-        customerControlledSandboxWallets:
-          walletConfig.mode === "crossmint-sandbox-customer",
+        customerWalletControls: requiresCustomerWalletControlSchema(config),
       }),
     close: () => connection.pool.end(),
   });

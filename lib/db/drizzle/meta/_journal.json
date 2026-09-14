@@ -148,6 +148,13 @@
       "when": 1788981600000,
       "tag": "0020_marketing_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789387200000,
+      "tag": "0021_customer_wallet_control_setup",
+      "breakpoints": true
     }
   ]
 }

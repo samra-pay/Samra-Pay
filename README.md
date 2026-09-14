@@ -8,7 +8,9 @@ The locked Alpha vendors are:
 
 - Auth0 for customer authentication;
 - Persona for KYC evidence;
-- Crossmint for an approved USDC wallet configuration;
+- Crossmint for the Alpha wallet, intended for a future approved USDC
+  asset/network configuration; the current staging create request is generic
+  EVM wallet evidence only;
 - Google Cloud for staging runtime and data infrastructure;
 - GitHub Actions and GitHub issues for automated and user-test evidence.
 
@@ -25,28 +27,29 @@ For implementation, read [AGENTS.md](AGENTS.md), the
 [local setup and contribution guide](CONTRIBUTING.md), and
 [engineering authority and decisions](docs/engineering-governance.md).
 
-The two governing architecture documents are:
+The three governing architecture documents are:
 
 - [Alpha platform and vendor boundary](docs/architecture/alpha-platform.md)
 - [Architecture and financial invariants](docs/architecture/README.md)
+- [Provider portability and Samra control-plane ownership](docs/architecture/provider-portability.md)
 
 See [user testing](docs/testing/user-testing.md) to run scenarios with testers and
 track failures through fixes and retests. Qase is retired; historical evidence remains.
 
 ## Workspace map
 
-| Area | Location |
-| --- | --- |
-| Customer web | `artifacts/samra-pay/` |
-| Expo mobile | `artifacts/samra-pay-mobile/` |
-| Operations Portal | `artifacts/samra-pay-ops/` |
-| API service | `artifacts/api-server/` |
-| Design system | `artifacts/samra-pay-ds/` |
-| API contracts and clients | `lib/api-*` and `lib/samra-client/` |
-| Persistence | `lib/db/` |
-| Ledger | `lib/ledger/` |
-| Remittance | `lib/remittance/` |
-| Google Cloud controls | `deploy/gcp/` |
+| Area                         | Location                                              |
+| ---------------------------- | ----------------------------------------------------- |
+| Customer web                 | `artifacts/samra-pay/`                                |
+| Expo mobile                  | `artifacts/samra-pay-mobile/`                         |
+| Operations Portal            | `artifacts/samra-pay-ops/`                            |
+| API service                  | `artifacts/api-server/`                               |
+| Design system                | `artifacts/samra-pay-ds/`                             |
+| API contracts and clients    | `lib/api-*` and `lib/samra-client/`                   |
+| Persistence                  | `lib/db/`                                             |
+| Ledger                       | `lib/ledger/`                                         |
+| Remittance                   | `lib/remittance/`                                     |
+| Google Cloud controls        | `deploy/gcp/`                                         |
 | Quality and evidence tooling | `scripts/`, `.github/workflows/`, and `docs/testing/` |
 
 ## Non-negotiable boundaries
@@ -54,6 +57,9 @@ track failures through fixes and retests. Qase is retired; historical evidence r
 - Samra's ledger is financial truth; clients and vendors are not.
 - Vendor IDs are mappings to Samra IDs, never primary customer or transaction
   identity.
+- Every material provider integration needs a documented exit path before it is
+  architecture-complete. Unresolved exit, migration, runoff, or reconciliation
+  behavior is architecture debt and blocks the affected production capability.
 - Webhooks are authenticated, persisted, deduplicated, normalized, and applied
   under Samra transaction controls.
 - Real vendor traffic, customer data, public deployment, and production claims

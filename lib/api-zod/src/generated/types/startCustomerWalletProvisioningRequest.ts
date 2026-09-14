@@ -5,12 +5,9 @@
  * Samra Pay synthetic architecture-foundation API
  * OpenAPI spec version: 0.2.0
  */
-import type { StartCustomerWalletProvisioningRequestBundleVersion } from "./startCustomerWalletProvisioningRequestBundleVersion";
-import type { StartCustomerWalletProvisioningRequestDocumentVersion } from "./startCustomerWalletProvisioningRequestDocumentVersion";
+import type { StagingCustomerWalletProvisioningAcceptance } from "./stagingCustomerWalletProvisioningAcceptance";
+import type { SyntheticCustomerWalletProvisioningAcceptance } from "./syntheticCustomerWalletProvisioningAcceptance";
 
-export interface StartCustomerWalletProvisioningRequest {
-  bundleVersion: StartCustomerWalletProvisioningRequestBundleVersion;
-  documentVersion: StartCustomerWalletProvisioningRequestDocumentVersion;
-  locale: "en-US";
-  decision: "accepted";
-}
+export type StartCustomerWalletProvisioningRequest =
+  | SyntheticCustomerWalletProvisioningAcceptance
+  | StagingCustomerWalletProvisioningAcceptance;

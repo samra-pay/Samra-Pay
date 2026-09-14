@@ -422,7 +422,7 @@ paths:
       operationId: startCustomerWalletProvisioning
       tags: [onboarding]
       summary: Create or resume the Samra-owned customer wallet record
-      description: Records the current non-production wallet provisioning disclosure, enforces approved identity state, and idempotently calls the configured wallet provider. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
+      description: Records the current non-production wallet provisioning disclosure, enforces approved identity state, and sends the Samra-owned durable request key on the initial wallet-provider dispatch. An existing nonterminal staging record blocks another automatic dispatch until reconciliation. The response exposes normalized Samra state only; it does not expose provider identifiers, credentials, customer PII, balances, funding, or remittance entitlements.
       security:
         - CustomerBearer: []
       parameters:
@@ -456,6 +456,7 @@ paths:
           $ref: "#/components/responses/ValidationProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
+
     get:
       operationId: getCustomerWallet
       tags: [onboarding]
@@ -475,6 +476,28 @@ paths:
           $ref: "#/components/responses/ForbiddenProblem"
         "404":
           $ref: "#/components/responses/NotFoundProblem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/onboarding/wallet/disclosure:
+    get:
+      operationId: getCustomerWalletDisclosure
+      tags: [onboarding]
+      summary: Get the current wallet provisioning disclosure
+      description: Returns the server-selected, non-production wallet disclosure for the authenticated customer. Clients submit the returned versions to the provisioning endpoint; they do not select a provider or infer funding, remittance, or customer-control readiness.
+      security:
+        - CustomerBearer: []
+      responses:
+        "200":
+          description: Current wallet provisioning disclosure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerWalletDisclosure"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "503":
           $ref: "#/components/responses/Unavailable"
 
@@ -840,7 +863,7 @@ paths:
       operationId: selectDemoTransferScenario
       tags: [demo]
       summary: Select and advance a deterministic fake-provider scenario
-      description: Available only when the backend is explicitly in demo/fake mode.
+      description: Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
       requestBody:
         required: true
         content:
@@ -868,7 +891,7 @@ paths:
       operationId: advanceDemoCustomerIdentity
       tags: [demo]
       summary: Apply a deterministic fake Persona decision
-      description: Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+      description: Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -898,7 +921,7 @@ paths:
       operationId: runDemoReconciliation
       tags: [demo]
       summary: Run deterministic fake-provider reconciliation
-      description: Available only when the backend is explicitly in demo/fake mode.
+      description: Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
       requestBody:
         required: false
         content:
@@ -1602,6 +1625,7 @@ components:
         - bank_matched
         - wallet_consent_pending
         - wallet_provisioning
+        - wallet_control_setup
         - wallet_ready
         - funding_ready
         - activated
@@ -1870,18 +1894,179 @@ components:
 
     CustomerWalletState:
       type: string
-      enum: [created, provisioning, ready, restricted, error]
+      enum:
+        [
+          created,
+          provisioning,
+          customer_control_setup,
+          ready,
+          restricted,
+          error,
+        ]
 
-    StartCustomerWalletProvisioningRequest:
+    CustomerWalletDisclosure:
+      oneOf:
+        - $ref: "#/components/schemas/SyntheticCustomerWalletDisclosure"
+        - $ref: "#/components/schemas/StagingCustomerWalletDisclosure"
+      discriminator:
+        propertyName: environment
+        mapping:
+          synthetic: "#/components/schemas/SyntheticCustomerWalletDisclosure"
+          staging: "#/components/schemas/StagingCustomerWalletDisclosure"
+
+    SyntheticCustomerWalletDisclosure:
       type: object
       additionalProperties: false
       properties:
         bundleVersion:
           type: string
-          enum: [alpha-wallet-non-production-v1, sandbox-customer-wallet-v1]
+          const: alpha-wallet-non-production-v2
         documentVersion:
           type: string
-          enum: [alpha-wallet-non-production-v1, sandbox-customer-wallet-v1]
+          const: alpha-wallet-non-production-v2
+        locale:
+          type: string
+          const: en-US
+        legalEffect:
+          type: string
+          const: non_production
+        environment:
+          type: string
+          const: synthetic
+        createsRealWallet:
+          type: boolean
+          const: false
+        customerControlSetupRequired:
+          type: boolean
+          const: false
+        fundingEnabled:
+          type: boolean
+          const: false
+        remittanceEnabled:
+          type: boolean
+          const: false
+        presentation:
+          type: object
+          additionalProperties: false
+          properties:
+            title:
+              type: string
+              const: Create your synthetic USDC wallet record
+            body:
+              type: string
+              const: This alpha step creates only a synthetic wallet record. It does not create a blockchain wallet, tokens, public address, balance, funding, remittance, transfers, withdrawals, or live financial access.
+            acceptanceLabel:
+              type: string
+              const: I understand this creates only a synthetic wallet record
+            actionLabel:
+              type: string
+              const: Create synthetic wallet
+          required: [title, body, acceptanceLabel, actionLabel]
+      required:
+        - bundleVersion
+        - documentVersion
+        - locale
+        - legalEffect
+        - environment
+        - createsRealWallet
+        - customerControlSetupRequired
+        - fundingEnabled
+        - remittanceEnabled
+        - presentation
+
+    StagingCustomerWalletDisclosure:
+      type: object
+      additionalProperties: false
+      properties:
+        bundleVersion:
+          type: string
+          const: sandbox-customer-wallet-v2
+        documentVersion:
+          type: string
+          const: sandbox-customer-wallet-v2
+        locale:
+          type: string
+          const: en-US
+        legalEffect:
+          type: string
+          const: non_production
+        environment:
+          type: string
+          const: staging
+        createsRealWallet:
+          type: boolean
+          const: true
+        customerControlSetupRequired:
+          type: boolean
+          const: true
+        fundingEnabled:
+          type: boolean
+          const: false
+        remittanceEnabled:
+          type: boolean
+          const: false
+        presentation:
+          type: object
+          additionalProperties: false
+          properties:
+            title:
+              type: string
+              const: Create your Crossmint non-production EVM wallet
+            body:
+              type: string
+              const: This creates a real, non-production Crossmint EVM wallet intended for future approved USDC use and associates it with your Samra account. Crossmint receives an opaque Samra customer reference and the configured tester recovery email for the wallet's email admin signer. Samra has not configured a token or on-chain asset for this wallet. Because this flow does not inspect on-chain holdings, it makes no claim that the address is empty; Samra does not recognize or present a wallet balance. Customer signing and recovery control have not been verified, so the wallet is not ready. Funding, remittance, transfers, withdrawals, and live financial access remain disabled.
+            acceptanceLabel:
+              type: string
+              const: I understand Crossmint receives the configured tester recovery email; this flow does not prove the wallet is empty or customer-controlled, and Samra does not present a wallet balance
+            actionLabel:
+              type: string
+              const: Create Crossmint test wallet
+          required: [title, body, acceptanceLabel, actionLabel]
+      required:
+        - bundleVersion
+        - documentVersion
+        - locale
+        - legalEffect
+        - environment
+        - createsRealWallet
+        - customerControlSetupRequired
+        - fundingEnabled
+        - remittanceEnabled
+        - presentation
+
+    StartCustomerWalletProvisioningRequest:
+      oneOf:
+        - $ref: "#/components/schemas/SyntheticCustomerWalletProvisioningAcceptance"
+        - $ref: "#/components/schemas/StagingCustomerWalletProvisioningAcceptance"
+
+    SyntheticCustomerWalletProvisioningAcceptance:
+      type: object
+      additionalProperties: false
+      properties:
+        bundleVersion:
+          type: string
+          const: alpha-wallet-non-production-v2
+        documentVersion:
+          type: string
+          const: alpha-wallet-non-production-v2
+        locale:
+          type: string
+          const: en-US
+        decision:
+          type: string
+          const: accepted
+      required: [bundleVersion, documentVersion, locale, decision]
+
+    StagingCustomerWalletProvisioningAcceptance:
+      type: object
+      additionalProperties: false
+      properties:
+        bundleVersion:
+          type: string
+          const: sandbox-customer-wallet-v2
+        documentVersion:
+          type: string
+          const: sandbox-customer-wallet-v2
         locale:
           type: string
           const: en-US
@@ -1907,12 +2092,16 @@ components:
         asset:
           type: string
           enum: [USDC]
+          description: Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network.
         network:
           anyOf: [{ type: string }, { type: "null" }]
+          description: Provider-normalized chain family or synthetic marker. The current staging value `evm` is not evidence of an exact blockchain network.
         custodyModel:
           anyOf: [{ type: string }, { type: "null" }]
+          description: Normalized custody and customer-control model. It remains null until Samra has durable evidence that required signing and recovery controls are complete.
         publicAddress:
           anyOf: [{ type: string }, { type: "null" }]
+          description: Customer-visible address, exposed only for a ready wallet with completed control evidence; null for every non-ready state.
         configurationVersion:
           type: string
           enum:
@@ -2022,6 +2211,12 @@ components:
             type: string
         consentBundle:
           $ref: "#/components/schemas/CustomerConsentBundle"
+          description: >
+            Current server-selected catalog to present, not proof that this
+            customer accepted the current version. Durable acceptance evidence
+            remains server-side; submit_required_consents in nextAllowedActions
+            means the current bundle must be accepted before the later journey
+            stage can continue.
       required:
         - onboardingId
         - customerId

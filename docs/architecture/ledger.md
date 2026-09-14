@@ -1,9 +1,16 @@
 # Control Ledger v0
 
 Status: implemented and tested for synthetic USD product balances. The Alpha
-wallet decision is Crossmint USDC, but the custody, token-versus-USD accounting,
-funding, and payout structure must be approved before this chart is promoted to
-live financial accounting.
+wallet target is a Crossmint-hosted wallet under a future approved USDC
+asset/network configuration. The current create request proves only a generic
+EVM smart-wallet resource. Custody, token-versus-USD accounting, funding, and
+payout structure must be approved before this chart is promoted to live
+financial accounting.
+
+The [provider-portability decision](./provider-portability.md) requires every
+live posting to select provider-specific control accounts from persisted route
+and provider-instance provenance. The current Rain control account is disclosed
+synthetic history, not a portable settlement implementation.
 
 ## Runtime authority
 

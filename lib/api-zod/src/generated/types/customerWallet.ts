@@ -16,9 +16,13 @@ export interface CustomerWallet {
   state: CustomerWalletState;
   reasonFamily: string | null;
   provider: CustomerWalletProvider;
+  /** Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network. */
   asset: CustomerWalletAsset;
+  /** Provider-normalized chain family or synthetic marker. The current staging value `evm` is not evidence of an exact blockchain network. */
   network: string | null;
+  /** Normalized custody and customer-control model. It remains null until Samra has durable evidence that required signing and recovery controls are complete. */
   custodyModel: string | null;
+  /** Customer-visible address, exposed only for a ready wallet with completed control evidence; null for every non-ready state. */
   publicAddress: string | null;
   configurationVersion: CustomerWalletConfigurationVersion;
   synthetic: boolean;

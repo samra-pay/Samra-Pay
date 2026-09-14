@@ -20,6 +20,11 @@ activated only with an approved Persona sandbox inventory.
 
 The complete Alpha sequence is governed by
 [Alpha platform and vendor boundary](./alpha-platform.md).
+The cross-provider target is governed by
+[provider portability and Samra control-plane ownership](./provider-portability.md).
+The current interface/schema remain Persona-only and allow one case per
+onboarding; they do not yet support a second provider or reverification history.
+See the [dated code audit](../reviews/2026-09-14-provider-portability-code-audit.md).
 
 ## Durable model
 
@@ -44,16 +49,24 @@ created -> pending -> review -> approved
 
 Approved and declined are terminal case states. A later contradictory terminal
 decision is recorded as a conflict and restricts onboarding for reviewed
-operations handling. A stale event is retained as ignored evidence and cannot
-move state backward.
+operations handling, including when onboarding has already reached a later
+wallet or funding stage. The wallet record and provider mapping remain durable
+evidence; restriction removes progression and customer capability rather than
+erasing provider history. A stale event is retained as ignored evidence and
+cannot move state backward.
 
-## Provider-neutral start contract
+## Provider boundary and current limitation
 
 The API first creates or resumes the Samra case in PostgreSQL. It then calls a
 `CustomerIdentityProvider` using only the Samra case reference and a stable
 provider request key. The provider adapter must make that request idempotent.
 The provider inquiry reference is attached exactly once in a second database
 transaction.
+
+This is a useful adapter seam, not provider neutrality today: the TypeScript
+contract, database constraints, and persistence implementation are Persona-
+specific. A future provider/reverification change needs an additive case-attempt
+and evidence model while retaining the Samra customer ID.
 
 If the process stops between provider creation and attachment, a retry uses the
 same request key. If the provider call fails, the case records a retryable error.
@@ -68,7 +81,9 @@ data are not sent by this call.
 
 The adapter has a fixed Persona API origin, a ten-second timeout, no redirects,
 and generic provider errors. It rejects a non-sandbox key at startup and cannot
-be selected without Auth0 customer mode and PostgreSQL persistence.
+be selected outside the staging deployment or without Auth0 customer mode and
+PostgreSQL persistence. Selecting any non-fake identity or wallet provider also
+disables the unauthenticated developer routes and internal operations controls.
 
 ## API contract
 
@@ -108,6 +123,7 @@ Samra case before any state transition is allowed.
 
 | Name                                    | Classification | Source when activated                          |
 | --------------------------------------- | -------------- | ---------------------------------------------- |
+| `SAMRA_DEPLOYMENT_ENVIRONMENT`          | non-secret     | exact value `staging`                          |
 | `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | non-secret     | exact value `persona-sandbox`                  |
 | `PERSONA_INQUIRY_TEMPLATE_ID`           | non-secret     | approved Persona sandbox inventory             |
 | `PERSONA_ENVIRONMENT_ID`                | non-secret     | approved Persona sandbox inventory             |

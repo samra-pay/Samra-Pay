@@ -34,7 +34,7 @@ type ReadinessQueryable = Pick<pg.Pool, "query">;
 export async function assertPostgresRuntimeReady(
   pool: ReadinessQueryable,
   options: Readonly<{
-    customerControlledSandboxWallets?: boolean;
+    customerWalletControls?: boolean;
     alphaReleaseAdmission?: boolean;
   }> = {},
 ): Promise<void> {
@@ -77,23 +77,59 @@ export async function assertPostgresRuntimeReady(
     if (guards.rows[0]?.ready !== true)
       throw new Error("PostgreSQL alpha admission migration is not ready.");
   }
-  if (options.customerControlledSandboxWallets) {
+  if (options.customerWalletControls) {
     const guards = await pool.query<{ ready: boolean }>(
       `SELECT EXISTS (
-         SELECT 1 FROM pg_trigger
+       SELECT 1 FROM pg_trigger
           WHERE tgrelid = 'samra_core.customer_wallet_provider_mappings'::regclass
             AND tgname = 'customer_wallet_mapping_configuration_guard'
+            AND tgenabled = 'O' AND NOT tgisinternal
+       ) AND EXISTS (
+         SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'samra_core.customer_wallet_provider_mappings'::regclass
+            AND tgname = 'customer_wallet_provider_mappings_append_only'
+            AND tgenabled = 'O' AND NOT tgisinternal
+       ) AND EXISTS (
+         SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'samra_core.customer_consents'::regclass
+            AND tgname = 'customer_consents_append_only'
+            AND tgenabled = 'O' AND NOT tgisinternal
+       ) AND EXISTS (
+         SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'samra_core.customer_wallets'::regclass
+            AND tgname = 'customer_wallets_controlled_mutation'
+            AND tgenabled = 'O' AND NOT tgisinternal
+            AND (tgtype::integer & 31) = 31
+       ) AND EXISTS (
+         SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'samra_core.customer_onboardings'::regclass
+            AND tgname = 'customer_onboardings_controlled_mutation'
             AND tgenabled = 'O' AND NOT tgisinternal
        ) AND EXISTS (
          SELECT 1 FROM pg_constraint
           WHERE conrelid = 'samra_core.customer_wallets'::regclass
             AND conname = 'customer_wallets_environment_chk' AND convalidated
             AND pg_get_constraintdef(oid) LIKE '%crossmint-sandbox-evm-customer-email-v1%'
+       ) AND EXISTS (
+         SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'samra_core.customer_wallets'::regclass
+            AND conname = 'customer_wallets_state_chk' AND convalidated
+            AND pg_get_constraintdef(oid) LIKE '%customer_control_setup%'
+       ) AND EXISTS (
+         SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'samra_core.customer_wallets'::regclass
+            AND conname = 'customer_wallets_customer_control_setup_chk'
+            AND convalidated
+       ) AND EXISTS (
+         SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'samra_core.customer_onboardings'::regclass
+            AND conname = 'customer_onboardings_state_chk' AND convalidated
+            AND pg_get_constraintdef(oid) LIKE '%wallet_control_setup%'
        ) AS ready`,
     );
     if (guards.rows[0]?.ready !== true) {
       throw new Error(
-        "PostgreSQL customer-controlled sandbox wallet migration is not ready.",
+        "PostgreSQL customer wallet control migration is not ready.",
       );
     }
   }

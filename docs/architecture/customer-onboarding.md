@@ -5,28 +5,35 @@
 Samra Pay owns the customer ID, onboarding state, consent evidence, capability
 decisions, and audit trail. Auth0 proves that an external subject authenticated;
 it does not create a financial entitlement. The locked Alpha sequence is Auth0
-authentication, Persona KYC, and Crossmint USDC wallet creation. Funding and
-Ethiopia payout remain unresolved. Cybrid, Rain, and Bridge are post-Alpha
-wallet alternatives, not active integrations.
+authentication, Persona KYC, and creation of a Crossmint non-production EVM
+smart-wallet resource intended for a future approved USDC configuration. The
+current adapter neither selects nor verifies a USDC token contract or exact
+network. Funding and Ethiopia payout remain unresolved. Cybrid, Rain, and
+Bridge are post-Alpha wallet alternatives, not active integrations.
 
 This foundation creates one durable customer and one onboarding aggregate
-across web and mobile. The connected clients can now create and resume the
-Samra-owned synthetic wallet record through the fake Crossmint adapter. This
-does not configure Auth0, call live Persona or Crossmint environments, fund an
-account, enable a deployment, or change Replit. See
+across web and mobile. The default connected path creates and resumes the
+Samra-owned synthetic wallet record through the fake Crossmint adapter. A
+separately guarded staging mode can call Crossmint to create a generic EVM
+smart-wallet resource, but no deployed Samra-to-Crossmint journey is evidenced.
+This does not configure Auth0, call live Persona, fund an account, enable a
+deployment, or change Replit. See
 [Alpha platform and vendor boundary](./alpha-platform.md).
 
 ## Runtime boundary
 
-The endpoints exist only in the disabled-by-default Auth0 plus PostgreSQL demo boundary defined in [Customer identity and Auth0 foundation](./customer-identity-auth0.md). The current consent catalog is explicitly `non_production`; it is architecture and test evidence, not approved legal text.
+The endpoints exist only in the disabled-by-default Auth0 plus PostgreSQL demo boundary defined in [Customer identity and Auth0 foundation](./customer-identity-auth0.md). The current consent catalog is explicitly `non_production`; it is architecture and test evidence, not approved legal text. A returned `consentBundle` is the current server-selected catalog to present. It is not proof that the customer accepted that version; accepted evidence remains in the append-only consent records and a missing current acceptance is exposed through `submit_required_consents`.
 
 ## Web and mobile journey boundary
 
 Web and mobile now consume one shared onboarding state model and one generated
 API adapter. Both surfaces provide the same four-step progress model, explicit
 versioned consent decisions, durable resume behavior, normalized identity and
-wallet states, reviewed failure copy, and a clear stop after synthetic wallet
-readiness but before funding, remittance, balances, or activation.
+wallet states, reviewed failure copy, and a clear stop before funding,
+remittance, balances, or activation. A staging wallet resource remains in a
+separate customer-control setup stage. The current transition guard cannot mark
+it ready; a future reviewed migration may open that path only with durable,
+server-verified signer and recovery evidence.
 
 Mock mode uses an in-memory, deterministic journey with synthetic identifiers
 and explicit fake Persona controls. API mode uses only server responses and
@@ -90,6 +97,7 @@ bank_link_pending
 bank_matched
 wallet_consent_pending
 wallet_provisioning
+wallet_control_setup
 wallet_ready
 funding_ready
 activated
@@ -102,13 +110,14 @@ The database trigger permits only the reviewed forward transition graph and tran
 
 ## API contract
 
-| Endpoint                           | Purpose                                    | Result                                                                                |
-| ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `POST /api/v1/onboarding`          | First-login initialization or safe resume  | `201` when the aggregate is created, `200` when it already exists                     |
-| `GET /api/v1/onboarding`           | Cross-surface resume                       | Current durable state, version, timestamps, consent catalog, and next allowed actions |
-| `POST /api/v1/onboarding/consents` | Submit the complete current consent bundle | Immutable decisions plus one atomic aggregate transition                              |
-| `POST /api/v1/onboarding/wallet`   | Record wallet disclosure and create/resume | Normalized synthetic wallet; no provider identifier, PII, balance, or funding         |
-| `GET /api/v1/onboarding/wallet`    | Cross-surface wallet resume                | Current normalized Samra wallet state                                                 |
+| Endpoint                                   | Purpose                                    | Result                                                                                                    |
+| ------------------------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `POST /api/v1/onboarding`                  | First-login initialization or safe resume  | `201` when the aggregate is created, `200` when it already exists                                         |
+| `GET /api/v1/onboarding`                   | Cross-surface resume                       | Current durable state, current catalog, and an explicit re-consent action when accepted evidence is older |
+| `POST /api/v1/onboarding/consents`         | Submit the complete current consent bundle | Immutable decisions plus one atomic aggregate transition                                                  |
+| `GET /api/v1/onboarding/wallet/disclosure` | Retrieve the active wallet disclosure      | Exact versions, canonical presentation copy, and explicit disabled capabilities                           |
+| `POST /api/v1/onboarding/wallet`           | Record wallet disclosure and create/resume | Normalized wallet state; no provider resource identifier, PII, balance, or funding                        |
+| `GET /api/v1/onboarding/wallet`            | Cross-surface wallet resume                | Current normalized Samra wallet state                                                                     |
 
 All endpoints require an already validated Auth0 API access token. Every
 command endpoint requires `Idempotency-Key`. No endpoint accepts a customer ID,
@@ -137,11 +146,12 @@ In one transaction the server:
 1. locks the authenticated identity and onboarding aggregate;
 2. verifies the hashed idempotency command and request fingerprint;
 3. appends each versioned consent decision;
-4. moves accepted bundles to `identity_in_progress`, or records a normalized decline while remaining `consent_pending`;
-5. appends transition and redacted audit evidence;
-6. stores the exact response for deterministic replay.
+4. for initial consent, moves an accepted bundle to `identity_in_progress` or records a normalized decline while remaining `consent_pending`;
+5. for a later catalog version, preserves the customer's existing progress after acceptance or moves the onboarding and any exposed wallet access to `restricted` after decline;
+6. appends transition and redacted audit evidence;
+7. stores the exact response for deterministic replay.
 
-A reused key with changed decisions returns a conflict. A declined customer may later submit a new command and continue. Stored consent and transition rows cannot be updated or deleted.
+A reused key with changed decisions returns a conflict. A declined customer may later submit a new command and continue only while initial consent remains pending. When the catalog advances, GET advertises the current bundle and re-consent action without erasing the durable identity or wallet stage; a later decline restricts access. Old and current consent rows remain separate immutable evidence and transition history records the same-state refresh. Stored consent and transition rows cannot be updated or deleted.
 
 ## Operations visibility
 
@@ -173,7 +183,7 @@ The change is acceptable only when Linux CI proves:
 6. consent acceptance, decline, recovery, and same-key replay are atomic;
 7. changed-request key reuse is rejected;
 8. restart returns the same aggregate and replay response;
-9. consent and transition evidence is append-only;
+9. consent and transition evidence is append-only, and a current-version refresh preserves prior acceptance evidence and onboarding progress;
 10. raw subjects and raw idempotency keys are absent from audit evidence;
 11. prior-schema migration and repeat migration remain safe;
 12. the full workspace test, typecheck, build, and PostgreSQL gates pass.
@@ -187,11 +197,35 @@ write customer capability fields directly.
 
 The web and mobile onboarding journey is connected to durable onboarding
 resume, consent, normalized identity state, explicit wallet disclosure, and
-synthetic wallet create/resume. Both surfaces use the same query keys and
-generated transport adapter, keep the wallet disclosure unselected, reuse one
-idempotency key across a retry, and display only normalized Samra state. They do
-not store wallet truth locally or show a provider wallet identifier, public
-address, token balance, or financial entitlement.
+wallet create/resume. Both surfaces use the same query keys and generated
+transport adapter. They retrieve the active disclosure from the server, accept
+only an exact response that matches the client's compiled disclosure allowlist,
+render the validated canonical presentation, keep acceptance unselected, and
+submit the corresponding allowlisted version tuple. That client-side pin is a
+fail-closed contract check; it does not let the client select provider mode or
+invent legal copy. Within a mounted journey, both surfaces reuse one command
+key. After a reload, an interrupted synthetic `provisioning` record exposes an
+explicit resume action backed by the server-stored wallet command and provider
+request key. Staging `provisioning` or `error` instead preserves the original
+command and blocks another create while the upstream outcome is ambiguous. The
+clients refresh onboarding and wallet truth after both success and failure,
+then offer status refresh rather than another staging create. Provider
+lookup/reconciliation remains a launch requirement before that state can be
+resolved.
+
+When the base or wallet disclosure catalog advances, the same journey pauses at
+the relevant current disclosure before offering the later stage again. A base
+acceptance appends new evidence while preserving the durable stage. A legacy
+wallet disclosure can likewise be refreshed through the existing wallet command
+without replacing its original consent reference or dispatching a second
+provider create for a completed staging resource. Until refreshed, the API does
+not expose a funding continuation action.
+
+The clients display only normalized Samra state. They do not store wallet truth
+locally or show a provider wallet identifier, setup-stage public address or
+custody/control label, token balance, or financial entitlement. Normalized
+storage is portability groundwork; it does not establish that the current
+Crossmint-specific mapping can execute or survive a provider migration.
 
 Live Auth0 tenant configuration, Persona sandbox configuration, Crossmint
 sandbox credentials, and a reviewed mobile custom-development-build and

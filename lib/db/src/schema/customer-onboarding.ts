@@ -45,7 +45,7 @@ export const customerOnboardings = samraCore.table(
     ),
     check(
       "customer_onboardings_state_chk",
-      sql`${table.state} in ('not_started','authenticated','consent_pending','identity_in_progress','identity_review','identity_approved','bank_link_pending','bank_matched','wallet_consent_pending','wallet_provisioning','wallet_ready','funding_ready','activated','restricted')`,
+      sql`${table.state} in ('not_started','authenticated','consent_pending','identity_in_progress','identity_review','identity_approved','bank_link_pending','bank_matched','wallet_consent_pending','wallet_provisioning','wallet_control_setup','wallet_ready','funding_ready','activated','restricted')`,
     ),
     check("customer_onboardings_version_chk", sql`${table.version} > 0`),
     check(

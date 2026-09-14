@@ -18,6 +18,7 @@ export const CUSTOMER_ONBOARDING_STATES = Object.freeze([
   "bank_matched",
   "wallet_consent_pending",
   "wallet_provisioning",
+  "wallet_control_setup",
   "wallet_ready",
   "funding_ready",
   "activated",
@@ -231,7 +232,7 @@ export class PostgresCustomerOnboardingStore {
       );
       if (existing) {
         return Object.freeze({
-          snapshot: mapOnboarding(existing),
+          snapshot: await mapOnboarding(this.#context, existing),
           created: false,
         });
       }
@@ -289,7 +290,7 @@ export class PostgresCustomerOnboardingStore {
         ],
       );
       return Object.freeze({
-        snapshot: mapOnboarding(onboarding),
+        snapshot: await mapOnboarding(this.#context, onboarding),
         created: true,
       });
     });
@@ -315,7 +316,7 @@ export class PostgresCustomerOnboardingStore {
       false,
     );
     if (!onboarding) throw new CustomerOnboardingNotFoundError();
-    return mapOnboarding(onboarding);
+    return mapOnboarding(this.#context, onboarding);
   }
 
   async recordAuth0ConsentBundle(input: {
@@ -380,10 +381,19 @@ export class PostgresCustomerOnboardingStore {
       }
 
       normalizeConsentDecisions(input);
-      if (onboarding.state !== "consent_pending") {
+      const currentAcceptance = await hasCurrentConsentAcceptance(
+        this.#context,
+        identity.customer_id,
+        onboarding.id,
+      );
+      const isInitialConsent = onboarding.state === "consent_pending";
+      if (
+        onboarding.state === "restricted" ||
+        (!isInitialConsent && currentAcceptance)
+      ) {
         throw new DomainError(
           "INVALID_TRANSITION",
-          "Required consent decisions can be recorded only while consent is pending.",
+          "The current required consent decisions are not pending.",
         );
       }
 
@@ -410,10 +420,18 @@ export class PostgresCustomerOnboardingStore {
         (decision) => decision.decision === "accepted",
       );
       const nextState: CustomerOnboardingState = allAccepted
-        ? "identity_in_progress"
-        : "consent_pending";
+        ? isInitialConsent
+          ? "identity_in_progress"
+          : onboarding.state
+        : isInitialConsent
+          ? "consent_pending"
+          : "restricted";
       const nextVersion = onboarding.version + 1;
-      const reasonFamily = allAccepted ? null : "required_consent_declined";
+      const reasonFamily = allAccepted
+        ? isInitialConsent
+          ? null
+          : onboarding.reason_family
+        : "required_consent_declined";
       const updated = await this.#context.query().query<OnboardingRow>(
         `UPDATE samra_core.customer_onboardings
          SET state = $2,
@@ -429,7 +447,9 @@ export class PostgresCustomerOnboardingStore {
         [
           onboarding.id,
           nextState,
-          allAccepted ? "required_consents" : onboarding.latest_completed_step,
+          allAccepted && isInitialConsent
+            ? "required_consents"
+            : onboarding.latest_completed_step,
           reasonFamily,
           onboarding.version,
           identity.customer_external_ref,
@@ -456,17 +476,20 @@ export class PostgresCustomerOnboardingStore {
           `consent:${key}`,
         ],
       );
-      const snapshot = mapOnboarding(updatedRow);
+      const snapshot = await mapOnboarding(this.#context, updatedRow);
       await this.#context.query().query(
         `INSERT INTO samra_core.audit_events
          (event_key, actor_type, actor_id, action, entity_type, entity_id,
           metadata)
-         VALUES ($1, 'customer', $2, 'customer_consent_bundle_recorded',
-                 'customer_onboarding', $3, $4::jsonb)`,
+         VALUES ($1, 'customer', $2, $4,
+                 'customer_onboarding', $3, $5::jsonb)`,
         [
           `customer-onboarding:${onboarding.id}:version:${nextVersion}`,
           identity.customer_external_ref,
           onboarding.id,
+          isInitialConsent
+            ? "customer_consent_bundle_recorded"
+            : "customer_consent_bundle_refreshed",
           JSON.stringify({
             bundleVersion: input.bundleVersion,
             locale: input.locale,
@@ -474,6 +497,7 @@ export class PostgresCustomerOnboardingStore {
             allRequiredAccepted: allAccepted,
             resultingState: nextState,
             onboardingVersion: nextVersion,
+            refreshedExistingOnboarding: !isInitialConsent,
             syntheticOnly: true,
           }),
         ],
@@ -641,7 +665,41 @@ function fingerprint(value: Readonly<Record<string, unknown>>): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-function mapOnboarding(row: OnboardingRow): CustomerOnboardingSnapshot {
+async function hasCurrentConsentAcceptance(
+  context: PostgresPersistenceContext,
+  customerId: string,
+  onboardingId: string,
+): Promise<boolean> {
+  const result = await context.query().query<{ accepted_count: number }>(
+    `SELECT count(DISTINCT consent_type)::int AS accepted_count
+       FROM samra_core.customer_consents
+      WHERE customer_id = $1
+        AND onboarding_id = $2
+        AND bundle_version = $3
+        AND document_version = $3
+        AND locale = $4
+        AND decision = 'accepted'
+        AND consent_type IN
+            ('terms_of_service','privacy_notice','electronic_communications')`,
+    [
+      customerId,
+      onboardingId,
+      ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+      ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    ],
+  );
+  return result.rows[0]?.accepted_count === 3;
+}
+
+async function mapOnboarding(
+  context: PostgresPersistenceContext,
+  row: OnboardingRow,
+): Promise<CustomerOnboardingSnapshot> {
+  const currentConsentAccepted = await hasCurrentConsentAcceptance(
+    context,
+    row.customer_id,
+    row.id,
+  );
   return Object.freeze({
     onboardingId: row.id,
     customerId: row.customer_external_ref,
@@ -652,7 +710,7 @@ function mapOnboarding(row: OnboardingRow): CustomerOnboardingSnapshot {
     enteredAt: row.entered_at.toISOString(),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
-    nextAllowedActions: nextAllowedActions(row.state),
+    nextAllowedActions: nextAllowedActions(row.state, currentConsentAccepted),
     consentBundle: ALPHA_ONBOARDING_CONSENT_BUNDLE,
   });
 }
@@ -766,7 +824,17 @@ function unrecoverableConsentResponse(): DomainError {
   );
 }
 
-function nextAllowedActions(state: CustomerOnboardingState): readonly string[] {
+function nextAllowedActions(
+  state: CustomerOnboardingState,
+  currentConsentAccepted = true,
+): readonly string[] {
+  if (!currentConsentAccepted && state !== "restricted") {
+    return Object.freeze([
+      "review_required_consents",
+      "submit_required_consents",
+      "exit_onboarding",
+    ]);
+  }
   const actions: Readonly<Record<CustomerOnboardingState, readonly string[]>> =
     {
       not_started: ["authenticate"],
@@ -783,6 +851,7 @@ function nextAllowedActions(state: CustomerOnboardingState): readonly string[] {
       bank_matched: ["continue_to_wallet_setup"],
       wallet_consent_pending: ["review_wallet_terms"],
       wallet_provisioning: ["await_wallet_provisioning"],
+      wallet_control_setup: ["await_customer_control_setup", "exit_onboarding"],
       wallet_ready: ["choose_funding_method"],
       funding_ready: ["activate_customer"],
       activated: ["use_customer_products"],

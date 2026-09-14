@@ -73,6 +73,15 @@ Crossmint, Auth0, and Persona provide bounded capabilities. They do not own the
 Samra customer, authorization decision, balance, transaction state, ledger,
 audit trail, reconciliation result, or provider-migration mapping.
 
+Architecture decision on **2026-09-14** at source baseline
+`9a948c62cf31294716d8ae1f9dcd4f80949d1658`: the
+[provider-portability and Samra control-plane standard](architecture/provider-portability.md)
+now governs every material integration. Its accompanying
+[code audit](reviews/2026-09-14-provider-portability-code-audit.md) records
+current coupling and pre-activation debt. This is a documentation and decision
+record; it does not change the Alpha vendor selection, implement a second
+provider, activate a vendor, or establish production capability.
+
 ## Capability register
 
 “Implemented” means source exists; “tested” needs a result for an exact SHA;
@@ -136,6 +145,8 @@ a separate prerequisite; scenarios and templates are not executed user evidence.
 
 - [Alpha platform and vendor boundary](architecture/alpha-platform.md)
 - [Architecture foundation](architecture/README.md)
+- [Provider portability and Samra control-plane ownership](architecture/provider-portability.md)
+- [Provider-portability code audit, 2026-09-14](reviews/2026-09-14-provider-portability-code-audit.md)
 - [Customer onboarding and consent](architecture/customer-onboarding.md)
 - [Customer funnel and attribution](architecture/customer-funnel-attribution.md)
 - [Frontend cutover](architecture/frontend-cutover.md)

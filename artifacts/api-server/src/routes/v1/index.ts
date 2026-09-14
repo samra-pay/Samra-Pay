@@ -25,6 +25,7 @@ import {
   CreateRemittanceTransferHeader,
   CreateRemittanceTransferResponse,
   GetCurrentCustomerResponse,
+  GetCustomerWalletDisclosureResponse,
   GetCustomerWalletResponse,
   GetCustomerIdentityCaseResponse,
   GetCustomerOnboardingResponse,
@@ -123,7 +124,12 @@ import {
   type PublicReconciliationDemoScenario,
 } from "../../domain/demo-runtime";
 import { IdentityProviderUnavailableError } from "../../domain/customer-identity";
-import { WalletProviderUnavailableError } from "../../domain/customer-wallet";
+import {
+  assertCustomerWalletConsentMatchesDisclosure,
+  customerWalletDisclosureFor,
+  toPublicCustomerWalletSnapshot,
+  WalletProviderUnavailableError,
+} from "../../domain/customer-wallet";
 import { serializeQuote, serializeTransfer } from "../../domain/serializers";
 import {
   BackendUnavailableError,
@@ -278,6 +284,7 @@ export function createV1Router(
       "POST /onboarding/consents",
       "GET /onboarding/identity",
       "POST /onboarding/identity",
+      "GET /onboarding/wallet/disclosure",
       "GET /onboarding/wallet",
       "POST /onboarding/wallet",
     ]);
@@ -491,8 +498,15 @@ export function createV1Router(
         const header = parseSchema(StartCustomerWalletProvisioningHeader, {
           "Idempotency-Key": req.header("Idempotency-Key"),
         });
+        assertWalletProvisioningBodyHasNoUnexpectedFields(req.body);
         const body = parseSchema(StartCustomerWalletProvisioningBody, req.body);
         try {
+          assertCustomerWalletConsentMatchesDisclosure(
+            body,
+            customerWalletDisclosureFor(
+              config.customerWalletProvider?.mode ?? "fake",
+            ),
+          );
           const result = await walletProvisioning.startAuth0Wallet({
             ...identity,
             idempotencyKey: header["Idempotency-Key"],
@@ -501,7 +515,9 @@ export function createV1Router(
           res
             .status(result.created ? 201 : 200)
             .json(
-              StartCustomerWalletProvisioningResponse.parse(result.snapshot),
+              StartCustomerWalletProvisioningResponse.parse(
+                toPublicCustomerWalletSnapshot(result.snapshot),
+              ),
             );
         } catch (error) {
           throw translateWalletProvisioningError(error);
@@ -516,12 +532,28 @@ export function createV1Router(
         try {
           res.json(
             GetCustomerWalletResponse.parse(
-              await walletProvisioning.getAuth0Wallet(identity),
+              toPublicCustomerWalletSnapshot(
+                await walletProvisioning.getAuth0Wallet(identity),
+              ),
             ),
           );
         } catch (error) {
           throw translateWalletProvisioningError(error);
         }
+      }),
+    );
+
+    router.get(
+      "/onboarding/wallet/disclosure",
+      asyncRoute(async (req, res) => {
+        verifiedAuth0Identity(req, auth0Config);
+        res.json(
+          GetCustomerWalletDisclosureResponse.parse(
+            customerWalletDisclosureFor(
+              config.customerWalletProvider?.mode ?? "fake",
+            ),
+          ),
+        );
       }),
     );
 
@@ -1837,6 +1869,26 @@ function parseSchema<T>(schema: SafeParseSchema<T>, value: unknown): T {
   throw new RequestValidationError("One or more request fields are invalid.", {
     ...fieldErrors,
   });
+}
+
+function assertWalletProvisioningBodyHasNoUnexpectedFields(
+  value: unknown,
+): void {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  const allowed = new Set([
+    "bundleVersion",
+    "documentVersion",
+    "locale",
+    "decision",
+  ]);
+  const unexpected = Object.keys(value).filter((field) => !allowed.has(field));
+  if (unexpected.length === 0) return;
+  throw new RequestValidationError(
+    "Wallet provisioning acceptance contains unexpected fields.",
+    Object.fromEntries(
+      unexpected.map((field) => [field, ["Unexpected field."]]),
+    ),
+  );
 }
 
 function assertRailSpecificDeliveryInput(value: unknown): void {

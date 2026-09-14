@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GeneratedSamraOnboardingSource } from "@workspace/samra-client/generated-transport";
-import { SYNTHETIC_WALLET_PROVISIONING_INPUT } from "@workspace/samra-client/onboarding";
+import {
+  STAGING_CUSTOMER_WALLET_DISCLOSURE,
+  SYNTHETIC_WALLET_PROVISIONING_INPUT,
+  walletProvisioningInputFromDisclosure,
+} from "@workspace/samra-client/onboarding";
 
 const onboarding = {
   onboardingId: "onboarding_001",
@@ -14,13 +18,13 @@ const onboarding = {
   createdAt: "2026-08-19T00:00:00.000Z",
   updatedAt: "2026-08-19T00:00:00.000Z",
   consentBundle: {
-    bundleVersion: "alpha-non-production-v1",
+    bundleVersion: "alpha-non-production-v2",
     locale: "en-US",
     legalEffect: "non_production",
     documents: [
       {
         consentType: "terms_of_service",
-        documentVersion: "alpha-non-production-v1",
+        documentVersion: "alpha-non-production-v2",
         required: true,
       },
     ],
@@ -58,6 +62,25 @@ const wallet = {
   updatedAt: "2026-08-19T00:00:00.000Z",
   nextAllowedActions: ["review_wallet"],
 };
+
+const stagingWalletDisclosure = {
+  bundleVersion: "sandbox-customer-wallet-v2",
+  documentVersion: "sandbox-customer-wallet-v2",
+  locale: "en-US",
+  legalEffect: "non_production",
+  environment: "staging",
+  createsRealWallet: true,
+  customerControlSetupRequired: true,
+  fundingEnabled: false,
+  remittanceEnabled: false,
+  presentation: {
+    title: "Create your Crossmint non-production EVM wallet",
+    body: "This creates a real, non-production Crossmint EVM wallet intended for future approved USDC use and associates it with your Samra account. Crossmint receives an opaque Samra customer reference and the configured tester recovery email for the wallet's email admin signer. Samra has not configured a token or on-chain asset for this wallet. Because this flow does not inspect on-chain holdings, it makes no claim that the address is empty; Samra does not recognize or present a wallet balance. Customer signing and recovery control have not been verified, so the wallet is not ready. Funding, remittance, transfers, withdrawals, and live financial access remain disabled.",
+    acceptanceLabel:
+      "I understand Crossmint receives the configured tester recovery email; this flow does not prove the wallet is empty or customer-controlled, and Samra does not present a wallet balance",
+    actionLabel: "Create Crossmint test wallet",
+  },
+} as const;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -125,6 +148,69 @@ describe("generated onboarding API adapter", () => {
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.nextAllowedActions)).toBe(true);
     expect(result).not.toHaveProperty("providerWalletId");
+  });
+
+  it("fetches and submits the server-selected staging wallet disclosure", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(stagingWalletDisclosure))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            ...wallet,
+            state: "customer_control_setup",
+            network: "base-sepolia",
+            custodyModel: null,
+            configurationVersion: "crossmint-sandbox-evm-customer-email-v1",
+            synthetic: false,
+            readyAt: null,
+            nextAllowedActions: ["await_customer_control_setup"],
+          },
+          201,
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const source = new GeneratedSamraOnboardingSource();
+
+    const disclosure = await source.getWalletDisclosure();
+    const result = await source.startWalletProvisioning(
+      walletProvisioningInputFromDisclosure(disclosure),
+      "wallet-command-staging-001",
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/onboarding/wallet/disclosure",
+    );
+    expect(Object.isFrozen(disclosure)).toBe(true);
+    expect(Object.isFrozen(disclosure.presentation)).toBe(true);
+    expect(disclosure).toBe(STAGING_CUSTOMER_WALLET_DISCLOSURE);
+    expect(disclosure).not.toHaveProperty("provider");
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("/api/v1/onboarding/wallet");
+    expect(JSON.parse(String(init.body))).toEqual({
+      bundleVersion: stagingWalletDisclosure.bundleVersion,
+      documentVersion: stagingWalletDisclosure.documentVersion,
+      locale: stagingWalletDisclosure.locale,
+      decision: "accepted",
+    });
+    expect(result.state).toBe("customer_control_setup");
+    expect(result.custodyModel).toBeNull();
+    expect(result.publicAddress).toBeNull();
+  });
+
+  it("rejects an incoherent server disclosure before it can be accepted", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        ...stagingWalletDisclosure,
+        createsRealWallet: false,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const source = new GeneratedSamraOnboardingSource();
+
+    await expect(source.getWalletDisclosure()).rejects.toThrow(
+      /complete, recognized server contract/i,
+    );
   });
 
   it("keeps the deterministic fake Persona command behind the explicit demo method", async () => {

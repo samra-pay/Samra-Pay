@@ -36,6 +36,7 @@ import { useCustomerAuth } from "@/lib/customer-auth";
 
 const WALLET_STATES = new Set([
   "wallet_provisioning",
+  "wallet_control_setup",
   "wallet_ready",
   "funding_ready",
   "activated",
@@ -158,6 +159,14 @@ function WalletOverview({
   wallet: CustomerWalletSnapshot;
   mock: boolean;
 }) {
+  const customerControlSetupRequired =
+    wallet.state === "customer_control_setup" ||
+    wallet.nextAllowedActions.includes("await_customer_control_setup") ||
+    wallet.nextAllowedActions.includes("await_customer_signer_setup");
+  if (customerControlSetupRequired) {
+    return <WalletControlSetupRequired />;
+  }
+
   const ready = wallet.state === "ready";
   const restricted = wallet.state === "restricted" || wallet.state === "error";
   const status = restricted
@@ -172,24 +181,25 @@ function WalletOverview({
         <Info aria-hidden="true" className="h-4 w-4 shrink-0" />
         {mock || wallet.synthetic
           ? "Synthetic wallet preview"
-          : "Staging wallet · test network only"}
+          : "Staging wallet · non-production only"}
       </p>
       <Card className="border-primary">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Wallet aria-hidden="true" className="h-6 w-6 text-primary" />
-            <CardTitle className="font-serif text-2xl">USDC wallet</CardTitle>
+            <CardTitle className="font-serif text-2xl">Wallet record</CardTitle>
           </div>
           {ready ? <WalletDetails wallet={wallet} /> : null}
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <p className="text-sm text-muted-foreground">
-              Available balance · USDC
+              Intended product asset · {wallet.asset}
             </p>
             <p className="mt-2 font-serif text-4xl">Unavailable</p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Balance information is not available for this wallet yet.
+              Samra has not configured a token or on-chain asset for this wallet
+              record and does not recognize or present a wallet balance.
             </p>
           </div>
           <p className="flex items-center gap-2 text-sm" role="status">
@@ -251,6 +261,24 @@ function WalletOverview({
   );
 }
 
+function WalletControlSetupRequired() {
+  return (
+    <Card>
+      <CardContent className="space-y-4 pt-6">
+        <Clock3 aria-hidden="true" className="h-7 w-7 text-primary" />
+        <h2 className="font-serif text-2xl">Wallet setup is not complete</h2>
+        <p className="text-muted-foreground">
+          Customer signing and recovery setup are still required. Wallet
+          details, funding, and transfers remain unavailable.
+        </p>
+        <Button asChild>
+          <Link href="/onboarding">Continue account setup</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function WalletDetails({ wallet }: { wallet: CustomerWalletSnapshot }) {
   const [copyStatus, setCopyStatus] = useState("");
   const address = wallet.publicAddress;
@@ -273,15 +301,16 @@ function WalletDetails({ wallet }: { wallet: CustomerWalletSnapshot }) {
       <DialogContent className="max-w-sm sm:max-w-lg">
         <DialogTitle>Wallet details</DialogTitle>
         <DialogDescription>
-          This is a test wallet record. Deposits and transfers are unavailable.
+          This is a non-production wallet record. Samra does not recognize or
+          present a wallet balance. Deposits and transfers are unavailable.
         </DialogDescription>
         <dl className="space-y-5 text-sm">
           <div>
-            <dt className="text-muted-foreground">Asset</dt>
+            <dt className="text-muted-foreground">Intended product asset</dt>
             <dd className="mt-1">{wallet.asset}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Network</dt>
+            <dt className="text-muted-foreground">Chain family</dt>
             <dd className="mt-1 break-words">
               {wallet.network ?? "Not available"}
             </dd>
