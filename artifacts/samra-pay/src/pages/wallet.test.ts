@@ -144,10 +144,12 @@ describe("read-only customer wallet dashboard", () => {
       "Intended product asset · USDCUnavailable",
     );
     expect(host.textContent).toContain(
-      "No token balance is configured or available",
+      "does not recognize or present a wallet balance",
     );
     expect(host.textContent).toContain("Activity unavailable");
-    expect(host.textContent).not.toMatch(/0\.00|No activity yet|untrusted/);
+    expect(host.textContent).not.toMatch(
+      /0\.00|No activity yet|untrusted|wallet is empty|no token balance/i,
+    );
     expect(button("Add money").disabled).toBe(true);
     expect(button("Send").disabled).toBe(true);
     await click("Wallet details");

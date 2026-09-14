@@ -105,7 +105,7 @@ test("sandbox PostgreSQL wallet consent, ownership, immutable mapping, retries, 
   });
   try {
     await assertPostgresRuntimeReady(pool, {
-      customerControlledSandboxWallets: true,
+      customerWalletControls: true,
     });
     await t.test(
       "startup rejects disabled sandbox evidence guards",
@@ -142,7 +142,7 @@ test("sandbox PostgreSQL wallet consent, ownership, immutable mapping, retries, 
               );
               await assert.rejects(
                 assertPostgresRuntimeReady(client, {
-                  customerControlledSandboxWallets: true,
+                  customerWalletControls: true,
                 }),
                 /migration is not ready/,
               );

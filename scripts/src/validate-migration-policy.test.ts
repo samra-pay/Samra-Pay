@@ -28,7 +28,7 @@ describe("forward-only migration policy", () => {
     ).not.toThrow();
   });
 
-  it("locks wallet evidence before the 0019 preflight and guards every wallet write", () => {
+  it("locks wallet evidence and preserves only the deployed synthetic rollback contract", () => {
     const migration =
       readMigrationInputs().migrations["0021_customer_wallet_control_setup"];
     expect(migration).toBeDefined();
@@ -37,6 +37,10 @@ describe("forward-only migration policy", () => {
     const triggerIndex = sql.indexOf(
       'CREATE TRIGGER "customer_wallets_controlled_mutation"',
     );
+    const walletGuardIndex = sql.indexOf(
+      'CREATE OR REPLACE FUNCTION "samra_core"."guard_customer_wallet_mutation"',
+    );
+    const walletGuard = sql.slice(walletGuardIndex, triggerIndex);
 
     expect(sql.indexOf("LOCK TABLE")).toBe(0);
     expect(preflightIndex).toBeGreaterThan(0);
@@ -56,11 +60,17 @@ describe("forward-only migration policy", () => {
     expect(sql).toContain("'alpha-non-production-v2'");
     expect(sql).toContain("'alpha-wallet-non-production-v2'");
     expect(sql).toContain("'sandbox-customer-wallet-v2'");
+    expect(walletGuard).toContain("836f76bd368e9d81c633d7483e48b907c42ef775");
+    expect(walletGuard).toContain("'alpha-non-production-v1'");
+    expect(walletGuard).toContain("'alpha-wallet-non-production-v1'");
+    expect(walletGuard).toContain("NEW.\"environment\" <> 'synthetic'");
+    expect(walletGuard).toContain("OLD.\"environment\" <> 'synthetic'");
+    expect(walletGuard).not.toContain("'sandbox-customer-wallet-v1'");
     expect(sql).toContain(
-      "customer wallet creation requires the current onboarding consent bundle",
+      "customer wallet creation requires an approved onboarding consent bundle",
     );
     expect(sql).toContain(
-      "wallet capability transitions require the exact current wallet disclosure",
+      "wallet capability transitions require an approved wallet disclosure",
     );
     expect(sql).toContain(
       'BEFORE INSERT OR UPDATE OR DELETE ON "samra_core"."customer_wallets"',

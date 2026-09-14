@@ -251,6 +251,127 @@ async function insertLegacyProviderMapping(
   );
 }
 
+async function insertApprovedWalletCustomer(
+  target: ReturnType<typeof createDatabase>,
+  baseConsentVersion: "alpha-non-production-v1" | "alpha-non-production-v2",
+): Promise<Readonly<{ customerId: string; onboardingId: string }>> {
+  const customer = await target.pool.query<{ id: string }>(
+    `INSERT INTO samra_core.customers
+       (external_ref, display_name, country_code, state, metadata)
+     VALUES ($1, NULL, NULL, 'active', '{"profileStatus":"pending"}'::jsonb)
+     RETURNING id`,
+    [`customer_${randomUUID().replaceAll("-", "")}`],
+  );
+  const customerId = customer.rows[0]!.id;
+  await target.pool.query(
+    `INSERT INTO samra_core.customer_auth_identities
+       (customer_id, provider, issuer, subject)
+     VALUES ($1, 'auth0', $2, $3)`,
+    [
+      customerId,
+      `https://${randomUUID()}.rollback.samra.test/`,
+      `auth0|${randomUUID()}`,
+    ],
+  );
+  const onboarding = await target.pool.query<{ id: string }>(
+    `INSERT INTO samra_core.customer_onboardings
+       (customer_id, state, latest_completed_step, reason_family, version)
+     VALUES ($1, 'identity_approved', 'identity_verification', NULL, 1)
+     RETURNING id`,
+    [customerId],
+  );
+  const onboardingId = onboarding.rows[0]!.id;
+  await target.pool.query(
+    `INSERT INTO samra_core.customer_onboarding_transitions
+       (onboarding_id, sequence, from_state, to_state, command_key)
+     VALUES ($1, 1, NULL, 'identity_approved', $2)`,
+    [
+      onboardingId,
+      `fixture:identity-approved:${randomUUID().replaceAll("-", "")}`,
+    ],
+  );
+  await target.pool.query(
+    `INSERT INTO samra_core.customer_identity_cases
+       (external_ref, customer_id, onboarding_id, provider,
+        provider_request_key, provider_inquiry_ref, state, decided_at)
+     VALUES ($1, $2, $3, 'persona', $4, $5, 'approved', now())`,
+    [
+      `identity_${randomUUID().replaceAll("-", "")}`,
+      customerId,
+      onboardingId,
+      randomUUID().replaceAll("-", "").repeat(2),
+      `inquiry_${randomUUID().replaceAll("-", "")}`,
+    ],
+  );
+  await target.pool.query(
+    `INSERT INTO samra_core.customer_consents
+       (customer_id, onboarding_id, consent_type, document_version,
+        bundle_version, decision, locale, channel, idempotency_key)
+     SELECT $1, $2, consent_type, $3, $3, 'accepted', 'en-US', 'api', $4
+       FROM unnest(ARRAY[
+         'terms_of_service',
+         'privacy_notice',
+         'electronic_communications'
+       ]) AS consent_types(consent_type)`,
+    [
+      customerId,
+      onboardingId,
+      baseConsentVersion,
+      randomUUID().replaceAll("-", "").repeat(2),
+    ],
+  );
+  return Object.freeze({ customerId, onboardingId });
+}
+
+async function assertSyntheticMixedConsentRejected(
+  target: ReturnType<typeof createDatabase>,
+  baseConsentVersion: "alpha-non-production-v1" | "alpha-non-production-v2",
+  walletConsentVersion:
+    "alpha-wallet-non-production-v1" | "alpha-wallet-non-production-v2",
+): Promise<void> {
+  const fixture = await insertApprovedWalletCustomer(
+    target,
+    baseConsentVersion,
+  );
+  const walletConsent = await target.pool.query<{ id: string }>(
+    `INSERT INTO samra_core.customer_consents
+       (customer_id, onboarding_id, consent_type, document_version,
+        bundle_version, decision, locale, channel, idempotency_key)
+     VALUES ($1, $2, 'wallet_provisioning', $3, $3, 'accepted', 'en-US',
+             'api', $4)
+     RETURNING id`,
+    [
+      fixture.customerId,
+      fixture.onboardingId,
+      walletConsentVersion,
+      randomUUID().replaceAll("-", "").repeat(2),
+    ],
+  );
+  await assert.rejects(
+    target.pool.query(
+      `INSERT INTO samra_core.customer_wallets
+         (external_ref, customer_id, onboarding_id, wallet_consent_id,
+          provider, provider_request_key, creation_command_key, state, asset,
+          environment, configuration_version)
+       VALUES ($1, $2, $3, $4, 'crossmint', $5, $6, 'created', 'USDC',
+               'synthetic', 'crossmint-synthetic-v1')`,
+      [
+        `wallet_${randomUUID().replaceAll("-", "")}`,
+        fixture.customerId,
+        fixture.onboardingId,
+        walletConsent.rows[0]!.id,
+        randomUUID().replaceAll("-", "").repeat(2),
+        randomUUID().replaceAll("-", "").repeat(2),
+      ],
+    ),
+    (error: unknown) =>
+      errorChainIncludes(
+        error,
+        "customer wallet creation requires an approved wallet disclosure",
+      ),
+  );
+}
+
 function errorChainIncludes(error: unknown, expected: string): boolean {
   let current: unknown = error;
   while (current instanceof Error) {
@@ -638,7 +759,7 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
   }
 });
 
-test("migration 0019 refuses malformed staging-ready wallet evidence", async () => {
+test("migration 0021 refuses malformed staging-ready wallet evidence", async () => {
   const journal = await readAndValidateMigrationJournal();
   const preCurrentMigrationCount = journal.entries.length - 1;
   const databaseName = `samra_invalid_wallet_${randomUUID().replaceAll("-", "")}`;
@@ -762,6 +883,262 @@ test("migration 0019 refuses malformed staging-ready wallet evidence", async () 
     if (target) await target.pool.end();
     if (preCurrentFolder)
       await rm(preCurrentFolder, { recursive: true, force: true });
+    await admin.pool.query(
+      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
+    );
+    await admin.pool.end();
+  }
+});
+
+test("migration 0021 preserves deployed synthetic rollback wallet writes while staging remains v2-only", async () => {
+  const rollbackSourceSha = "836f76bd368e9d81c633d7483e48b907c42ef775" as const;
+  assert.equal(rollbackSourceSha.length, 40);
+  const journal = await readAndValidateMigrationJournal();
+  const databaseName = `samra_wallet_rollback_${randomUUID().replaceAll("-", "")}`;
+  const adminUrl = new URL(connectionString);
+  adminUrl.pathname = "/postgres";
+  const admin = createDatabase({ connectionString: adminUrl.toString() });
+  const targetUrl = databaseUrl(databaseName);
+  let target: ReturnType<typeof createDatabase> | undefined;
+  try {
+    await admin.pool.query(`CREATE DATABASE "${databaseName}"`);
+    target = createDatabase({ connectionString: targetUrl });
+    await migrate(drizzle(target.pool), {
+      migrationsFolder: migrationFolder,
+      migrationsSchema: "samra_migrations",
+      migrationsTable: "migration_history",
+    });
+    assert.equal(
+      journal.entries.at(-1)?.tag,
+      "0021_customer_wallet_control_setup",
+    );
+
+    const legacy = await insertApprovedWalletCustomer(
+      target,
+      "alpha-non-production-v1",
+    );
+    const commandKey = createHash("sha256")
+      .update("deployed-synthetic-wallet-command")
+      .digest("hex");
+    await target.pool.query(
+      `UPDATE samra_core.customer_onboardings
+          SET state = 'wallet_consent_pending', version = version + 1,
+              entered_at = now(), updated_at = now()
+        WHERE id = $1 AND version = 1`,
+      [legacy.onboardingId],
+    );
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_onboarding_transitions
+         (onboarding_id, sequence, from_state, to_state, command_key)
+       VALUES ($1, 2, 'identity_approved', 'wallet_consent_pending', $2)`,
+      [legacy.onboardingId, `wallet-consent-presented:${commandKey}`],
+    );
+    const walletConsent = await target.pool.query<{ id: string }>(
+      `INSERT INTO samra_core.customer_consents
+         (customer_id, onboarding_id, consent_type, document_version,
+          bundle_version, decision, locale, channel, idempotency_key)
+       VALUES ($1, $2, 'wallet_provisioning',
+               'alpha-wallet-non-production-v1',
+               'alpha-wallet-non-production-v1', 'accepted', 'en-US', 'api', $3)
+       RETURNING id`,
+      [legacy.customerId, legacy.onboardingId, commandKey],
+    );
+    const walletExternalRef = `wallet_${randomUUID().replaceAll("-", "")}`;
+    const providerRequestKey = createHash("sha256")
+      .update(
+        JSON.stringify({
+          provider: "crossmint",
+          walletId: walletExternalRef,
+          configurationVersion: "crossmint-synthetic-v1",
+        }),
+      )
+      .digest("hex");
+    const wallet = await target.pool.query<{ id: string }>(
+      `INSERT INTO samra_core.customer_wallets
+         (external_ref, customer_id, onboarding_id, wallet_consent_id,
+          provider, provider_request_key, creation_command_key, state, asset,
+          environment, configuration_version)
+       VALUES ($1, $2, $3, $4, 'crossmint', $5, $6, 'created', 'USDC',
+               'synthetic', 'crossmint-synthetic-v1')
+       RETURNING id`,
+      [
+        walletExternalRef,
+        legacy.customerId,
+        legacy.onboardingId,
+        walletConsent.rows[0]!.id,
+        providerRequestKey,
+        commandKey,
+      ],
+    );
+    const walletId = wallet.rows[0]!.id;
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_wallet_transitions
+         (wallet_id, sequence, from_state, to_state, command_key)
+       VALUES ($1, 1, NULL, 'created', $2)`,
+      [walletId, `create:${commandKey}`],
+    );
+    await target.pool.query(
+      `UPDATE samra_core.customer_wallets
+          SET state = 'provisioning', version = version + 1, updated_at = now()
+        WHERE id = $1 AND version = 1`,
+      [walletId],
+    );
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_wallet_transitions
+         (wallet_id, sequence, from_state, to_state, command_key)
+       VALUES ($1, 2, 'created', 'provisioning', $2)`,
+      [walletId, `provision:${commandKey}`],
+    );
+    await target.pool.query(
+      `UPDATE samra_core.customer_onboardings
+          SET state = 'wallet_provisioning',
+              latest_completed_step = 'wallet_provisioning_consent',
+              version = version + 1, entered_at = now(), updated_at = now()
+        WHERE id = $1 AND version = 2`,
+      [legacy.onboardingId],
+    );
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_onboarding_transitions
+         (onboarding_id, sequence, from_state, to_state, command_key)
+       VALUES ($1, 3, 'wallet_consent_pending', 'wallet_provisioning', $2)`,
+      [legacy.onboardingId, `wallet-provisioning:${commandKey}`],
+    );
+
+    const providerWalletRef = `wallet_fake_${randomUUID()
+      .replaceAll("-", "")
+      .slice(0, 32)}`;
+    const providerResultHash = createHash("sha256")
+      .update(providerWalletRef)
+      .digest("hex");
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_wallet_provider_mappings
+         (wallet_id, provider, provider_wallet_ref, network, custody_model,
+          public_address, configuration_version)
+       VALUES ($1, 'crossmint', $2, 'synthetic', 'synthetic', NULL,
+               'crossmint-synthetic-v1')`,
+      [walletId, providerWalletRef],
+    );
+    await target.pool.query(
+      `UPDATE samra_core.customer_wallets
+          SET state = 'ready', reason_family = NULL, version = version + 1,
+              ready_at = now(), updated_at = now()
+        WHERE id = $1 AND version = 2`,
+      [walletId],
+    );
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_wallet_transitions
+         (wallet_id, sequence, from_state, to_state, command_key)
+       VALUES ($1, 3, 'provisioning', 'ready', $2)`,
+      [walletId, `provider-wallet:${providerResultHash}`],
+    );
+    await target.pool.query(
+      `UPDATE samra_core.customer_onboardings
+          SET state = 'wallet_ready', latest_completed_step = 'wallet_provisioned',
+              version = version + 1, entered_at = now(), updated_at = now()
+        WHERE id = $1 AND version = 3`,
+      [legacy.onboardingId],
+    );
+    await target.pool.query(
+      `INSERT INTO samra_core.customer_onboarding_transitions
+         (onboarding_id, sequence, from_state, to_state, command_key)
+       VALUES ($1, 4, 'wallet_provisioning', 'wallet_ready', $2)`,
+      [legacy.onboardingId, `wallet-ready:${providerResultHash}`],
+    );
+
+    const completed = await target.pool.query<{
+      wallet_state: string;
+      onboarding_state: string;
+      mapping_count: string;
+      v1_base_consent_count: string;
+      v1_wallet_consent_count: string;
+    }>(
+      `SELECT wallet.state AS wallet_state,
+              onboarding.state AS onboarding_state,
+              (SELECT count(*)::text
+                 FROM samra_core.customer_wallet_provider_mappings mapping
+                WHERE mapping.wallet_id = wallet.id) AS mapping_count,
+              (SELECT count(DISTINCT consent_type)::text
+                 FROM samra_core.customer_consents consent
+                WHERE consent.customer_id = wallet.customer_id
+                  AND consent.onboarding_id = wallet.onboarding_id
+                  AND consent.bundle_version = 'alpha-non-production-v1'
+                  AND consent.document_version = 'alpha-non-production-v1'
+                  AND consent.decision = 'accepted') AS v1_base_consent_count,
+              (SELECT count(*)::text
+                 FROM samra_core.customer_consents consent
+                WHERE consent.id = wallet.wallet_consent_id
+                  AND consent.bundle_version = 'alpha-wallet-non-production-v1'
+                  AND consent.document_version = 'alpha-wallet-non-production-v1'
+                  AND consent.decision = 'accepted') AS v1_wallet_consent_count
+         FROM samra_core.customer_wallets wallet
+         JOIN samra_core.customer_onboardings onboarding
+           ON onboarding.id = wallet.onboarding_id
+        WHERE wallet.id = $1`,
+      [walletId],
+    );
+    assert.deepEqual(completed.rows, [
+      {
+        wallet_state: "ready",
+        onboarding_state: "wallet_ready",
+        mapping_count: "1",
+        v1_base_consent_count: "3",
+        v1_wallet_consent_count: "1",
+      },
+    ]);
+
+    await assertSyntheticMixedConsentRejected(
+      target,
+      "alpha-non-production-v1",
+      "alpha-wallet-non-production-v2",
+    );
+    await assertSyntheticMixedConsentRejected(
+      target,
+      "alpha-non-production-v2",
+      "alpha-wallet-non-production-v1",
+    );
+
+    const staging = await insertApprovedWalletCustomer(
+      target,
+      "alpha-non-production-v2",
+    );
+    const legacyStagingConsent = await target.pool.query<{ id: string }>(
+      `INSERT INTO samra_core.customer_consents
+         (customer_id, onboarding_id, consent_type, document_version,
+          bundle_version, decision, locale, channel, idempotency_key)
+       VALUES ($1, $2, 'wallet_provisioning', 'sandbox-customer-wallet-v1',
+               'sandbox-customer-wallet-v1', 'accepted', 'en-US', 'api', $3)
+       RETURNING id`,
+      [
+        staging.customerId,
+        staging.onboardingId,
+        randomUUID().replaceAll("-", "").repeat(2),
+      ],
+    );
+    await assert.rejects(
+      target.pool.query(
+        `INSERT INTO samra_core.customer_wallets
+           (external_ref, customer_id, onboarding_id, wallet_consent_id,
+            provider, provider_request_key, creation_command_key, state, asset,
+            environment, configuration_version)
+         VALUES ($1, $2, $3, $4, 'crossmint', $5, $6, 'created', 'USDC',
+                 'staging', 'crossmint-sandbox-evm-customer-email-v1')`,
+        [
+          `wallet_${randomUUID().replaceAll("-", "")}`,
+          staging.customerId,
+          staging.onboardingId,
+          legacyStagingConsent.rows[0]!.id,
+          randomUUID().replaceAll("-", "").repeat(2),
+          randomUUID().replaceAll("-", "").repeat(2),
+        ],
+      ),
+      (error: unknown) =>
+        errorChainIncludes(
+          error,
+          "customer wallet creation requires an approved wallet disclosure",
+        ),
+    );
+  } finally {
+    if (target) await target.pool.end();
     await admin.pool.query(
       `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
     );

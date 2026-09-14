@@ -165,9 +165,21 @@ Migration `0021_customer_wallet_control_setup` recognizes the exact legacy
 pre-existing staging mapping. It does not treat that historical acceptance as
 the current catalog. The original row remains immutable; the clients and API
 append a separate v2 acceptance before continuing, and this acknowledgement
-does not redispatch provider creation. New wallet inserts and capability
-transitions require the current base and environment-specific wallet consent at
-the database boundary.
+does not redispatch provider creation. New staging wallet inserts and capability
+transitions require the current base and staging v2 wallet consent at the
+database boundary.
+
+The same migration deliberately keeps one narrower expand-and-contract window
+for Dev/Test rollback. The deployed synthetic fake-provider revision
+`836f76bd368e9d81c633d7483e48b907c42ef775` submits the exact
+`alpha-non-production-v1` base bundle and
+`alpha-wallet-non-production-v1` wallet disclosure. While that revision remains
+an approved rollback target, the database guard accepts either the complete v2
+pair or that complete v1 pair for synthetic wallet creation and transition to
+`ready`; it does not accept mixed versions or the staging v1 disclosure. The
+current application still enforces v2 before reaching the database. Strict
+synthetic v2-only enforcement at the database boundary must be added in a later
+contract migration after the old revision is removed from the rollback set.
 
 ## Connected web and mobile boundary
 

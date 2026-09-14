@@ -39,7 +39,7 @@ stays clean. The final merged SHA needs a new inventory and release evidence.
 
 | Area               | Evidence at preparation                                                                                                                                               | Required next evidence/change                                                                                                    |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Backend            | PR 157 added the creation-only customer sandbox adapter and migration 0017; the current implementation adds a separate customer-control setup state in migration 0019 | Exact release SHA passes required CI, security, PostgreSQL and container checks                                                  |
+| Backend            | PR 157 added the creation-only customer sandbox adapter and migration 0017; the current implementation adds a separate customer-control setup state in migration 0021 | Exact release SHA passes required CI, security, PostgreSQL and container checks                                                  |
 | Cloud Run          | Earlier console inspection in this session showed no staging services                                                                                                 | Fresh keyless inventory of services, jobs, IAM and private invocation path                                                       |
 | Cloud SQL          | Existing private PostgreSQL 16 instance; earlier console showed backups/PITR/deletion protection and allowed unencrypted direct connections                           | Enforced TLS, client transport review, backup/restore evidence, actual schema journal and split database roles                   |
 | Migration delivery | The original PR 158 baseline had no governed producer; the current repository has a protected staging migration workflow and API prerequisite verification            | Verify the candidate-SHA workflow registration, upstream artifact digest, execution authorization, result and cleanup evidence   |
@@ -144,7 +144,7 @@ the operator's laptop just because the operator has an Auth0 token.
 
 Audit the actual migration journal before selecting pending migrations. On an
 empty database, apply every journaled migration in order; on an initialized
-database, only the missing reviewed suffix. Never run 0017 or 0019 alone
+database, only the missing reviewed suffix. Never run 0017 or 0021 alone
 against an unknown schema. Require readiness to verify the environment,
 mapping, and customer-control state constraints.
 The API identity must have only required runtime DML, no DDL or migration role.
@@ -236,7 +236,7 @@ before activating customer access. Do not delete shared infrastructure.
 
 After wallet provisioning, disable the sandbox provider mode and its invocation
 path, preserving wallet, consent, immutable mapping and audit records. Do not
-down-migrate 0017 or 0019 or replace a staging mapping with a synthetic one.
+down-migrate 0017 or 0021 or replace a staging mapping with a synthetic one.
 Reverting the runtime needs a schema-compatible reviewed image; turning a mode
 off does not undo provider creation. Existing revision rollback is available
 only after an actual previous revision and restoration evidence are recorded.

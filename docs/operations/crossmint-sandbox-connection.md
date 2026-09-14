@@ -93,7 +93,7 @@ resource creation from customer-control readiness and corrects earlier staging
 rows that were labeled ready. Existing mappings remain immutable. Startup
 readiness checks require the sandbox, mapping, and customer-control constraints.
 A valid legacy staging row must reference the exact v1 disclosure and mapping
-before migration; 0019 preserves that evidence but does not promote it to
+before migration; 0021 preserves that evidence but does not promote it to
 current acceptance. Returning testers append current base and wallet v2 consent
 without replacing the old rows or redispatching a completed create.
 A changed idempotency command or provider configuration is rejected; a
@@ -149,7 +149,7 @@ creation path. No financial capability is enabled by this change.
 
 Rollback: disable the sandbox wallet mode and stop provisioning traffic. Preserve
 wallet, consent, mapping, and audit records. Do not replace a staging mapping
-with a synthetic mapping or destructively roll back migration 0017 or 0019.
+with a synthetic mapping or destructively roll back migration 0017 or 0021.
 
 ### Local validation
 

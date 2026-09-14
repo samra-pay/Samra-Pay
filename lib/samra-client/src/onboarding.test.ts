@@ -615,18 +615,23 @@ test("server activation completes the journey even with a retained ready wallet"
     assert.equal(view.stage, "complete");
     assert.equal(view.progressPercent, 100);
   }
-  // A restriction or unresolved wallet result continues to take precedence.
-  for (const [state, expected] of [
-    ["restricted", "restricted"],
-    ["error", "wallet_error"],
-    ["provisioning", "wallet_provisioning"],
-  ] as const) {
+  // A retained pre-activation wallet snapshot cannot erase the server's later
+  // activation. Only a current restriction or explicit re-consent action may
+  // interrupt the completed journey.
+  for (const state of ["error", "provisioning"] as const) {
     assert.equal(
       buildOnboardingJourneyView(activated, approved, { ...wallet, state })
         .stage,
-      expected,
+      "complete",
     );
   }
+  assert.equal(
+    buildOnboardingJourneyView(activated, approved, {
+      ...wallet,
+      state: "restricted",
+    }).stage,
+    "restricted",
+  );
   assert.equal(
     buildOnboardingJourneyView(
       { ...activated, state: "restricted" },

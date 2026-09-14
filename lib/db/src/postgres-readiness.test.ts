@@ -3,7 +3,7 @@ import test from "node:test";
 import type pg from "pg";
 import { assertPostgresRuntimeReady } from "./postgres-readiness";
 
-test("sandbox startup requires its validated constraints and evidence guards", async () => {
+test("wallet runtimes require the current control constraints and evidence guards", async () => {
   for (const ready of [false, undefined, true]) {
     let calls = 0;
     const statements: string[] = [];
@@ -17,10 +17,10 @@ test("sandbox startup requires its validated constraints and evidence guards", a
       },
     } as unknown as Pick<pg.Pool, "query">;
     const check = assertPostgresRuntimeReady(pool, {
-      customerControlledSandboxWallets: true,
+      customerWalletControls: true,
     });
     if (ready === true) await check;
-    else await assert.rejects(check, /sandbox wallet migration is not ready/);
+    else await assert.rejects(check, /wallet control migration is not ready/);
     assert.equal(calls, 2);
     assert.match(statements[1]!, /customer_wallet_mapping_configuration_guard/);
     assert.match(
@@ -36,7 +36,7 @@ test("sandbox startup requires its validated constraints and evidence guards", a
   }
 });
 
-test("default synthetic startup does not require the sandbox migration", async () => {
+test("default local demo startup does not require the wallet control migration", async () => {
   let calls = 0;
   const pool = {
     async query() {

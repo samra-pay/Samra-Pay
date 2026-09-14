@@ -165,6 +165,10 @@ BEGIN
         USING ERRCODE = '23514';
     END IF;
 
+    -- Keep the exact deployed synthetic rollback revision
+    -- 836f76bd368e9d81c633d7483e48b907c42ef775 schema-compatible while it is a
+    -- rollback target. The current application still requires v2 before it
+    -- reaches this trigger. Staging never receives this v1 compatibility path.
     IF (
       SELECT count(DISTINCT consent."consent_type")
         FROM "samra_core"."customer_consents" consent
@@ -176,8 +180,22 @@ BEGIN
          AND consent."document_version" = 'alpha-non-production-v2'
          AND consent."locale" = 'en-US'
          AND consent."decision" = 'accepted'
-    ) <> 3 THEN
-      RAISE EXCEPTION 'customer wallet creation requires the current onboarding consent bundle'
+    ) <> 3 AND (
+      NEW."environment" <> 'synthetic'
+      OR (
+        SELECT count(DISTINCT consent."consent_type")
+          FROM "samra_core"."customer_consents" consent
+         WHERE consent."customer_id" = NEW."customer_id"
+           AND consent."onboarding_id" = NEW."onboarding_id"
+           AND consent."consent_type" IN
+               ('terms_of_service','privacy_notice','electronic_communications')
+           AND consent."bundle_version" = 'alpha-non-production-v1'
+           AND consent."document_version" = 'alpha-non-production-v1'
+           AND consent."locale" = 'en-US'
+           AND consent."decision" = 'accepted'
+      ) <> 3
+    ) THEN
+      RAISE EXCEPTION 'customer wallet creation requires an approved onboarding consent bundle'
         USING ERRCODE = '23514';
     END IF;
 
@@ -188,20 +206,47 @@ BEGIN
          AND consent."customer_id" = NEW."customer_id"
          AND consent."onboarding_id" = NEW."onboarding_id"
          AND consent."consent_type" = 'wallet_provisioning'
-         AND consent."bundle_version" = CASE
-               WHEN NEW."environment" = 'synthetic'
-                 THEN 'alpha-wallet-non-production-v2'
-               ELSE 'sandbox-customer-wallet-v2'
-             END
-         AND consent."document_version" = CASE
-               WHEN NEW."environment" = 'synthetic'
-                 THEN 'alpha-wallet-non-production-v2'
-               ELSE 'sandbox-customer-wallet-v2'
-             END
+         AND (
+           (NEW."environment" = 'synthetic' AND (
+             (consent."bundle_version" = 'alpha-wallet-non-production-v2'
+               AND consent."document_version" = 'alpha-wallet-non-production-v2'
+               AND (
+                 SELECT count(DISTINCT base_consent."consent_type")
+                   FROM "samra_core"."customer_consents" base_consent
+                  WHERE base_consent."customer_id" = NEW."customer_id"
+                    AND base_consent."onboarding_id" = NEW."onboarding_id"
+                    AND base_consent."consent_type" IN
+                        ('terms_of_service','privacy_notice','electronic_communications')
+                    AND base_consent."bundle_version" = 'alpha-non-production-v2'
+                    AND base_consent."document_version" = 'alpha-non-production-v2'
+                    AND base_consent."locale" = 'en-US'
+                    AND base_consent."decision" = 'accepted'
+               ) = 3)
+             OR
+             (consent."bundle_version" = 'alpha-wallet-non-production-v1'
+               AND consent."document_version" = 'alpha-wallet-non-production-v1'
+               AND (
+                 SELECT count(DISTINCT base_consent."consent_type")
+                   FROM "samra_core"."customer_consents" base_consent
+                  WHERE base_consent."customer_id" = NEW."customer_id"
+                    AND base_consent."onboarding_id" = NEW."onboarding_id"
+                    AND base_consent."consent_type" IN
+                        ('terms_of_service','privacy_notice','electronic_communications')
+                    AND base_consent."bundle_version" = 'alpha-non-production-v1'
+                    AND base_consent."document_version" = 'alpha-non-production-v1'
+                    AND base_consent."locale" = 'en-US'
+                    AND base_consent."decision" = 'accepted'
+               ) = 3)
+           ))
+           OR
+           (NEW."environment" = 'staging'
+             AND consent."bundle_version" = 'sandbox-customer-wallet-v2'
+             AND consent."document_version" = 'sandbox-customer-wallet-v2')
+         )
          AND consent."locale" = 'en-US'
          AND consent."decision" = 'accepted'
     ) THEN
-      RAISE EXCEPTION 'customer wallet creation requires the exact current wallet disclosure'
+      RAISE EXCEPTION 'customer wallet creation requires an approved wallet disclosure'
         USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
@@ -239,8 +284,22 @@ BEGIN
        AND consent."document_version" = 'alpha-non-production-v2'
        AND consent."locale" = 'en-US'
        AND consent."decision" = 'accepted'
-  ) <> 3 THEN
-    RAISE EXCEPTION 'wallet capability transitions require the current onboarding consent bundle'
+  ) <> 3 AND (
+    OLD."environment" <> 'synthetic'
+    OR (
+      SELECT count(DISTINCT consent."consent_type")
+        FROM "samra_core"."customer_consents" consent
+       WHERE consent."customer_id" = OLD."customer_id"
+         AND consent."onboarding_id" = OLD."onboarding_id"
+         AND consent."consent_type" IN
+             ('terms_of_service','privacy_notice','electronic_communications')
+         AND consent."bundle_version" = 'alpha-non-production-v1'
+         AND consent."document_version" = 'alpha-non-production-v1'
+         AND consent."locale" = 'en-US'
+         AND consent."decision" = 'accepted'
+    ) <> 3
+  ) THEN
+    RAISE EXCEPTION 'wallet capability transitions require an approved onboarding consent bundle'
       USING ERRCODE = '23514';
   END IF;
 
@@ -250,20 +309,47 @@ BEGIN
      WHERE consent."customer_id" = OLD."customer_id"
        AND consent."onboarding_id" = OLD."onboarding_id"
        AND consent."consent_type" = 'wallet_provisioning'
-       AND consent."bundle_version" = CASE
-             WHEN OLD."environment" = 'synthetic'
-               THEN 'alpha-wallet-non-production-v2'
-             ELSE 'sandbox-customer-wallet-v2'
-           END
-       AND consent."document_version" = CASE
-             WHEN OLD."environment" = 'synthetic'
-               THEN 'alpha-wallet-non-production-v2'
-             ELSE 'sandbox-customer-wallet-v2'
-           END
+       AND (
+         (OLD."environment" = 'synthetic' AND (
+           (consent."bundle_version" = 'alpha-wallet-non-production-v2'
+             AND consent."document_version" = 'alpha-wallet-non-production-v2'
+             AND (
+               SELECT count(DISTINCT base_consent."consent_type")
+                 FROM "samra_core"."customer_consents" base_consent
+                WHERE base_consent."customer_id" = OLD."customer_id"
+                  AND base_consent."onboarding_id" = OLD."onboarding_id"
+                  AND base_consent."consent_type" IN
+                      ('terms_of_service','privacy_notice','electronic_communications')
+                  AND base_consent."bundle_version" = 'alpha-non-production-v2'
+                  AND base_consent."document_version" = 'alpha-non-production-v2'
+                  AND base_consent."locale" = 'en-US'
+                  AND base_consent."decision" = 'accepted'
+             ) = 3)
+           OR
+           (consent."bundle_version" = 'alpha-wallet-non-production-v1'
+             AND consent."document_version" = 'alpha-wallet-non-production-v1'
+             AND (
+               SELECT count(DISTINCT base_consent."consent_type")
+                 FROM "samra_core"."customer_consents" base_consent
+                WHERE base_consent."customer_id" = OLD."customer_id"
+                  AND base_consent."onboarding_id" = OLD."onboarding_id"
+                  AND base_consent."consent_type" IN
+                      ('terms_of_service','privacy_notice','electronic_communications')
+                  AND base_consent."bundle_version" = 'alpha-non-production-v1'
+                  AND base_consent."document_version" = 'alpha-non-production-v1'
+                  AND base_consent."locale" = 'en-US'
+                  AND base_consent."decision" = 'accepted'
+             ) = 3)
+         ))
+         OR
+         (OLD."environment" = 'staging'
+           AND consent."bundle_version" = 'sandbox-customer-wallet-v2'
+           AND consent."document_version" = 'sandbox-customer-wallet-v2')
+       )
        AND consent."locale" = 'en-US'
        AND consent."decision" = 'accepted'
   ) THEN
-    RAISE EXCEPTION 'wallet capability transitions require the exact current wallet disclosure'
+    RAISE EXCEPTION 'wallet capability transitions require an approved wallet disclosure'
       USING ERRCODE = '23514';
   END IF;
 

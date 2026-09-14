@@ -34,7 +34,7 @@ type ReadinessQueryable = Pick<pg.Pool, "query">;
 export async function assertPostgresRuntimeReady(
   pool: ReadinessQueryable,
   options: Readonly<{
-    customerControlledSandboxWallets?: boolean;
+    customerWalletControls?: boolean;
     alphaReleaseAdmission?: boolean;
   }> = {},
 ): Promise<void> {
@@ -77,7 +77,7 @@ export async function assertPostgresRuntimeReady(
     if (guards.rows[0]?.ready !== true)
       throw new Error("PostgreSQL alpha admission migration is not ready.");
   }
-  if (options.customerControlledSandboxWallets) {
+  if (options.customerWalletControls) {
     const guards = await pool.query<{ ready: boolean }>(
       `SELECT EXISTS (
        SELECT 1 FROM pg_trigger
@@ -129,7 +129,7 @@ export async function assertPostgresRuntimeReady(
     );
     if (guards.rows[0]?.ready !== true) {
       throw new Error(
-        "PostgreSQL customer-controlled sandbox wallet migration is not ready.",
+        "PostgreSQL customer wallet control migration is not ready.",
       );
     }
   }

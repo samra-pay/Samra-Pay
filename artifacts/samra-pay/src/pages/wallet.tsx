@@ -198,8 +198,8 @@ function WalletOverview({
             </p>
             <p className="mt-2 font-serif text-4xl">Unavailable</p>
             <p className="mt-3 text-sm text-muted-foreground">
-              No token balance is configured or available for this wallet
-              record.
+              Samra has not configured a token or on-chain asset for this wallet
+              record and does not recognize or present a wallet balance.
             </p>
           </div>
           <p className="flex items-center gap-2 text-sm" role="status">
@@ -301,8 +301,8 @@ function WalletDetails({ wallet }: { wallet: CustomerWalletSnapshot }) {
       <DialogContent className="max-w-sm sm:max-w-lg">
         <DialogTitle>Wallet details</DialogTitle>
         <DialogDescription>
-          This is a non-production wallet record. No token balance, deposits, or
-          transfers are available.
+          This is a non-production wallet record. Samra does not recognize or
+          present a wallet balance. Deposits and transfers are unavailable.
         </DialogDescription>
         <dl className="space-y-5 text-sm">
           <div>
