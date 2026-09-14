@@ -49,8 +49,11 @@ created -> pending -> review -> approved
 
 Approved and declined are terminal case states. A later contradictory terminal
 decision is recorded as a conflict and restricts onboarding for reviewed
-operations handling. A stale event is retained as ignored evidence and cannot
-move state backward.
+operations handling, including when onboarding has already reached a later
+wallet or funding stage. The wallet record and provider mapping remain durable
+evidence; restriction removes progression and customer capability rather than
+erasing provider history. A stale event is retained as ignored evidence and
+cannot move state backward.
 
 ## Provider boundary and current limitation
 

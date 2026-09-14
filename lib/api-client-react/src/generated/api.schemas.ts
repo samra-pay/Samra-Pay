@@ -162,6 +162,7 @@ export const CustomerOnboardingState = {
   bank_matched: "bank_matched",
   wallet_consent_pending: "wallet_consent_pending",
   wallet_provisioning: "wallet_provisioning",
+  wallet_control_setup: "wallet_control_setup",
   wallet_ready: "wallet_ready",
   funding_ready: "funding_ready",
   activated: "activated",
@@ -370,33 +371,90 @@ export type CustomerWalletState =
 export const CustomerWalletState = {
   created: "created",
   provisioning: "provisioning",
+  customer_control_setup: "customer_control_setup",
   ready: "ready",
   restricted: "restricted",
   error: "error",
 } as const;
 
-export type StartCustomerWalletProvisioningRequestBundleVersion =
-  (typeof StartCustomerWalletProvisioningRequestBundleVersion)[keyof typeof StartCustomerWalletProvisioningRequestBundleVersion];
+export type SyntheticCustomerWalletDisclosureEnvironment =
+  (typeof SyntheticCustomerWalletDisclosureEnvironment)[keyof typeof SyntheticCustomerWalletDisclosureEnvironment];
 
-export const StartCustomerWalletProvisioningRequestBundleVersion = {
-  "alpha-wallet-non-production-v1": "alpha-wallet-non-production-v1",
-  "sandbox-customer-wallet-v1": "sandbox-customer-wallet-v1",
+export const SyntheticCustomerWalletDisclosureEnvironment = {
+  synthetic: "synthetic",
 } as const;
 
-export type StartCustomerWalletProvisioningRequestDocumentVersion =
-  (typeof StartCustomerWalletProvisioningRequestDocumentVersion)[keyof typeof StartCustomerWalletProvisioningRequestDocumentVersion];
+export type SyntheticCustomerWalletDisclosurePresentation = {
+  title: "Create your synthetic USDC wallet record";
+  body: "This alpha step creates only a synthetic wallet record. It does not create a blockchain wallet, tokens, public address, balance, funding, remittance, transfers, withdrawals, or live financial access.";
+  acceptanceLabel: "I understand this creates only a synthetic wallet record";
+  actionLabel: "Create synthetic wallet";
+};
 
-export const StartCustomerWalletProvisioningRequestDocumentVersion = {
-  "alpha-wallet-non-production-v1": "alpha-wallet-non-production-v1",
-  "sandbox-customer-wallet-v1": "sandbox-customer-wallet-v1",
-} as const;
-
-export interface StartCustomerWalletProvisioningRequest {
-  bundleVersion: StartCustomerWalletProvisioningRequestBundleVersion;
-  documentVersion: StartCustomerWalletProvisioningRequestDocumentVersion;
+export interface SyntheticCustomerWalletDisclosure {
+  bundleVersion: "alpha-wallet-non-production-v2";
+  documentVersion: "alpha-wallet-non-production-v2";
   locale: "en-US";
-  decision: "accepted";
+  legalEffect: "non_production";
+  environment: SyntheticCustomerWalletDisclosureEnvironment;
+  createsRealWallet: false;
+  customerControlSetupRequired: false;
+  fundingEnabled: false;
+  remittanceEnabled: false;
+  presentation: SyntheticCustomerWalletDisclosurePresentation;
 }
+
+export type StagingCustomerWalletDisclosureEnvironment =
+  (typeof StagingCustomerWalletDisclosureEnvironment)[keyof typeof StagingCustomerWalletDisclosureEnvironment];
+
+export const StagingCustomerWalletDisclosureEnvironment = {
+  staging: "staging",
+} as const;
+
+export type StagingCustomerWalletDisclosurePresentation = {
+  title: "Create your Crossmint non-production EVM wallet";
+  body: "This creates a real, non-production Crossmint EVM wallet intended for future approved USDC use and associates it with your Samra account. Crossmint receives an opaque Samra customer reference and the configured tester recovery email for the wallet's email admin signer. Samra has not configured a token or on-chain asset for this wallet. Because this flow does not inspect on-chain holdings, it makes no claim that the address is empty; Samra does not recognize or present a wallet balance. Customer signing and recovery control have not been verified, so the wallet is not ready. Funding, remittance, transfers, withdrawals, and live financial access remain disabled.";
+  acceptanceLabel: "I understand Crossmint receives the configured tester recovery email; this flow does not prove the wallet is empty or customer-controlled, and Samra does not present a wallet balance";
+  actionLabel: "Create Crossmint test wallet";
+};
+
+export interface StagingCustomerWalletDisclosure {
+  bundleVersion: "sandbox-customer-wallet-v2";
+  documentVersion: "sandbox-customer-wallet-v2";
+  locale: "en-US";
+  legalEffect: "non_production";
+  environment: StagingCustomerWalletDisclosureEnvironment;
+  createsRealWallet: true;
+  customerControlSetupRequired: true;
+  fundingEnabled: false;
+  remittanceEnabled: false;
+  presentation: StagingCustomerWalletDisclosurePresentation;
+}
+
+export type CustomerWalletDisclosure =
+  SyntheticCustomerWalletDisclosure | StagingCustomerWalletDisclosure;
+
+export const SyntheticCustomerWalletProvisioningAcceptanceValue = {
+  bundleVersion: "alpha-wallet-non-production-v2",
+  documentVersion: "alpha-wallet-non-production-v2",
+  locale: "en-US",
+  decision: "accepted",
+} as const;
+export type SyntheticCustomerWalletProvisioningAcceptance =
+  typeof SyntheticCustomerWalletProvisioningAcceptanceValue;
+
+export const StagingCustomerWalletProvisioningAcceptanceValue = {
+  bundleVersion: "sandbox-customer-wallet-v2",
+  documentVersion: "sandbox-customer-wallet-v2",
+  locale: "en-US",
+  decision: "accepted",
+} as const;
+export type StagingCustomerWalletProvisioningAcceptance =
+  typeof StagingCustomerWalletProvisioningAcceptanceValue;
+
+export type StartCustomerWalletProvisioningRequest =
+  | SyntheticCustomerWalletProvisioningAcceptance
+  | StagingCustomerWalletProvisioningAcceptance;
 
 export type CustomerWalletProvider =
   (typeof CustomerWalletProvider)[keyof typeof CustomerWalletProvider];
@@ -405,6 +463,9 @@ export const CustomerWalletProvider = {
   crossmint: "crossmint",
 } as const;
 
+/**
+ * Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network.
+ */
 export type CustomerWalletAsset =
   (typeof CustomerWalletAsset)[keyof typeof CustomerWalletAsset];
 
@@ -427,9 +488,13 @@ export interface CustomerWallet {
   state: CustomerWalletState;
   reasonFamily: string | null;
   provider: CustomerWalletProvider;
+  /** Samra's intended product asset for this wallet record. This field does not prove that the provider has configured or issued a token on any network. */
   asset: CustomerWalletAsset;
+  /** Provider-normalized chain family or synthetic marker. The current staging value `evm` is not evidence of an exact blockchain network. */
   network: string | null;
+  /** Normalized custody and customer-control model. It remains null until Samra has durable evidence that required signing and recovery controls are complete. */
   custodyModel: string | null;
+  /** Customer-visible address, exposed only for a ready wallet with completed control evidence; null for every non-ready state. */
   publicAddress: string | null;
   configurationVersion: CustomerWalletConfigurationVersion;
   synthetic: boolean;
@@ -486,6 +551,7 @@ export interface CustomerOnboarding {
   createdAt: string;
   updatedAt: string;
   nextAllowedActions: string[];
+  /** Current server-selected catalog to present, not proof that this customer accepted the current version. Durable acceptance evidence remains server-side; submit_required_consents in nextAllowedActions means the current bundle must be accepted before the later journey stage can continue. */
   consentBundle: CustomerConsentBundle;
 }
 

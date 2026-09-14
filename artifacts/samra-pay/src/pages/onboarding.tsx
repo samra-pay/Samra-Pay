@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   buildOnboardingJourneyView,
   getCustomerConsentPresentation,
-  SYNTHETIC_WALLET_PROVISIONING_INPUT,
+  walletProvisioningInputFromDisclosure,
   type CustomerConsentType,
   type CustomerIdentityProviderDecision,
+  type CustomerWalletDisclosure,
   type CustomerWalletSnapshot,
 } from "@workspace/samra-client/onboarding";
 import {
@@ -12,6 +13,7 @@ import {
   useCustomerIdentityCase,
   useCustomerOnboarding,
   useCustomerWallet,
+  useCustomerWalletDisclosure,
   useResetDemoCustomerOnboarding,
   useSamraCustomerAcquisition,
   useSamraOnboardingRuntime,
@@ -56,10 +58,19 @@ const WALLET_STATES = new Set([
   "identity_approved",
   "wallet_consent_pending",
   "wallet_provisioning",
+  "wallet_control_setup",
   "wallet_ready",
   "funding_ready",
   "activated",
   "restricted",
+]);
+
+const WALLET_DISCLOSURE_STATES = new Set([
+  "identity_approved",
+  "wallet_consent_pending",
+  "wallet_provisioning",
+  "wallet_control_setup",
+  "wallet_ready",
 ]);
 
 export default function CustomerOnboardingPage() {
@@ -76,7 +87,23 @@ export default function CustomerOnboardingPage() {
     Boolean(onboarding && WALLET_STATES.has(onboarding.state)),
   );
   const wallet = walletQuery.data ?? null;
-  const journey = buildOnboardingJourneyView(onboarding, identityCase, wallet);
+  const requiresWalletDisclosureRefresh =
+    wallet?.nextAllowedActions.includes("accept_current_wallet_disclosure") ===
+    true;
+  const walletDisclosureQuery = useCustomerWalletDisclosure(
+    Boolean(
+      onboarding &&
+      (WALLET_DISCLOSURE_STATES.has(onboarding.state) ||
+        requiresWalletDisclosureRefresh),
+    ),
+  );
+  const walletDisclosure = walletDisclosureQuery.data ?? null;
+  const journey = buildOnboardingJourneyView(
+    onboarding,
+    identityCase,
+    wallet,
+    walletDisclosure,
+  );
   const headingRef = useRef<HTMLHeadingElement>(null);
   const commandKeys = useRef(new Map<string, string>());
   const [accepted, setAccepted] = useState<
@@ -106,17 +133,23 @@ export default function CustomerOnboardingPage() {
 
   useEffect(() => {
     setWalletDisclosureAccepted(false);
-  }, [wallet?.walletId]);
+  }, [journey.stage, walletDisclosure]);
 
   const documents = onboarding?.consentBundle.documents ?? [];
   const allAccepted =
     documents.length > 0 &&
     documents.every((document) => accepted[document.consentType] === true);
+  const walletMutationError =
+    journey.stage === "wallet_consent" ||
+    journey.stage === "wallet_provisioning" ||
+    journey.stage === "wallet_error"
+      ? startWallet.error
+      : null;
   const mutationError =
     startOnboarding.error ??
     submitConsents.error ??
     startIdentity.error ??
-    startWallet.error ??
+    walletMutationError ??
     advanceIdentity.error ??
     resetDemo.error;
   const isMutating =
@@ -352,11 +385,12 @@ export default function CustomerOnboardingPage() {
       );
     }
 
-    if (journey.stage === "wallet_consent") {
+    if (journey.stage === "wallet_consent" && walletDisclosure) {
       return (
         <div className="space-y-4">
           <WalletDisclosure
             accepted={walletDisclosureAccepted}
+            disclosure={walletDisclosure}
             onAcceptedChange={setWalletDisclosureAccepted}
           />
           <PrimaryAction
@@ -366,14 +400,17 @@ export default function CustomerOnboardingPage() {
               const key = commandKey(commandKeys.current, "wallet-start");
               startWallet.mutate(
                 {
-                  input: SYNTHETIC_WALLET_PROVISIONING_INPUT,
+                  input:
+                    walletProvisioningInputFromDisclosure(walletDisclosure),
                   idempotencyKey: key,
                 },
                 { onSuccess: () => commandKeys.current.delete("wallet-start") },
               );
             }}
           >
-            Create synthetic wallet
+            {requiresWalletDisclosureRefresh
+              ? "Accept updated wallet disclosure"
+              : walletDisclosure.presentation.actionLabel}
           </PrimaryAction>
         </div>
       );
@@ -383,8 +420,55 @@ export default function CustomerOnboardingPage() {
       return (
         <div className="space-y-4">
           <StatusPanel icon={Clock3}>
-            The durable Samra wallet record is waiting for its normalized
-            provider result. No balance or funding capability exists yet.
+            {wallet && !wallet.synthetic
+              ? "The provider outcome is not reconciled, and another create remains blocked. No balance or funding capability exists."
+              : "The durable Samra wallet record is waiting for its deterministic synthetic result. No balance or funding capability exists yet."}
+          </StatusPanel>
+          {wallet?.synthetic &&
+          walletDisclosure?.environment === "synthetic" ? (
+            <PrimaryAction
+              loading={startWallet.isPending}
+              onClick={() =>
+                startWallet.mutate({
+                  input:
+                    walletProvisioningInputFromDisclosure(walletDisclosure),
+                  idempotencyKey: commandKey(
+                    commandKeys.current,
+                    "wallet-start",
+                  ),
+                })
+              }
+            >
+              Resume synthetic wallet setup
+            </PrimaryAction>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => {
+                void Promise.all([
+                  onboardingQuery.refetch(),
+                  walletQuery.refetch(),
+                  walletDisclosureQuery.refetch(),
+                ]);
+              }}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh wallet status
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    if (journey.stage === "wallet_control_setup") {
+      return (
+        <div className="space-y-4">
+          <StatusPanel icon={Clock3}>
+            Wallet creation is recorded, but customer signing and recovery setup
+            are still required. Wallet details, funding, and transfers remain
+            unavailable.
           </StatusPanel>
           <Button
             type="button"
@@ -404,7 +488,58 @@ export default function CustomerOnboardingPage() {
       );
     }
 
-    if (journey.stage === "wallet_error") {
+    if (journey.stage === "wallet_error" && wallet) {
+      if (!wallet.synthetic) {
+        return (
+          <div className="space-y-4">
+            <StatusPanel icon={TriangleAlert}>
+              The wallet-creation outcome is unknown. The Samra command is
+              preserved, and another provider create stays blocked until the
+              result is reconciled.
+            </StatusPanel>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => {
+                void Promise.all([
+                  onboardingQuery.refetch(),
+                  walletQuery.refetch(),
+                ]);
+              }}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh wallet status
+            </Button>
+          </div>
+        );
+      }
+      if (!walletDisclosure || walletDisclosure.environment !== "synthetic") {
+        return (
+          <div className="space-y-4">
+            <StatusPanel icon={TriangleAlert}>
+              Automatic retry is unavailable because the current wallet
+              disclosure does not match this synthetic wallet record. Refresh
+              the status and contact support if it remains unresolved.
+            </StatusPanel>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => {
+                void Promise.all([
+                  onboardingQuery.refetch(),
+                  walletQuery.refetch(),
+                  walletDisclosureQuery.refetch(),
+                ]);
+              }}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh wallet status
+            </Button>
+          </div>
+        );
+      }
       return (
         <div className="space-y-4">
           <StatusPanel icon={TriangleAlert}>
@@ -415,7 +550,7 @@ export default function CustomerOnboardingPage() {
             loading={startWallet.isPending}
             onClick={() =>
               startWallet.mutate({
-                input: SYNTHETIC_WALLET_PROVISIONING_INPUT,
+                input: walletProvisioningInputFromDisclosure(walletDisclosure),
                 idempotencyKey: commandKey(commandKeys.current, "wallet-start"),
               })
             }
@@ -500,17 +635,25 @@ export default function CustomerOnboardingPage() {
     startWallet,
     submitConsents,
     wallet,
+    walletDisclosure,
     walletDisclosureAccepted,
     walletQuery,
     allAccepted,
   ]);
 
-  if (onboardingQuery.isLoading || walletQuery.isLoading) {
+  if (
+    onboardingQuery.isLoading ||
+    walletQuery.isLoading ||
+    walletDisclosureQuery.isLoading
+  ) {
     return <OnboardingLoading />;
   }
 
   const queryError =
-    onboardingQuery.error ?? identityQuery.error ?? walletQuery.error;
+    onboardingQuery.error ??
+    identityQuery.error ??
+    walletQuery.error ??
+    walletDisclosureQuery.error;
   if (queryError) {
     return (
       <OnboardingFailure
@@ -518,12 +661,16 @@ export default function CustomerOnboardingPage() {
         retrying={
           onboardingQuery.isFetching ||
           identityQuery.isFetching ||
-          walletQuery.isFetching
+          walletQuery.isFetching ||
+          walletDisclosureQuery.isFetching
         }
         onRetry={() => {
           const retries: Promise<unknown>[] = [onboardingQuery.refetch()];
           if (identityQuery.error) retries.push(identityQuery.refetch());
           if (walletQuery.error) retries.push(walletQuery.refetch());
+          if (walletDisclosureQuery.error) {
+            retries.push(walletDisclosureQuery.refetch());
+          }
           void Promise.all(retries);
         }}
       />
@@ -669,32 +816,30 @@ function BoundaryList() {
 
 function WalletDisclosure({
   accepted,
+  disclosure,
   onAcceptedChange,
 }: {
   accepted: boolean;
+  disclosure: CustomerWalletDisclosure;
   onAcceptedChange: (accepted: boolean) => void;
 }) {
   const checkboxId = "wallet-disclosure";
   return (
     <div className="space-y-4">
-      <ul className="space-y-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm text-muted-foreground">
-        <li className="flex gap-3">
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm text-muted-foreground">
+        <div className="flex gap-3">
           <ShieldCheck
             aria-hidden="true"
             className="mt-0.5 h-5 w-5 shrink-0 text-primary"
           />
-          Crossmint is isolated behind Samra’s wallet adapter and does not own
-          your onboarding or ledger record.
-        </li>
-        <li className="flex gap-3">
-          <LockKeyhole
-            aria-hidden="true"
-            className="mt-0.5 h-5 w-5 shrink-0 text-primary"
-          />
-          This alpha creates a synthetic USDC wallet record only: no tokens,
-          public address, balance, funding, remittance, or withdrawal access.
-        </li>
-      </ul>
+          <div>
+            <h3 className="font-semibold text-foreground">
+              {disclosure.presentation.title}
+            </h3>
+            <p className="mt-2 leading-6">{disclosure.presentation.body}</p>
+          </div>
+        </div>
+      </div>
       <div className="flex min-h-20 gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
         <Checkbox
           id={checkboxId}
@@ -708,14 +853,13 @@ function WalletDisclosure({
             htmlFor={checkboxId}
             className="cursor-pointer text-sm font-semibold text-foreground"
           >
-            I understand this is a synthetic wallet
+            {disclosure.presentation.acceptanceLabel}
           </label>
           <p
             id={`${checkboxId}-description`}
             className="mt-1 text-sm leading-6 text-muted-foreground"
           >
-            Record disclosure version alpha-wallet-non-production-v1 and begin
-            idempotent synthetic provisioning.
+            Accept disclosure version {disclosure.documentVersion}.
           </p>
         </div>
       </div>
@@ -724,15 +868,19 @@ function WalletDisclosure({
 }
 
 function WalletSummary({ wallet }: { wallet: CustomerWalletSnapshot }) {
+  const walletLabel = wallet.synthetic
+    ? "Synthetic wallet"
+    : "Non-production wallet";
   return (
     <div className="space-y-4">
       <StatusPanel icon={CheckCircle2}>
-        Synthetic wallet {wallet.walletId.slice(-8)} is ready. Its normalized
-        state is stored by Samra and can survive a provider migration.
+        {walletLabel} record {wallet.walletId.slice(-8)} is ready. Its
+        normalized state and history are owned by Samra. Any future reviewed
+        provider migration must preserve both.
       </StatusPanel>
       <dl className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-muted-foreground">Asset configuration</dt>
+          <dt className="text-muted-foreground">Intended product asset</dt>
           <dd className="mt-1 font-semibold text-foreground">{wallet.asset}</dd>
         </div>
         <div>
@@ -742,7 +890,7 @@ function WalletSummary({ wallet }: { wallet: CustomerWalletSnapshot }) {
           </dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Environment</dt>
+          <dt className="text-muted-foreground">Chain family</dt>
           <dd className="mt-1 font-semibold capitalize text-foreground">
             {wallet.network ?? "synthetic"}
           </dd>

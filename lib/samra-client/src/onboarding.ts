@@ -1,4 +1,8 @@
 import { SAMRA_LEGAL_PATHS } from "./legal.ts";
+import type {
+  CustomerWalletDisclosure as ApiCustomerWalletDisclosure,
+  StartCustomerWalletProvisioningRequest as ApiStartCustomerWalletProvisioningRequest,
+} from "@workspace/api-client-react";
 
 export const CUSTOMER_ONBOARDING_STATES = Object.freeze([
   "not_started",
@@ -11,6 +15,7 @@ export const CUSTOMER_ONBOARDING_STATES = Object.freeze([
   "bank_matched",
   "wallet_consent_pending",
   "wallet_provisioning",
+  "wallet_control_setup",
   "wallet_ready",
   "funding_ready",
   "activated",
@@ -74,24 +79,158 @@ export type CustomerIdentityCaseSnapshot = Readonly<{
 }>;
 
 export type CustomerWalletState =
-  "created" | "provisioning" | "ready" | "restricted" | "error";
+  | "created"
+  | "provisioning"
+  | "customer_control_setup"
+  | "ready"
+  | "restricted"
+  | "error";
 
-export type StartCustomerWalletProvisioningInput = Readonly<{
-  bundleVersion:
-    "alpha-wallet-non-production-v1" | "sandbox-customer-wallet-v1";
-  documentVersion:
-    "alpha-wallet-non-production-v1" | "sandbox-customer-wallet-v1";
-  locale: "en-US";
-  decision: "accepted";
-}>;
+export type StartCustomerWalletProvisioningInput =
+  Readonly<ApiStartCustomerWalletProvisioningRequest>;
 
 export const SYNTHETIC_WALLET_PROVISIONING_INPUT: StartCustomerWalletProvisioningInput =
   Object.freeze({
-    bundleVersion: "alpha-wallet-non-production-v1",
-    documentVersion: "alpha-wallet-non-production-v1",
+    bundleVersion: "alpha-wallet-non-production-v2",
+    documentVersion: "alpha-wallet-non-production-v2",
     locale: "en-US",
     decision: "accepted",
   });
+
+export type CustomerWalletDisclosure = Readonly<ApiCustomerWalletDisclosure>;
+
+export const SYNTHETIC_CUSTOMER_WALLET_DISCLOSURE: CustomerWalletDisclosure =
+  Object.freeze({
+    bundleVersion: SYNTHETIC_WALLET_PROVISIONING_INPUT.bundleVersion,
+    documentVersion: SYNTHETIC_WALLET_PROVISIONING_INPUT.documentVersion,
+    locale: SYNTHETIC_WALLET_PROVISIONING_INPUT.locale,
+    legalEffect: "non_production",
+    environment: "synthetic",
+    createsRealWallet: false,
+    customerControlSetupRequired: false,
+    fundingEnabled: false,
+    remittanceEnabled: false,
+    presentation: Object.freeze({
+      title: "Create your synthetic USDC wallet record",
+      body: "This alpha step creates only a synthetic wallet record. It does not create a blockchain wallet, tokens, public address, balance, funding, remittance, transfers, withdrawals, or live financial access.",
+      acceptanceLabel:
+        "I understand this creates only a synthetic wallet record",
+      actionLabel: "Create synthetic wallet",
+    }),
+  });
+
+export const STAGING_CUSTOMER_WALLET_DISCLOSURE: CustomerWalletDisclosure =
+  Object.freeze({
+    bundleVersion: "sandbox-customer-wallet-v2",
+    documentVersion: "sandbox-customer-wallet-v2",
+    locale: "en-US",
+    legalEffect: "non_production",
+    environment: "staging",
+    createsRealWallet: true,
+    customerControlSetupRequired: true,
+    fundingEnabled: false,
+    remittanceEnabled: false,
+    presentation: Object.freeze({
+      title: "Create your Crossmint non-production EVM wallet",
+      body: "This creates a real, non-production Crossmint EVM wallet intended for future approved USDC use and associates it with your Samra account. Crossmint receives an opaque Samra customer reference and the configured tester recovery email for the wallet's email admin signer. Samra has not configured a token or on-chain asset for this wallet. Because this flow does not inspect on-chain holdings, it makes no claim that the address is empty; Samra does not recognize or present a wallet balance. Customer signing and recovery control have not been verified, so the wallet is not ready. Funding, remittance, transfers, withdrawals, and live financial access remain disabled.",
+      acceptanceLabel:
+        "I understand Crossmint receives the configured tester recovery email; this flow does not prove the wallet is empty or customer-controlled, and Samra does not present a wallet balance",
+      actionLabel: "Create Crossmint test wallet",
+    }),
+  });
+
+export function parseCustomerWalletDisclosure(
+  input: unknown,
+): CustomerWalletDisclosure {
+  if (
+    matchesCustomerWalletDisclosure(input, SYNTHETIC_CUSTOMER_WALLET_DISCLOSURE)
+  ) {
+    return SYNTHETIC_CUSTOMER_WALLET_DISCLOSURE;
+  }
+  if (
+    matchesCustomerWalletDisclosure(input, STAGING_CUSTOMER_WALLET_DISCLOSURE)
+  ) {
+    return STAGING_CUSTOMER_WALLET_DISCLOSURE;
+  }
+  throw new Error(
+    "The wallet disclosure does not match a complete, recognized server contract.",
+  );
+}
+
+export function walletProvisioningInputFromDisclosure(
+  disclosure: CustomerWalletDisclosure,
+): StartCustomerWalletProvisioningInput {
+  const recognized = parseCustomerWalletDisclosure(disclosure);
+  return recognized.environment === "synthetic"
+    ? SYNTHETIC_WALLET_PROVISIONING_INPUT
+    : Object.freeze({
+        bundleVersion: "sandbox-customer-wallet-v2",
+        documentVersion: "sandbox-customer-wallet-v2",
+        locale: "en-US",
+        decision: "accepted",
+      });
+}
+
+const CUSTOMER_WALLET_DISCLOSURE_KEYS = Object.freeze([
+  "bundleVersion",
+  "documentVersion",
+  "locale",
+  "legalEffect",
+  "environment",
+  "createsRealWallet",
+  "customerControlSetupRequired",
+  "fundingEnabled",
+  "remittanceEnabled",
+  "presentation",
+] as const);
+
+const CUSTOMER_WALLET_PRESENTATION_KEYS = Object.freeze([
+  "title",
+  "body",
+  "acceptanceLabel",
+  "actionLabel",
+] as const);
+
+function matchesCustomerWalletDisclosure(
+  input: unknown,
+  expected: CustomerWalletDisclosure,
+): boolean {
+  if (
+    !hasExactKeys(input, CUSTOMER_WALLET_DISCLOSURE_KEYS) ||
+    !hasExactKeys(input.presentation, CUSTOMER_WALLET_PRESENTATION_KEYS)
+  ) {
+    return false;
+  }
+  return (
+    input.bundleVersion === expected.bundleVersion &&
+    input.documentVersion === expected.documentVersion &&
+    input.locale === expected.locale &&
+    input.legalEffect === expected.legalEffect &&
+    input.environment === expected.environment &&
+    input.createsRealWallet === expected.createsRealWallet &&
+    input.customerControlSetupRequired ===
+      expected.customerControlSetupRequired &&
+    input.fundingEnabled === expected.fundingEnabled &&
+    input.remittanceEnabled === expected.remittanceEnabled &&
+    input.presentation.title === expected.presentation.title &&
+    input.presentation.body === expected.presentation.body &&
+    input.presentation.acceptanceLabel ===
+      expected.presentation.acceptanceLabel &&
+    input.presentation.actionLabel === expected.presentation.actionLabel
+  );
+}
+
+function hasExactKeys<const TKey extends string>(
+  input: unknown,
+  expectedKeys: readonly TKey[],
+): input is Record<TKey, unknown> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+  const actualKeys = Object.keys(input);
+  return (
+    actualKeys.length === expectedKeys.length &&
+    expectedKeys.every((key) => Object.hasOwn(input, key))
+  );
+}
 
 export type CustomerWalletSnapshot = Readonly<{
   walletId: string;
@@ -164,6 +303,7 @@ export interface SamraOnboardingSource {
   startIdentityVerification(
     idempotencyKey: string,
   ): Promise<CustomerIdentityCaseSnapshot>;
+  getWalletDisclosure(): Promise<CustomerWalletDisclosure>;
   getWallet(): Promise<CustomerWalletSnapshot | null>;
   startWalletProvisioning(
     input: StartCustomerWalletProvisioningInput,
@@ -191,6 +331,7 @@ export type OnboardingJourneyStage =
   | "identity_error"
   | "wallet_consent"
   | "wallet_provisioning"
+  | "wallet_control_setup"
   | "wallet_ready"
   | "wallet_error"
   | "account_setup"
@@ -259,7 +400,7 @@ const JOURNEY_COPY: Readonly<
     eyebrow: "Step 3 of 4",
     title: "Identity verified",
     description:
-      "Verification is complete. Review the wallet disclosure before any synthetic provisioning begins.",
+      "Verification is complete. Review the server-selected wallet disclosure before provisioning begins.",
     statusTone: "success",
   },
   identity_declined: {
@@ -281,9 +422,9 @@ const JOURNEY_COPY: Readonly<
   wallet_consent: {
     step: 3,
     eyebrow: "Step 3 of 4",
-    title: "Create your synthetic USDC wallet",
+    title: "Review the wallet disclosure",
     description:
-      "Crossmint is isolated behind a Samra-owned adapter. This alpha step records your disclosure decision and creates no real funds or financial access.",
+      "The server-selected disclosure must load completely before wallet provisioning can begin.",
     statusTone: "neutral",
   },
   wallet_provisioning: {
@@ -291,13 +432,21 @@ const JOURNEY_COPY: Readonly<
     eyebrow: "Wallet setup",
     title: "Your wallet is being prepared",
     description:
-      "Your progress is durable. You can leave and return while Samra safely resumes the provider result.",
+      "Your progress is durable. If synthetic processing was interrupted, resume it using the server-stored Samra command.",
+    statusTone: "progress",
+  },
+  wallet_control_setup: {
+    step: 3,
+    eyebrow: "Wallet setup",
+    title: "Customer control setup is required",
+    description:
+      "Your non-production wallet record was created. Customer signing and recovery setup are not complete. Funding and remittance remain unavailable.",
     statusTone: "progress",
   },
   wallet_ready: {
     step: 3,
     eyebrow: "Step 3 of 4 complete",
-    title: "Your synthetic wallet is ready",
+    title: "Your synthetic wallet record is ready",
     description:
       "The wallet record is ready. Funding, balances, remittance access, and live USDC remain disabled until their separate gates are approved.",
     statusTone: "success",
@@ -340,9 +489,13 @@ export function buildOnboardingJourneyView(
   onboarding: CustomerOnboardingSnapshot | null,
   identityCase: CustomerIdentityCaseSnapshot | null,
   wallet: CustomerWalletSnapshot | null = null,
+  walletDisclosure: CustomerWalletDisclosure | null = null,
 ): OnboardingJourneyView {
   const stage = resolveJourneyStage(onboarding, identityCase, wallet);
-  const copy = JOURNEY_COPY[stage];
+  const recognizedDisclosure = walletDisclosure
+    ? parseCustomerWalletDisclosure(walletDisclosure)
+    : null;
+  const copy = journeyCopyFor(stage, wallet, recognizedDisclosure);
   return Object.freeze({
     stage,
     totalSteps: 4,
@@ -351,26 +504,101 @@ export function buildOnboardingJourneyView(
   });
 }
 
+function journeyCopyFor(
+  stage: OnboardingJourneyStage,
+  wallet: CustomerWalletSnapshot | null,
+  disclosure: CustomerWalletDisclosure | null,
+): (typeof JOURNEY_COPY)[OnboardingJourneyStage] {
+  if (stage === "wallet_consent" && disclosure) {
+    return Object.freeze({
+      step: 3,
+      eyebrow: "Step 3 of 4",
+      title: disclosure.presentation.title,
+      description: disclosure.presentation.body,
+      statusTone: "neutral" as const,
+    });
+  }
+  if (stage === "wallet_provisioning" && wallet && !wallet.synthetic) {
+    return Object.freeze({
+      step: 3,
+      eyebrow: "Wallet setup",
+      title: "Non-production wallet outcome pending",
+      description:
+        "Samra has recorded the wallet request, but the provider outcome is not reconciled. Another create remains blocked. Refresh the status while operations confirms the result.",
+      statusTone: "progress" as const,
+    });
+  }
+  if (stage === "wallet_ready" && wallet && !wallet.synthetic) {
+    return Object.freeze({
+      step: 3,
+      eyebrow: "Step 3 of 4 complete",
+      title: "Your non-production wallet record is ready",
+      description:
+        "Customer signing and recovery controls are verified for this non-production wallet. Funding, balances, remittance access, and live financial access remain disabled until their separate gates are approved.",
+      statusTone: "success" as const,
+    });
+  }
+  if (stage === "wallet_error" && wallet && !wallet.synthetic) {
+    return Object.freeze({
+      step: 3,
+      eyebrow: "Wallet setup",
+      title: "Non-production wallet setup is temporarily unavailable",
+      description:
+        "The wallet-creation outcome is unknown. The Samra command is preserved, and another provider create stays blocked until the result is reconciled.",
+      statusTone: "danger" as const,
+    });
+  }
+  if (
+    stage === "wallet_error" &&
+    wallet?.synthetic &&
+    disclosure?.environment !== "synthetic"
+  ) {
+    return Object.freeze({
+      step: 3,
+      eyebrow: "Wallet setup",
+      title: "Wallet configuration changed",
+      description:
+        "Automatic retry is unavailable because the current wallet disclosure does not match this synthetic wallet record. Refresh the status and contact support if it remains unresolved.",
+      statusTone: "danger" as const,
+    });
+  }
+  return JOURNEY_COPY[stage];
+}
+
 function resolveJourneyStage(
   onboarding: CustomerOnboardingSnapshot | null,
   identityCase: CustomerIdentityCaseSnapshot | null,
   wallet: CustomerWalletSnapshot | null,
 ): OnboardingJourneyStage {
   if (!onboarding || onboarding.state === "not_started") return "welcome";
-  if (
-    onboarding.state === "authenticated" ||
-    onboarding.state === "consent_pending"
-  ) {
-    return "consent";
-  }
   if (onboarding.state === "restricted") {
     return identityCase?.state === "declined"
       ? "identity_declined"
       : "restricted";
   }
+  if (
+    onboarding.state === "authenticated" ||
+    onboarding.state === "consent_pending" ||
+    onboarding.nextAllowedActions.includes("submit_required_consents")
+  ) {
+    return "consent";
+  }
   if (onboarding.state === "identity_review") return "identity_review";
   if (wallet?.state === "restricted") return "restricted";
+  if (wallet?.nextAllowedActions.includes("accept_current_wallet_disclosure")) {
+    return "wallet_consent";
+  }
+  if (onboarding.state === "activated") return "complete";
+  if (onboarding.state === "funding_ready") return "account_setup";
   if (wallet?.state === "error") return "wallet_error";
+  if (
+    onboarding.state === "wallet_control_setup" ||
+    wallet?.state === "customer_control_setup" ||
+    wallet?.nextAllowedActions.includes("await_customer_control_setup") ||
+    wallet?.nextAllowedActions.includes("await_customer_signer_setup")
+  ) {
+    return "wallet_control_setup";
+  }
   if (wallet?.state === "provisioning" || wallet?.state === "created") {
     return "wallet_provisioning";
   }
@@ -548,6 +776,10 @@ export class SyntheticSamraOnboardingSource
 
   async getWallet(): Promise<CustomerWalletSnapshot | null> {
     return this.#wallet;
+  }
+
+  async getWalletDisclosure(): Promise<CustomerWalletDisclosure> {
+    return SYNTHETIC_CUSTOMER_WALLET_DISCLOSURE;
   }
 
   async startWalletProvisioning(

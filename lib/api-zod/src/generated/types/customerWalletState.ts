@@ -12,6 +12,7 @@ export type CustomerWalletState =
 export const CustomerWalletState = {
   created: "created",
   provisioning: "provisioning",
+  customer_control_setup: "customer_control_setup",
   ready: "ready",
   restricted: "restricted",
   error: "error",

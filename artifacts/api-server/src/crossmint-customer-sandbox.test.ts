@@ -25,7 +25,7 @@ const response = () => ({
   config: { adminSigner: { type: "email", email: config.recoveryEmail } },
 });
 
-test("sandbox wallet creation uses a fixed staging endpoint, stable retry key, and tester recovery", async () => {
+test("sandbox wallet creation uses a fixed staging endpoint, stable idempotency header, and tester recovery", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const adapter = new CrossmintCustomerSandboxAdapter(config, {
     fetch: async (url, init) => {

@@ -1,14 +1,14 @@
 # Provider portability and Samra control-plane ownership
 
-| Field | Decision |
-| --- | --- |
-| Status | Accepted |
-| Decision date | 2026-09-14 |
-| Decision owner | David Haile |
-| Approval evidence | Direct authorization in the 2026-09-14 repository task |
-| Source baseline inspected | `9a948c62cf31294716d8ae1f9dcd4f80949d1658` |
-| Applies to | Every material external provider integration |
-| Supersedes | Nothing; elaborates the architecture foundation and Alpha platform decision |
+| Field                     | Decision                                                                    |
+| ------------------------- | --------------------------------------------------------------------------- |
+| Status                    | Accepted                                                                    |
+| Decision date             | 2026-09-14                                                                  |
+| Decision owner            | David Haile                                                                 |
+| Approval evidence         | Direct authorization in the 2026-09-14 repository task                      |
+| Source baseline inspected | `9a948c62cf31294716d8ae1f9dcd4f80949d1658`                                  |
+| Applies to                | Every material external provider integration                                |
+| Supersedes                | Nothing; elaborates the architecture foundation and Alpha platform decision |
 
 This document is both the governing architecture standard and its decision
 record. A second ADR would repeat the same decision without adding authority.
@@ -36,12 +36,14 @@ operating history. Provider access is not ownership. A provider may perform a
 regulated or technical primitive; it does not become Samra's customer system,
 ledger, product policy, or operating control plane.
 
-The accepted Alpha remains Auth0 authentication, Persona KYC, and Crossmint
-USDC wallet creation. Funding and Ethiopia payout providers remain unresolved.
-The repository's Rain, Caliza, and Chapa remittance paths are synthetic. This
-decision does not select a new provider, validate any provider's capability,
-change a contract, introduce credentials, move funds, or establish a live
-integration.
+The accepted Alpha product intent remains Auth0 authentication, Persona KYC,
+and a Crossmint wallet under a future approved USDC asset/network configuration.
+The current staging create request proves only a generic EVM smart-wallet
+resource and does not select or verify an exact token contract or chain. Funding
+and Ethiopia payout providers remain unresolved. The repository's Rain, Caliza,
+and Chapa remittance paths are synthetic. This decision does not select a new
+provider, validate any provider's capability, change a contract, introduce
+credentials, move funds, or establish a live integration.
 
 Names in the landscape below were discussed or are under evaluation. They are
 not endorsements or verified capability claims. Due diligence must establish
@@ -92,19 +94,19 @@ action.
 
 ## Samra-owned control plane
 
-| Domain | Samra is authoritative for | Provider input is limited to |
-| --- | --- | --- |
-| Customer identity | Canonical customer/person IDs, authentication mappings, lifecycle, merge/restriction history | Authenticated subject or identity evidence |
-| Accounts and eligibility | Account IDs, lifecycle, capabilities, product eligibility, internal restrictions | Legally required acceptance, denial, limit, or restriction evidence |
-| KYC operations | Case/attempt history, normalized status, policy version, expiry/reverification schedule, support state | Evidence collection and provider decision |
-| Wallets and instruments | Samra wallet/account/instrument IDs, customer association, state, mappings, disclosures | Custody, key, address, token, or instrument operation explicitly contracted |
-| Transactions | Intent, quote, route version, lifecycle, idempotency, history, dispute/support association | Execution status and evidence |
-| Financial truth | Double-entry ledger, holds, balances, history, corrections, reconciliation decisions | Statements, reports, confirmations, fees, and settlement observations |
-| Economics | Customer price, fee, FX rule/version, promotion, margin attribution | Executable provider price, fee, FX, and limit inputs |
-| Loyalty | Program rules, accrual/redemption ledger, promotion version, customer presentation | Partner issuance/redemption acknowledgment, including Ethiopian Airlines/ShebaMiles |
-| Risk and compliance orchestration | Signals, internal rules/models, decision version, case, route restriction, audit | Provider risk signal or legally binding counterparty decision |
-| Routing | Eligible capability set, selected provider instance, route version, cohort, fallback policy | Availability, limits, jurisdiction, cost, SLA, and risk inputs |
-| Operations | Reconciliation, exceptions, audit, analytics, customer support history and resolution | Provider evidence and provider-side case reference |
+| Domain                            | Samra is authoritative for                                                                             | Provider input is limited to                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Customer identity                 | Canonical customer/person IDs, authentication mappings, lifecycle, merge/restriction history           | Authenticated subject or identity evidence                                          |
+| Accounts and eligibility          | Account IDs, lifecycle, capabilities, product eligibility, internal restrictions                       | Legally required acceptance, denial, limit, or restriction evidence                 |
+| KYC operations                    | Case/attempt history, normalized status, policy version, expiry/reverification schedule, support state | Evidence collection and provider decision                                           |
+| Wallets and instruments           | Samra wallet/account/instrument IDs, customer association, state, mappings, disclosures                | Custody, key, address, token, or instrument operation explicitly contracted         |
+| Transactions                      | Intent, quote, route version, lifecycle, idempotency, history, dispute/support association             | Execution status and evidence                                                       |
+| Financial truth                   | Double-entry ledger, holds, balances, history, corrections, reconciliation decisions                   | Statements, reports, confirmations, fees, and settlement observations               |
+| Economics                         | Customer price, fee, FX rule/version, promotion, margin attribution                                    | Executable provider price, fee, FX, and limit inputs                                |
+| Loyalty                           | Program rules, accrual/redemption ledger, promotion version, customer presentation                     | Partner issuance/redemption acknowledgment, including Ethiopian Airlines/ShebaMiles |
+| Risk and compliance orchestration | Signals, internal rules/models, decision version, case, route restriction, audit                       | Provider risk signal or legally binding counterparty decision                       |
+| Routing                           | Eligible capability set, selected provider instance, route version, cohort, fallback policy            | Availability, limits, jurisdiction, cost, SLA, and risk inputs                      |
+| Operations                        | Reconciliation, exceptions, audit, analytics, customer support history and resolution                  | Provider evidence and provider-side case reference                                  |
 
 A regulated provider remains authoritative for decisions the law or contract
 assigns to it. Samra must not override those decisions. Samra owns the normalized
@@ -140,27 +142,32 @@ authenticated ingress -> immutable provider evidence -> canonical event
 Samra state transition / posting policy / reconciliation
 ```
 
-The outbound command intent is durable before dispatch. Network calls do not
-remain inside the database transaction that records Samra state. Dispatch may
-finish as `pending`, `succeeded`, `failed`, or `ambiguous`; ambiguous results are
-recovered through idempotent lookup, retry, or reconciliation before another
-financial effect is allowed.
+The outbound command intent is durable before dispatch. The target financial
+command pattern keeps provider network calls outside the transaction that
+records Samra state, then resolves `pending`, `succeeded`, `failed`, or
+`ambiguous` through idempotent lookup or reconciliation. The current bounded
+wallet-create slice is an explicit non-production exception: it holds the
+customer/onboarding transaction lock across the single provider create and
+mapping attachment so a concurrent identity restriction cannot race the call.
+It has a short timeout, grants no financial capability, and blocks automatic
+staging redispatch after an ambiguous result. Replace that exception with a
+durable dispatch/reconciliation state machine before live financial effects.
 
 ## Provider landscape and role separation
 
 One company may bundle several roles. Samra records each role separately and
 does not infer one role from another.
 
-| Capability under discussion | Named landscape | Required role clarity |
-| --- | --- | --- |
-| Customer authentication | Auth0 for Alpha | Identity provider, credential/session operator, subject mapping |
-| KYC | Persona for Alpha | Evidence collector, verification vendor, legally accountable decision maker, data controller/processor |
-| Wallet/custody | Crossmint for Alpha; Utila, Rain, Cybrid under evaluation | Wallet technology, custodian, key/MPC operator, asset/chain support, recovery operator |
-| Card/program | Wirex, Rain, Nium, Cross River, or a future issuer under evaluation | Program manager, processor, issuer, sponsor bank, network, wallet/custodian, settlement party |
-| Banking | Cross River or a future bank under evaluation | Account holder, deposit bank, sponsor bank, payment originator/receiver |
-| Stablecoin/settlement | Stellar, Utila, Rain, Cybrid, Nium under evaluation | Network, wallet/key operator, custodian, issuer/redemption party, liquidity and settlement counterparty |
-| Cross-border/final mile | Thunes, Cybrid, Wise, possible Western Union, direct Ethiopian institutions, or MTOs under evaluation | Remitter/transfer provider, correspondent, FX principal/agent, payout network, final-mile institution |
-| Loyalty | Ethiopian Airlines/ShebaMiles relationship under evaluation | Loyalty partner and fulfillment counterparty; Samra retains rule and ledger ownership |
+| Capability under discussion | Named landscape                                                                                       | Required role clarity                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Customer authentication     | Auth0 for Alpha                                                                                       | Identity provider, credential/session operator, subject mapping                                         |
+| KYC                         | Persona for Alpha                                                                                     | Evidence collector, verification vendor, legally accountable decision maker, data controller/processor  |
+| Wallet/custody              | Crossmint for Alpha; Utila, Rain, Cybrid under evaluation                                             | Wallet technology, custodian, key/MPC operator, asset/chain support, recovery operator                  |
+| Card/program                | Wirex, Rain, Nium, Cross River, or a future issuer under evaluation                                   | Program manager, processor, issuer, sponsor bank, network, wallet/custodian, settlement party           |
+| Banking                     | Cross River or a future bank under evaluation                                                         | Account holder, deposit bank, sponsor bank, payment originator/receiver                                 |
+| Stablecoin/settlement       | Stellar, Utila, Rain, Cybrid, Nium under evaluation                                                   | Network, wallet/key operator, custodian, issuer/redemption party, liquidity and settlement counterparty |
+| Cross-border/final mile     | Thunes, Cybrid, Wise, possible Western Union, direct Ethiopian institutions, or MTOs under evaluation | Remitter/transfer provider, correspondent, FX principal/agent, payout network, final-mile institution   |
+| Loyalty                     | Ethiopian Airlines/ShebaMiles relationship under evaluation                                           | Loyalty partner and fulfillment counterparty; Samra retains rule and ledger ownership                   |
 
 No row asserts that a named organization offers every listed role, serves the
 US–Ethiopia corridor, or is approved for Samra. A network such as Stellar is not
@@ -442,45 +449,45 @@ work back from reversing already executed external activity.
 
 ## Failure scenarios that the design must survive
 
-| Scenario | Required safe behavior |
-| --- | --- |
-| Provider times out after accepting a command | Mark ambiguous; query/reconcile by idempotency key before retrying or posting |
-| Database commit fails after provider success | Recover from pre-dispatch command intent and provider lookup; never lose the external effect |
-| Duplicate webhook | Deduplicate without a second transition or journal |
-| Same provider event ID arrives with different resource/type/payload | Reject and alert as a conflicting replay |
-| Late or out-of-order event | Preserve evidence; apply only a valid monotonic/recovery transition |
-| Provider API outage | Stop affected new work, preserve safe reads/history/support, and use only an approved cohort fallback |
-| Provider or corridor outage | Stop only the dependent capability/routes and expose accurate status |
-| Provider has a prolonged operational outage | Invoke the continuity threshold, cap exposure, and migrate only through an approved route/cohort plan |
-| Credential, webhook secret, or provider access is revoked | Fail closed, rotate under policy, preserve reads/evidence, and reconcile ambiguity |
-| Provider resource cannot be mapped to one Samra object | Quarantine; do not auto-create, auto-merge, or post |
-| Quote expires or provider economics move | Honor the accepted contract when permitted or require a new customer-approved quote |
-| Provider report disagrees with Samra | Open an exception; no silent ledger mutation |
-| Settlement is late, short, frozen, or insolvent | Isolate the position, enforce exposure limits, and follow treasury/escalation policy |
-| Provider becomes insolvent | Stop new exposure, protect locally held evidence, isolate balances/receivables/reserves, and invoke legal/treasury continuity plans |
-| Provider terminates service or withholds export | Invoke contractual exit, stop new exposure, retain local evidence, and move only verified cohorts |
-| Provider loses a license | Disable the affected legal role/jurisdiction and execute the approved regulatory transition |
-| Sponsor bank terminates the provider/program | Stop dependent capabilities, protect funds/evidence, and activate the documented bank/program transition |
-| Card network suspends the program | Stop issuing/authorizations as required while preserving account access, history, support, disputes, and settlement runoff |
-| Provider stops supporting Ethiopia | Disable only the affected corridor/routes and preserve recovery, refund, support, and alternative-route controls |
-| Provider materially increases pricing | Reprice only under approved customer/product rules or route future cohorts to an economically approved alternative |
-| Provider introduces unacceptable reserves | Enforce treasury/concentration limits; reject new exposure or migrate future cohorts without commingling residuals |
-| Provider changes an API incompatibly | Hold the capability at the adapter/version boundary; fail closed and roll forward/back under a tested contract |
-| Provider has a security incident | Isolate credentials/data paths, preserve evidence, assess affected mappings/customers, and follow incident/regulatory duties |
-| Provider loses settlement-rail access | Stop the dependent route, isolate outstanding positions, and reconcile or move settlement through an approved alternative |
-| Samra voluntarily migrates for better economics | Use the same evidence, cohort, customer, treasury, runoff, reconciliation, and rollback controls as a forced exit |
-| KYC evidence cannot transfer | Reverify against the same Samra customer with controlled access and support state |
-| Wallet keys or addresses cannot transfer | Create a reviewed replacement resource, move eligible assets, notify customers, and reconcile both |
-| Card credentials require reissue | Run old/new cohorts, customer activation and notices; preserve dispute and clearing runoff |
-| Final-mile institution suspends payout | Stop that route, preserve the transfer and funds state, and use only an approved recovery/refund path |
-| Refund, chargeback, or dispute arrives after cutover | Route it to the original provider mapping and keep residual reconciliation open |
+| Scenario                                                            | Required safe behavior                                                                                                              |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Provider times out after accepting a command                        | Mark ambiguous; query/reconcile by idempotency key before retrying or posting                                                       |
+| Database commit fails after provider success                        | Recover from pre-dispatch command intent and provider lookup; never lose the external effect                                        |
+| Duplicate webhook                                                   | Deduplicate without a second transition or journal                                                                                  |
+| Same provider event ID arrives with different resource/type/payload | Reject and alert as a conflicting replay                                                                                            |
+| Late or out-of-order event                                          | Preserve evidence; apply only a valid monotonic/recovery transition                                                                 |
+| Provider API outage                                                 | Stop affected new work, preserve safe reads/history/support, and use only an approved cohort fallback                               |
+| Provider or corridor outage                                         | Stop only the dependent capability/routes and expose accurate status                                                                |
+| Provider has a prolonged operational outage                         | Invoke the continuity threshold, cap exposure, and migrate only through an approved route/cohort plan                               |
+| Credential, webhook secret, or provider access is revoked           | Fail closed, rotate under policy, preserve reads/evidence, and reconcile ambiguity                                                  |
+| Provider resource cannot be mapped to one Samra object              | Quarantine; do not auto-create, auto-merge, or post                                                                                 |
+| Quote expires or provider economics move                            | Honor the accepted contract when permitted or require a new customer-approved quote                                                 |
+| Provider report disagrees with Samra                                | Open an exception; no silent ledger mutation                                                                                        |
+| Settlement is late, short, frozen, or insolvent                     | Isolate the position, enforce exposure limits, and follow treasury/escalation policy                                                |
+| Provider becomes insolvent                                          | Stop new exposure, protect locally held evidence, isolate balances/receivables/reserves, and invoke legal/treasury continuity plans |
+| Provider terminates service or withholds export                     | Invoke contractual exit, stop new exposure, retain local evidence, and move only verified cohorts                                   |
+| Provider loses a license                                            | Disable the affected legal role/jurisdiction and execute the approved regulatory transition                                         |
+| Sponsor bank terminates the provider/program                        | Stop dependent capabilities, protect funds/evidence, and activate the documented bank/program transition                            |
+| Card network suspends the program                                   | Stop issuing/authorizations as required while preserving account access, history, support, disputes, and settlement runoff          |
+| Provider stops supporting Ethiopia                                  | Disable only the affected corridor/routes and preserve recovery, refund, support, and alternative-route controls                    |
+| Provider materially increases pricing                               | Reprice only under approved customer/product rules or route future cohorts to an economically approved alternative                  |
+| Provider introduces unacceptable reserves                           | Enforce treasury/concentration limits; reject new exposure or migrate future cohorts without commingling residuals                  |
+| Provider changes an API incompatibly                                | Hold the capability at the adapter/version boundary; fail closed and roll forward/back under a tested contract                      |
+| Provider has a security incident                                    | Isolate credentials/data paths, preserve evidence, assess affected mappings/customers, and follow incident/regulatory duties        |
+| Provider loses settlement-rail access                               | Stop the dependent route, isolate outstanding positions, and reconcile or move settlement through an approved alternative           |
+| Samra voluntarily migrates for better economics                     | Use the same evidence, cohort, customer, treasury, runoff, reconciliation, and rollback controls as a forced exit                   |
+| KYC evidence cannot transfer                                        | Reverify against the same Samra customer with controlled access and support state                                                   |
+| Wallet keys or addresses cannot transfer                            | Create a reviewed replacement resource, move eligible assets, notify customers, and reconcile both                                  |
+| Card credentials require reissue                                    | Run old/new cohorts, customer activation and notices; preserve dispute and clearing runoff                                          |
+| Final-mile institution suspends payout                              | Stop that route, preserve the transfer and funds state, and use only an approved recovery/refund path                               |
+| Refund, chargeback, or dispute arrives after cutover                | Route it to the original provider mapping and keep residual reconciliation open                                                     |
 
 ## Stage-appropriate graduation
 
-| Stage | Minimum portability posture |
-| --- | --- |
-| Alpha / up to 100 invited users | One provider per approved capability is acceptable. Require canonical IDs, bounded adapter, signed/deduplicated ingress, provider mapping/evidence, Samra ledger independence, manual registry, explicit exit/runoff plan, fail-closed behavior, and no unresolved P0/P1 gate for the capability being activated. |
-| Approximately 10,000 customers | Durable provider-instance/capability/role registries; versioned route/cohort data; concurrent mappings; automated provider reconciliation; treasury/concentration limits; measured SLAs; tested export and bounded migration rehearsal; a qualified alternative or documented contingency for each critical capability. |
+| Stage                                  | Minimum portability posture                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Alpha / up to 100 invited users        | One provider per approved capability is acceptable. Require canonical IDs, bounded adapter, signed/deduplicated ingress, provider mapping/evidence, Samra ledger independence, manual registry, explicit exit/runoff plan, fail-closed behavior, and no unresolved P0/P1 gate for the capability being activated.                     |
+| Approximately 10,000 customers         | Durable provider-instance/capability/role registries; versioned route/cohort data; concurrent mappings; automated provider reconciliation; treasury/concentration limits; measured SLAs; tested export and bounded migration rehearsal; a qualified alternative or documented contingency for each critical capability.               |
 | Approximately 50,000–100,000 customers | Multiple proven routes where economics/risk justify them; automated health and exposure controls; independent provider reports; continuous concentration/treasury monitoring; rehearsed cutover/rollback and customer communications; capacity and support evidence; board/executive acceptance of any single-provider residual risk. |
 
 Scale does not by itself require simultaneous live providers. The risk,

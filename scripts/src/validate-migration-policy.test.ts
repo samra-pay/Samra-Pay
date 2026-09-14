@@ -28,6 +28,45 @@ describe("forward-only migration policy", () => {
     ).not.toThrow();
   });
 
+  it("locks wallet evidence before the 0019 preflight and guards every wallet write", () => {
+    const migration =
+      readMigrationInputs().migrations["0021_customer_wallet_control_setup"];
+    expect(migration).toBeDefined();
+    const sql = migration!;
+    const preflightIndex = sql.indexOf("DO $$");
+    const triggerIndex = sql.indexOf(
+      'CREATE TRIGGER "customer_wallets_controlled_mutation"',
+    );
+
+    expect(sql.indexOf("LOCK TABLE")).toBe(0);
+    expect(preflightIndex).toBeGreaterThan(0);
+    expect(triggerIndex).toBeGreaterThan(preflightIndex);
+    const preflightLock = sql.slice(0, preflightIndex);
+    for (const table of [
+      "customer_wallets",
+      "customer_onboardings",
+      "customer_consents",
+      "customer_wallet_provider_mappings",
+    ]) {
+      expect(preflightLock).toContain(`"samra_core"."${table}"`);
+    }
+    expect(preflightLock).toContain("IN SHARE MODE;");
+    expect(sql).toContain("IF TG_OP = 'INSERT' THEN");
+    expect(sql).toContain("NEW.\"state\" <> 'created'");
+    expect(sql).toContain("'alpha-non-production-v2'");
+    expect(sql).toContain("'alpha-wallet-non-production-v2'");
+    expect(sql).toContain("'sandbox-customer-wallet-v2'");
+    expect(sql).toContain(
+      "customer wallet creation requires the current onboarding consent bundle",
+    );
+    expect(sql).toContain(
+      "wallet capability transitions require the exact current wallet disclosure",
+    );
+    expect(sql).toContain(
+      'BEFORE INSERT OR UPDATE OR DELETE ON "samra_core"."customer_wallets"',
+    );
+  });
+
   it("rejects an unapproved destructive migration", () => {
     expect(() =>
       validateMigrationPolicy(

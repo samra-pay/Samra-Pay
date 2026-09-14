@@ -8,7 +8,9 @@ The locked Alpha vendors are:
 
 - Auth0 for customer authentication;
 - Persona for KYC evidence;
-- Crossmint for an approved USDC wallet configuration;
+- Crossmint for the Alpha wallet, intended for a future approved USDC
+  asset/network configuration; the current staging create request is generic
+  EVM wallet evidence only;
 - Google Cloud for staging runtime and data infrastructure;
 - GitHub Actions and GitHub issues for automated and user-test evidence.
 
@@ -36,18 +38,18 @@ track failures through fixes and retests. Qase is retired; historical evidence r
 
 ## Workspace map
 
-| Area | Location |
-| --- | --- |
-| Customer web | `artifacts/samra-pay/` |
-| Expo mobile | `artifacts/samra-pay-mobile/` |
-| Operations Portal | `artifacts/samra-pay-ops/` |
-| API service | `artifacts/api-server/` |
-| Design system | `artifacts/samra-pay-ds/` |
-| API contracts and clients | `lib/api-*` and `lib/samra-client/` |
-| Persistence | `lib/db/` |
-| Ledger | `lib/ledger/` |
-| Remittance | `lib/remittance/` |
-| Google Cloud controls | `deploy/gcp/` |
+| Area                         | Location                                              |
+| ---------------------------- | ----------------------------------------------------- |
+| Customer web                 | `artifacts/samra-pay/`                                |
+| Expo mobile                  | `artifacts/samra-pay-mobile/`                         |
+| Operations Portal            | `artifacts/samra-pay-ops/`                            |
+| API service                  | `artifacts/api-server/`                               |
+| Design system                | `artifacts/samra-pay-ds/`                             |
+| API contracts and clients    | `lib/api-*` and `lib/samra-client/`                   |
+| Persistence                  | `lib/db/`                                             |
+| Ledger                       | `lib/ledger/`                                         |
+| Remittance                   | `lib/remittance/`                                     |
+| Google Cloud controls        | `deploy/gcp/`                                         |
 | Quality and evidence tooling | `scripts/`, `.github/workflows/`, and `docs/testing/` |
 
 ## Non-negotiable boundaries

@@ -123,6 +123,7 @@ export function createConfiguredDemoRuntime(
       config.customerAuth.mode === "auth0"
         ? new CustomerWalletProvisioningService({
             store: customerWalletStore,
+            providerMode: walletConfig.mode,
             provider:
               walletConfig.mode === "crossmint-sandbox-customer"
                 ? new CrossmintCustomerSandboxAdapter(walletConfig)

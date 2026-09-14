@@ -3,12 +3,14 @@ import test from "node:test";
 import type pg from "pg";
 import { assertPostgresRuntimeReady } from "./postgres-readiness";
 
-test("sandbox startup requires its validated constraint and enabled mapping guard", async () => {
+test("sandbox startup requires its validated constraints and evidence guards", async () => {
   for (const ready of [false, undefined, true]) {
     let calls = 0;
+    const statements: string[] = [];
     const pool = {
-      async query() {
+      async query(sql: string) {
         calls++;
+        statements.push(sql);
         return {
           rows: calls === 1 ? [] : ready === undefined ? [] : [{ ready }],
         };
@@ -20,6 +22,17 @@ test("sandbox startup requires its validated constraint and enabled mapping guar
     if (ready === true) await check;
     else await assert.rejects(check, /sandbox wallet migration is not ready/);
     assert.equal(calls, 2);
+    assert.match(statements[1]!, /customer_wallet_mapping_configuration_guard/);
+    assert.match(
+      statements[1]!,
+      /customer_wallet_provider_mappings_append_only/,
+    );
+    assert.match(statements[1]!, /customer_consents_append_only/);
+    assert.match(statements[1]!, /customer_wallets_controlled_mutation/);
+    assert.match(statements[1]!, /tgtype::integer & 31/);
+    assert.match(statements[1]!, /customer_onboardings_controlled_mutation/);
+    assert.match(statements[1]!, /customer_control_setup/);
+    assert.match(statements[1]!, /wallet_control_setup/);
   }
 });
 

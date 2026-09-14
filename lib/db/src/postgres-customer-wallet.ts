@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { DomainError } from "@workspace/remittance";
 import {
+  ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CustomerOnboardingAccessRestrictedError,
   CustomerOnboardingNotFoundError,
   type CustomerOnboardingState,
@@ -14,6 +15,7 @@ import type { PostgresPersistenceContext } from "./postgres-persistence";
 export const CUSTOMER_WALLET_STATES = Object.freeze([
   "created",
   "provisioning",
+  "customer_control_setup",
   "ready",
   "restricted",
   "error",
@@ -22,8 +24,8 @@ export const CUSTOMER_WALLET_STATES = Object.freeze([
 export type CustomerWalletState = (typeof CUSTOMER_WALLET_STATES)[number];
 
 export const ALPHA_WALLET_PROVISIONING_DISCLOSURE = Object.freeze({
-  bundleVersion: "alpha-wallet-non-production-v1",
-  documentVersion: "alpha-wallet-non-production-v1",
+  bundleVersion: "alpha-wallet-non-production-v2",
+  documentVersion: "alpha-wallet-non-production-v2",
   locale: "en-US",
   legalEffect: "non_production" as const,
   provider: "crossmint" as const,
@@ -40,8 +42,8 @@ export const ALPHA_WALLET_CONFIGURATION_VERSION =
 export const CUSTOMER_CONTROLLED_SANDBOX_CONFIGURATION_VERSION =
   "crossmint-sandbox-evm-customer-email-v1" as const;
 export const CUSTOMER_CONTROLLED_SANDBOX_DISCLOSURE = Object.freeze({
-  bundleVersion: "sandbox-customer-wallet-v1",
-  documentVersion: "sandbox-customer-wallet-v1",
+  bundleVersion: "sandbox-customer-wallet-v2",
+  documentVersion: "sandbox-customer-wallet-v2",
   locale: "en-US",
   legalEffect: "non_production" as const,
   provider: "crossmint" as const,
@@ -109,6 +111,7 @@ type IdentityContextRow = {
   customer_state: "active" | "suspended" | "closed";
   onboarding_id: string;
   onboarding_state: CustomerOnboardingState;
+  onboarding_reason_family: string | null;
   onboarding_version: number;
   identity_case_state: string | null;
 };
@@ -116,6 +119,7 @@ type IdentityContextRow = {
 type OnboardingRow = {
   id: string;
   state: CustomerOnboardingState;
+  reason_family: string | null;
   version: number;
 };
 
@@ -145,6 +149,13 @@ type WalletMappingRow = {
   custody_model: string;
   public_address: string | null;
   configuration_version: string;
+};
+
+type WalletConsentRow = {
+  bundle_version: string;
+  document_version: string;
+  decision: string;
+  locale: string;
 };
 
 export class PostgresCustomerWalletStore {
@@ -227,17 +238,46 @@ export class PostgresCustomerWalletStore {
             "The existing wallet belongs to a different provider configuration.",
           );
         }
-        if (existing.creation_command_key !== commandKey) {
+        if (identity.onboarding_state === "restricted") {
+          const restricted = await restrictWalletForCustomerAccess(
+            this.#context,
+            existing,
+            identity.onboarding_reason_family,
+          );
+          return Object.freeze({
+            snapshot: await snapshotForWallet(this.#context, restricted),
+            providerRequestKey: restricted.provider_request_key,
+            ownerLocator: ownerLocator(identity.customer_external_ref),
+            created: false,
+          });
+        }
+        await assertCurrentOnboardingConsent(this.#context, identity);
+        const refreshedLegacyConsent = await ensureCurrentWalletConsent(
+          this.#context,
+          existing,
+          input.consent,
+          commandKey,
+        );
+        if (
+          existing.creation_command_key !== commandKey &&
+          existing.environment !== "synthetic" &&
+          !["customer_control_setup", "ready"].includes(existing.state) &&
+          !refreshedLegacyConsent
+        ) {
           throw new DomainError(
             "CONFLICT",
             "The customer wallet already exists under a different idempotency command.",
           );
         }
         if (
-          this.#environment === "staging" &&
-          !["ready", "restricted"].includes(existing.state) &&
-          (identity.onboarding_state !== "wallet_provisioning" ||
-            identity.identity_case_state !== "approved")
+          (this.#environment === "staging" &&
+            existing.state === "customer_control_setup" &&
+            identity.onboarding_state !== "wallet_control_setup") ||
+          (!["customer_control_setup", "ready", "restricted"].includes(
+            existing.state,
+          ) &&
+            (identity.onboarding_state !== "wallet_provisioning" ||
+              identity.identity_case_state !== "approved"))
         ) {
           throw invalidWalletTransition();
         }
@@ -258,10 +298,12 @@ export class PostgresCustomerWalletStore {
           "Wallet provisioning requires an approved Samra-owned identity case.",
         );
       }
+      await assertCurrentOnboardingConsent(this.#context, identity);
 
       let onboarding: OnboardingRow = {
         id: identity.onboarding_id,
         state: identity.onboarding_state,
+        reason_family: null,
         version: identity.onboarding_version,
       };
       onboarding = await transitionOnboarding(this.#context, onboarding, {
@@ -357,6 +399,96 @@ export class PostgresCustomerWalletStore {
     });
   }
 
+  async runAuthorizedProviderDispatch(
+    input: {
+      issuer: string;
+      subject: string;
+      walletId: string;
+      providerRequestKey: string;
+    },
+    operation: () => Promise<CustomerWalletSnapshot>,
+  ): Promise<CustomerWalletSnapshot> {
+    const issuer = normalizeAuth0Issuer(input.issuer);
+    const subject = normalizeAuth0Subject(input.subject);
+    const walletId = normalizeVisibleValue(input.walletId, "wallet ID", 8, 128);
+    const providerRequestKey = normalizeDigest(
+      input.providerRequestKey,
+      "provider request key",
+    );
+
+    return this.#context.run(async () => {
+      await lockIdentity(this.#context, issuer, subject);
+      const identity = await selectIdentityContext(
+        this.#context,
+        issuer,
+        subject,
+        true,
+      );
+      if (!identity) throw new CustomerOnboardingNotFoundError();
+      assertIdentityAccess(identity);
+      if (
+        this.#policy.mode === "crossmint-sandbox-customer" &&
+        identity.customer_external_ref !== this.#policy.allowedCustomerId
+      ) {
+        throw new CustomerOnboardingAccessRestrictedError();
+      }
+      if (identity.onboarding_state === "restricted") {
+        throw new CustomerOnboardingAccessRestrictedError();
+      }
+      const wallet = await selectWalletByOnboarding(
+        this.#context,
+        identity.onboarding_id,
+        true,
+      );
+      if (!wallet || wallet.external_ref !== walletId) {
+        throw new CustomerWalletNotFoundError();
+      }
+      if (
+        wallet.environment !== this.#environment ||
+        wallet.configuration_version !== this.#configurationVersion
+      ) {
+        throw new DomainError(
+          "CONFLICT",
+          "The wallet provider dispatch belongs to a different configuration.",
+        );
+      }
+      if (wallet.provider_request_key !== providerRequestKey) {
+        throw new DomainError(
+          "CONFLICT",
+          "The provider request does not belong to this wallet.",
+        );
+      }
+
+      const mapping = await selectWalletMapping(this.#context, wallet.id, true);
+      const isCompletedReplay =
+        (wallet.state === "ready" &&
+          identity.onboarding_state === "wallet_ready") ||
+        (wallet.state === "customer_control_setup" &&
+          identity.onboarding_state === "wallet_control_setup");
+      if (mapping && isCompletedReplay) {
+        return mapWallet(wallet, mapping);
+      }
+      if (
+        identity.onboarding_state !== "wallet_provisioning" ||
+        identity.identity_case_state !== "approved"
+      ) {
+        throw invalidWalletTransition();
+      }
+      if (
+        !new Set<CustomerWalletState>(["provisioning", "error"]).has(
+          wallet.state,
+        )
+      ) {
+        throw invalidWalletTransition();
+      }
+      if (mapping) {
+        throw invalidWalletTransition();
+      }
+
+      return operation();
+    });
+  }
+
   async attachProviderWallet(input: {
     walletId: string;
     providerRequestKey: string;
@@ -413,28 +545,38 @@ export class PostgresCustomerWalletStore {
         true,
       );
       if (existingMapping) {
-        if (sameProviderResult(existingMapping, result)) {
-          return mapWallet(wallet, existingMapping);
+        if (!sameProviderResult(existingMapping, result)) {
+          const restricted = await restrictWalletForProviderConflict(
+            this.#context,
+            wallet,
+          );
+          return mapWallet(restricted, existingMapping);
         }
-        const restricted = await restrictWalletForProviderConflict(
-          this.#context,
-          wallet,
-        );
-        return mapWallet(restricted, existingMapping);
+        if (onboarding.state === "restricted") {
+          const restricted = await restrictWalletForCustomerAccess(
+            this.#context,
+            wallet,
+            onboarding.reason_family,
+          );
+          return mapWallet(restricted, existingMapping);
+        }
+        return mapWallet(wallet, existingMapping);
       }
-      if (wallet.state === "restricted" || wallet.state === "ready") {
-        return mapWallet(wallet, undefined);
+      if (wallet.state === "ready") {
+        throw invalidWalletTransition();
       }
       if (
-        this.#environment === "staging" &&
-        onboarding.state !== "wallet_provisioning"
+        onboarding.state !== "wallet_provisioning" &&
+        onboarding.state !== "restricted"
       ) {
         throw invalidWalletTransition();
       }
       if (
-        !new Set<CustomerWalletState>(["provisioning", "error"]).has(
-          wallet.state,
-        )
+        !new Set<CustomerWalletState>([
+          "provisioning",
+          "error",
+          "restricted",
+        ]).has(wallet.state)
       ) {
         throw invalidWalletTransition();
       }
@@ -453,22 +595,55 @@ export class PostgresCustomerWalletStore {
           result.configurationVersion,
         ],
       );
-      const ready = await transitionWallet(this.#context, {
+      const mapping = mappingFromResult(result);
+      if (onboarding.state === "restricted" || wallet.state === "restricted") {
+        const restricted = await restrictWalletForCustomerAccess(
+          this.#context,
+          wallet,
+          onboarding.reason_family,
+        );
+        await appendWalletAudit(this.#context, {
+          wallet: restricted,
+          eventSuffix: `restricted-provider:${sha256(result.providerWalletRef).slice(0, 16)}`,
+          actorId: "customer-wallet-provider",
+          action:
+            "customer_wallet_provider_mapping_preserved_under_restriction",
+          metadata: {
+            provider: "crossmint",
+            asset: "USDC",
+            network: result.network,
+            configurationVersion: result.configurationVersion,
+            restrictionReasonFamily: restricted.reason_family,
+            syntheticOnly: wallet.environment === "synthetic",
+            enablesFunding: false,
+            enablesRemittance: false,
+          },
+        });
+        return mapWallet(restricted, mapping);
+      }
+      const attachedState: CustomerWalletState =
+        this.#environment === "staging" ? "customer_control_setup" : "ready";
+      const attached = await transitionWallet(this.#context, {
         wallet,
-        nextState: "ready",
+        nextState: attachedState,
         reasonFamily: null,
         commandKey: `provider-wallet:${sha256(result.providerWalletRef)}`,
       });
-      if (onboarding.state !== "wallet_ready") {
-        await transitionOnboarding(this.#context, onboarding, {
-          state: "wallet_ready",
-          latestCompletedStep: "wallet_provisioned",
-          reasonFamily: null,
-          commandKey: `wallet-ready:${sha256(result.providerWalletRef)}`,
-        });
-      }
+      const onboardingState: CustomerOnboardingState =
+        this.#environment === "staging"
+          ? "wallet_control_setup"
+          : "wallet_ready";
+      await transitionOnboarding(this.#context, onboarding, {
+        state: onboardingState,
+        latestCompletedStep:
+          this.#environment === "staging"
+            ? "wallet_created"
+            : "wallet_provisioned",
+        reasonFamily: null,
+        commandKey: `${onboardingState}:${sha256(result.providerWalletRef)}`,
+      });
       await appendWalletAudit(this.#context, {
-        wallet: ready,
+        wallet: attached,
         actorId: "customer-wallet-provider",
         action: "customer_wallet_provider_mapping_attached",
         metadata: {
@@ -478,9 +653,10 @@ export class PostgresCustomerWalletStore {
           custodyModel: result.custodyModel,
           configurationVersion: result.configurationVersion,
           syntheticOnly: wallet.environment === "synthetic",
+          customerControlSetupRequired: this.#environment === "staging",
         },
       });
-      return mapWallet(ready, mappingFromResult(result));
+      return mapWallet(attached, mapping);
     });
   }
 
@@ -496,6 +672,18 @@ export class PostgresCustomerWalletStore {
       64,
     );
     return this.#context.run(async () => {
+      const locatedWallet = await selectWalletByExternalRef(
+        this.#context,
+        walletId,
+        false,
+      );
+      if (!locatedWallet) throw new CustomerWalletNotFoundError();
+      const onboarding = await selectOnboarding(
+        this.#context,
+        locatedWallet.onboarding_id,
+        true,
+      );
+      if (!onboarding) throw new CustomerOnboardingNotFoundError();
       const wallet = await selectWalletByExternalRef(
         this.#context,
         walletId,
@@ -507,6 +695,14 @@ export class PostgresCustomerWalletStore {
         wallet.id,
         false,
       );
+      if (onboarding.state === "restricted") {
+        const restricted = await restrictWalletForCustomerAccess(
+          this.#context,
+          wallet,
+          onboarding.reason_family,
+        );
+        return mapWallet(restricted, mapping);
+      }
       if (
         wallet.state === "error" ||
         wallet.state === "ready" ||
@@ -555,13 +751,17 @@ export class PostgresCustomerWalletStore {
       false,
     );
     if (!wallet) throw new CustomerWalletNotFoundError();
-    return snapshotForWallet(this.#context, wallet);
+    const snapshot = await snapshotForWallet(this.#context, wallet);
+    return identity.onboarding_state === "restricted"
+      ? restrictedWalletSnapshot(snapshot, identity.onboarding_reason_family)
+      : snapshot;
   }
 }
 
 export type CustomerWalletStore = Pick<
   PostgresCustomerWalletStore,
   | "prepareAuth0Wallet"
+  | "runAuthorizedProviderDispatch"
   | "attachProviderWallet"
   | "recordProviderStartFailure"
   | "getAuth0Wallet"
@@ -578,6 +778,7 @@ async function selectIdentityContext(
             customer.external_ref AS customer_external_ref,
             customer.state AS customer_state, onboarding.id AS onboarding_id,
             onboarding.state AS onboarding_state,
+            onboarding.reason_family AS onboarding_reason_family,
             onboarding.version AS onboarding_version,
             identity_case.state AS identity_case_state
      FROM samra_core.customer_auth_identities identity
@@ -601,7 +802,7 @@ async function selectOnboarding(
   forUpdate: boolean,
 ): Promise<OnboardingRow | undefined> {
   const result = await context.query().query<OnboardingRow>(
-    `SELECT id, state, version
+    `SELECT id, state, reason_family, version
      FROM samra_core.customer_onboardings
      WHERE id = $1 ${forUpdate ? "FOR UPDATE" : ""}
      LIMIT 1`,
@@ -663,6 +864,180 @@ async function selectWalletMapping(
   return result.rows[0];
 }
 
+async function ensureCurrentWalletConsent(
+  context: PostgresPersistenceContext,
+  wallet: WalletRow,
+  expected: CustomerWalletProvisioningConsent,
+  commandKey: string,
+): Promise<boolean> {
+  const result = await context.query().query<WalletConsentRow>(
+    `SELECT bundle_version, document_version, decision, locale
+       FROM samra_core.customer_consents
+      WHERE id = $1
+        AND customer_id = $2
+        AND onboarding_id = $3
+        AND consent_type = 'wallet_provisioning'
+      LIMIT 1`,
+    [wallet.wallet_consent_id, wallet.customer_id, wallet.onboarding_id],
+  );
+  const persisted = result.rows[0];
+  if (!persisted) {
+    throw new DomainError(
+      "CONFLICT",
+      "The existing wallet does not have durable wallet provisioning consent.",
+    );
+  }
+  if (
+    persisted.bundle_version === expected.bundleVersion &&
+    persisted.document_version === expected.documentVersion &&
+    persisted.locale === expected.locale &&
+    persisted.decision === expected.decision
+  ) {
+    return false;
+  }
+
+  const legacyVersion =
+    wallet.environment === "synthetic"
+      ? "alpha-wallet-non-production-v1"
+      : "sandbox-customer-wallet-v1";
+  if (
+    persisted.bundle_version !== legacyVersion ||
+    persisted.document_version !== legacyVersion ||
+    persisted.locale !== "en-US" ||
+    persisted.decision !== "accepted"
+  ) {
+    throw new DomainError(
+      "CONFLICT",
+      "The existing wallet was created under an unrecognized wallet provisioning disclosure.",
+    );
+  }
+
+  const existingCurrent = await context
+    .query()
+    .query<{ id: string; idempotency_key: string }>(
+      `SELECT id, idempotency_key
+       FROM samra_core.customer_consents
+      WHERE customer_id = $1
+        AND onboarding_id = $2
+        AND consent_type = 'wallet_provisioning'
+        AND document_version = $3
+        AND bundle_version = $4
+        AND decision = 'accepted'
+        AND locale = $5
+      LIMIT 1`,
+      [
+        wallet.customer_id,
+        wallet.onboarding_id,
+        expected.documentVersion,
+        expected.bundleVersion,
+        expected.locale,
+      ],
+    );
+  if (existingCurrent.rows[0]) {
+    return existingCurrent.rows[0].idempotency_key === commandKey;
+  }
+
+  const refreshed = await context.query().query<{ id: string }>(
+    `INSERT INTO samra_core.customer_consents
+     (customer_id, onboarding_id, consent_type, document_version,
+      bundle_version, decision, locale, channel, idempotency_key)
+     VALUES ($1,$2,'wallet_provisioning',$3,$4,'accepted',$5,'api',$6)
+     ON CONFLICT (customer_id, idempotency_key, consent_type) DO NOTHING
+     RETURNING id`,
+    [
+      wallet.customer_id,
+      wallet.onboarding_id,
+      expected.documentVersion,
+      expected.bundleVersion,
+      expected.locale,
+      commandKey,
+    ],
+  );
+  const current = await context.query().query<{ id: string }>(
+    `SELECT id
+       FROM samra_core.customer_consents
+      WHERE customer_id = $1
+        AND onboarding_id = $2
+        AND consent_type = 'wallet_provisioning'
+        AND document_version = $3
+        AND bundle_version = $4
+        AND decision = 'accepted'
+        AND locale = $5
+        AND idempotency_key = $6
+      LIMIT 1`,
+    [
+      wallet.customer_id,
+      wallet.onboarding_id,
+      expected.documentVersion,
+      expected.bundleVersion,
+      expected.locale,
+      commandKey,
+    ],
+  );
+  if (!current.rows[0]) {
+    throw new DomainError(
+      "CONFLICT",
+      "The current wallet provisioning disclosure could not be recorded.",
+    );
+  }
+  if (refreshed.rows[0]) {
+    await appendWalletAudit(context, {
+      wallet,
+      eventSuffix: `consent:${sha256(expected.bundleVersion).slice(0, 16)}`,
+      actorId: "customer-wallet-consent",
+      action: "customer_wallet_provisioning_consent_refreshed",
+      metadata: {
+        priorBundleVersion: persisted.bundle_version,
+        bundleVersion: expected.bundleVersion,
+        documentVersion: expected.documentVersion,
+        locale: expected.locale,
+        environment: wallet.environment,
+        providerRedispatched: false,
+      },
+    });
+  }
+  return true;
+}
+
+async function assertCurrentOnboardingConsent(
+  context: PostgresPersistenceContext,
+  identity: Pick<IdentityContextRow, "customer_id" | "onboarding_id">,
+): Promise<void> {
+  const result = await context.query().query<{
+    consent_type: string;
+    document_version: string;
+    bundle_version: string;
+    decision: string;
+    locale: string;
+  }>(
+    `SELECT consent_type, document_version, bundle_version, decision, locale
+       FROM samra_core.customer_consents
+      WHERE customer_id = $1
+        AND onboarding_id = $2
+        AND consent_type IN
+            ('terms_of_service','privacy_notice','electronic_communications')`,
+    [identity.customer_id, identity.onboarding_id],
+  );
+  const hasCurrentAcceptance = ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.every(
+    (document) =>
+      result.rows.some(
+        (consent) =>
+          consent.consent_type === document.consentType &&
+          consent.document_version === document.documentVersion &&
+          consent.bundle_version ===
+            ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion &&
+          consent.decision === "accepted" &&
+          consent.locale === ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+      ),
+  );
+  if (!hasCurrentAcceptance) {
+    throw new DomainError(
+      "INVALID_TRANSITION",
+      "The current non-production onboarding consent bundle is required before wallet provisioning.",
+    );
+  }
+}
+
 async function snapshotForWallet(
   context: PostgresPersistenceContext,
   wallet: WalletRow,
@@ -670,7 +1045,39 @@ async function snapshotForWallet(
   return mapWallet(
     wallet,
     await selectWalletMapping(context, wallet.id, false),
+    await hasCurrentWalletConsent(context, wallet),
   );
+}
+
+async function hasCurrentWalletConsent(
+  context: PostgresPersistenceContext,
+  wallet: WalletRow,
+): Promise<boolean> {
+  const disclosure =
+    wallet.environment === "synthetic"
+      ? ALPHA_WALLET_PROVISIONING_DISCLOSURE
+      : CUSTOMER_CONTROLLED_SANDBOX_DISCLOSURE;
+  const result = await context.query().query<{ accepted: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM samra_core.customer_consents
+        WHERE customer_id = $1
+          AND onboarding_id = $2
+          AND consent_type = 'wallet_provisioning'
+          AND bundle_version = $3
+          AND document_version = $4
+          AND locale = $5
+          AND decision = 'accepted'
+     ) AS accepted`,
+    [
+      wallet.customer_id,
+      wallet.onboarding_id,
+      disclosure.bundleVersion,
+      disclosure.documentVersion,
+      disclosure.locale,
+    ],
+  );
+  return result.rows[0]?.accepted === true;
 }
 
 async function transitionWallet(
@@ -753,7 +1160,7 @@ async function transitionOnboarding(
      SET state = $2, latest_completed_step = $3, reason_family = $4,
          version = version + 1, entered_at = now(), updated_at = now()
      WHERE id = $1 AND version = $5
-     RETURNING id, state, version`,
+     RETURNING id, state, reason_family, version`,
     [
       onboarding.id,
       target.state,
@@ -817,10 +1224,39 @@ async function restrictWalletForProviderConflict(
   return restricted;
 }
 
+async function restrictWalletForCustomerAccess(
+  context: PostgresPersistenceContext,
+  wallet: WalletRow,
+  reasonFamily: string | null,
+): Promise<WalletRow> {
+  if (wallet.state === "restricted") return wallet;
+  const normalizedReason = reasonFamily ?? "customer_access_restricted";
+  const restricted = await transitionWallet(context, {
+    wallet,
+    nextState: "restricted",
+    reasonFamily: normalizedReason,
+    commandKey: `customer-access-restricted:${wallet.version + 1}`,
+  });
+  await appendWalletAudit(context, {
+    wallet: restricted,
+    actorId: "samra-control-plane",
+    action: "customer_wallet_restricted_by_onboarding",
+    metadata: {
+      provider: "crossmint",
+      reasonFamily: normalizedReason,
+      syntheticOnly: wallet.environment === "synthetic",
+      enablesFunding: false,
+      enablesRemittance: false,
+    },
+  });
+  return restricted;
+}
+
 async function appendWalletAudit(
   context: PostgresPersistenceContext,
   input: Readonly<{
     wallet: WalletRow;
+    eventSuffix?: string;
     actorId: string;
     action: string;
     metadata: Readonly<Record<string, unknown>>;
@@ -831,7 +1267,9 @@ async function appendWalletAudit(
      (event_key, actor_type, actor_id, action, entity_type, entity_id, metadata)
      VALUES ($1,'system',$2,$3,'customer_wallet',$4,$5::jsonb)`,
     [
-      `customer-wallet:${input.wallet.id}:version:${input.wallet.version}`,
+      `customer-wallet:${input.wallet.id}:${
+        input.eventSuffix ?? `version:${input.wallet.version}`
+      }`,
       input.actorId,
       input.action,
       input.wallet.id,
@@ -843,6 +1281,7 @@ async function appendWalletAudit(
 function mapWallet(
   wallet: WalletRow,
   mapping: WalletMappingRow | undefined,
+  currentWalletConsentAccepted = true,
 ): CustomerWalletSnapshot {
   return Object.freeze({
     walletId: wallet.external_ref,
@@ -851,28 +1290,59 @@ function mapWallet(
     provider: "crossmint",
     asset: "USDC",
     network: mapping?.network ?? null,
-    custodyModel: mapping?.custody_model ?? null,
-    publicAddress: mapping?.public_address ?? null,
+    custodyModel:
+      wallet.state === "ready" ? (mapping?.custody_model ?? null) : null,
+    publicAddress:
+      wallet.state === "ready" ? (mapping?.public_address ?? null) : null,
     configurationVersion: wallet.configuration_version,
     synthetic: wallet.environment === "synthetic",
     version: wallet.version,
     readyAt: wallet.ready_at?.toISOString() ?? null,
     createdAt: wallet.created_at.toISOString(),
     updatedAt: wallet.updated_at.toISOString(),
-    nextAllowedActions:
-      wallet.environment === "staging" && wallet.state === "ready"
-        ? Object.freeze(["await_customer_signer_setup"])
-        : walletNextActions(wallet.state),
+    nextAllowedActions: walletNextActions(
+      wallet.state,
+      wallet.environment,
+      currentWalletConsentAccepted,
+    ),
   });
 }
 
-function walletNextActions(state: CustomerWalletState): readonly string[] {
+function restrictedWalletSnapshot(
+  snapshot: CustomerWalletSnapshot,
+  reasonFamily: string | null,
+): CustomerWalletSnapshot {
+  return Object.freeze({
+    ...snapshot,
+    state: "restricted",
+    reasonFamily: reasonFamily ?? "customer_access_restricted",
+    custodyModel: null,
+    publicAddress: null,
+    nextAllowedActions: Object.freeze(["contact_support"]),
+  });
+}
+
+function walletNextActions(
+  state: CustomerWalletState,
+  environment: WalletRow["environment"],
+  currentWalletConsentAccepted = true,
+): readonly string[] {
+  if (!currentWalletConsentAccepted && state !== "restricted") {
+    return Object.freeze(["accept_current_wallet_disclosure"]);
+  }
   const actions: Readonly<Record<CustomerWalletState, readonly string[]>> = {
     created: ["await_wallet_provisioning"],
-    provisioning: ["await_wallet_provisioning"],
+    provisioning:
+      environment === "staging"
+        ? ["await_wallet_reconciliation", "contact_support"]
+        : ["await_wallet_provisioning"],
+    customer_control_setup: ["await_customer_control_setup"],
     ready: ["continue_to_funding_setup"],
     restricted: ["contact_support"],
-    error: ["retry_wallet_provisioning", "contact_support"],
+    error:
+      environment === "staging"
+        ? ["await_wallet_reconciliation", "contact_support"]
+        : ["retry_wallet_provisioning", "contact_support"],
   };
   return Object.freeze([...actions[state]]);
 }

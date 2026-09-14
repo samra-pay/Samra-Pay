@@ -11,6 +11,7 @@ const runtimeSource = read("../lib/samra-runtime.tsx");
 const layoutSource = read("../app/_layout.tsx");
 const legalRouteSource = read("../app/legal/[kind].tsx");
 const sharedJourneySource = read("../../../lib/samra-client/src/onboarding.ts");
+const sharedReactSource = read("../../../lib/samra-client/src/react.tsx");
 const ciWorkflowSource = read("../../../.github/workflows/ci.yml");
 const releaseWorkflowSource = read(
   "../../../.github/workflows/release-candidate.yml",
@@ -72,11 +73,61 @@ describe("mobile customer-onboarding trust boundary", () => {
       /AsyncStorage|localStorage|sessionStorage/,
     );
     expect(sharedJourneySource).toContain("Nothing is preselected");
-    expect(onboardingSource).toContain(
-      "I understand this is a synthetic wallet",
+    expect(onboardingSource).not.toContain(
+      "SYNTHETIC_WALLET_PROVISIONING_INPUT",
     );
-    expect(onboardingSource).toContain("SYNTHETIC_WALLET_PROVISIONING_INPUT");
-    expect(onboardingSource).toContain("no tokens");
+    expect(onboardingSource).toContain("useCustomerWalletDisclosure");
+    expect(onboardingSource).toContain("walletProvisioningInputFromDisclosure");
+    expect(onboardingSource).toMatch(
+      /const WALLET_DISCLOSURE_STATES[\s\S]*?"wallet_control_setup"[\s\S]*?"wallet_ready"[\s\S]*?\]\);/,
+    );
+    expect(onboardingSource).toMatch(
+      /wallet\?\.nextAllowedActions\.includes\(\s*"accept_current_wallet_disclosure"/,
+    );
+    expect(onboardingSource).toContain("disclosure.presentation.title");
+    expect(onboardingSource).toContain("disclosure.presentation.body");
+    expect(onboardingSource).toContain(
+      "disclosure.presentation.acceptanceLabel",
+    );
+    expect(onboardingSource).toContain(
+      "walletDisclosure.presentation.actionLabel",
+    );
+    expect(sharedJourneySource).toContain(
+      "does not create a blockchain wallet, tokens",
+    );
+    expect(onboardingSource).toContain(
+      'journey.stage === "wallet_control_setup"',
+    );
+    expect(onboardingSource).toContain('iconName="clock"');
+    expect(onboardingSource).toContain("wallet-creation outcome is unknown");
+    expect(onboardingSource).toContain("another provider create stays blocked");
+    expect(onboardingSource).toContain("Resume synthetic wallet setup");
+    expect(onboardingSource).toContain("const walletMutationError");
+    expect(onboardingSource).toContain(
+      'journey.stage === "wallet_control_setup"',
+    );
+    expect(onboardingSource).toContain(
+      'walletDisclosure?.environment === "synthetic"',
+    );
+    expect(onboardingSource).not.toContain("No second test-network wallet");
+    expect(onboardingSource).not.toContain("Retry non-production wallet setup");
+    expect(onboardingSource).not.toContain(
+      "This non-production flow creates no account, wallet",
+    );
+    expect(onboardingSource).toContain(
+      "non-production wallet creation is a separate, explicitly disclosed",
+    );
+    expect(onboardingSource).toContain("!wallet.synthetic");
+    expect(onboardingSource).toContain("[journey.stage, walletDisclosure]");
+    expect(sharedReactSource).toContain(
+      "setQueryData(samraQueryKeys.walletDisclosure, null)",
+    );
+    expect(sharedReactSource).toContain("async onSettled()");
+    expect(sharedReactSource).toContain(
+      "queryClient.invalidateQueries({ queryKey: samraQueryKeys.wallet })",
+    );
+    expect(onboardingSource).toContain("wallet.synthetic");
+    expect(onboardingSource).toContain("Non-production wallet");
   });
 
   it("registers onboarding as a protected application route", () => {

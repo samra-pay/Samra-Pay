@@ -1,12 +1,14 @@
 # Synthetic Remittance Lifecycle
 
 Status: implemented and tested with deterministic fake adapters. Crossmint is
-the locked Alpha USDC wallet provider, not an approved funding or Ethiopia
-payout rail. Those two rails and the remitter-of-record structure remain
-unresolved. The current synthetic core does encode Rain, Caliza, and Chapa in
-provider types, ports, orchestration, events, database enums, ledger selection,
-and reconciliation. They are not active vendor decisions, but they do govern
-the implementation today. The
+the locked Alpha wallet provider for a future approved USDC asset/network
+configuration, not an approved funding or Ethiopia payout rail. The current
+staging create request proves only a generic EVM smart-wallet resource; it does
+not verify an exact token contract or chain. Those two rails and the
+remitter-of-record structure remain unresolved. The current synthetic core does
+encode Rain, Caliza, and Chapa in provider types, ports, orchestration, events,
+database enums, ledger selection, and reconciliation. They are not active vendor
+decisions, but they do govern the implementation today. The
 [provider-portability decision](./provider-portability.md) defines the target;
 the [dated code audit](../reviews/2026-09-14-provider-portability-code-audit.md)
 grades the gap.

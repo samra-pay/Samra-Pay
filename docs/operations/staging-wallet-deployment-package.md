@@ -14,8 +14,10 @@ actual cloud execution remain unverified and separately authorized.
 
 The next product milestone is one wallet created through Samra's authenticated
 backend, attached to one consenting test customer's durable PostgreSQL record,
-and recovered unchanged after a retry and process restart. Funding, outgoing
-transfers, device enrollment, and recovery exercises are later milestones.
+and recovered unchanged from persisted state after a process restart. A provider
+transport timeout is a separate ambiguous-outcome case and must be reconciled
+before another create request. Funding, outgoing transfers, device enrollment,
+and recovery exercises are later milestones.
 
 The implementation baseline is merged PR [157](https://github.com/haileleuld87/Samra-Pay/pull/157),
 main commit `39a8babf4927685ce05b5f4623b6d258f6280380`. A subsequent release must
@@ -35,17 +37,17 @@ stays clean. The final merged SHA needs a new inventory and release evidence.
 
 ## Evidence and unresolved dependencies
 
-| Area               | Evidence at preparation                                                                                                                     | Required next evidence/change                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Backend            | PR 157 adds the creation-only customer sandbox adapter and migration 0017; current journal has 18 migrations                                | Exact release SHA passes required CI, security, PostgreSQL and container checks                                                  |
-| Cloud Run          | Earlier console inspection in this session showed no staging services                                                                       | Fresh keyless inventory of services, jobs, IAM and private invocation path                                                       |
-| Cloud SQL          | Existing private PostgreSQL 16 instance; earlier console showed backups/PITR/deletion protection and allowed unencrypted direct connections | Enforced TLS, client transport review, backup/restore evidence, actual schema journal and split database roles                   |
-| Migration delivery | Zero-traffic workflow explicitly stops for `samra-api`; no governed migration producer is registered                                        | Implement the producer and exact run/artifact verification before removing the API stop                                          |
-| Bootstrap          | `activate-staging-database-access.sh` uses `:latest` in access and migration jobs                                                           | Bind every job to the approved numeric secret version; produce evidence and cleanup proof                                        |
-| Runtime            | Existing contract is `synthetic-only`, worker `true`, provider `fake`                                                                       | Review a separate one-customer sandbox lane; worker `false`, restricted vendor key and explicit data scope                       |
-| Credentials/Auth0  | Values and enabled secret versions were not inspected                                                                                       | Verify metadata and pinned versions without returning secret payloads; verify issuer, audience and customer actor                |
-| Identity           | Sandbox provisioning requires an approved durable Samra identity case                                                                       | Prove the selected test identity can satisfy this gate without manual database edits or enabling development/operations controls |
-| First deployment   | Existing traffic promotion disallows first activation; no previous API revision is evidenced                                                | Governed private first-revision verification and abort procedure; no invented rollback target                                    |
+| Area               | Evidence at preparation                                                                                                                                               | Required next evidence/change                                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Backend            | PR 157 added the creation-only customer sandbox adapter and migration 0017; the current implementation adds a separate customer-control setup state in migration 0019 | Exact release SHA passes required CI, security, PostgreSQL and container checks                                                  |
+| Cloud Run          | Earlier console inspection in this session showed no staging services                                                                                                 | Fresh keyless inventory of services, jobs, IAM and private invocation path                                                       |
+| Cloud SQL          | Existing private PostgreSQL 16 instance; earlier console showed backups/PITR/deletion protection and allowed unencrypted direct connections                           | Enforced TLS, client transport review, backup/restore evidence, actual schema journal and split database roles                   |
+| Migration delivery | The original PR 158 baseline had no governed producer; the current repository has a protected staging migration workflow and API prerequisite verification            | Verify the candidate-SHA workflow registration, upstream artifact digest, execution authorization, result and cleanup evidence   |
+| Bootstrap          | The original PR 158 baseline used `:latest`; the current bootstrap pins numeric secret versions and shares the database lock                                          | Verify those controls at the candidate SHA and collect actual cloud execution and cleanup evidence                               |
+| Runtime            | Existing contract is `synthetic-only`, worker `true`, provider `fake`                                                                                                 | Review a separate one-customer sandbox lane; worker `false`, restricted vendor key and explicit data scope                       |
+| Credentials/Auth0  | Values and enabled secret versions were not inspected                                                                                                                 | Verify metadata and pinned versions without returning secret payloads; verify issuer, audience and customer actor                |
+| Identity           | Sandbox provisioning requires an approved durable Samra identity case                                                                                                 | Prove the selected test identity can satisfy this gate without manual database edits or enabling development/operations controls |
+| First deployment   | Existing traffic promotion disallows first activation; no previous API revision is evidenced                                                                          | Governed private first-revision verification and abort procedure; no invented rollback target                                    |
 
 The latest Chrome refresh was denied because the admin-enforced policy could
 not be verified. Earlier console observations are not a fresh cloud audit.
@@ -53,19 +55,18 @@ No cloud configuration was changed while preparing this package.
 
 ## Dependency-ordered implementation
 
-1. **Database release prerequisite.** Extend the existing release control plane,
-   not a second deployment system. Add a manual protected-main migration producer
-   with isolated keyless identity, read-only preflight before mutation, and an
-   explicit expiring execution authorization. Verify image-publication run,
-   attempt, repository numeric IDs, workflow path, artifact ID/digest and exact
-   candidate SHA before Google authentication. Run only the published
-   `samra-migrations@sha256:…` image, one task, parallelism one, zero automatic
-   retries, timeout 600 seconds. Serialize database operations across bootstrap
-   and migration workflows. Include the pre/post migration journal, SQL file
-   hashes, numeric migration secret version, job/execution identity, image
-   digest, successful result and cleanup evidence in a hashed artifact. Register
-   that fixed producer with `verify-github-upstream-artifact.mjs`; the API consumer
-   must reject review-only, failed, stale, wrong-SHA or ungoverned evidence.
+1. **Database release prerequisite.** Use the existing governed staging
+   migration workflow; do not create a second deployment system. Verify its
+   protected-main trigger, isolated keyless identity, read-only preflight,
+   explicit expiring execution authorization, image-publication run and attempt,
+   repository numeric IDs, workflow path, artifact ID/digest, and exact candidate
+   SHA before Google authentication. Verify that it runs only the published
+   `samra-migrations@sha256:…` image with one task, parallelism one, zero automatic
+   retries, and a 600-second timeout; that database operations serialize across
+   bootstrap and migration workflows; and that its hashed artifact contains the
+   pre/post journal, SQL hashes, numeric secret version, execution identity,
+   image digest, result, and cleanup evidence. The API consumer must continue to
+   reject review-only, failed, stale, wrong-SHA, or ungoverned evidence.
 2. **Private API lane.** After database access and migration evidence pass, extend
    the existing zero-traffic and probe controls with the bounded profile below.
    Keep initial runtime checks in fake mode without a Crossmint secret. Test the
@@ -78,8 +79,9 @@ No cloud configuration was changed while preparing this package.
    Extend the existing synthetic probe deliberately; do not feed real tester
    identity or credentials into a synthetic-only workflow or its artifacts.
 
-Steps 1–3 require code review before any cloud apply. This package does not
-implement the missing migration producer or authorize bypassing its blocker.
+Steps 1–3 require code review before any cloud apply. The migration producer is
+implemented in the repository, but this document neither proves a successful
+cloud execution nor authorizes bypassing any producer or API release gate.
 
 ## Proposed runtime profile
 
@@ -100,6 +102,8 @@ These settings are a proposal, not an applied overlay:
 | `SAMRA_PERSISTENCE_MODE`                | `postgres`               | `postgres`                                                                         |
 | `SAMRA_DEPLOYMENT_ENVIRONMENT`          | `staging`                | `staging`                                                                          |
 | `SAMRA_CUSTOMER_AUTH_MODE`              | `auth0`                  | `auth0`                                                                            |
+| `SAMRA_RELEASE_PROFILE`                 | `alpha-release-1`        | `alpha-release-1`                                                                  |
+| `SAMRA_ALLOWED_ORIGINS`                 | exact reviewed origins   | exact reviewed origins; no wildcard                                                |
 | `SAMRA_RUN_WORKER`                      | `false`                  | `false`                                                                            |
 | `SAMRA_INTERNAL_OPERATIONS_ENABLED`     | `false`                  | `false`                                                                            |
 | `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | `fake`                   | `fake`, only if approved test-case evidence is established through a reviewed path |
@@ -107,6 +111,11 @@ These settings are a proposal, not an applied overlay:
 | `CROSSMINT_SERVER_API_KEY`              | absent                   | pinned restricted staging secret reference                                         |
 | `CROSSMINT_SANDBOX_CUSTOMER_ID`         | absent                   | one authenticated `customer_<32 lowercase hex>`                                    |
 | `CROSSMINT_SANDBOX_RECOVERY_EMAIL`      | absent                   | selected tester's verified recovery email, supplied privately                      |
+
+Do not omit `SAMRA_RELEASE_PROFILE`: omission defaults to the broader `demo`
+route profile rather than the narrow Alpha Release 1 surface. The Alpha profile
+also requires a nonempty, exact origin allowlist. Verify the final values; do
+not invent an origin or use `*`.
 
 Verify `AUTH0_ISSUER_BASE_URL` and `AUTH0_AUDIENCE` against the existing tenant.
 `DATABASE_URL` must reference `samra-staging-database-url:<numeric version>`;
@@ -134,9 +143,10 @@ the operator's laptop just because the operator has an Auth0 token.
 ## Database transport and migration
 
 Audit the actual migration journal before selecting pending migrations. On an
-empty database, apply all 18 in order; on an initialized database, only the
-missing reviewed suffix. Never run 0017 alone against an unknown schema.
-Require readiness to verify its environment constraint and mapping trigger.
+empty database, apply every journaled migration in order; on an initialized
+database, only the missing reviewed suffix. Never run 0017 or 0019 alone
+against an unknown schema. Require readiness to verify the environment,
+mapping, and customer-control state constraints.
 The API identity must have only required runtime DML, no DDL or migration role.
 
 Cloud SQL's `ENCRYPTED_ONLY` setting rejects unencrypted connections.
@@ -180,20 +190,36 @@ billing data cannot enforce a real-time dollar cap.
 2. The selected tester signs in through Auth0. Resolve its durable Samra ID and
    approved identity case; do not substitute the console's
    `samra-sandbox-wallet-001` owner or fabricate production KYC evidence.
-3. Present the [sandbox disclosure and exact request body](crossmint-sandbox-connection.md#bounded-activation-prerequisites).
-   The tester accepts; submit `POST /api/v1/onboarding/wallet` with a stable
-   idempotency key through the private authenticated route. Do not reuse the
-   frontend's existing synthetic disclosure.
+3. Call authenticated `GET /api/v1/onboarding/wallet/disclosure`. The current
+   clients deliberately accept only a complete response that exactly matches
+   their compiled disclosure allowlist, render the validated canonical
+   presentation, and submit the corresponding allowlisted version tuple plus
+   `decision: accepted`, using a stable idempotency key through the private
+   authenticated route. This pin is a fail-closed contract check; it does not
+   let the client select provider mode, alter the disclosure, or substitute an
+   operator-authored request body.
 4. Verify one immutable mapping, expected owner, address and customer email
-   recovery configuration. Repeat the same request and restart the process;
-   GET/retry must recover the same wallet. A changed request, another customer,
-   provider conflict or restriction must fail closed. Record normalized IDs,
-   result codes and audit references only; exclude tokens, key values, email,
-   raw Auth0 subject and provider payloads from release artifacts/logs.
-5. Require `await_customer_signer_setup`, no funding/remittance entitlement,
-   no signing invocation and no transfer. Successful creation does not prove
-   customer operational signing, recovery, supported token network or custody
-   configuration beyond the verified fields.
+   recovery configuration through the bounded server/provider evidence path.
+   The customer API must return wallet `customer_control_setup`, onboarding
+   `wallet_control_setup`, `readyAt: null`, `publicAddress: null`,
+   `custodyModel: null`, and `await_customer_control_setup`. Restart the process
+   and verify that GET and a conclusive persisted replay return the same
+   setup-required wallet. If a
+   provider call timed out without a persisted mapping or separately verified
+   provider result, treat the outcome as ambiguous: stop and reconcile it before
+   any further create request. A changed create request against that nonterminal
+   staging command, another customer, provider conflict or restriction must fail
+   closed. A version-refresh acknowledgement for an already completed resource
+   may append current consent, but it must not redispatch creation. Record normalized IDs, result codes
+   and audit references only; exclude tokens, key values, email, raw Auth0
+   subject and provider payloads from release artifacts/logs.
+5. Require no funding/remittance entitlement, no signing invocation and no
+   transfer. Record the result as a generic EVM smart-wallet resource, not a
+   verified USDC wallet: the current request does not select or validate a token
+   contract or exact chain. Successful provider resource creation does not prove
+   customer operational signing or recovery and must not transition to `ready`.
+   A future reviewed implementation must persist server-verified signer and
+   recovery evidence before a separate migration may permit that transition.
 
 Stop on wrong identity/project/SHA/digest, unknown secret version, failed TLS,
 missing migration evidence, unexpected privileges, duplicate/conflicting wallet,
@@ -210,10 +236,10 @@ before activating customer access. Do not delete shared infrastructure.
 
 After wallet provisioning, disable the sandbox provider mode and its invocation
 path, preserving wallet, consent, immutable mapping and audit records. Do not
-down-migrate 0017 or replace a staging mapping with a synthetic one. Reverting
-the runtime needs a schema-compatible reviewed image; turning a mode off does
-not undo provider creation. Existing revision rollback is available only after
-an actual previous revision and restoration evidence are recorded.
+down-migrate 0017 or 0019 or replace a staging mapping with a synthetic one.
+Reverting the runtime needs a schema-compatible reviewed image; turning a mode
+off does not undo provider creation. Existing revision rollback is available
+only after an actual previous revision and restoration evidence are recorded.
 
 ## Reconciliation with PR 156
 

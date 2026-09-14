@@ -84,22 +84,34 @@ An existing wallet address must not be used as an external signer.
 one opaque Samra customer ID, a staging server key, and the tester's recovery
 email. Workers, internal operations, and development controls are disabled.
 Only the exact configured customer can provision. Identity approval and the
-separate `sandbox-customer-wallet-v1` disclosure must precede creation.
+separate current `sandbox-customer-wallet-v2` disclosure must precede creation.
 
 Migration `0017_customer_controlled_sandbox_wallets` separates staging from
 synthetic configurations and validates new provider mappings with a database
-trigger. Existing mappings remain immutable. Startup readiness checks require
-the sandbox constraint and trigger. A changed idempotency command or provider
-configuration is rejected; a conflicting provider result restricts the wallet.
-A restriction arriving during provisioning cannot be changed back to ready by
-the provider response. A ready sandbox address returns
-`await_customer_signer_setup`, not permission to fund it.
+trigger. Migration `0021_customer_wallet_control_setup` separates provider
+resource creation from customer-control readiness and corrects earlier staging
+rows that were labeled ready. Existing mappings remain immutable. Startup
+readiness checks require the sandbox, mapping, and customer-control constraints.
+A valid legacy staging row must reference the exact v1 disclosure and mapping
+before migration; 0019 preserves that evidence but does not promote it to
+current acceptance. Returning testers append current base and wallet v2 consent
+without replacing the old rows or redispatching a completed create.
+A changed idempotency command or provider configuration is rejected; a
+conflicting provider result restricts the wallet. A created sandbox resource
+returns wallet `customer_control_setup`, onboarding `wallet_control_setup`,
+`readyAt: null`, a withheld customer-facing address and custody/control label,
+and `await_customer_control_setup`. It is not permission to fund or transfer.
+The adapter sends a stable idempotency key but has no provider retrieval or
+reconciliation method. A transport timeout can therefore leave the upstream
+outcome ambiguous; do not automatically reissue creation until the original
+outcome is reconciled through a separately verified provider path.
 
-This is backend provisioning only. The existing web/mobile synthetic disclosure
-does not authorize sandbox creation. Client device enrollment, client JWT trust,
-recovery verification, and an explicit transaction-confirmation interface remain
-outside the implemented backend creation path. No financial capability is
-enabled by this change.
+This is backend provisioning only. Web and mobile retrieve the active
+non-production disclosure from Samra before provisioning; neither client can
+select the provider mode or claim customer-control completion. Client device
+enrollment, client JWT trust, recovery verification, and an explicit
+transaction-confirmation interface remain outside the implemented backend
+creation path. No financial capability is enabled by this change.
 
 ### Bounded activation prerequisites
 
@@ -110,40 +122,47 @@ enabled by this change.
    Samra identity case is approved; do not fabricate production KYC evidence.
 3. Provide a scoped staging server key through a pinned numeric Secret Manager
    version. Configure `SAMRA_DEPLOYMENT_ENVIRONMENT=staging`,
+   `SAMRA_RELEASE_PROFILE=alpha-release-1`, an exact reviewed
+   `SAMRA_ALLOWED_ORIGINS` list with no wildcard,
    `SAMRA_CUSTOMER_WALLET_PROVIDER_MODE=crossmint-sandbox-customer`,
    `CROSSMINT_SANDBOX_CUSTOMER_ID`, and `CROSSMINT_SANDBOX_RECOVERY_EMAIL`.
    Supply `CROSSMINT_SERVER_API_KEY` by secret reference, never in frontend code.
-4. Present the tester with the disclosure: this creates a non-production
-   Crossmint EVM smart wallet associated with the tester's Samra account and
-   configured email recovery; device signing setup remains incomplete; funding
-   and remittance are disabled. Record acceptance using the authenticated
-   `POST /api/v1/onboarding/wallet` route, a stable `Idempotency-Key`, and this body:
-
-   ```json
-   {
-     "bundleVersion": "sandbox-customer-wallet-v1",
-     "documentVersion": "sandbox-customer-wallet-v1",
-     "locale": "en-US",
-     "decision": "accepted"
-   }
-   ```
-
-5. Verify the exact returned owner/address/recovery configuration, PostgreSQL
-   mapping, repeated request, process restart, audit trail, and absence of funds
-   or signing authority. Treat the console test owner as a separate test wallet.
+4. Call authenticated `GET /api/v1/onboarding/wallet/disclosure`. The current
+   clients deliberately accept only a complete response that exactly matches
+   their compiled disclosure allowlist, then render the validated canonical
+   presentation and submit the corresponding allowlisted version tuple with
+   `decision: accepted` and a stable `Idempotency-Key`. This pin is a fail-closed
+   contract check, not client authority to select provider mode or alter the
+   disclosure. Do not bypass it with an operator-authored request body.
+5. Verify owner/address/recovery configuration through the bounded
+   server/provider evidence path and verify the immutable PostgreSQL mapping,
+   conclusive local replay, process restart, audit trail, and absence of funds
+   or signing authority. A timeout without a persisted mapping or a separately
+   verified provider result is ambiguous: stop and reconcile it instead of
+   issuing another create request. The customer response must remain
+   `customer_control_setup` with no address or readiness claim. Treat the
+   console test owner as a separate test wallet. Record this as a generic EVM
+   smart-wallet resource, not a verified USDC wallet; the create request does
+   not select or validate an asset contract or exact chain.
 6. Configure client JWT ownership mapping and scoped client access only after
    review. The tester must complete device/recovery enrollment personally.
 
 Rollback: disable the sandbox wallet mode and stop provisioning traffic. Preserve
 wallet, consent, mapping, and audit records. Do not replace a staging mapping
-with a synthetic mapping or destructively roll back migration 0017.
+with a synthetic mapping or destructively roll back migration 0017 or 0019.
 
 ### Local validation
 
-- API suite: 60 tests passed, plus nine connection-reader/JUnit tests. The HTTP
+The counts below preserve the 2026-09-04 implementation evidence. They are not
+a current release result; rerun the full current journal and release gates for
+the candidate SHA.
+
+- At the time of this 2026-09-04 evidence capture, the API suite had 60 passing
+  tests, plus nine connection-reader/JUnit tests. The HTTP
   tests required temporary localhost listeners outside the filesystem sandbox.
 - API TypeScript check, shared-library TypeScript build/checks, OpenAPI
-  generation, compiled API build, and migration policy passed (18 migrations).
+  generation, compiled API build, and migration policy passed at that baseline
+  (18 migrations).
 - The generated-contract drift check, 11 database unit tests, and all 255
   deployment-boundary/static-server tests passed. No cloud resources were changed
   by these tests.
@@ -203,9 +222,11 @@ are resolved for this approved inspection. No IAM changes, key creation,
 deployment, billing changes, or traffic promotion occurred.
 
 The next release needs the prepared customer-controlled backend code and a
-private staging API deployment. The cloud database migration has not been
-applied. Complete the identity mapping, customer signer/recovery flow, disclosure,
-scoped credentials, and authenticated onboarding/replay verification. Use the repository's staging
+private staging API deployment. The cloud database migrations have not been
+applied. Complete the identity mapping, customer signer/recovery flow, scoped
+credentials, and authenticated onboarding/replay verification. The disclosure
+retrieval and setup-required client state now exist in code, but they have not
+been exercised in a deployed staging journey. Use the repository's staging
 release controls for database readiness, immutable images, zero-traffic
 verification, cost review, rollback, and any subsequent traffic approval.
 

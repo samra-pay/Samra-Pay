@@ -47,7 +47,7 @@ const wallet: CustomerWalletSnapshot = {
   readyAt: "2026-09-07T00:00:00Z",
   createdAt: "2026-09-07T00:00:00Z",
   updatedAt: "2026-09-07T00:00:00Z",
-  nextAllowedActions: ["await_customer_signer_setup"],
+  nextAllowedActions: ["review_wallet"],
 };
 let root: Root;
 let host: HTMLDivElement;
@@ -105,6 +105,7 @@ beforeEach(() => {
   getWallet.mockResolvedValue(wallet);
   source = {
     getOnboarding,
+    getWalletDisclosure: mutate,
     getWallet,
     startOnboarding: mutate,
     submitConsentBundle: mutate,
@@ -138,15 +139,17 @@ describe("read-only customer wallet dashboard", () => {
     expect(getOnboarding.mock.invocationCallOrder[0]).toBeLessThan(
       getWallet.mock.invocationCallOrder[0],
     );
-    expect(host.textContent).toContain("Staging wallet · test network only");
-    expect(host.textContent).toContain("Available balance · USDCUnavailable");
+    expect(host.textContent).toContain("Staging wallet · non-production only");
+    expect(host.textContent).toContain(
+      "Intended product asset · USDCUnavailable",
+    );
+    expect(host.textContent).toContain(
+      "No token balance is configured or available",
+    );
     expect(host.textContent).toContain("Activity unavailable");
     expect(host.textContent).not.toMatch(/0\.00|No activity yet|untrusted/);
     expect(button("Add money").disabled).toBe(true);
     expect(button("Send").disabled).toBe(true);
-    expect(host.textContent).toContain(
-      "Customer signing setup is still required",
-    );
     await click("Wallet details");
     expect(document.body.textContent).toContain(wallet.publicAddress);
     expect(document.body.textContent).toContain("base-sepolia");
@@ -154,6 +157,53 @@ describe("read-only customer wallet dashboard", () => {
     expect(writeText).toHaveBeenCalledExactlyOnceWith(wallet.publicAddress);
     expect(document.body.textContent).toContain("Wallet address copied.");
   });
+
+  it.each([
+    {
+      state: "customer_control_setup" as const,
+      nextAllowedActions: ["await_customer_control_setup"],
+    },
+    {
+      state: "ready" as const,
+      nextAllowedActions: ["await_customer_signer_setup"],
+    },
+  ])(
+    "hides wallet details and financial controls while customer control is incomplete: $state",
+    async ({ state, nextAllowedActions }) => {
+      getOnboarding.mockResolvedValue({
+        ...onboarding,
+        state: "wallet_control_setup",
+        latestCompletedStep: "wallet_provisioned",
+      });
+      getWallet.mockResolvedValue({
+        ...wallet,
+        state,
+        publicAddress: "0x2222222222222222222222222222222222222222",
+        readyAt: null,
+        nextAllowedActions,
+      });
+
+      await render();
+
+      expect(getWallet).toHaveBeenCalledTimes(1);
+      expect(host.textContent).toContain("Wallet setup is not complete");
+      expect(host.textContent).toContain(
+        "Customer signing and recovery setup are still required",
+      );
+      expect(
+        Array.from(host.querySelectorAll("button")).some(
+          (item) => item.textContent === "Wallet details",
+        ),
+      ).toBe(false);
+      expect(host.textContent).not.toContain("Intended product asset");
+      expect(host.textContent).not.toContain("Add money");
+      expect(host.textContent).not.toContain("Send");
+      expect(document.body.textContent).not.toContain(
+        "0x2222222222222222222222222222222222222222",
+      );
+      expect(document.body.textContent).not.toContain("Copy wallet address");
+    },
+  );
 
   it.each([
     null,

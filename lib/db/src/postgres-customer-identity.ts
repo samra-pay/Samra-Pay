@@ -751,6 +751,14 @@ async function restrictOnboardingForConflict(
       "identity_in_progress",
       "identity_review",
       "identity_approved",
+      "bank_link_pending",
+      "bank_matched",
+      "wallet_consent_pending",
+      "wallet_provisioning",
+      "wallet_control_setup",
+      "wallet_ready",
+      "funding_ready",
+      "activated",
     ]).has(current.state)
   ) {
     throw invalidIdentityTransition();

@@ -1247,8 +1247,8 @@ test("customer onboarding is atomic across first login, restart, consent replay,
       `INSERT INTO samra_core.customer_consents
        (customer_id, onboarding_id, consent_type, document_version,
         bundle_version, decision, locale, channel, idempotency_key)
-       SELECT customer.id, $1, 'privacy_notice', 'alpha-non-production-v1',
-              'alpha-non-production-v1', 'accepted', 'en-US', 'api', $2
+       SELECT customer.id, $1, 'privacy_notice', 'alpha-non-production-v2',
+              'alpha-non-production-v2', 'accepted', 'en-US', 'api', $2
        FROM samra_core.customers customer
        WHERE customer.external_ref = 'demo_customer_001'`,
       [durable.onboardingId, "0".repeat(64)],
@@ -1338,6 +1338,118 @@ test("customer onboarding is atomic across first login, restart, consent replay,
     recovered.snapshot.onboardingId,
     declinedStart.snapshot.onboardingId,
   );
+});
+
+test("an existing onboarding can accept a newer consent bundle without losing its progress", async () => {
+  const target = createRuntime();
+  const store = new PostgresCustomerOnboardingStore(target.context);
+  const issuer = `https://${randomUUID()}.onboarding-reconsent.samra.test/`;
+  const subject = `auth0|${randomUUID()}`;
+  const started = await store.startAuth0Onboarding({
+    issuer,
+    subject,
+    idempotencyKey: "reconsent-start-command-001",
+  });
+  const legacyKey = sha256("legacy-alpha-consent-bundle-v1");
+  await target.connection.pool.query(
+    `INSERT INTO samra_core.customer_consents
+       (customer_id, onboarding_id, consent_type, document_version,
+        bundle_version, decision, locale, channel, idempotency_key)
+     SELECT customer.id, onboarding.id, consent_type,
+            'alpha-non-production-v1', 'alpha-non-production-v1',
+            'accepted', 'en-US', 'api', $4
+       FROM samra_core.customers customer
+       JOIN samra_core.customer_auth_identities identity
+         ON identity.customer_id = customer.id
+       JOIN samra_core.customer_onboardings onboarding
+         ON onboarding.customer_id = customer.id
+       CROSS JOIN unnest(ARRAY[
+         'terms_of_service',
+         'privacy_notice',
+         'electronic_communications'
+       ]) AS consent_types(consent_type)
+      WHERE identity.provider = 'auth0'
+        AND identity.issuer = $1
+        AND identity.subject = $2
+        AND onboarding.id = $3`,
+    [issuer, subject, started.snapshot.onboardingId, legacyKey],
+  );
+  await target.connection.pool.query(
+    `UPDATE samra_core.customer_onboardings
+        SET state = 'identity_in_progress',
+            latest_completed_step = 'required_consents',
+            reason_family = NULL,
+            version = version + 1,
+            entered_at = now(),
+            updated_at = now()
+      WHERE id = $1`,
+    [started.snapshot.onboardingId],
+  );
+  await target.connection.pool.query(
+    `INSERT INTO samra_core.customer_onboarding_transitions
+       (onboarding_id, sequence, from_state, to_state, reason_family,
+        command_key)
+     VALUES ($1,2,'consent_pending','identity_in_progress',NULL,$2)`,
+    [started.snapshot.onboardingId, `consent:${legacyKey}`],
+  );
+
+  const stale = await store.getAuth0Onboarding({ issuer, subject });
+  assert.equal(stale.state, "identity_in_progress");
+  assert.ok(stale.nextAllowedActions.includes("submit_required_consents"));
+
+  const refreshed = await store.recordAuth0ConsentBundle({
+    issuer,
+    subject,
+    idempotencyKey: "reconsent-current-command-001",
+    bundleVersion: ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+    locale: ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+    decisions: ALPHA_ONBOARDING_CONSENT_BUNDLE.documents.map((document) => ({
+      consentType: document.consentType,
+      documentVersion: document.documentVersion,
+      decision: "accepted" as const,
+    })),
+  });
+  assert.equal(refreshed.snapshot.state, "identity_in_progress");
+  assert.equal(refreshed.snapshot.version, 3);
+  assert.equal(
+    refreshed.snapshot.nextAllowedActions.includes("submit_required_consents"),
+    false,
+  );
+
+  const evidence = await target.connection.pool.query<{
+    consent_rows: string;
+    legacy_rows: string;
+    refreshed_events: string;
+    same_state_transitions: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::text
+          FROM samra_core.customer_consents
+         WHERE onboarding_id = $1) AS consent_rows,
+       (SELECT count(*)::text
+          FROM samra_core.customer_consents
+         WHERE onboarding_id = $1
+           AND bundle_version = 'alpha-non-production-v1') AS legacy_rows,
+       (SELECT count(*)::text
+          FROM samra_core.audit_events
+         WHERE entity_type = 'customer_onboarding'
+           AND entity_id = $1::text
+           AND action = 'customer_consent_bundle_refreshed')
+         AS refreshed_events,
+       (SELECT count(*)::text
+          FROM samra_core.customer_onboarding_transitions
+         WHERE onboarding_id = $1
+           AND from_state = 'identity_in_progress'
+           AND to_state = 'identity_in_progress')
+         AS same_state_transitions`,
+    [started.snapshot.onboardingId],
+  );
+  assert.deepEqual(evidence.rows[0], {
+    consent_rows: "6",
+    legacy_rows: "3",
+    refreshed_events: "1",
+    same_state_transitions: "1",
+  });
 });
 
 test("customer onboarding rolls back every write after controlled mid-transaction failures and remains retryable", async () => {

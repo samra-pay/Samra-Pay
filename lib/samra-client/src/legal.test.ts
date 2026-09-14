@@ -56,3 +56,14 @@ test("every required consent can be reviewed through an owned legal path", () =>
     assert.equal(getSamraLegalDocument(legalKind!).path, presentation.href);
   }
 });
+
+test("base consent does not contradict separately disclosed provider tests", () => {
+  const privacy = getSamraLegalDocument("privacy");
+  const terms = getSamraLegalDocument("terms");
+
+  assert.doesNotMatch(JSON.stringify(privacy), /wallet.*not enabled/iu);
+  assert.match(JSON.stringify(privacy), /separately enabled/iu);
+  assert.doesNotMatch(terms.intro, /does not open an account or wallet/iu);
+  assert.match(terms.intro, /does not itself open an account or wallet/iu);
+  assert.match(terms.intro, /separately disclosed non-production wallet/iu);
+});

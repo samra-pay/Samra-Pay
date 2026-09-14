@@ -12,6 +12,7 @@ const legalPageSource = read("../pages/legal.tsx");
 const sharedJourneySource = read(
   "../../../../lib/samra-client/src/onboarding.ts",
 );
+const sharedReactSource = read("../../../../lib/samra-client/src/react.tsx");
 
 describe("web customer-onboarding trust boundary", () => {
   it("does not collect a local email or password and delegates API sign-in to Auth0", () => {
@@ -56,11 +57,28 @@ describe("web customer-onboarding trust boundary", () => {
     expect(onboardingSource).not.toMatch(
       /localStorage|sessionStorage|indexedDB/,
     );
-    expect(onboardingSource).toContain(
-      "I understand this is a synthetic wallet",
+    expect(onboardingSource).not.toContain(
+      "SYNTHETIC_WALLET_PROVISIONING_INPUT",
     );
-    expect(onboardingSource).toContain("SYNTHETIC_WALLET_PROVISIONING_INPUT");
-    expect(onboardingSource).toContain("no tokens");
+    expect(onboardingSource).toContain("useCustomerWalletDisclosure");
+    expect(onboardingSource).toContain("walletProvisioningInputFromDisclosure");
+    expect(onboardingSource).toMatch(
+      /const WALLET_DISCLOSURE_STATES[\s\S]*?"wallet_control_setup"[\s\S]*?"wallet_ready"[\s\S]*?\]\);/,
+    );
+    expect(onboardingSource).toMatch(
+      /wallet\?\.nextAllowedActions\.includes\(\s*"accept_current_wallet_disclosure"/,
+    );
+    expect(onboardingSource).toContain("disclosure.presentation.title");
+    expect(onboardingSource).toContain("disclosure.presentation.body");
+    expect(onboardingSource).toContain(
+      "disclosure.presentation.acceptanceLabel",
+    );
+    expect(onboardingSource).toContain(
+      "walletDisclosure.presentation.actionLabel",
+    );
+    expect(sharedJourneySource).toContain(
+      "does not create a blockchain wallet, tokens",
+    );
     expect(appSource).toContain('path="/electronic-communications"');
     expect(legalPageSource).toContain("getSamraLegalDocument");
   });
@@ -83,6 +101,38 @@ describe("web customer-onboarding trust boundary", () => {
     expect(onboardingSource).toContain("identityQuery.refetch()");
     expect(onboardingSource).toContain("walletQuery.refetch()");
     expect(onboardingSource).toContain("Financial access");
+    expect(onboardingSource).toContain(
+      'journey.stage === "wallet_control_setup"',
+    );
+    expect(onboardingSource).toContain(
+      "Wallet details, funding, and transfers remain",
+    );
+    expect(onboardingSource).toContain("wallet-creation outcome is unknown");
+    expect(onboardingSource).toContain("another provider create stays blocked");
+    expect(onboardingSource).toContain("Resume synthetic wallet setup");
+    expect(onboardingSource).toContain("const walletMutationError");
+    expect(onboardingSource).toContain(
+      'journey.stage === "wallet_control_setup"',
+    );
+    expect(onboardingSource).toContain(
+      'walletDisclosure?.environment === "synthetic"',
+    );
+    expect(onboardingSource).not.toContain("No second test-network wallet");
+    expect(onboardingSource).not.toContain("Retry non-production wallet setup");
+    expect(onboardingSource).toContain("if (!wallet.synthetic)");
+    expect(onboardingSource).toContain("[journey.stage, walletDisclosure]");
+    expect(sharedReactSource).toContain(
+      "setQueryData(samraQueryKeys.walletDisclosure, null)",
+    );
+    expect(sharedReactSource).toContain("async onSettled()");
+    expect(sharedReactSource).toContain(
+      "queryClient.invalidateQueries({ queryKey: samraQueryKeys.wallet })",
+    );
+    expect(onboardingSource).toContain("wallet.synthetic");
+    expect(onboardingSource).toContain("Non-production wallet");
+    expect(onboardingSource).toContain("Any future reviewed");
+    expect(onboardingSource).toContain("provider migration");
+    expect(onboardingSource).not.toContain("can survive a provider migration");
     expect(onboardingSource).toContain('role="alert"');
     expect(onboardingSource).toContain("motion-reduce:animate-none");
   });

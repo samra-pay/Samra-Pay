@@ -125,6 +125,7 @@ export const samraQueryKeys = {
   transfer: (id: string) => ["samra", "remittance", "transfer", id] as const,
   onboarding: ["samra", "onboarding"] as const,
   identityCase: ["samra", "onboarding", "identity"] as const,
+  walletDisclosure: ["samra", "onboarding", "wallet", "disclosure"] as const,
   wallet: ["samra", "onboarding", "wallet"] as const,
 };
 
@@ -309,6 +310,15 @@ export function useCustomerWallet(enabled: boolean) {
   });
 }
 
+export function useCustomerWalletDisclosure(enabled: boolean) {
+  const { source } = useSamraOnboardingRuntime();
+  return useQuery({
+    ...queryDefaults(samraQueryKeys.walletDisclosure),
+    queryFn: () => source.getWalletDisclosure(),
+    enabled,
+  });
+}
+
 export function useStartCustomerOnboarding() {
   const { source } = useSamraOnboardingRuntime();
   const queryClient = useQueryClient();
@@ -369,11 +379,16 @@ export function useStartCustomerWalletProvisioning() {
       idempotencyKey: string;
     }) => source.startWalletProvisioning(input, idempotencyKey),
     retry: false,
-    async onSuccess(snapshot) {
+    onSuccess(snapshot) {
       queryClient.setQueryData(samraQueryKeys.wallet, snapshot);
-      await queryClient.invalidateQueries({
-        queryKey: samraQueryKeys.onboarding,
-      });
+    },
+    async onSettled() {
+      await Promise.allSettled([
+        queryClient.invalidateQueries({
+          queryKey: samraQueryKeys.onboarding,
+        }),
+        queryClient.invalidateQueries({ queryKey: samraQueryKeys.wallet }),
+      ]);
     },
   });
 }
@@ -425,6 +440,7 @@ export function useResetDemoCustomerOnboarding() {
       queryClient.setQueryData(samraQueryKeys.onboarding, null);
       queryClient.setQueryData(samraQueryKeys.identityCase, null);
       queryClient.setQueryData(samraQueryKeys.wallet, null);
+      queryClient.setQueryData(samraQueryKeys.walletDisclosure, null);
     },
   });
 }

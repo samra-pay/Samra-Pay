@@ -76,7 +76,7 @@ export const customerWallets = samraCore.table(
     ),
     check(
       "customer_wallets_state_chk",
-      sql`${table.state} in ('created','provisioning','ready','restricted','error')`,
+      sql`${table.state} in ('created','provisioning','customer_control_setup','ready','restricted','error')`,
     ),
     check("customer_wallets_asset_chk", sql`${table.asset} = 'USDC'`),
     check(
@@ -104,6 +104,10 @@ export const customerWallets = samraCore.table(
       sql`${table.reasonFamily} is null or length(${table.reasonFamily}) between 1 and 64`,
     ),
     check("customer_wallets_version_chk", sql`${table.version} > 0`),
+    check(
+      "customer_wallets_customer_control_setup_chk",
+      sql`${table.state} <> 'customer_control_setup' or ${table.environment} = 'staging'`,
+    ),
     check(
       "customer_wallets_ready_time_chk",
       sql`(${table.state} <> 'ready' or ${table.readyAt} is not null) and (${table.readyAt} is null or ${table.state} in ('ready','restricted'))`,
@@ -198,7 +202,7 @@ export const customerWalletTransitions = samraCore.table(
     ),
     check(
       "customer_wallet_transitions_state_chk",
-      sql`${table.toState} in ('created','provisioning','ready','restricted','error')`,
+      sql`${table.toState} in ('created','provisioning','customer_control_setup','ready','restricted','error')`,
     ),
     check(
       "customer_wallet_transitions_reason_chk",
