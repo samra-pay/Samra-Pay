@@ -140,6 +140,7 @@
       "deploy/gcp/audit-staging-traffic-federation.sh",
       "deploy/gcp/audit-staging-zero-traffic-federation.sh",
       "deploy/gcp/coming-soon-static-hosting.json",
+      "deploy/gcp/dev-test-runtime.md",
       "deploy/gcp/github-upstream-artifact.test.mjs",
       "deploy/gcp/production-foundation-preflight.json",
       "deploy/gcp/production-foundation-preflight.test.mjs",
