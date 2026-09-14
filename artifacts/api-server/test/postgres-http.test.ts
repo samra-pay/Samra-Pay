@@ -1511,6 +1511,23 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
         `SELECT id FROM samra_core.customer_onboardings WHERE customer_id = $1`,
         [customerId],
       );
+      for (const document of ALPHA_ONBOARDING_CONSENT_BUNDLE.documents) {
+        await pool.query(
+          `INSERT INTO samra_core.customer_consents
+            (customer_id, onboarding_id, consent_type, document_version,
+             bundle_version, decision, locale, channel, idempotency_key)
+           VALUES ($1, $2, $3, $4, $5, 'accepted', $6, 'api', $7)`,
+          [
+            customerId,
+            onboarding.rows[0]!.id,
+            document.consentType,
+            document.documentVersion,
+            ALPHA_ONBOARDING_CONSENT_BUNDLE.bundleVersion,
+            ALPHA_ONBOARDING_CONSENT_BUNDLE.locale,
+            randomUUID().replaceAll("-", "").repeat(2),
+          ],
+        );
+      }
       const legacyWalletConsent = await pool.query<{ id: string }>(
         `INSERT INTO samra_core.customer_consents
           (customer_id, onboarding_id, consent_type, document_version,
