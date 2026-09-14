@@ -3,7 +3,13 @@
 Status: implemented and tested with deterministic fake adapters. Crossmint is
 the locked Alpha USDC wallet provider, not an approved funding or Ethiopia
 payout rail. Those two rails and the remitter-of-record structure remain
-unresolved. Provider names in historical fixtures do not govern this lifecycle.
+unresolved. The current synthetic core does encode Rain, Caliza, and Chapa in
+provider types, ports, orchestration, events, database enums, ledger selection,
+and reconciliation. They are not active vendor decisions, but they do govern
+the implementation today. The
+[provider-portability decision](./provider-portability.md) defines the target;
+the [dated code audit](../reviews/2026-09-14-provider-portability-code-audit.md)
+grades the gap.
 
 ## Quote
 
@@ -94,9 +100,11 @@ controls select a named scenario.
 
 ## Durable event rules
 
-These are the PostgreSQL-backed target rules. The current demo applies the
-same deduplication and ordering behavior through an in-memory repository, so
-it resets on process restart.
+These are the PostgreSQL-backed target rules. The current demo has durable and
+in-memory event scaffolding and ordering tests, but its core events are still
+vendor-named and its replay key is not bound to the original transfer, type, and
+payload digest. It therefore does not yet satisfy rules 2–3 for live ingress.
+The in-memory repository also resets on process restart.
 
 The current single-process demo also serializes state-changing commands so two
 requests cannot consume one quote, reserve funds twice, or race a cancellation

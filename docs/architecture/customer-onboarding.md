@@ -107,7 +107,7 @@ The database trigger permits only the reviewed forward transition graph and tran
 | `POST /api/v1/onboarding`          | First-login initialization or safe resume  | `201` when the aggregate is created, `200` when it already exists                     |
 | `GET /api/v1/onboarding`           | Cross-surface resume                       | Current durable state, version, timestamps, consent catalog, and next allowed actions |
 | `POST /api/v1/onboarding/consents` | Submit the complete current consent bundle | Immutable decisions plus one atomic aggregate transition                              |
-| `POST /api/v1/onboarding/wallet`   | Record wallet disclosure and create/resume | Normalized synthetic wallet; no provider identifier, PII, balance, or funding         |
+| `POST /api/v1/onboarding/wallet`   | Record wallet disclosure and create/resume | Normalized synthetic wallet; no provider resource identifier, PII, balance, or funding |
 | `GET /api/v1/onboarding/wallet`    | Cross-surface wallet resume                | Current normalized Samra wallet state                                                 |
 
 All endpoints require an already validated Auth0 API access token. Every

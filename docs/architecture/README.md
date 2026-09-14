@@ -2,7 +2,9 @@
 
 The [documentation index](../README.md) is the current product status. The
 [Alpha platform contract](./alpha-platform.md) governs vendor roles and trust
-boundaries.
+boundaries. The [provider-portability decision](./provider-portability.md)
+governs Samra control-plane ownership, capability adapters, migrations, and
+provider-exit acceptance.
 
 ## Purpose
 
@@ -23,7 +25,7 @@ web / mobile / operations clients
   -> Auth0 access-token boundary where enabled
   -> /api/v1 Samra contract
   -> customer, onboarding, wallet, and remittance services
-  -> provider-neutral Auth0, Persona, Crossmint, funding, and payout adapters
+  -> Samra-owned capability boundaries with provider-specific adapters
   -> inbox / outbox and idempotency
   -> Samra double-entry ledger
   -> reconciliation, audit, and operations evidence
@@ -102,6 +104,7 @@ financial data.
 
 - [Public and product surface boundary](./public-product-surface-boundary.md)
 - [Alpha platform and vendor boundary](./alpha-platform.md)
+- [Provider portability and Samra control-plane ownership](./provider-portability.md)
 - [Ledger](./ledger.md)
 - [Remittance](./remittance.md)
 - [Auth0 identity](./customer-identity-auth0.md)

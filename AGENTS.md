@@ -43,6 +43,29 @@ broader credentials.
 
 - Samra owns customer identity mapping, authorization, transaction state,
   ledger, reconciliation, audit, and product data. Vendor IDs are mappings.
+- Samra also owns account lifecycle and eligibility, canonical balances and
+  history, pricing/fees/FX logic, loyalty and promotions, risk decisions,
+  provider routing, analytics, and the customer-support record. A regulated
+  counterparty retains its legally required decisions; Samra records the
+  normalized result and owns the resulting Samra product state.
+- Put every material external capability behind a Samra capability interface
+  and anti-corruption adapter. Keep provider IDs, statuses, payload shapes,
+  webhook names, and bundled legal roles out of Samra domain identity and
+  canonical events. Preserve provider-specific details only in explicit
+  provider-boundary records such as adapters, configuration, mappings,
+  registries, contracts, evidence, reconciliation, provider operations, and
+  legally required disclosures.
+- Before an integration is architecture-complete, answer how Samra exits it:
+  data and evidence export, mappings, keys or instruments, in-flight work,
+  residual settlement, reconciliation, customer action, contract termination,
+  cutover cohorts, rollback, and graceful degradation. An unanswered exit is
+  architecture debt and a production gate for the affected capability.
+- Use the simplest stage-appropriate boundary. Do not build multiple live
+  providers merely to demonstrate abstraction, but do not encode one provider
+  as the permanent domain model. Bundled infrastructure may accelerate launch
+  only when its legal roles stay distinct and Samra can progressively unbundle
+  the stack as scale, economics, and risk justify it. Follow the governing
+  [provider-portability decision](docs/architecture/provider-portability.md).
 - Use integer minor units internally and decimal strings over JSON. Clients
   and provider responses never supply financial truth.
 - Preserve atomicity, immutable postings, idempotency, authenticated/deduplicated

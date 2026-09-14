@@ -102,6 +102,10 @@ mandatory exact-revision checks and evidence regardless of reporting availabilit
 
 ## Vendor portability rules
 
+The [provider-portability and Samra control-plane decision](provider-portability.md)
+is the governing standard. The rules below are its Alpha-specific minimum, not
+a complete migration or provider-exit plan.
+
 - Internal IDs are Samra-generated UUIDs; vendor IDs are opaque mappings.
 - Frontend contracts expose normalized Samra states, never vendor payloads.
 - Every create or command uses a stable Samra idempotency reference.

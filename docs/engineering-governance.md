@@ -35,6 +35,12 @@ Before implementation, identify the outcome, scope, acceptance criteria, owner,
 dependencies, time boundary, and any existing authorization. David is the
 decision owner until another owner is explicitly assigned.
 
+For a material provider integration, ready-for-review also requires a completed
+provider-portability acceptance checklist and a dated migration/exit plan. Any
+"no" answer must be recorded as architecture debt with an owner, deadline, and
+activation consequence. Provider access or a working sandbox does not waive the
+gate. See the [governing decision](architecture/provider-portability.md).
+
 Implementation is ready for review when the PR links its source task, includes
 appropriate tests and updated documentation, and states remaining risks.
 Completion requires the authorized merge and exact-commit checks. Deployment,
@@ -54,6 +60,7 @@ and the current-state index in the same PR.
 | Samra Pay card front artwork v1.0 | Approved by David on 2026-09-09: [four locked card designs and website artwork](design/approved-card-artwork-v1.md) |
 | Invite-only Alpha Release 1 | Accepted 2026-09-06 in the main task: [scope and sequence](architecture/alpha-release-1.md); 100-user cap, customer-controlled wallets, deposits/transfers unavailable |
 | Samra owns customer, financial state, ledger, and audit                  | Accepted: [architecture invariants](architecture/README.md)                                                                                                   |
+| Provider portability and Samra control-plane ownership                   | Accepted 2026-09-14: [capability boundaries, exit requirements, and acceptance checklist](architecture/provider-portability.md)                               |
 | Alpha uses Auth0, Persona, Crossmint, Google Cloud, GitHub Actions, GitHub issues | Accepted repository decision: [Alpha platform](architecture/alpha-platform.md); funding and Ethiopia payout remain unresolved                                 |
 | Customer-controlled sandbox signing/recovery                             | Recorded choice on 2026-09-04: [Crossmint evidence](operations/crossmint-sandbox-connection.md); complete signer/recovery proof and deployment remain blocked |
 | Public marketing versus authenticated financial surfaces                 | Accepted: [surface boundary](architecture/public-product-surface-boundary.md); activation is separately authorized                                            |

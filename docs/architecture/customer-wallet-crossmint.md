@@ -17,17 +17,29 @@ Samra Pay owns the customer-to-wallet relationship and all financial product
 state. Crossmint owns only the provider capability confirmed in its executed
 commercial and technical terms.
 
+The cross-provider target is governed by
+[provider portability and Samra control-plane ownership](./provider-portability.md).
+The current schema and wired adapter are intentionally Crossmint-specific and
+creation-only; they are not a completed custody-migration boundary. See the
+[dated code audit](../reviews/2026-09-14-provider-portability-code-audit.md).
+
 ## Samra-owned model
 
-One `customer_wallet` record represents the product wallet independent of a
-provider. A separate immutable provider mapping contains:
+One `customer_wallet` record provides the Samra wallet ID, but the current
+aggregate embeds Crossmint, USDC, and Crossmint configuration constraints. A
+separate immutable provider mapping currently contains:
 
 - Samra wallet and customer IDs;
 - provider name and environment;
 - opaque provider wallet and account references;
 - normalized asset, network, custody, and lifecycle fields;
 - creation idempotency reference and timestamps;
-- suspension, replacement, and closure evidence.
+- the current creation reference and timestamps.
+
+The mapping is Crossmint-only and unique by Samra wallet, so it cannot yet hold
+concurrent old/new provider resources, effective dates, or superseded/runoff
+state. Those are forward-migration requirements before a provider transition,
+not implemented Alpha behavior.
 
 Names, email, phone, Auth0 subjects, Persona payloads, private keys, seed
 phrases, access tokens, and provider credentials are prohibited from wallet
@@ -35,7 +47,8 @@ mapping and audit metadata.
 
 ## Provider contract
 
-The `CustomerWalletProvider` boundary must support only reviewed operations:
+The eventual `CustomerWalletProvider` boundary may support only reviewed
+operations:
 
 - create or return the same wallet for one stable Samra request;
 - retrieve normalized wallet state;
@@ -43,6 +56,10 @@ The `CustomerWalletProvider` boundary must support only reviewed operations:
 - suspend or restrict through an explicit reviewed command when supported;
 - normalize authenticated provider events;
 - expose deterministic error families without leaking vendor payloads.
+
+The wired customer sandbox adapter currently implements creation only. Provider
+retrieval, signing, recovery, transactions, authenticated wallet events, and
+provider reconciliation are not implemented capabilities.
 
 Create is idempotent. A retry after timeout or process failure must find or
 return the original Crossmint wallet. The mapping attaches exactly once under a

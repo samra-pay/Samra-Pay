@@ -25,10 +25,11 @@ For implementation, read [AGENTS.md](AGENTS.md), the
 [local setup and contribution guide](CONTRIBUTING.md), and
 [engineering authority and decisions](docs/engineering-governance.md).
 
-The two governing architecture documents are:
+The three governing architecture documents are:
 
 - [Alpha platform and vendor boundary](docs/architecture/alpha-platform.md)
 - [Architecture and financial invariants](docs/architecture/README.md)
+- [Provider portability and Samra control-plane ownership](docs/architecture/provider-portability.md)
 
 See [user testing](docs/testing/user-testing.md) to run scenarios with testers and
 track failures through fixes and retests. Qase is retired; historical evidence remains.
@@ -54,6 +55,9 @@ track failures through fixes and retests. Qase is retired; historical evidence r
 - Samra's ledger is financial truth; clients and vendors are not.
 - Vendor IDs are mappings to Samra IDs, never primary customer or transaction
   identity.
+- Every material provider integration needs a documented exit path before it is
+  architecture-complete. Unresolved exit, migration, runoff, or reconciliation
+  behavior is architecture debt and blocks the affected production capability.
 - Webhooks are authenticated, persisted, deduplicated, normalized, and applied
   under Samra transaction controls.
 - Real vendor traffic, customer data, public deployment, and production claims

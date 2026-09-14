@@ -20,6 +20,11 @@ activated only with an approved Persona sandbox inventory.
 
 The complete Alpha sequence is governed by
 [Alpha platform and vendor boundary](./alpha-platform.md).
+The cross-provider target is governed by
+[provider portability and Samra control-plane ownership](./provider-portability.md).
+The current interface/schema remain Persona-only and allow one case per
+onboarding; they do not yet support a second provider or reverification history.
+See the [dated code audit](../reviews/2026-09-14-provider-portability-code-audit.md).
 
 ## Durable model
 
@@ -47,13 +52,18 @@ decision is recorded as a conflict and restricts onboarding for reviewed
 operations handling. A stale event is retained as ignored evidence and cannot
 move state backward.
 
-## Provider-neutral start contract
+## Provider boundary and current limitation
 
 The API first creates or resumes the Samra case in PostgreSQL. It then calls a
 `CustomerIdentityProvider` using only the Samra case reference and a stable
 provider request key. The provider adapter must make that request idempotent.
 The provider inquiry reference is attached exactly once in a second database
 transaction.
+
+This is a useful adapter seam, not provider neutrality today: the TypeScript
+contract, database constraints, and persistence implementation are Persona-
+specific. A future provider/reverification change needs an additive case-attempt
+and evidence model while retaining the Samra customer ID.
 
 If the process stops between provider creation and attachment, a retry uses the
 same request key. If the provider call fails, the case records a retryable error.
