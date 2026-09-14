@@ -1532,7 +1532,7 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
           (external_ref, customer_id, onboarding_id, wallet_consent_id,
            provider, provider_request_key, creation_command_key, state, asset,
            environment, configuration_version)
-         VALUES ($1, $2, $3, $4, 'crossmint', $5, $6, 'provisioning', 'USDC',
+         VALUES ($1, $2, $3, $4, 'crossmint', $5, $6, 'created', 'USDC',
                  'synthetic', 'crossmint-synthetic-v1')
          RETURNING id`,
         [
@@ -1543,6 +1543,13 @@ for (const releaseProfile of ["alpha-release-1", "synthetic-shared"] as const) {
           randomUUID().replaceAll("-", "").repeat(2),
           randomUUID().replaceAll("-", "").repeat(2),
         ],
+      );
+      await pool.query(
+        `UPDATE samra_core.customer_wallets
+            SET state = 'provisioning', version = version + 1,
+                updated_at = now()
+          WHERE id = $1`,
+        [legacyWallet.rows[0]!.id],
       );
       const providerWalletRef = `synthetic_${randomUUID()}`;
       await pool.query(

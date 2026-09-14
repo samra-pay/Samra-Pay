@@ -823,7 +823,7 @@ test("sandbox PostgreSQL wallet consent, ownership, immutable mapping, retries, 
         }
         await assert.rejects(
           f.store.prepareAuth0Wallet(f.input),
-          /different wallet provisioning disclosure/,
+          /unrecognized wallet provisioning disclosure/,
         );
       },
     );
