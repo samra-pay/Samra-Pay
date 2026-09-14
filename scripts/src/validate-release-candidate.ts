@@ -290,6 +290,28 @@ function validateIsolatedPostgresSuites(workflow: string): void {
     }
   }
 
+  const persistenceServiceStart = workflow.indexOf(
+    "      postgres-persistence:",
+  );
+  const persistenceServiceEnd = workflow.indexOf(
+    "      postgres-http:",
+    persistenceServiceStart,
+  );
+  const persistenceService = workflow.slice(
+    persistenceServiceStart,
+    persistenceServiceEnd,
+  );
+  if (
+    !/^          POSTGRES_DB: samra_test$/mu.test(persistenceService) ||
+    !/--health-cmd "pg_isready [^"]* -d samra_test"/u.test(
+      persistenceService,
+    )
+  ) {
+    throw new Error(
+      "Release persistence service must use the bounded synthetic Test database.",
+    );
+  }
+
   const migrationStep = readWorkflowStep(
     workflow,
     "Apply migrations and prove repeatable seed",
@@ -316,6 +338,11 @@ function validateIsolatedPostgresSuites(workflow: string): void {
   );
 
   const persistenceUrl = readDatabaseUrl(migrationStep);
+  if (decodeURIComponent(new URL(persistenceUrl).pathname) !== "/samra_test") {
+    throw new Error(
+      "Release persistence suites must target the bounded synthetic Test database.",
+    );
+  }
   if (readDatabaseUrl(persistenceStep) !== persistenceUrl) {
     throw new Error(
       "Persistence migrations and tests must use the same disposable database.",
