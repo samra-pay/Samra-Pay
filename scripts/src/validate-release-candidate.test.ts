@@ -87,6 +87,10 @@ const workflow = [
   "severity: HIGH,CRITICAL",
   "timeout-minutes: 120",
   "      postgres-persistence:",
+  "        env:",
+  "          POSTGRES_DB: samra_test",
+  "        options: >-",
+  '          --health-cmd "pg_isready -U p -d samra_test"',
   "      postgres-http:",
   "      postgres-resilience:",
   "      postgres-performance:",
@@ -116,14 +120,14 @@ const workflow = [
   '          test "${RUNTIME_IMAGES_RESULT}" = success',
   "      - name: Apply migrations and prove repeatable seed",
   "        env:",
-  "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/p",
+  "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/samra_test",
   "        run: |",
   "          pnpm --filter @workspace/db run test:migrate",
   "          pnpm --filter @workspace/db run test:seed",
   "          pnpm --filter @workspace/db run test:seed",
   "      - name: Run PostgreSQL persistence and ledger release suite",
   "        env:",
-  "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/p",
+  "          TEST_DATABASE_URL: postgresql://p:p@127.0.0.1:5432/samra_test",
   "        run: pnpm --filter @workspace/api-server run test:postgres:junit",
   "      - name: Run HTTP, daily journey, and process-restart release suite",
   "        env:",
@@ -279,11 +283,36 @@ describe("validateReleaseCandidateContract", () => {
         contract,
         workflow.replace(
           "postgresql://h:h@127.0.0.1:5433/h",
-          "postgresql://p:p@127.0.0.1:5432/p",
+          "postgresql://p:p@127.0.0.1:5432/samra_test",
         ),
         { automatedReports: reports },
       ),
     ).toThrow(/must use isolated database URLs/);
+  });
+
+  it("rejects a persistence fixture outside the bounded synthetic Test database", () => {
+    for (const changed of [
+      workflow.replace(
+        "POSTGRES_DB: samra_test",
+        "POSTGRES_DB: samra_release_persistence",
+      ),
+      workflow.replace(
+        "-d samra_test",
+        "-d samra_release_persistence",
+      ),
+      replaceInStep(
+        workflow,
+        "Apply migrations and prove repeatable seed",
+        "/samra_test",
+        "/samra_release_persistence",
+      ),
+    ]) {
+      expect(() =>
+        validateReleaseCandidateContract(contract, changed, {
+          automatedReports: reports,
+        }),
+      ).toThrow(/synthetic Test database/);
+    }
   });
 
   it("rejects an isolated suite that runs before its database is prepared", () => {
