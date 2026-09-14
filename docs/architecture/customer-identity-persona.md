@@ -78,7 +78,9 @@ data are not sent by this call.
 
 The adapter has a fixed Persona API origin, a ten-second timeout, no redirects,
 and generic provider errors. It rejects a non-sandbox key at startup and cannot
-be selected without Auth0 customer mode and PostgreSQL persistence.
+be selected outside the staging deployment or without Auth0 customer mode and
+PostgreSQL persistence. Selecting any non-fake identity or wallet provider also
+disables the unauthenticated developer routes and internal operations controls.
 
 ## API contract
 
@@ -118,6 +120,7 @@ Samra case before any state transition is allowed.
 
 | Name                                    | Classification | Source when activated                          |
 | --------------------------------------- | -------------- | ---------------------------------------------- |
+| `SAMRA_DEPLOYMENT_ENVIRONMENT`          | non-secret     | exact value `staging`                          |
 | `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | non-secret     | exact value `persona-sandbox`                  |
 | `PERSONA_INQUIRY_TEMPLATE_ID`           | non-secret     | approved Persona sandbox inventory             |
 | `PERSONA_ENVIRONMENT_ID`                | non-secret     | approved Persona sandbox inventory             |

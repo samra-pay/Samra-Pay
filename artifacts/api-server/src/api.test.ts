@@ -118,11 +118,11 @@ test("public waitlist records explicit consent idempotently and rejects extra tr
       website: "",
     };
     const headers = { "Idempotency-Key": "waitlist-command-001" };
-    const accepted = await request(
-      origin,
-      "/api/v1/waitlist/subscriptions",
-      { method: "POST", headers, body: input },
-    );
+    const accepted = await request(origin, "/api/v1/waitlist/subscriptions", {
+      method: "POST",
+      headers,
+      body: input,
+    });
     assert.equal(accepted.status, 202);
     assert.equal(accepted.body["accepted"], true);
     assert.equal(typeof accepted.body["acceptedAt"], "string");
@@ -199,6 +199,14 @@ test("production-style demo mode does not mount dev controls", async () => {
       });
       assert.equal(dev.status, 404);
       assert.equal(dev.body["code"], "NOT_FOUND");
+
+      const identityDecision = await request(
+        origin,
+        "/api/v1/dev/onboarding/identity/not-exposed/decision",
+        { method: "POST", body: { decision: "approved" } },
+      );
+      assert.equal(identityDecision.status, 404);
+      assert.equal(identityDecision.body["code"], "NOT_FOUND");
     },
   );
 });
@@ -1387,9 +1395,11 @@ async function withServer(
   }
 }
 
-
 test("enabled runtime cannot silently fall back to an in-memory ledger", () => {
   for (const persistenceMode of [undefined, "memory"] as const) {
-    assert.throws(() => createApp({ ...demoConfig, persistenceMode }), /requires SAMRA_PERSISTENCE_MODE=postgres/);
+    assert.throws(
+      () => createApp({ ...demoConfig, persistenceMode }),
+      /requires SAMRA_PERSISTENCE_MODE=postgres/,
+    );
   }
 });

@@ -75,12 +75,16 @@ export function loadApiRuntimeConfig(
   const persistenceMode = parsePersistenceMode(
     environment["SAMRA_PERSISTENCE_MODE"],
   );
+  const customerIdentityProviderMode =
+    environment["SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE"] ?? "fake";
+  const customerWalletProviderMode =
+    environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"] ?? "fake";
   const devControlsEnabled =
     releaseProfile === "demo" &&
     backendMode === "demo" &&
     providerMode === "fake" &&
-    environment["SAMRA_CUSTOMER_WALLET_PROVIDER_MODE"] !==
-      "crossmint-sandbox-customer" &&
+    customerIdentityProviderMode === "fake" &&
+    customerWalletProviderMode === "fake" &&
     environment["NODE_ENV"] !== "production";
   const operationsRequested = parseBoolean(
     environment["SAMRA_INTERNAL_OPERATIONS_ENABLED"],
@@ -91,7 +95,7 @@ export function loadApiRuntimeConfig(
     (!devControlsEnabled || persistenceMode !== "postgres")
   ) {
     throw new Error(
-      "SAMRA_INTERNAL_OPERATIONS_ENABLED requires non-production demo/fake mode with PostgreSQL persistence.",
+      "SAMRA_INTERNAL_OPERATIONS_ENABLED requires non-production demo mode with PostgreSQL persistence and fake remittance, identity, and wallet providers.",
     );
   }
   const customerAuth = parseCustomerAuth(
@@ -224,9 +228,13 @@ function parseCustomerIdentityProvider(
       `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE must be "fake" or "persona-sandbox"; received "${mode}". Persona production mode is not implemented.`,
     );
   }
-  if (customerAuth.mode !== "auth0" || persistenceMode !== "postgres") {
+  if (
+    environment["SAMRA_DEPLOYMENT_ENVIRONMENT"] !== "staging" ||
+    customerAuth.mode !== "auth0" ||
+    persistenceMode !== "postgres"
+  ) {
     throw new Error(
-      "SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE=persona-sandbox requires Auth0 customer mode with PostgreSQL persistence.",
+      "SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE=persona-sandbox requires staging with Auth0 customer mode and PostgreSQL persistence.",
     );
   }
 

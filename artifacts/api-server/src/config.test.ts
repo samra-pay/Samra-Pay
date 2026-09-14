@@ -21,6 +21,7 @@ test("internal operations are default-off and require the explicit safe demo bou
 test("Persona sandbox mode is explicit, Auth0-bound, PostgreSQL-backed, and rotation ready", () => {
   const config = loadApiRuntimeConfig({
     NODE_ENV: "production",
+    SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PROVIDER_MODE: "fake",
     SAMRA_PERSISTENCE_MODE: "postgres",
@@ -47,9 +48,41 @@ test("Persona sandbox mode is explicit, Auth0-bound, PostgreSQL-backed, and rota
   });
 });
 
+test("Persona sandbox mode disables developer and internal operations controls", () => {
+  const personaSandbox = {
+    NODE_ENV: "test",
+    SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    SAMRA_BACKEND_MODE: "demo",
+    SAMRA_PROVIDER_MODE: "fake",
+    SAMRA_PERSISTENCE_MODE: "postgres",
+    SAMRA_CUSTOMER_AUTH_MODE: "auth0",
+    AUTH0_ISSUER_BASE_URL: "https://samra-test.us.auth0.com",
+    AUTH0_AUDIENCE: "https://api.samrapay.test",
+    SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "persona-sandbox",
+    PERSONA_API_KEY: "persona_sandbox_test_key_123456789",
+    PERSONA_INQUIRY_TEMPLATE_ID: "itmpl_AbCdEf123456",
+    PERSONA_ENVIRONMENT_ID: "env_AbCdEf123456",
+    PERSONA_WEBHOOK_SECRET: "current_webhook_secret_123456",
+  } as const;
+
+  const config = loadApiRuntimeConfig(personaSandbox);
+  assert.equal(config.devControlsEnabled, false);
+  assert.equal(config.internalOperationsEnabled, false);
+
+  assert.throws(
+    () =>
+      loadApiRuntimeConfig({
+        ...personaSandbox,
+        SAMRA_INTERNAL_OPERATIONS_ENABLED: "true",
+      }),
+    /requires non-production demo mode with PostgreSQL persistence and fake remittance, identity, and wallet providers/,
+  );
+});
+
 test("Persona sandbox mode fails closed on incomplete, production, or unsafe trust configuration", () => {
   const base = {
     NODE_ENV: "production",
+    SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PROVIDER_MODE: "fake",
     SAMRA_PERSISTENCE_MODE: "postgres",
@@ -68,7 +101,15 @@ test("Persona sandbox mode fails closed on incomplete, production, or unsafe tru
         ...base,
         SAMRA_CUSTOMER_AUTH_MODE: "disabled",
       }),
-    /requires Auth0 customer mode with PostgreSQL persistence/,
+    /requires staging with Auth0 customer mode and PostgreSQL persistence/,
+  );
+  assert.throws(
+    () =>
+      loadApiRuntimeConfig({
+        ...base,
+        SAMRA_DEPLOYMENT_ENVIRONMENT: "production",
+      }),
+    /requires staging with Auth0 customer mode and PostgreSQL persistence/,
   );
   assert.throws(
     () =>
@@ -194,7 +235,7 @@ test("internal operations cannot be enabled in memory or production mode", () =>
         SAMRA_PERSISTENCE_MODE: "memory",
         SAMRA_INTERNAL_OPERATIONS_ENABLED: "true",
       }),
-    /requires non-production demo\/fake mode with PostgreSQL persistence/,
+    /requires non-production demo mode with PostgreSQL persistence and fake remittance, identity, and wallet providers/,
   );
   assert.throws(
     () =>
@@ -205,7 +246,7 @@ test("internal operations cannot be enabled in memory or production mode", () =>
         SAMRA_PERSISTENCE_MODE: "postgres",
         SAMRA_INTERNAL_OPERATIONS_ENABLED: "true",
       }),
-    /requires non-production demo\/fake mode with PostgreSQL persistence/,
+    /requires non-production demo mode with PostgreSQL persistence and fake remittance, identity, and wallet providers/,
   );
 });
 

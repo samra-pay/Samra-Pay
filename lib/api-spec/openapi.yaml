@@ -840,7 +840,7 @@ paths:
       operationId: selectDemoTransferScenario
       tags: [demo]
       summary: Select and advance a deterministic fake-provider scenario
-      description: Available only when the backend is explicitly in demo/fake mode.
+      description: Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
       requestBody:
         required: true
         content:
@@ -868,7 +868,7 @@ paths:
       operationId: advanceDemoCustomerIdentity
       tags: [demo]
       summary: Apply a deterministic fake Persona decision
-      description: Available only in non-production demo/fake mode. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
+      description: Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake. It stores digest-only provider evidence and never accepts provider payloads or customer PII.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -898,7 +898,7 @@ paths:
       operationId: runDemoReconciliation
       tags: [demo]
       summary: Run deterministic fake-provider reconciliation
-      description: Available only when the backend is explicitly in demo/fake mode.
+      description: Available only in non-production demo mode when remittance, identity, and wallet provider modes are all explicitly fake.
       requestBody:
         required: false
         content:
