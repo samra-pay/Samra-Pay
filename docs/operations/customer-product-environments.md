@@ -46,9 +46,15 @@ secret inventory, Auth0 application/audience, provider configuration, logs,
 alerts, budget attribution, backup/restore evidence, and rollback target.
 
 Use one reviewed source candidate through promotion. Do not create long-lived
-environment branches. Rebuild the environment-specific web/mobile artifact and
-record its configuration and digest at every promotion. A Test browser result
-does not certify an installed iOS or Android build.
+environment branches. For Dev-to-Test promotion, follow the
+[Dev/Test runbook](../../deploy/gcp/dev-test-runtime.md): after Dev acceptance
+and sealing, copy the same digest-pinned API, customer-web and migration images
+without rebuilding. Supply and verify the reviewed, environment-specific
+customer-web/Auth0 public configuration at runtime.
+
+Build native artifacts for their target environment and record their public
+configuration, source revision and artifact digest. A Test browser result does
+not certify an installed iOS or Android build.
 
 Never copy production customer data or production provider credentials into a
 lower environment. Feature flags are not an isolation boundary. Browser and
