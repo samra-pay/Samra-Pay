@@ -7,7 +7,10 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "test": "NODE_ENV=test node --import tsx --test src/*.test.ts && node --test test/run-with-junit.test.mjs test/crossmint-sandbox-read.test.mjs",
+    "test": "NODE_ENV=test node --import tsx --test src/*.test.ts && node --test test/run-with-junit.test.mjs test/crossmint-sandbox-read.test.mjs test/persona-lab/contract.test.mjs test/persona-lab/cli.test.mjs",
+    "test:personas": "node test/persona-lab/cli.mjs",
+    "test:personas:contracts": "node --test test/persona-lab/contract.test.mjs test/persona-lab/cli.test.mjs",
+    "test:personas:typecheck": "tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop test/persona-lab/runtime.ts test/persona-lab/run.ts test/persona-lab/integration.test.ts",
     "test:postgres": "NODE_ENV=test node --import tsx --test test/postgres.test.ts",
     "test:postgres:junit": "node test/run-with-junit.mjs test-results/postgres-persistence.xml 'PostgreSQL persistence' test/postgres.test.ts",
     "test:ledger-journals": "NODE_ENV=test node --import tsx --test test/ledger-journal-assurance.test.ts",
@@ -47,7 +50,7 @@
     "test:weekly-backup-restore:junit": "node test/run-with-junit.mjs test-results/weekly-backup-restore.xml 'Synthetic PostgreSQL backup and restore' test/weekly-backup-restore.test.ts 'Weekly Backend Resilience'",
     "test:process-restart": "node --test test/process-startup-recovery.test.mjs",
     "test:process-restart:junit": "node test/run-with-junit.mjs test-results/postgres-process-restart.xml 'Compiled PostgreSQL process restart' test/process-startup-recovery.test.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm run test:personas:typecheck"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
