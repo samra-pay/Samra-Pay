@@ -29,7 +29,7 @@ test("packet records source restrictions without claiming cloud readiness", () =
     packet.observedRepositoryControls.apiDeploymentStatus,
     "requires-governed-migration-evidence",
   );
-  assert.equal(packet.observedRepositoryControls.apiWorkerSetting, "true");
+  assert.equal(packet.observedRepositoryControls.apiWorkerSetting, "false");
   assert.equal(
     packet.observedRepositoryControls.bootstrapUsesLatestSecretVersion,
     false,

@@ -7,6 +7,16 @@ type ApplicationLocation = Readonly<{
   baseUrl: string;
 }>;
 
+export type WebDeploymentEnvironment =
+  "dev" | "test" | "staging" | "production";
+
+const AUTH0_AUDIENCE_BY_ENVIRONMENT = Object.freeze({
+  dev: "https://api.samrapay.com/development",
+  test: "https://api.samrapay.com/test",
+  staging: "https://api.staging.samrapay.com",
+  production: "https://api.samrapay.com",
+} satisfies Record<WebDeploymentEnvironment, string>);
+
 export type WebCustomerAuthConfig =
   | Readonly<{ mode: "mock" }>
   | Readonly<{
@@ -15,6 +25,7 @@ export type WebCustomerAuthConfig =
       clientId: string;
       audience: string;
       applicationUri: string;
+      environment: WebDeploymentEnvironment;
     }>;
 
 export function resolveWebCustomerAuthConfig(
@@ -25,8 +36,40 @@ export function resolveWebCustomerAuthConfig(
     stringValue(environment.VITE_SAMRA_DATA_MODE),
     "VITE_SAMRA_DATA_MODE",
   );
+  const applicationUri = buildApplicationUri(location.origin, location.baseUrl);
+  const environmentValue = stringValue(environment.VITE_SAMRA_ENVIRONMENT);
 
-  if (dataMode === "mock") return Object.freeze({ mode: "mock" });
+  if (dataMode === "mock") {
+    if (
+      applicationUri === "https://app.samrapay.com/" ||
+      environmentValue === "production"
+    ) {
+      throw new Error(
+        "The Production customer application cannot run in mock mode",
+      );
+    }
+    if (environmentValue) {
+      assertApplicationEnvironmentBoundary(
+        parseDeploymentEnvironment(environmentValue),
+        applicationUri,
+      );
+    }
+    return Object.freeze({ mode: "mock" });
+  }
+
+  const deploymentEnvironment = parseDeploymentEnvironment(
+    required(environment, "VITE_SAMRA_ENVIRONMENT"),
+  );
+  const audience = parseAudience(
+    required(environment, "VITE_AUTH0_AUDIENCE"),
+    "VITE_AUTH0_AUDIENCE",
+  );
+  if (audience !== AUTH0_AUDIENCE_BY_ENVIRONMENT[deploymentEnvironment]) {
+    throw new Error(
+      `VITE_AUTH0_AUDIENCE must match the ${deploymentEnvironment} Samra API identifier`,
+    );
+  }
+  assertApplicationEnvironmentBoundary(deploymentEnvironment, applicationUri);
 
   return Object.freeze({
     mode: "auth0",
@@ -38,12 +81,50 @@ export function resolveWebCustomerAuthConfig(
       required(environment, "VITE_AUTH0_CLIENT_ID"),
       "VITE_AUTH0_CLIENT_ID",
     ),
-    audience: parseAudience(
-      required(environment, "VITE_AUTH0_AUDIENCE"),
-      "VITE_AUTH0_AUDIENCE",
-    ),
-    applicationUri: buildApplicationUri(location.origin, location.baseUrl),
+    audience,
+    applicationUri,
+    environment: deploymentEnvironment,
   });
+}
+
+function parseDeploymentEnvironment(value: string): WebDeploymentEnvironment {
+  if (
+    value === "dev" ||
+    value === "test" ||
+    value === "staging" ||
+    value === "production"
+  ) {
+    return value;
+  }
+  throw new Error(
+    "VITE_SAMRA_ENVIRONMENT must be dev, test, staging, or production",
+  );
+}
+
+function assertApplicationEnvironmentBoundary(
+  environment: WebDeploymentEnvironment,
+  applicationUri: string,
+): void {
+  const origin = new URL(applicationUri).origin;
+  if (environment === "production") {
+    if (applicationUri !== "https://app.samrapay.com/") {
+      throw new Error(
+        "Production customer authentication is allowed only at https://app.samrapay.com/",
+      );
+    }
+    return;
+  }
+
+  if (
+    origin === "https://samrapay.com" ||
+    origin === "https://www.samrapay.com" ||
+    origin === "https://app.samrapay.com" ||
+    origin === "https://api.samrapay.com"
+  ) {
+    throw new Error(
+      "A non-production customer build cannot use a Samra production origin",
+    );
+  }
 }
 
 export function withApplicationPath(

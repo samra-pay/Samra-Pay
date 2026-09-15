@@ -40,7 +40,10 @@ test("Dev explicitly migrates and seeds before the persistent API starts", () =>
   assert.equal(workflow.match(/"deploy\/dev\/\*\*"/g)?.length, 2);
 });
 test("shared Test is isolated, authenticated, fake-provider only with human acceptance still pending", () => {
-  assert.equal(plan.status, "runtimes-deployed-paused-human-acceptance-pending");
+  assert.equal(
+    plan.status,
+    "runtimes-deployed-paused-human-acceptance-pending",
+  );
   const envs = plan.environments;
   assert.equal(new Set(Object.values(envs).map((e) => e.projectId)).size, 4);
   assert.equal(envs.dev.cloudDatabaseCount, 1);
@@ -56,6 +59,14 @@ test("shared Test is isolated, authenticated, fake-provider only with human acce
     assert.equal(runtime.SAMRA_RELEASE_PROFILE, "synthetic-shared");
     assert.equal(runtime.GOOGLE_CLOUD_PROJECT, `samra-pay-${name}`);
     assert.equal(runtime.SAMRA_DEPLOYMENT_ENVIRONMENT, name);
+    assert.equal(
+      envs[name].web.runtimeEnvironment.SAMRA_PUBLIC_ENVIRONMENT,
+      name,
+    );
+    assert.equal(
+      envs[name].web.runtimeEnvironment.SAMRA_PUBLIC_AUTH0_AUDIENCE,
+      runtime.AUTH0_AUDIENCE,
+    );
   }
   assert.equal(plan.budget.amountUsd, 50);
   assert.equal(plan.budget.hardCap, false);

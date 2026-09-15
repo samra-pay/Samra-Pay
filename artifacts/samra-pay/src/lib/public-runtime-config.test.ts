@@ -8,6 +8,7 @@ describe("public runtime configuration", () => {
       resolveWebPublicEnvironment(
         {
           VITE_SAMRA_DATA_MODE: "api",
+          VITE_SAMRA_ENVIRONMENT: "staging",
           VITE_AUTH0_DOMAIN: "build.example.test",
           PRIVATE_BUILD_VALUE: "never-exported-by-the-server",
         },
@@ -20,6 +21,7 @@ describe("public runtime configuration", () => {
       ),
     ).toEqual({
       VITE_SAMRA_DATA_MODE: "api",
+      VITE_SAMRA_ENVIRONMENT: "staging",
       VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
       VITE_AUTH0_CLIENT_ID: "public-client-id",
       VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",

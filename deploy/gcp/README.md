@@ -804,13 +804,14 @@ static server emits only these allowlisted public runtime values:
 
 ```text
 SAMRA_PUBLIC_DATA_MODE=api
+SAMRA_PUBLIC_ENVIRONMENT=<dev|test|staging|production>
 SAMRA_PUBLIC_AUTH0_DOMAIN=<hostname-only>
 SAMRA_PUBLIC_AUTH0_CLIENT_ID=<public-SPA-client-id>
 SAMRA_PUBLIC_AUTH0_AUDIENCE=<exact-HTTPS-Samra-API-identifier>
 ```
 
 They are not secrets. Omitting any Auth0 value leaves API-mode customer sign-in
-fail-closed. The endpoint is `no-store`, maps only the four reviewed public
+fail-closed. The endpoint is `no-store`, maps only the five reviewed public
 identifiers, and ignores every other process variable. Auth0 identifiers are no
 longer Docker build arguments, so one immutable image can move between reviewed
 environments without a rebuild. Never pass an Auth0 client secret, access token,

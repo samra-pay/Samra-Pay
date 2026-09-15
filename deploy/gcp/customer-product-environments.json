@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-release-authorized",
+  "decisionOwner": "David Haile",
+  "environmentOrder": ["local", "dev", "test", "staging", "production"],
+  "publicSurface": {
+    "marketingOrigin": "https://www.samrapay.com",
+    "customerApplicationOrigin": "https://app.samrapay.com",
+    "productionApiAudience": "https://api.samrapay.com",
+    "marketingRemainsIndependent": true,
+    "marketingReplacementAuthorized": false
+  },
+  "cloudEnvironments": {
+    "dev": {
+      "projectId": "samra-pay-dev",
+      "purpose": "bounded shared integration",
+      "dataClass": "synthetic-only",
+      "providerClass": "fake-only",
+      "apiAudience": "https://api.samrapay.com/development",
+      "mobileApplicationId": "com.samrapay.mobile.dev",
+      "mobileCallbackScheme": "samrapaydevauth"
+    },
+    "test": {
+      "projectId": "samra-pay-test",
+      "purpose": "stable human acceptance",
+      "dataClass": "synthetic-only",
+      "providerClass": "fake-only",
+      "apiAudience": "https://api.samrapay.com/test",
+      "mobileApplicationId": "com.samrapay.mobile.test",
+      "mobileCallbackScheme": "samrapaytestauth"
+    },
+    "staging": {
+      "projectId": "samra-pay-staging",
+      "purpose": "production-like release and sandbox-provider rehearsal",
+      "dataClass": "synthetic-only",
+      "providerClass": "sandbox-only-after-separate-activation",
+      "apiAudience": "https://api.staging.samrapay.com",
+      "mobileApplicationId": "com.samrapay.mobile.staging",
+      "mobileCallbackScheme": "samrapayauth"
+    },
+    "production": {
+      "projectId": "samra-pay-production",
+      "purpose": "separately approved invited-customer service",
+      "dataClass": "customer-data-after-release-approval",
+      "providerClass": "production-only-after-separate-provider-approval",
+      "apiAudience": "https://api.samrapay.com",
+      "mobileApplicationId": "com.samrapay.mobile",
+      "mobileCallbackScheme": "samrapayprodauth"
+    }
+  },
+  "releaseSequence": [
+    {
+      "id": "local",
+      "environment": "local",
+      "requiredEvidence": "automated tests and disposable-database proof"
+    },
+    {
+      "id": "dev-integration",
+      "environment": "dev",
+      "requiredEvidence": "exact-source cloud integration and failure-path proof"
+    },
+    {
+      "id": "test-uat",
+      "environment": "test",
+      "requiredEvidence": "human web and installed-mobile login, onboarding, isolation and recovery proof"
+    },
+    {
+      "id": "staging-rehearsal",
+      "environment": "staging",
+      "requiredEvidence": "immutable release, migration, sandbox-provider, monitoring and rollback proof"
+    },
+    {
+      "id": "production-zero-traffic",
+      "environment": "production",
+      "requiredEvidence": "exact production configuration, migration, security, monitoring and rollback read-back"
+    },
+    {
+      "id": "invited-identity-wallet-alpha",
+      "environment": "production",
+      "requiredEvidence": "one invited customer completes Auth0, Persona and customer-controlled wallet return flow"
+    },
+    {
+      "id": "limited-money-movement-pilot",
+      "environment": "production",
+      "requiredEvidence": "separately approved live funding, FX, payout, limits, ledger and reconciliation proof"
+    },
+    {
+      "id": "wider-production",
+      "environment": "production",
+      "requiredEvidence": "graduated cohort, support, incident, compliance and service-level acceptance"
+    }
+  ],
+  "productionCustomerRelease": {
+    "mobileCodeTargetPrepared": true,
+    "customerDnsChangeAuthorized": false,
+    "customerTrafficAuthorized": false,
+    "liveIdentityProviderActivationAuthorized": false,
+    "liveWalletProviderActivationAuthorized": false,
+    "realMoneyAuthorized": false,
+    "alphaInviteLimit": 100,
+    "alphaCapabilities": ["login", "identity-verification", "wallet-creation"],
+    "alphaExcludedCapabilities": [
+      "funding",
+      "fx-execution",
+      "transfers",
+      "payouts",
+      "cards"
+    ]
+  },
+  "isolationRules": {
+    "oneSourceCandidateAcrossPromotion": true,
+    "longLivedEnvironmentBranchesAllowed": false,
+    "sharedProjectsAcrossCloudEnvironmentsAllowed": false,
+    "sharedDatabasesAcrossCloudEnvironmentsAllowed": false,
+    "sharedServiceIdentitiesAcrossCloudEnvironmentsAllowed": false,
+    "sharedAuth0ApplicationsAcrossStagingAndProductionAllowed": false,
+    "productionDataCopiedDownAllowed": false,
+    "clientSecretsInBrowserOrMobileAllowed": false,
+    "productionProviderCredentialsInNonProductionAllowed": false
+  }
+}

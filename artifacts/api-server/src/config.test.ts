@@ -22,12 +22,13 @@ test("Persona sandbox mode is explicit, Auth0-bound, PostgreSQL-backed, and rota
   const config = loadApiRuntimeConfig({
     NODE_ENV: "production",
     SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PROVIDER_MODE: "fake",
     SAMRA_PERSISTENCE_MODE: "postgres",
     SAMRA_CUSTOMER_AUTH_MODE: "auth0",
     AUTH0_ISSUER_BASE_URL: "https://samra-test.us.auth0.com",
-    AUTH0_AUDIENCE: "https://api.samrapay.test",
+    AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
     SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "persona-sandbox",
     PERSONA_API_KEY: "persona_sandbox_test_key_123456789",
     PERSONA_INQUIRY_TEMPLATE_ID: "itmpl_AbCdEf123456",
@@ -52,12 +53,13 @@ test("Persona sandbox mode disables developer and internal operations controls",
   const personaSandbox = {
     NODE_ENV: "test",
     SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PROVIDER_MODE: "fake",
     SAMRA_PERSISTENCE_MODE: "postgres",
     SAMRA_CUSTOMER_AUTH_MODE: "auth0",
     AUTH0_ISSUER_BASE_URL: "https://samra-test.us.auth0.com",
-    AUTH0_AUDIENCE: "https://api.samrapay.test",
+    AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
     SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "persona-sandbox",
     PERSONA_API_KEY: "persona_sandbox_test_key_123456789",
     PERSONA_INQUIRY_TEMPLATE_ID: "itmpl_AbCdEf123456",
@@ -83,12 +85,13 @@ test("Persona sandbox mode fails closed on incomplete, production, or unsafe tru
   const base = {
     NODE_ENV: "production",
     SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PROVIDER_MODE: "fake",
     SAMRA_PERSISTENCE_MODE: "postgres",
     SAMRA_CUSTOMER_AUTH_MODE: "auth0",
     AUTH0_ISSUER_BASE_URL: "https://samra-test.us.auth0.com",
-    AUTH0_AUDIENCE: "https://api.samrapay.test",
+    AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
     SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "persona-sandbox",
     PERSONA_API_KEY: "persona_sandbox_test_key_123456789",
     PERSONA_INQUIRY_TEMPLATE_ID: "itmpl_AbCdEf123456",
@@ -108,8 +111,9 @@ test("Persona sandbox mode fails closed on incomplete, production, or unsafe tru
       loadApiRuntimeConfig({
         ...base,
         SAMRA_DEPLOYMENT_ENVIRONMENT: "production",
+        GOOGLE_CLOUD_PROJECT: "samra-pay-production",
       }),
-    /requires staging with Auth0 customer mode and PostgreSQL persistence/,
+    /Production customer API remains blocked/,
   );
   assert.throws(
     () =>
@@ -153,6 +157,50 @@ test("Auth0 customer mode is explicit, PostgreSQL-backed, and locked to an exact
     audience: "https://api.samrapay.test",
     tokenSigningAlgorithm: "RS256",
   });
+});
+
+test("deployed customer configuration is bound to one exact GCP project and Auth0 audience", () => {
+  const staging = {
+    NODE_ENV: "production",
+    SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
+    SAMRA_BACKEND_MODE: "demo",
+    SAMRA_PROVIDER_MODE: "fake",
+    SAMRA_PERSISTENCE_MODE: "postgres",
+    SAMRA_CUSTOMER_AUTH_MODE: "auth0",
+    AUTH0_ISSUER_BASE_URL: "https://samra-staging.us.auth0.com",
+    AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+    SAMRA_ALLOWED_ORIGINS: "https://app.staging.samrapay.com",
+  } as const;
+
+  assert.equal(loadApiRuntimeConfig(staging).deploymentEnvironment, "staging");
+  for (const overrides of [
+    { GOOGLE_CLOUD_PROJECT: "samra-pay-test" },
+    { GOOGLE_CLOUD_PROJECT: undefined },
+    { AUTH0_AUDIENCE: "https://api.samrapay.com/test" },
+    { SAMRA_ALLOWED_ORIGINS: "https://app.samrapay.com" },
+  ]) {
+    assert.throws(() => loadApiRuntimeConfig({ ...staging, ...overrides }));
+  }
+
+  assert.throws(
+    () =>
+      loadApiRuntimeConfig({
+        GOOGLE_CLOUD_PROJECT: "samra-pay-production",
+      }),
+    /SAMRA_DEPLOYMENT_ENVIRONMENT is required/,
+  );
+  assert.throws(
+    () =>
+      loadApiRuntimeConfig({
+        ...staging,
+        SAMRA_DEPLOYMENT_ENVIRONMENT: "production",
+        GOOGLE_CLOUD_PROJECT: "samra-pay-production",
+        AUTH0_AUDIENCE: "https://api.samrapay.com",
+        SAMRA_ALLOWED_ORIGINS: "https://app.samrapay.com",
+      }),
+    /Production customer API remains blocked/,
+  );
 });
 
 test("Auth0 customer mode fails closed on unsafe runtime or incomplete trust configuration", () => {

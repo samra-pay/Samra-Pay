@@ -246,6 +246,25 @@ export function loadPublicRuntimeConfig(environment = process.env) {
   if (dataMode !== undefined && dataMode !== "api" && dataMode !== "mock") {
     throw new Error('SAMRA_PUBLIC_DATA_MODE must be "api" or "mock".');
   }
+  const deploymentEnvironment = environment.SAMRA_PUBLIC_ENVIRONMENT?.trim();
+  if (
+    deploymentEnvironment !== undefined &&
+    !["dev", "test", "staging", "production"].includes(deploymentEnvironment)
+  ) {
+    throw new Error(
+      "SAMRA_PUBLIC_ENVIRONMENT must be dev, test, staging, or production.",
+    );
+  }
+  if (dataMode === "api" && !deploymentEnvironment) {
+    throw new Error(
+      "SAMRA_PUBLIC_ENVIRONMENT is required when the customer web uses API mode.",
+    );
+  }
+  if (dataMode !== "api" && deploymentEnvironment === "production") {
+    throw new Error(
+      "The Production customer application cannot run in mock mode.",
+    );
+  }
 
   const auth0 = {
     domain: environment.SAMRA_PUBLIC_AUTH0_DOMAIN?.trim(),
@@ -254,6 +273,11 @@ export function loadPublicRuntimeConfig(environment = process.env) {
   };
   const auth0Values = Object.values(auth0);
   const configuredAuth0Values = auth0Values.filter(Boolean);
+  if (configuredAuth0Values.length > 0 && dataMode !== "api") {
+    throw new Error(
+      "Public Auth0 identifiers are allowed only in customer API mode.",
+    );
+  }
   if (
     configuredAuth0Values.length !== 0 &&
     configuredAuth0Values.length !== auth0Values.length
@@ -271,10 +295,24 @@ export function loadPublicRuntimeConfig(environment = process.env) {
       );
     }
     assertPublicHttpsIdentifier(auth0.audience, "SAMRA_PUBLIC_AUTH0_AUDIENCE");
+    const expectedAudience = {
+      dev: "https://api.samrapay.com/development",
+      test: "https://api.samrapay.com/test",
+      staging: "https://api.staging.samrapay.com",
+      production: "https://api.samrapay.com",
+    }[deploymentEnvironment];
+    if (!expectedAudience || auth0.audience !== expectedAudience) {
+      throw new Error(
+        "SAMRA_PUBLIC_AUTH0_AUDIENCE must match SAMRA_PUBLIC_ENVIRONMENT.",
+      );
+    }
   }
 
   return Object.freeze({
     ...(dataMode ? { VITE_SAMRA_DATA_MODE: dataMode } : {}),
+    ...(deploymentEnvironment
+      ? { VITE_SAMRA_ENVIRONMENT: deploymentEnvironment }
+      : {}),
     ...(auth0.domain
       ? {
           VITE_AUTH0_DOMAIN: auth0.domain,

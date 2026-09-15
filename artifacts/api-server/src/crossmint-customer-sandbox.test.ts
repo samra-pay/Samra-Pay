@@ -157,9 +157,10 @@ test("runtime sandbox mode is opt-in, staging-only, authenticated, persistent, a
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PERSISTENCE_MODE: "postgres",
     SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
     SAMRA_CUSTOMER_AUTH_MODE: "auth0",
     AUTH0_ISSUER_BASE_URL: "https://example.us.auth0.com",
-    AUTH0_AUDIENCE: "https://api.example.test",
+    AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
     SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: config.mode,
     CROSSMINT_SERVER_API_KEY: config.apiKey,
     CROSSMINT_SANDBOX_CUSTOMER_ID: config.allowedCustomerId,
@@ -170,7 +171,10 @@ test("runtime sandbox mode is opt-in, staging-only, authenticated, persistent, a
   assert.equal(loaded.devControlsEnabled, false);
   assert.equal(loaded.runWorker, false);
   for (const override of [
-    { SAMRA_DEPLOYMENT_ENVIRONMENT: "production" },
+    {
+      SAMRA_DEPLOYMENT_ENVIRONMENT: "production",
+      GOOGLE_CLOUD_PROJECT: "samra-pay-production",
+    },
     { SAMRA_CUSTOMER_AUTH_MODE: "disabled" },
     { SAMRA_PERSISTENCE_MODE: "memory" },
     { SAMRA_RUN_WORKER: "true" },

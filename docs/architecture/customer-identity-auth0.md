@@ -62,6 +62,7 @@ The customer web client is independently fail-closed in API mode:
 
 ```text
 VITE_SAMRA_DATA_MODE=api
+VITE_SAMRA_ENVIRONMENT=<dev|test|staging|production>
 VITE_AUTH0_DOMAIN=<tenant-or-custom-domain-hostname>
 VITE_AUTH0_CLIENT_ID=<public-single-page-application-client-id>
 VITE_AUTH0_AUDIENCE=<exact-Samra-API-identifier>
@@ -69,8 +70,9 @@ VITE_AUTH0_AUDIENCE=<exact-Samra-API-identifier>
 
 Local Vite development reads those names directly. The portable Cloud Run
 image does not bake them in. Its static server maps the public-only
-`SAMRA_PUBLIC_AUTH0_DOMAIN`, `SAMRA_PUBLIC_AUTH0_CLIENT_ID`, and
-`SAMRA_PUBLIC_AUTH0_AUDIENCE` runtime values into an allowlisted
+`SAMRA_PUBLIC_ENVIRONMENT`, `SAMRA_PUBLIC_AUTH0_DOMAIN`,
+`SAMRA_PUBLIC_AUTH0_CLIENT_ID`, and `SAMRA_PUBLIC_AUTH0_AUDIENCE` runtime values
+into an allowlisted
 `/samra-runtime-config.js` response before the application loads. No Auth0
 secret or vendor credential is part of that response.
 

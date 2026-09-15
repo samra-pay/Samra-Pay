@@ -127,7 +127,7 @@ case "${TARGET_SERVICE}" in
     RUNTIME_SERVICE_ACCOUNT="${RUNTIME_API}"
     MAX_INSTANCES=2
     CONCURRENCY=10
-    CONFIG_ENVIRONMENT_NAMES="SAMRA_STAGING_AUTH0_ISSUER_BASE_URL,SAMRA_STAGING_AUTH0_AUDIENCE,SAMRA_STAGING_DATABASE_SECRET_VERSION"
+    CONFIG_ENVIRONMENT_NAMES="SAMRA_STAGING_AUTH0_ISSUER_BASE_URL,SAMRA_STAGING_AUTH0_AUDIENCE,SAMRA_STAGING_ALLOWED_ORIGINS,SAMRA_STAGING_DATABASE_SECRET_VERSION"
     ;;
   samra-customer-web)
     RUNTIME_SERVICE_ACCOUNT="${RUNTIME_CUSTOMER_WEB}"
@@ -206,7 +206,17 @@ if [[ "${TARGET_SERVICE}" == "samra-api" ]]; then
     }
   [[ "${SAMRA_STAGING_DATABASE_SECRET_VERSION:-}" =~ ^[1-9][0-9]*$ ]] || { echo "STOP: pinned database secret version is required" >&2; exit 1; }
   [[ "${SAMRA_STAGING_AUTH0_ISSUER_BASE_URL:-}" =~ ^https://[^/]+/?$ ]] || { echo "STOP: approved HTTPS Auth0 issuer is required" >&2; exit 1; }
-  [[ "${SAMRA_STAGING_AUTH0_AUDIENCE:-}" =~ ^https:// ]] || { echo "STOP: approved HTTPS Auth0 audience is required" >&2; exit 1; }
+  [[ "${SAMRA_STAGING_AUTH0_AUDIENCE:-}" == "https://api.staging.samrapay.com" ]] || { echo "STOP: Auth0 audience must match staging" >&2; exit 1; }
+  node -e '
+    const values = (process.argv[1] || "").split(",").map((value) => value.trim()).filter(Boolean);
+    if (values.length !== 1) throw new Error("exactly one allowed browser origin is required");
+    for (const value of values) {
+      const origin = new URL(value);
+      if (origin.protocol !== "https:" || origin.origin !== value || ["samrapay.com", "www.samrapay.com", "app.samrapay.com", "api.samrapay.com"].includes(origin.hostname)) {
+        throw new Error("allowed origins must be exact non-production HTTPS origins");
+      }
+    }
+  ' "${SAMRA_STAGING_ALLOWED_ORIGINS:-}" || { echo "STOP: approved staging browser origins are required" >&2; exit 1; }
   [[ "$(gcloud secrets versions describe "${SAMRA_STAGING_DATABASE_SECRET_VERSION}" --secret=samra-staging-database-url --project="${PROJECT_ID}" --format='value(state)')" == "ENABLED" ]] || {
     echo "STOP: pinned database secret version is not enabled" >&2
     exit 1
@@ -223,7 +233,7 @@ elif [[ "${TARGET_SERVICE}" == "samra-customer-web" ]]; then
   [[ "${SAMRA_STAGING_API_SERVICE_AUDIENCE:-}" == "${SAMRA_STAGING_API_ORIGIN}" ]] || { echo "STOP: API service audience must equal API origin" >&2; exit 1; }
   [[ "${SAMRA_STAGING_AUTH0_DOMAIN:-}" =~ ^[a-zA-Z0-9.-]+$ ]] || { echo "STOP: approved Auth0 domain is required without a URL scheme" >&2; exit 1; }
   [[ -n "${SAMRA_STAGING_AUTH0_CLIENT_ID:-}" ]] || { echo "STOP: approved Auth0 public client ID is required" >&2; exit 1; }
-  [[ "${SAMRA_STAGING_AUTH0_AUDIENCE:-}" =~ ^https:// ]] || { echo "STOP: approved HTTPS Auth0 audience is required" >&2; exit 1; }
+  [[ "${SAMRA_STAGING_AUTH0_AUDIENCE:-}" == "https://api.staging.samrapay.com" ]] || { echo "STOP: Auth0 audience must match staging" >&2; exit 1; }
 fi
 
 service_exists() {
@@ -312,12 +322,12 @@ case "${TARGET_SERVICE}" in
   samra-api)
     gcloud run deploy "${COMMON_ARGS[@]}" \
       --network="${NETWORK}" --subnet="${SUBNET}" --vpc-egress=private-ranges-only \
-      --set-env-vars="NODE_ENV=production,SAMRA_BACKEND_MODE=demo,SAMRA_PROVIDER_MODE=fake,SAMRA_PERSISTENCE_MODE=postgres,SAMRA_RUN_WORKER=true,SAMRA_INTERNAL_OPERATIONS_ENABLED=false,SAMRA_CUSTOMER_AUTH_MODE=auth0,SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE=fake,AUTH0_ISSUER_BASE_URL=${SAMRA_STAGING_AUTH0_ISSUER_BASE_URL},AUTH0_AUDIENCE=${SAMRA_STAGING_AUTH0_AUDIENCE}" \
+      --set-env-vars="NODE_ENV=production,SAMRA_RELEASE_PROFILE=alpha-release-1,SAMRA_DEPLOYMENT_ENVIRONMENT=staging,GOOGLE_CLOUD_PROJECT=samra-pay-staging,SAMRA_BACKEND_MODE=demo,SAMRA_PROVIDER_MODE=fake,SAMRA_PERSISTENCE_MODE=postgres,SAMRA_RUN_WORKER=false,SAMRA_INTERNAL_OPERATIONS_ENABLED=false,SAMRA_CUSTOMER_AUTH_MODE=auth0,SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE=fake,SAMRA_CUSTOMER_WALLET_PROVIDER_MODE=fake,AUTH0_ISSUER_BASE_URL=${SAMRA_STAGING_AUTH0_ISSUER_BASE_URL},AUTH0_AUDIENCE=${SAMRA_STAGING_AUTH0_AUDIENCE},SAMRA_ALLOWED_ORIGINS=${SAMRA_STAGING_ALLOWED_ORIGINS}" \
       --set-secrets="DATABASE_URL=samra-staging-database-url:${SAMRA_STAGING_DATABASE_SECRET_VERSION}"
     ;;
   samra-customer-web)
     gcloud run deploy "${COMMON_ARGS[@]}" \
-      --set-env-vars="NODE_ENV=production,SAMRA_API_ORIGIN=${SAMRA_STAGING_API_ORIGIN},SAMRA_API_SERVICE_AUTH_MODE=cloud-run-iam,SAMRA_API_SERVICE_AUDIENCE=${SAMRA_STAGING_API_SERVICE_AUDIENCE},SAMRA_PUBLIC_DATA_MODE=api,SAMRA_PUBLIC_AUTH0_DOMAIN=${SAMRA_STAGING_AUTH0_DOMAIN},SAMRA_PUBLIC_AUTH0_CLIENT_ID=${SAMRA_STAGING_AUTH0_CLIENT_ID},SAMRA_PUBLIC_AUTH0_AUDIENCE=${SAMRA_STAGING_AUTH0_AUDIENCE}"
+      --set-env-vars="NODE_ENV=production,SAMRA_API_ORIGIN=${SAMRA_STAGING_API_ORIGIN},SAMRA_API_SERVICE_AUTH_MODE=cloud-run-iam,SAMRA_API_SERVICE_AUDIENCE=${SAMRA_STAGING_API_SERVICE_AUDIENCE},SAMRA_PUBLIC_DATA_MODE=api,SAMRA_PUBLIC_ENVIRONMENT=staging,SAMRA_PUBLIC_AUTH0_DOMAIN=${SAMRA_STAGING_AUTH0_DOMAIN},SAMRA_PUBLIC_AUTH0_CLIENT_ID=${SAMRA_STAGING_AUTH0_CLIENT_ID},SAMRA_PUBLIC_AUTH0_AUDIENCE=${SAMRA_STAGING_AUTH0_AUDIENCE}"
     ;;
   samra-design-system-preview)
     gcloud run deploy "${COMMON_ARGS[@]}" --set-env-vars="NODE_ENV=production"

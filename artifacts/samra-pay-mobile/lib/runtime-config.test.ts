@@ -110,6 +110,37 @@ describe("mobile runtime configuration", () => {
     ).toThrow(/AUTH0_CLIENT_ID/);
   });
 
+  it("rejects cross-environment audiences and locks Production to the customer edge", () => {
+    expect(() =>
+      loadMobileRuntimeConfig({
+        ...AUTH0_API_ENVIRONMENT,
+        EXPO_PUBLIC_SAMRA_ENVIRONMENT: "test",
+      }),
+    ).toThrow(/test Samra API identifier/);
+
+    const production = {
+      ...AUTH0_API_ENVIRONMENT,
+      EXPO_PUBLIC_SAMRA_ENVIRONMENT: "production",
+      EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://app.samrapay.com",
+      EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.samrapay.com",
+    };
+    expect(loadMobileRuntimeConfig(production)).toMatchObject({
+      dataMode: "api",
+      apiOrigin: "https://app.samrapay.com",
+      auth: {
+        mode: "auth0-native",
+        audience: "https://api.samrapay.com",
+        customScheme: "samrapayprodauth",
+      },
+    });
+    expect(() =>
+      loadMobileRuntimeConfig({
+        ...production,
+        EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.samrapay.com",
+      }),
+    ).toThrow(/through https:\/\/app\.samrapay\.com/);
+  });
+
   it("rejects Auth0 values in synthetic mode", () => {
     expect(() =>
       loadMobileRuntimeConfig({

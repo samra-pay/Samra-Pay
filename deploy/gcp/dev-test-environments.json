@@ -3,9 +3,7 @@
   "status": "runtimes-deployed-paused-human-acceptance-pending",
   "sourceBaseline": "1c2d6853385c7cda3dea94e4131b0233c53f7c35",
   "owner": "David Haile",
-  "approvedAdministrativePrincipals": [
-    "user:me@davidhaile.com"
-  ],
+  "approvedAdministrativePrincipals": ["user:me@davidhaile.com"],
   "organizationIdFromExistingFoundation": "614833350075",
   "currentOrganizationId": "993968777863",
   "organizationReadback": "docs/operations/evidence/2026-09-10-dev-test-handoff-readback.json",
@@ -99,6 +97,7 @@
         "browserIngressDecision": "public-login-shell-private-api-auth0-protected-data",
         "runtimeEnvironment": {
           "SAMRA_PUBLIC_DATA_MODE": "api",
+          "SAMRA_PUBLIC_ENVIRONMENT": "dev",
           "SAMRA_PUBLIC_AUTH0_DOMAIN": "dev-40h1kaj5488jqctu.us.auth0.com",
           "SAMRA_PUBLIC_AUTH0_CLIENT_ID": "1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0",
           "SAMRA_PUBLIC_AUTH0_AUDIENCE": "https://api.samrapay.com/development"
@@ -258,6 +257,7 @@
         "browserIngressDecision": "public-login-shell-private-api-auth0-protected-data",
         "runtimeEnvironment": {
           "SAMRA_PUBLIC_DATA_MODE": "api",
+          "SAMRA_PUBLIC_ENVIRONMENT": "test",
           "SAMRA_PUBLIC_AUTH0_DOMAIN": "dev-40h1kaj5488jqctu.us.auth0.com",
           "SAMRA_PUBLIC_AUTH0_CLIENT_ID": "QA8sB8K21gjV7lSo5LbqOXE6vyiQ3Cx3",
           "SAMRA_PUBLIC_AUTH0_AUDIENCE": "https://api.samrapay.com/test"

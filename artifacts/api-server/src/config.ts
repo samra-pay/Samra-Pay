@@ -3,6 +3,21 @@ import { isIP } from "node:net";
 export type BackendMode = "disabled" | "demo";
 export type ProviderMode = "fake";
 export type PersistenceMode = "memory" | "postgres";
+export type DeploymentEnvironment = "dev" | "test" | "staging" | "production";
+
+const PROJECT_BY_DEPLOYMENT_ENVIRONMENT = Object.freeze({
+  dev: "samra-pay-dev",
+  test: "samra-pay-test",
+  staging: "samra-pay-staging",
+  production: "samra-pay-production",
+} satisfies Record<DeploymentEnvironment, string>);
+
+const AUTH0_AUDIENCE_BY_DEPLOYMENT_ENVIRONMENT = Object.freeze({
+  dev: "https://api.samrapay.com/development",
+  test: "https://api.samrapay.com/test",
+  staging: "https://api.staging.samrapay.com",
+  production: "https://api.samrapay.com",
+} satisfies Record<DeploymentEnvironment, string>);
 export type CustomerWalletProviderConfig =
   | Readonly<{ mode: "fake" }>
   | Readonly<{
@@ -31,6 +46,7 @@ export type CustomerIdentityProviderConfig =
     }>;
 
 export type ApiRuntimeConfig = Readonly<{
+  deploymentEnvironment?: DeploymentEnvironment;
   releaseProfile?: "demo" | "alpha-release-1" | "synthetic-shared";
   allowedOrigins?: readonly string[];
   trustedProxies?: false | readonly string[];
@@ -49,6 +65,10 @@ export type ApiRuntimeConfig = Readonly<{
 export function loadApiRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): ApiRuntimeConfig {
+  const deploymentEnvironment = parseDeploymentEnvironment(
+    environment["SAMRA_DEPLOYMENT_ENVIRONMENT"],
+  );
+  validateCloudProjectBoundary(environment, deploymentEnvironment);
   const releaseProfile = environment["SAMRA_RELEASE_PROFILE"] ?? "demo";
   if (
     releaseProfile !== "demo" &&
@@ -103,6 +123,12 @@ export function loadApiRuntimeConfig(
     backendMode,
     persistenceMode,
   );
+  validateCustomerEnvironmentBoundary(
+    deploymentEnvironment,
+    customerAuth,
+    allowedOrigins,
+    backendMode,
+  );
   if (
     releaseProfile === "alpha-release-1" &&
     (backendMode !== "demo" ||
@@ -141,6 +167,7 @@ export function loadApiRuntimeConfig(
     persistenceMode,
   );
   return Object.freeze({
+    deploymentEnvironment,
     releaseProfile,
     allowedOrigins,
     trustedProxies,
@@ -159,6 +186,94 @@ export function loadApiRuntimeConfig(
       persistenceMode,
     ),
   });
+}
+
+function parseDeploymentEnvironment(
+  value: string | undefined,
+): DeploymentEnvironment | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (
+    value === "dev" ||
+    value === "test" ||
+    value === "staging" ||
+    value === "production"
+  ) {
+    return value;
+  }
+  throw new Error(
+    "SAMRA_DEPLOYMENT_ENVIRONMENT must be dev, test, staging, or production.",
+  );
+}
+
+function validateCloudProjectBoundary(
+  environment: NodeJS.ProcessEnv,
+  deploymentEnvironment: DeploymentEnvironment | undefined,
+): void {
+  const cloudProject = environment["GOOGLE_CLOUD_PROJECT"]?.trim();
+  const isSamraProject = Object.values(
+    PROJECT_BY_DEPLOYMENT_ENVIRONMENT,
+  ).includes(cloudProject ?? "");
+
+  if (!deploymentEnvironment) {
+    if (isSamraProject) {
+      throw new Error(
+        "SAMRA_DEPLOYMENT_ENVIRONMENT is required inside a Samra GCP project.",
+      );
+    }
+    return;
+  }
+
+  const expectedProject =
+    PROJECT_BY_DEPLOYMENT_ENVIRONMENT[deploymentEnvironment];
+  if (cloudProject !== expectedProject) {
+    throw new Error(
+      `SAMRA_DEPLOYMENT_ENVIRONMENT=${deploymentEnvironment} requires GOOGLE_CLOUD_PROJECT=${expectedProject}.`,
+    );
+  }
+}
+
+function validateCustomerEnvironmentBoundary(
+  deploymentEnvironment: DeploymentEnvironment | undefined,
+  customerAuth: CustomerAuthConfig,
+  allowedOrigins: readonly string[],
+  backendMode: BackendMode,
+): void {
+  if (!deploymentEnvironment) return;
+
+  if (
+    deploymentEnvironment === "production" &&
+    (backendMode !== "disabled" || customerAuth.mode !== "disabled")
+  ) {
+    throw new Error(
+      "The Production customer API remains blocked until reviewed production identity, KYC, wallet, and financial provider modes are implemented.",
+    );
+  }
+
+  if (customerAuth.mode === "auth0") {
+    const expectedAudience =
+      AUTH0_AUDIENCE_BY_DEPLOYMENT_ENVIRONMENT[deploymentEnvironment];
+    if (customerAuth.audience !== expectedAudience) {
+      throw new Error(
+        `AUTH0_AUDIENCE must match the ${deploymentEnvironment} Samra API identifier.`,
+      );
+    }
+  }
+
+  if (
+    deploymentEnvironment !== "production" &&
+    allowedOrigins.some((origin) =>
+      [
+        "https://samrapay.com",
+        "https://www.samrapay.com",
+        "https://app.samrapay.com",
+        "https://api.samrapay.com",
+      ].includes(origin),
+    )
+  ) {
+    throw new Error(
+      "A non-production API cannot allow a Samra production origin.",
+    );
+  }
 }
 
 function parseCustomerWalletProvider(

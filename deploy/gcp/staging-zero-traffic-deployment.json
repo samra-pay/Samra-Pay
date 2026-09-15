@@ -141,6 +141,7 @@
       "requiredRuntimeEnvironment": [
         "SAMRA_STAGING_AUTH0_ISSUER_BASE_URL",
         "SAMRA_STAGING_AUTH0_AUDIENCE",
+        "SAMRA_STAGING_ALLOWED_ORIGINS",
         "SAMRA_STAGING_DATABASE_SECRET_VERSION"
       ]
     },

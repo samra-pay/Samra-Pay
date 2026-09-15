@@ -78,6 +78,13 @@ and [operational readiness](operations/operational-readiness.md) remain mandator
 This process authorizes no production funds, provider activation, or customer
 rollout merely because code, a build, or a Test session passed.
 
+The [customer product environment contract](operations/customer-product-environments.md)
+extends the four deployment targets into the controlled Production sequence:
+zero traffic, invited identity-and-wallet Alpha, a separately approved
+money-movement pilot, then wider production. `www.samrapay.com` remains the
+independent public site throughout that sequence; the customer application is
+released separately at `app.samrapay.com`.
+
 ## September 10 local runtime proof
 
 The existing local Compose stack was built from protected main and started on

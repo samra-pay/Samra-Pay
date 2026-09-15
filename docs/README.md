@@ -187,6 +187,7 @@ a separate prerequisite; scenarios and templates are not executed user evidence.
 
 ### Cloud and delivery
 
+- [Customer product environments and release sequence](operations/customer-product-environments.md)
 - [Terraform adoption, state protection and security acceptance](../deploy/gcp/terraform/README.md) — prepared; live plan and state bootstrap pending.
 
 - [Google Cloud foundation and cutover](../deploy/gcp/README.md)

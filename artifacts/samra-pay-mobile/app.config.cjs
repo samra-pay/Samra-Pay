@@ -3,6 +3,7 @@ const nativeEnvironments = require("./native-environments.json");
 
 const AUTH0_CUSTOM_SCHEME = "samrapayauth";
 const NATIVE_APPLICATION_ID = "com.samrapay.mobile.staging";
+const SUPPORTED_NATIVE_TARGETS = Object.freeze(Object.keys(nativeEnvironments));
 
 function resolveExpoConfig(environment = process.env) {
   const mode = environment.EXPO_PUBLIC_SAMRA_AUTH_MODE || "disabled";
@@ -10,10 +11,28 @@ function resolveExpoConfig(environment = process.env) {
   const target = environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT || "staging";
   if (!Object.hasOwn(nativeEnvironments, target)) {
     throw new Error(
-      "EXPO_PUBLIC_SAMRA_ENVIRONMENT must be dev, test, or staging.",
+      `EXPO_PUBLIC_SAMRA_ENVIRONMENT must be ${SUPPORTED_NATIVE_TARGETS.join(", ")}.`,
     );
   }
   const native = nativeEnvironments[target];
+
+  if (
+    target === "production" &&
+    (mode !== "auth0-native" ||
+      environment.EXPO_PUBLIC_SAMRA_DATA_MODE !== "api")
+  ) {
+    throw new Error(
+      "Production mobile builds require API data mode and native Auth0.",
+    );
+  }
+  if (
+    target === "production" &&
+    environment.EXPO_PUBLIC_SAMRA_API_ORIGIN !== native.customerWebOrigin
+  ) {
+    throw new Error(
+      `Production mobile builds require EXPO_PUBLIC_SAMRA_API_ORIGIN=${native.customerWebOrigin}.`,
+    );
+  }
   if (mode === "auth0-native" || environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT) {
     expo.name = native.name;
     expo.ios = { ...expo.ios, bundleIdentifier: native.applicationId };
@@ -67,6 +86,11 @@ function resolveExpoConfig(environment = process.env) {
   } catch {
     throw new Error(
       "EXPO_PUBLIC_AUTH0_AUDIENCE must be the exact HTTPS Samra API identifier.",
+    );
+  }
+  if (audience !== native.apiAudience) {
+    throw new Error(
+      `EXPO_PUBLIC_AUTH0_AUDIENCE must match the ${target} Samra API identifier.`,
     );
   }
 

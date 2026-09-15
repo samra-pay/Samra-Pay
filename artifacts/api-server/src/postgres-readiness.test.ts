@@ -78,7 +78,10 @@ test("fake-provider shared Dev/Test rejects schema through 0020 and accepts curr
       SAMRA_PERSISTENCE_MODE: "postgres",
       SAMRA_CUSTOMER_AUTH_MODE: "auth0",
       AUTH0_ISSUER_BASE_URL: `https://auth.${deployment}.example.test`,
-      AUTH0_AUDIENCE: `https://api.${deployment}.example.test`,
+      AUTH0_AUDIENCE:
+        deployment === "dev"
+          ? "https://api.samrapay.com/development"
+          : "https://api.samrapay.com/test",
       SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
       SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: "fake",
       SAMRA_RUN_WORKER: "true",

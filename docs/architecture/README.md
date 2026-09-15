@@ -83,9 +83,11 @@ Funding, Ethiopia payout, and production financial capability remain blocked.
 | `SAMRA_CUSTOMER_AUTH_MODE`              | `disabled`, `auth0`                    | `disabled` | Enables exact-issuer Auth0 access tokens                                                  |
 | `SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE` | `fake`, `persona-sandbox`              | `fake`     | Selects the credential-gated KYC adapter                                                  |
 | `VITE_SAMRA_DATA_MODE`                  | `mock`, `api`                          | `mock`     | Selects customer-web data source                                                          |
+| `VITE_SAMRA_ENVIRONMENT`                | `dev`, `test`, `staging`, `production` | none       | Locks customer-web origin and Auth0 audience to one environment                           |
 | `VITE_AUTH0_DOMAIN`                     | Auth0 tenant or custom-domain hostname | none       | Required with customer-web API mode; hostname only                                        |
 | `VITE_AUTH0_CLIENT_ID`                  | Public Auth0 SPA client ID             | none       | Required with customer-web API mode; never a client secret                                |
 | `VITE_AUTH0_AUDIENCE`                   | Exact HTTPS Samra API identifier       | none       | Required with customer-web API mode and must match the API audience                       |
+| `SAMRA_PUBLIC_ENVIRONMENT`              | `dev`, `test`, `staging`, `production` | none       | Cloud Run public runtime mapping to `VITE_SAMRA_ENVIRONMENT`                              |
 | `SAMRA_PUBLIC_AUTH0_DOMAIN`             | Auth0 tenant or custom-domain hostname | none       | Cloud Run public runtime mapping to `VITE_AUTH0_DOMAIN`                                   |
 | `SAMRA_PUBLIC_AUTH0_CLIENT_ID`          | Public Auth0 SPA client ID             | none       | Cloud Run public runtime mapping; never a client secret                                   |
 | `SAMRA_PUBLIC_AUTH0_AUDIENCE`           | Exact HTTPS Samra API identifier       | none       | Cloud Run public runtime mapping to the same API audience                                 |
