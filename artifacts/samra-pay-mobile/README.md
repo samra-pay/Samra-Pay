@@ -36,18 +36,19 @@ Tester passwords, recovery and consent remain under each tester's control.
 
 ### Native environment selection
 
-| Environment         | Application ID (iOS and Android) | Auth0 callback scheme |
-| ------------------- | -------------------------------- | --------------------- |
-| `dev`               | `com.samrapay.mobile.dev`        | `samrapaydevauth`     |
-| `test`              | `com.samrapay.mobile.test`       | `samrapaytestauth`    |
-| `staging` (default) | `com.samrapay.mobile.staging`    | `samrapayauth`        |
+| Environment         | Application ID (iOS and Android) | Auth0 callback scheme | API audience                           |
+| ------------------- | -------------------------------- | --------------------- | -------------------------------------- |
+| `dev`               | `com.samrapay.mobile.dev`        | `samrapaydevauth`     | `https://api.samrapay.com/development` |
+| `test`              | `com.samrapay.mobile.test`       | `samrapaytestauth`    | `https://api.samrapay.com/test`        |
+| `staging` (default) | `com.samrapay.mobile.staging`    | `samrapayauth`        | `https://api.staging.samrapay.com`     |
+| `production`        | `com.samrapay.mobile`            | `samrapayprodauth`    | `https://api.samrapay.com`             |
 
 The saved Dev/Test tenant is `dev-40h1kaj5488jqctu.us.auth0.com`:
 
-| Environment | Public Native client ID | Samra API audience | Login connections |
-| --- | --- | --- | --- |
-| `dev` | `NbcuUH99abGjdE7gkKBY9wjfniE8e4r9` | `https://api.samrapay.com/development` | Password and Google |
-| `test` | `dFM0ZxzcQoQ6Ppj7KrgOxx70M9KSkk5K` | `https://api.samrapay.com/test` | Password only |
+| Environment | Public Native client ID            | Samra API audience                     | Login connections   |
+| ----------- | ---------------------------------- | -------------------------------------- | ------------------- |
+| `dev`       | `NbcuUH99abGjdE7gkKBY9wjfniE8e4r9` | `https://api.samrapay.com/development` | Password and Google |
+| `test`      | `dFM0ZxzcQoQ6Ppj7KrgOxx70M9KSkk5K` | `https://api.samrapay.com/test`        | Password only       |
 
 Each client has a user-delegated grant only for its matching Samra API, no
 machine grant, and Authorization Code as its only enabled grant type. The
@@ -57,11 +58,13 @@ remain required. No staging client was created by this change; the reused Dev
 client no longer accepts the old staging callback URLs.
 
 `native-environments.json` is shared by Expo build configuration and the runtime
-adapter so their callback schemes cannot diverge. `app.config.js` is the Expo 54
-discovery entry point for the existing CommonJS implementation. A `.cjs` file
-alone is not discovered by that SDK. Unknown targets, including production, fail
-closed. With no explicit target and disabled auth, the existing mock preview is
-unchanged. Dev/Test apps can be installed alongside staging.
+adapter so their callback schemes and API audiences cannot diverge.
+`app.config.js` is the Expo 54 discovery entry point for the existing CommonJS
+implementation. A `.cjs` file alone is not discovered by that SDK. Unknown
+targets fail closed. Production additionally fails closed unless API mode,
+native Auth0, the Production audience, and `https://app.samrapay.com` are exact.
+With no explicit target and disabled auth, the existing mock preview is
+unchanged. Dev, Test, Staging, and Production apps can be installed separately.
 
 Build a local Dev mock preview after installing the matching Xcode platform:
 
@@ -82,32 +85,55 @@ logout URLs for the selected scheme, domain and application ID:
 ```
 
 Mock preview success is separate from authenticated shared Test acceptance.
-Never promote a bundle compiled for Dev into Test or staging without rebuilding
+Never promote a bundle compiled for Dev into Test, Staging, or Production without rebuilding
 and recording its public configuration and exact source revision.
 
 ## Public build configuration
 
-| Variable                        | Required               | Meaning                                   |
-| ------------------------------- | ---------------------- | ----------------------------------------- |
-| `EXPO_PUBLIC_SAMRA_ENVIRONMENT` | No                     | `dev`, `test`, or `staging` (default)     |
-| `EXPO_PUBLIC_SAMRA_DATA_MODE`   | No                     | `mock` (default) or `api`                 |
-| `EXPO_PUBLIC_SAMRA_API_ORIGIN`  | In API mode            | Exact public API origin, normally HTTPS   |
-| `EXPO_PUBLIC_SAMRA_AUTH_MODE`   | In API mode            | `disabled` (default) or `auth0-native`    |
-| `EXPO_PUBLIC_AUTH0_DOMAIN`      | In `auth0-native` mode | Auth0 tenant/custom-domain hostname only  |
-| `EXPO_PUBLIC_AUTH0_CLIENT_ID`   | In `auth0-native` mode | Public Auth0 Native Application client ID |
-| `EXPO_PUBLIC_AUTH0_AUDIENCE`    | In `auth0-native` mode | Exact HTTPS Samra API identifier          |
+| Variable                        | Required               | Meaning                                             |
+| ------------------------------- | ---------------------- | --------------------------------------------------- |
+| `EXPO_PUBLIC_SAMRA_ENVIRONMENT` | No                     | `dev`, `test`, `staging` (default), or `production` |
+| `EXPO_PUBLIC_SAMRA_DATA_MODE`   | No                     | `mock` (default) or `api`                           |
+| `EXPO_PUBLIC_SAMRA_API_ORIGIN`  | In API mode            | Exact public API origin, normally HTTPS             |
+| `EXPO_PUBLIC_SAMRA_AUTH_MODE`   | In API mode            | `disabled` (default) or `auth0-native`              |
+| `EXPO_PUBLIC_AUTH0_DOMAIN`      | In `auth0-native` mode | Auth0 tenant/custom-domain hostname only            |
+| `EXPO_PUBLIC_AUTH0_CLIENT_ID`   | In `auth0-native` mode | Public Auth0 Native Application client ID           |
+| `EXPO_PUBLIC_AUTH0_AUDIENCE`    | In `auth0-native` mode | Exact HTTPS Samra API identifier                    |
 
-Example controlled staging bundle:
+Example controlled Staging native-configuration check:
 
 ```sh
+EXPO_PUBLIC_SAMRA_ENVIRONMENT=staging \
 EXPO_PUBLIC_SAMRA_DATA_MODE=api \
 EXPO_PUBLIC_SAMRA_API_ORIGIN=https://samra-customer-web.example.run.app \
 EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native \
 EXPO_PUBLIC_AUTH0_DOMAIN=samra-staging.us.auth0.com \
 EXPO_PUBLIC_AUTH0_CLIENT_ID=<public-native-client-id> \
 EXPO_PUBLIC_AUTH0_AUDIENCE=https://api.staging.samrapay.com \
-pnpm --filter @workspace/samra-pay-mobile run build
+pnpm --filter @workspace/samra-pay-mobile exec expo config --type public
 ```
+
+The Production target is a compile-time safety boundary, not an authorized
+distribution. It cannot build a mock or unauthenticated customer app and accepts
+only the Production customer-web origin and API audience:
+
+```sh
+EXPO_PUBLIC_SAMRA_ENVIRONMENT=production \
+EXPO_PUBLIC_SAMRA_DATA_MODE=api \
+EXPO_PUBLIC_SAMRA_API_ORIGIN=https://app.samrapay.com \
+EXPO_PUBLIC_SAMRA_AUTH_MODE=auth0-native \
+EXPO_PUBLIC_AUTH0_DOMAIN=<approved-production-auth0-domain> \
+EXPO_PUBLIC_AUTH0_CLIENT_ID=<approved-public-production-native-client-id> \
+EXPO_PUBLIC_AUTH0_AUDIENCE=https://api.samrapay.com \
+pnpm --filter @workspace/samra-pay-mobile exec expo config --type public
+```
+
+That command validates the generated public Expo configuration; it does not
+compile, sign, distribute, or install a native application. Do not start a
+Production native build or distribution until the Production Native
+Application, callback/logout inventory, customer-web/API DNS, exact backend
+revision, provider gates, app-store records, privacy declarations, and installed
+one-user acceptance are separately approved and read back.
 
 For an installed Test client, use the verified public configuration below after
 the Xcode platform is available and the Test runtime owner opens a bounded
@@ -138,7 +164,7 @@ variable. The API origin must never contain credentials, paths, queries, or
 fragments. Remote HTTP origins are rejected; HTTP loopback is allowed only for
 local development.
 
-Changing either value requires a new bundle or a restarted Expo development
+Changing any public build value requires a new bundle or a restarted Expo development
 server. Mock mode clears the API base URL. API mode without a valid origin fails
 at startup and never falls back to local financial fixtures.
 

@@ -171,7 +171,7 @@ function resolveMobileAuthConfig(
   const target = environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT || "staging";
   if (!Object.hasOwn(nativeEnvironments, target)) {
     throw new Error(
-      "EXPO_PUBLIC_SAMRA_ENVIRONMENT must be dev, test, or staging.",
+      `EXPO_PUBLIC_SAMRA_ENVIRONMENT must be ${Object.keys(nativeEnvironments).join(", ")}.`,
     );
   }
   const native = nativeEnvironments[target as keyof typeof nativeEnvironments];
@@ -201,11 +201,18 @@ function resolveMobileAuthConfig(
     throw new Error("Native Auth0 is allowed only in mobile API mode.");
   }
 
+  const audience = parseAuth0Audience(environment.EXPO_PUBLIC_AUTH0_AUDIENCE);
+  if (audience !== native.apiAudience) {
+    throw new Error(
+      `EXPO_PUBLIC_AUTH0_AUDIENCE must match the ${target} Samra API identifier.`,
+    );
+  }
+
   return Object.freeze({
     mode,
     domain: parseAuth0Domain(environment.EXPO_PUBLIC_AUTH0_DOMAIN),
     clientId: parseAuth0ClientId(environment.EXPO_PUBLIC_AUTH0_CLIENT_ID),
-    audience: parseAuth0Audience(environment.EXPO_PUBLIC_AUTH0_AUDIENCE),
+    audience,
     customScheme: native.customScheme,
   });
 }
@@ -215,10 +222,21 @@ export function loadMobileRuntimeConfig(
 ): MobileRuntimeConfig {
   const dataMode = parseDataMode(environment.EXPO_PUBLIC_SAMRA_DATA_MODE);
   const apiOrigin = parseApiOrigin(environment.EXPO_PUBLIC_SAMRA_API_ORIGIN);
+  const target = environment.EXPO_PUBLIC_SAMRA_ENVIRONMENT || "staging";
 
   if (dataMode === "api" && apiOrigin === null) {
     throw new Error(
       "EXPO_PUBLIC_SAMRA_API_ORIGIN is required when mobile API mode is enabled.",
+    );
+  }
+
+  if (
+    target === "production" &&
+    (dataMode !== "api" ||
+      apiOrigin !== nativeEnvironments.production.customerWebOrigin)
+  ) {
+    throw new Error(
+      `Production mobile runtime requires API mode through ${nativeEnvironments.production.customerWebOrigin}.`,
     );
   }
 

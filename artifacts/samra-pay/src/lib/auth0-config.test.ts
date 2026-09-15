@@ -8,6 +8,7 @@ import {
 
 const validEnvironment = Object.freeze({
   VITE_SAMRA_DATA_MODE: "api",
+  VITE_SAMRA_ENVIRONMENT: "staging",
   VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
   VITE_AUTH0_CLIENT_ID: "public-client-id",
   VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
@@ -35,6 +36,7 @@ describe("web Auth0 configuration", () => {
       clientId: "public-client-id",
       audience: "https://api.staging.samrapay.com",
       applicationUri: "https://staging.samrapay.com/",
+      environment: "staging",
     });
   });
 
@@ -96,5 +98,71 @@ describe("web Auth0 configuration", () => {
       "/samra-pay/",
     );
     expect(resolveAuth0ReturnTo("/admin", applicationUri)).toBe("/samra-pay/");
+  });
+
+  it("binds Auth0 audiences and customer origins to one exact environment", () => {
+    expect(() =>
+      resolveWebCustomerAuthConfig(
+        {
+          ...validEnvironment,
+          VITE_SAMRA_ENVIRONMENT: "test",
+        },
+        { origin: "https://test.example.com", baseUrl: "/" },
+      ),
+    ).toThrow(/test Samra API identifier/);
+
+    expect(
+      resolveWebCustomerAuthConfig(
+        {
+          ...validEnvironment,
+          VITE_SAMRA_ENVIRONMENT: "production",
+          VITE_AUTH0_AUDIENCE: "https://api.samrapay.com",
+        },
+        { origin: "https://app.samrapay.com", baseUrl: "/" },
+      ),
+    ).toMatchObject({
+      mode: "auth0",
+      environment: "production",
+      audience: "https://api.samrapay.com",
+      applicationUri: "https://app.samrapay.com/",
+    });
+
+    expect(() =>
+      resolveWebCustomerAuthConfig(
+        {
+          ...validEnvironment,
+          VITE_SAMRA_ENVIRONMENT: "production",
+          VITE_AUTH0_AUDIENCE: "https://api.samrapay.com",
+        },
+        { origin: "https://www.samrapay.com", baseUrl: "/" },
+      ),
+    ).toThrow(/only at https:\/\/app\.samrapay\.com/);
+
+    expect(() =>
+      resolveWebCustomerAuthConfig(
+        {
+          VITE_SAMRA_DATA_MODE: "mock",
+          VITE_SAMRA_ENVIRONMENT: "production",
+        },
+        { origin: "https://app.samrapay.com", baseUrl: "/" },
+      ),
+    ).toThrow(/cannot run in mock mode/);
+
+    expect(() =>
+      resolveWebCustomerAuthConfig(
+        { VITE_SAMRA_DATA_MODE: "mock" },
+        { origin: "https://app.samrapay.com", baseUrl: "/" },
+      ),
+    ).toThrow(/cannot run in mock mode/);
+
+    expect(() =>
+      resolveWebCustomerAuthConfig(
+        {
+          VITE_SAMRA_DATA_MODE: "mock",
+          VITE_SAMRA_ENVIRONMENT: "staging",
+        },
+        { origin: "https://app.samrapay.com", baseUrl: "/" },
+      ),
+    ).toThrow(/cannot run in mock mode/);
   });
 });

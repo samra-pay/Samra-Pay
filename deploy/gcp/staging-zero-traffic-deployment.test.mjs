@@ -449,6 +449,22 @@ test("controller deploys one exact digest without traffic, public access, migrat
     controller,
     /update-traffic|allow-unauthenticated|add-iam-policy-binding|gcloud builds submit|gcloud run jobs execute|secrets versions access|PERSONA_API_KEY|CROSSMINT_SERVER_API_KEY|worf\.replit|samra-pay-production/i,
   );
+  assert.match(controller, /SAMRA_RELEASE_PROFILE=alpha-release-1/);
+  assert.match(controller, /SAMRA_DEPLOYMENT_ENVIRONMENT=staging/);
+  assert.match(controller, /GOOGLE_CLOUD_PROJECT=samra-pay-staging/);
+  assert.match(controller, /SAMRA_RUN_WORKER=false/);
+  assert.match(controller, /SAMRA_CUSTOMER_WALLET_PROVIDER_MODE=fake/);
+  assert.match(
+    controller,
+    /SAMRA_ALLOWED_ORIGINS=\$\{SAMRA_STAGING_ALLOWED_ORIGINS\}/,
+  );
+  assert.match(controller, /SAMRA_PUBLIC_ENVIRONMENT=staging/);
+  assert.ok(
+    contract.services["samra-api"].requiredRuntimeEnvironment.includes(
+      "SAMRA_STAGING_ALLOWED_ORIGINS",
+    ),
+  );
+  assert.match(workflow, /SAMRA_STAGING_ALLOWED_ORIGINS/);
 });
 
 test("federation activation and audit grant only exact deploy and impersonation boundaries", () => {

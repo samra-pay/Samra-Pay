@@ -49,6 +49,7 @@ const sharedEnvironment = {
   SAMRA_RELEASE_PROFILE: "synthetic-shared",
   SAMRA_DEPLOYMENT_ENVIRONMENT: "test",
   GOOGLE_CLOUD_PROJECT: "samra-pay-test",
+  AUTH0_AUDIENCE: "https://api.samrapay.com/test",
   SAMRA_PROVIDER_MODE: "fake",
   SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
   SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: "fake",
@@ -61,6 +62,10 @@ test("shared synthetic profile enables its worker with Auth0 and keeps developer
       ...sharedEnvironment,
       SAMRA_DEPLOYMENT_ENVIRONMENT: deployment,
       GOOGLE_CLOUD_PROJECT: `samra-pay-${deployment}`,
+      AUTH0_AUDIENCE:
+        deployment === "dev"
+          ? "https://api.samrapay.com/development"
+          : "https://api.samrapay.com/test",
     });
     assert.equal(config.runWorker, true);
     assert.equal(config.customerAuth.mode, "auth0");

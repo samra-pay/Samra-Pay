@@ -7,10 +7,12 @@ account change, secret creation, secret-version creation, IAM grant, image
 publication, Cloud Run deployment, public route, real PII, wallet creation,
 funding, balance, remittance, or Replit change.
 
-The approved sequence is:
+The prepared sequence is:
 
-1. deploy the portable customer-web and API surfaces behind the reviewed Google
-   Cloud access boundary;
+1. deploy the portable customer-web and onboarding-only API surfaces at zero
+   traffic behind the reviewed Google Cloud access boundary, with
+   `SAMRA_RELEASE_PROFILE=alpha-release-1`, the Staging project marker, exact
+   browser origin, fake wallet provider, and workers disabled;
 2. connect Auth0 staging authentication using separate public SPA and Native
    Application identifiers plus exact API issuer/audience values;
 3. activate Persona sandbox only after its data and support controls pass;
@@ -35,17 +37,22 @@ The customer-web image contains no environment-specific Auth0 identifiers.
 Cloud Run's static server exposes `/samra-runtime-config.js` with an exact
 allowlist:
 
-| Cloud Run value                | Browser value          | Secret |
-| ------------------------------ | ---------------------- | ------ |
-| `SAMRA_PUBLIC_DATA_MODE`       | `VITE_SAMRA_DATA_MODE` | no     |
-| `SAMRA_PUBLIC_AUTH0_DOMAIN`    | `VITE_AUTH0_DOMAIN`    | no     |
-| `SAMRA_PUBLIC_AUTH0_CLIENT_ID` | `VITE_AUTH0_CLIENT_ID` | no     |
-| `SAMRA_PUBLIC_AUTH0_AUDIENCE`  | `VITE_AUTH0_AUDIENCE`  | no     |
+| Cloud Run value                | Browser value            | Secret |
+| ------------------------------ | ------------------------ | ------ |
+| `SAMRA_PUBLIC_DATA_MODE`       | `VITE_SAMRA_DATA_MODE`   | no     |
+| `SAMRA_PUBLIC_ENVIRONMENT`     | `VITE_SAMRA_ENVIRONMENT` | no     |
+| `SAMRA_PUBLIC_AUTH0_DOMAIN`    | `VITE_AUTH0_DOMAIN`      | no     |
+| `SAMRA_PUBLIC_AUTH0_CLIENT_ID` | `VITE_AUTH0_CLIENT_ID`   | no     |
+| `SAMRA_PUBLIC_AUTH0_AUDIENCE`  | `VITE_AUTH0_AUDIENCE`    | no     |
 
 The response is `no-store`. Partial Auth0 configuration fails startup. The
 server ignores all other process variables, including Auth0 secrets, Persona
 secrets, Crossmint secrets, and database credentials. Local Vite development
 serves an empty fallback and retains its existing build-time defaults.
+
+API mode requires `SAMRA_PUBLIC_ENVIRONMENT=staging`, and the public Auth0
+audience must be exactly `https://api.staging.samrapay.com`. A Dev, Test, or
+Production audience fails before the service starts.
 
 The same server also owns the private API proxy boundary. These server-only,
 non-secret values are never exported to the browser:
@@ -62,6 +69,12 @@ Google service identity token from Cloud Run metadata in that second header.
 No service-account key is created or stored. The customer-web identity still
 requires a future exact service-level `roles/run.invoker` grant and zero-traffic
 positive and negative proof before deployment or traffic is authorized.
+
+The API receives only the reviewed Auth0 issuer/audience, one exact
+`SAMRA_ALLOWED_ORIGINS` browser origin, and its pinned database secret. Its
+fixed runtime values bind it to `samra-pay-staging`, use Alpha Release 1, keep
+the remittance worker and operations controls disabled, and retain fake KYC and
+wallet adapters until their separate activation gates pass.
 
 ## Auth0 staging gate
 
@@ -168,7 +181,7 @@ References:
 
 - any plaintext or `latest` vendor-secret reference;
 - any vendor credential in GitHub, Docker build arguments, browser or mobile
-  bundles, Firebase, logs, screenshots, Qase, or support systems;
+  bundles, Firebase, logs, screenshots, test evidence, or support systems;
 - partial Auth0 public configuration;
 - a non-loopback API proxy without exact Cloud Run service authentication, or
   a project-wide API invoker grant;

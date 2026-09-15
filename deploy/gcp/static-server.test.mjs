@@ -210,6 +210,7 @@ test("exports only validated public Auth0 runtime identifiers", () => {
   assert.deepEqual(
     loadPublicRuntimeConfig({
       SAMRA_PUBLIC_DATA_MODE: "api",
+      SAMRA_PUBLIC_ENVIRONMENT: "staging",
       SAMRA_PUBLIC_AUTH0_DOMAIN: "login.staging.samrapay.com",
       SAMRA_PUBLIC_AUTH0_CLIENT_ID: "public_client_123",
       SAMRA_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
@@ -218,6 +219,7 @@ test("exports only validated public Auth0 runtime identifiers", () => {
     }),
     {
       VITE_SAMRA_DATA_MODE: "api",
+      VITE_SAMRA_ENVIRONMENT: "staging",
       VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
       VITE_AUTH0_CLIENT_ID: "public_client_123",
       VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
@@ -228,6 +230,7 @@ test("exports only validated public Auth0 runtime identifiers", () => {
     () =>
       loadPublicRuntimeConfig({
         SAMRA_PUBLIC_DATA_MODE: "api",
+        SAMRA_PUBLIC_ENVIRONMENT: "staging",
         SAMRA_PUBLIC_AUTH0_DOMAIN: "login.staging.samrapay.com",
       }),
     /Every public Auth0 identifier/,
@@ -235,6 +238,15 @@ test("exports only validated public Auth0 runtime identifiers", () => {
   assert.throws(
     () =>
       loadPublicRuntimeConfig({
+        SAMRA_PUBLIC_ENVIRONMENT: "production",
+      }),
+    /cannot run in mock mode/,
+  );
+  assert.throws(
+    () =>
+      loadPublicRuntimeConfig({
+        SAMRA_PUBLIC_DATA_MODE: "api",
+        SAMRA_PUBLIC_ENVIRONMENT: "staging",
         SAMRA_PUBLIC_AUTH0_DOMAIN: "https://tenant.auth0.com",
         SAMRA_PUBLIC_AUTH0_CLIENT_ID: "public_client_123",
         SAMRA_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
@@ -245,6 +257,7 @@ test("exports only validated public Auth0 runtime identifiers", () => {
     serializePublicRuntimeConfig(
       loadPublicRuntimeConfig({
         SAMRA_PUBLIC_DATA_MODE: "api",
+        SAMRA_PUBLIC_ENVIRONMENT: "staging",
       }),
     ),
     /SECRET|PERSONA|CROSSMINT/,
@@ -301,6 +314,7 @@ test("serves SPA routes and proxies API responses without mock fallback", async 
     port: 0,
     publicRuntimeConfig: Object.freeze({
       VITE_SAMRA_DATA_MODE: "api",
+      VITE_SAMRA_ENVIRONMENT: "staging",
       VITE_AUTH0_DOMAIN: "login.staging.samrapay.com",
       VITE_AUTH0_CLIENT_ID: "public_client_123",
       VITE_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",

@@ -50,6 +50,7 @@ describe("mobile customer-onboarding trust boundary", () => {
 
   it("builds API-mode mobile artifacts only with a complete synthetic Auth0 configuration", () => {
     for (const workflow of [ciWorkflowSource, releaseWorkflowSource]) {
+      expect(workflow).toContain('EXPO_PUBLIC_SAMRA_ENVIRONMENT: "staging"');
       expect(workflow).toContain('EXPO_PUBLIC_SAMRA_AUTH_MODE: "auth0-native"');
       expect(workflow).toContain(
         'EXPO_PUBLIC_AUTH0_DOMAIN: "auth0.ci.invalid"',
@@ -58,7 +59,7 @@ describe("mobile customer-onboarding trust boundary", () => {
         'EXPO_PUBLIC_AUTH0_CLIENT_ID: "NativeCiClient_12345678"',
       );
       expect(workflow).toContain(
-        'EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.ci.invalid"',
+        'EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com"',
       );
     }
   });

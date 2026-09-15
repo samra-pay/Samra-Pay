@@ -11,6 +11,7 @@ test("customer-web image receives public Auth0 identifiers at runtime", () => {
     "SAMRA_PUBLIC_AUTH0_DOMAIN",
     "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
     "SAMRA_PUBLIC_AUTH0_AUDIENCE",
+    "SAMRA_PUBLIC_ENVIRONMENT",
   ]) {
     assert.ok(server.includes(name), name);
   }

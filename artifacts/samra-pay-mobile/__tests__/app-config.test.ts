@@ -36,6 +36,7 @@ describe("mobile Expo Auth0 build boundary", () => {
     for (const [key, value] of Object.entries(NATIVE_ENVIRONMENT))
       vi.stubEnv(key, value);
     vi.stubEnv("EXPO_PUBLIC_SAMRA_ENVIRONMENT", "test");
+    vi.stubEnv("EXPO_PUBLIC_AUTH0_AUDIENCE", "https://api.samrapay.com/test");
     const result = getConfig(projectRoot);
     expect(result.dynamicConfigPath).toMatch(/app\.config\.js$/);
     expect(result.exp.ios.bundleIdentifier).toBe("com.samrapay.mobile.test");
@@ -49,16 +50,43 @@ describe("mobile Expo Auth0 build boundary", () => {
   });
 
   it.each([
-    ["dev", "com.samrapay.mobile.dev", "samrapaydevauth"],
-    ["test", "com.samrapay.mobile.test", "samrapaytestauth"],
+    [
+      "dev",
+      "com.samrapay.mobile.dev",
+      "samrapaydevauth",
+      "https://api.samrapay.com/development",
+      "https://proxy.example.test",
+    ],
+    [
+      "test",
+      "com.samrapay.mobile.test",
+      "samrapaytestauth",
+      "https://api.samrapay.com/test",
+      "https://proxy.example.test",
+    ],
+    [
+      "staging",
+      "com.samrapay.mobile.staging",
+      "samrapayauth",
+      "https://api.staging.samrapay.com",
+      "https://proxy.example.test",
+    ],
+    [
+      "production",
+      "com.samrapay.mobile",
+      "samrapayprodauth",
+      "https://api.samrapay.com",
+      "https://app.samrapay.com",
+    ],
   ])(
     "keeps %s native callbacks aligned with the running client",
-    (target, id, scheme) => {
+    (target, id, scheme, audience, apiOrigin) => {
       const environment = {
         ...NATIVE_ENVIRONMENT,
         EXPO_PUBLIC_SAMRA_ENVIRONMENT: target,
         EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
-        EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://proxy.example.test",
+        EXPO_PUBLIC_SAMRA_API_ORIGIN: apiOrigin,
+        EXPO_PUBLIC_AUTH0_AUDIENCE: audience,
       };
       const config = resolveExpoConfig(environment);
       expect(config.ios.bundleIdentifier).toBe(id);
@@ -84,15 +112,15 @@ describe("mobile Expo Auth0 build boundary", () => {
     );
   });
 
-  it.each(["production", "development", "__proto__"])(
+  it.each(["development", "__proto__"])(
     "rejects unsupported native target %s",
     (target) => {
       const environment = { EXPO_PUBLIC_SAMRA_ENVIRONMENT: target };
       expect(() => resolveExpoConfig(environment)).toThrow(
-        /must be dev, test, or staging/,
+        /must be dev, test, staging, production/,
       );
       expect(() => loadMobileRuntimeConfig(environment)).toThrow(
-        /must be dev, test, or staging/,
+        /must be dev, test, staging, production/,
       );
     },
   );
@@ -138,5 +166,36 @@ describe("mobile Expo Auth0 build boundary", () => {
         EXPO_PUBLIC_AUTH0_AUDIENCE: "http://api.example.test",
       }),
     ).toThrow(/exact HTTPS/);
+  });
+
+  it("fails production builds closed unless every production boundary is exact", () => {
+    const production = {
+      ...NATIVE_ENVIRONMENT,
+      EXPO_PUBLIC_SAMRA_ENVIRONMENT: "production",
+      EXPO_PUBLIC_SAMRA_DATA_MODE: "api",
+      EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://app.samrapay.com",
+      EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.samrapay.com",
+    };
+    expect(resolveExpoConfig(production).ios.bundleIdentifier).toBe(
+      "com.samrapay.mobile",
+    );
+    expect(() =>
+      resolveExpoConfig({
+        ...production,
+        EXPO_PUBLIC_SAMRA_AUTH_MODE: "disabled",
+      }),
+    ).toThrow(/require API data mode and native Auth0/);
+    expect(() =>
+      resolveExpoConfig({
+        ...production,
+        EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://staging.samrapay.com",
+      }),
+    ).toThrow(/app\.samrapay\.com/);
+    expect(() =>
+      resolveExpoConfig({
+        ...production,
+        EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com",
+      }),
+    ).toThrow(/production Samra API identifier/);
   });
 });

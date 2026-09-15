@@ -2,16 +2,26 @@
   "dev": {
     "name": "Samra Pay Dev",
     "applicationId": "com.samrapay.mobile.dev",
-    "customScheme": "samrapaydevauth"
+    "customScheme": "samrapaydevauth",
+    "apiAudience": "https://api.samrapay.com/development"
   },
   "test": {
     "name": "Samra Pay Test",
     "applicationId": "com.samrapay.mobile.test",
-    "customScheme": "samrapaytestauth"
+    "customScheme": "samrapaytestauth",
+    "apiAudience": "https://api.samrapay.com/test"
   },
   "staging": {
     "name": "Samra Pay Mobile",
     "applicationId": "com.samrapay.mobile.staging",
-    "customScheme": "samrapayauth"
+    "customScheme": "samrapayauth",
+    "apiAudience": "https://api.staging.samrapay.com"
+  },
+  "production": {
+    "name": "Samra Pay",
+    "applicationId": "com.samrapay.mobile",
+    "customScheme": "samrapayprodauth",
+    "apiAudience": "https://api.samrapay.com",
+    "customerWebOrigin": "https://app.samrapay.com"
   }
 }

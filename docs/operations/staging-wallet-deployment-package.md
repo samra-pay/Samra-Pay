@@ -44,7 +44,7 @@ stays clean. The final merged SHA needs a new inventory and release evidence.
 | Cloud SQL          | Existing private PostgreSQL 16 instance; earlier console showed backups/PITR/deletion protection and allowed unencrypted direct connections                           | Enforced TLS, client transport review, backup/restore evidence, actual schema journal and split database roles                   |
 | Migration delivery | The original PR 158 baseline had no governed producer; the current repository has a protected staging migration workflow and API prerequisite verification            | Verify the candidate-SHA workflow registration, upstream artifact digest, execution authorization, result and cleanup evidence   |
 | Bootstrap          | The original PR 158 baseline used `:latest`; the current bootstrap pins numeric secret versions and shares the database lock                                          | Verify those controls at the candidate SHA and collect actual cloud execution and cleanup evidence                               |
-| Runtime            | Existing contract is `synthetic-only`, worker `true`, provider `fake`                                                                                                 | Review a separate one-customer sandbox lane; worker `false`, restricted vendor key and explicit data scope                       |
+| Runtime            | Current Alpha Release 1 contract is `synthetic-only`, worker `false`, identity and wallet providers `fake`                                                            | Review a separate one-customer sandbox lane with a restricted vendor key and explicit data scope                                 |
 | Credentials/Auth0  | Values and enabled secret versions were not inspected                                                                                                                 | Verify metadata and pinned versions without returning secret payloads; verify issuer, audience and customer actor                |
 | Identity           | Sandbox provisioning requires an approved durable Samra identity case                                                                                                 | Prove the selected test identity can satisfy this gate without manual database edits or enabling development/operations controls |
 | First deployment   | Existing traffic promotion disallows first activation; no previous API revision is evidenced                                                                          | Governed private first-revision verification and abort procedure; no invented rollback target                                    |
@@ -86,7 +86,7 @@ cloud execution nor authorizes bypassing any producer or API release gate.
 ## Proposed runtime profile
 
 Target only `samra-pay-staging` (project number `934122615631`), organization
-`614833350075`, region `us-east4`, API service `samra-api`. Use
+`993968777863`, region `us-east4`, API service `samra-api`. Use
 `samra-api-staging@samra-pay-staging.iam.gserviceaccount.com` for the API and the
 separate `samra-migrations-staging` identity for migration. Use the existing
 private `samra-staging-vpc`, `samra-staging-us-east4` subnet and

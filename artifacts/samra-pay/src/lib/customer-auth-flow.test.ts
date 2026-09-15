@@ -24,9 +24,10 @@ vi.mock("@workspace/api-client-react", () => ({
 vi.mock("./public-runtime-config", () => ({
   resolveWebPublicEnvironment: () => ({
     VITE_SAMRA_DATA_MODE: "api",
+    VITE_SAMRA_ENVIRONMENT: "dev",
     VITE_AUTH0_DOMAIN: "tenant.example",
     VITE_AUTH0_CLIENT_ID: "public-test-client",
-    VITE_AUTH0_AUDIENCE: "https://api.example/development",
+    VITE_AUTH0_AUDIENCE: "https://api.samrapay.com/development",
   }),
 }));
 vi.mock("./samra-runtime", () => ({ useSamraDataMode: () => mocks.mode }));
@@ -280,7 +281,7 @@ describe("Auth0 customer entry", () => {
     expect(mocks.redirect).toHaveBeenCalledWith({
       appState: { returnTo: "/session" },
       authorizationParams: {
-        audience: "https://api.example/development",
+        audience: "https://api.samrapay.com/development",
         redirect_uri: window.location.origin + "/",
         prompt: "login",
       },

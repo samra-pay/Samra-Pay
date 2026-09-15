@@ -117,15 +117,19 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     JSON.stringify(api.environment) ===
       JSON.stringify({
         NODE_ENV: "production",
+        SAMRA_RELEASE_PROFILE: "alpha-release-1",
+        SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+        GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
         SAMRA_BACKEND_MODE: "demo",
         SAMRA_PROVIDER_MODE: "fake",
         SAMRA_PERSISTENCE_MODE: "postgres",
-        SAMRA_RUN_WORKER: "true",
+        SAMRA_RUN_WORKER: "false",
         SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
         SAMRA_CUSTOMER_AUTH_MODE: "auth0",
         SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
+        SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: "fake",
       }),
-    "API must remain durable synthetic staging with Auth0 and vendor activation disabled",
+    "API must remain onboarding-only staging with Auth0 and vendor activation disabled",
   );
   assert(
     api.databaseAccess === true &&
@@ -138,8 +142,12 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
   );
   assert(
     JSON.stringify(api.requiredRuntimeEnvironment) ===
-      JSON.stringify(["AUTH0_ISSUER_BASE_URL", "AUTH0_AUDIENCE"]),
-    "API must receive only the required non-secret Auth0 identifiers",
+      JSON.stringify([
+        "AUTH0_ISSUER_BASE_URL",
+        "AUTH0_AUDIENCE",
+        "SAMRA_ALLOWED_ORIGINS",
+      ]),
+    "API must receive only the required non-secret Auth0 identifiers and exact browser origins",
   );
   for (const name of SERVICE_NAMES.filter((name) => name !== "samra-api")) {
     const service = contract.services[name];
@@ -157,6 +165,7 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
         "SAMRA_API_SERVICE_AUTH_MODE",
         "SAMRA_API_SERVICE_AUDIENCE",
         "SAMRA_PUBLIC_DATA_MODE",
+        "SAMRA_PUBLIC_ENVIRONMENT",
         "SAMRA_PUBLIC_AUTH0_DOMAIN",
         "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
         "SAMRA_PUBLIC_AUTH0_AUDIENCE",
@@ -256,7 +265,7 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     "approved Auth0 tenant, API audience, callback, logout, and allowed-origin inventory",
     "separate Persona and Crossmint activation reviews with pinned secret versions",
     "logging, alerts, rollback owner, and cost budget",
-    "critical Qase regression with no unresolved severity-one or severity-two defect",
+    "critical GitHub user-test session with no unresolved P0 or P1 defect",
   ]) {
     assert(contract.approvalGates.includes(gate), `Missing gate: ${gate}`);
   }
@@ -317,6 +326,9 @@ function validateVendorReadiness(contract) {
       auth0.customerWebSecrets.length === 0 &&
       JSON.stringify(auth0.mobileRuntimeEnvironment) ===
         JSON.stringify([
+          "EXPO_PUBLIC_SAMRA_ENVIRONMENT",
+          "EXPO_PUBLIC_SAMRA_DATA_MODE",
+          "EXPO_PUBLIC_SAMRA_API_ORIGIN",
           "EXPO_PUBLIC_SAMRA_AUTH_MODE",
           "EXPO_PUBLIC_AUTH0_DOMAIN",
           "EXPO_PUBLIC_AUTH0_CLIENT_ID",

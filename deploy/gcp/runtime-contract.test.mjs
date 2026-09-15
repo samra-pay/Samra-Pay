@@ -148,17 +148,22 @@ test("locks the API to durable synthetic mode with explicit health checks", () =
   const api = contract.services["samra-api"];
   assert.deepEqual(api.environment, {
     NODE_ENV: "production",
+    SAMRA_RELEASE_PROFILE: "alpha-release-1",
+    SAMRA_DEPLOYMENT_ENVIRONMENT: "staging",
+    GOOGLE_CLOUD_PROJECT: "samra-pay-staging",
     SAMRA_BACKEND_MODE: "demo",
     SAMRA_PROVIDER_MODE: "fake",
     SAMRA_PERSISTENCE_MODE: "postgres",
-    SAMRA_RUN_WORKER: "true",
+    SAMRA_RUN_WORKER: "false",
     SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
     SAMRA_CUSTOMER_AUTH_MODE: "auth0",
     SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
+    SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: "fake",
   });
   assert.deepEqual(api.requiredRuntimeEnvironment, [
     "AUTH0_ISSUER_BASE_URL",
     "AUTH0_AUDIENCE",
+    "SAMRA_ALLOWED_ORIGINS",
   ]);
   assert.equal(api.startupProbe, "/api/readyz");
   assert.equal(api.livenessProbe, "/api/healthz");
@@ -175,6 +180,9 @@ test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
   assert.equal(auth0.status, "required-before-staging-deployment");
   assert.deepEqual(auth0.customerWebSecrets, []);
   assert.deepEqual(auth0.mobileRuntimeEnvironment, [
+    "EXPO_PUBLIC_SAMRA_ENVIRONMENT",
+    "EXPO_PUBLIC_SAMRA_DATA_MODE",
+    "EXPO_PUBLIC_SAMRA_API_ORIGIN",
     "EXPO_PUBLIC_SAMRA_AUTH_MODE",
     "EXPO_PUBLIC_AUTH0_DOMAIN",
     "EXPO_PUBLIC_AUTH0_CLIENT_ID",
@@ -203,6 +211,7 @@ test("keeps Auth0 portable and Persona plus Crossmint separately gated", () => {
       "SAMRA_API_SERVICE_AUTH_MODE",
       "SAMRA_API_SERVICE_AUDIENCE",
       "SAMRA_PUBLIC_DATA_MODE",
+      "SAMRA_PUBLIC_ENVIRONMENT",
       "SAMRA_PUBLIC_AUTH0_DOMAIN",
       "SAMRA_PUBLIC_AUTH0_CLIENT_ID",
       "SAMRA_PUBLIC_AUTH0_AUDIENCE",

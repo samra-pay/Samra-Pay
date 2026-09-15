@@ -122,12 +122,13 @@ jobs:
           PORT: "4173"
           BASE_PATH: "/"
           EXPO_PUBLIC_DOMAIN: "ci.invalid"
+          EXPO_PUBLIC_SAMRA_ENVIRONMENT: "staging"
           EXPO_PUBLIC_SAMRA_DATA_MODE: "api"
           EXPO_PUBLIC_SAMRA_API_ORIGIN: "https://api.ci.invalid"
           EXPO_PUBLIC_SAMRA_AUTH_MODE: "auth0-native"
           EXPO_PUBLIC_AUTH0_DOMAIN: "auth0.ci.invalid"
           EXPO_PUBLIC_AUTH0_CLIENT_ID: "NativeCiClient_12345678"
-          EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.ci.invalid"
+          EXPO_PUBLIC_AUTH0_AUDIENCE: "https://api.staging.samrapay.com"
 
       - name: Enforce customer experience artifact budgets
         run: >-

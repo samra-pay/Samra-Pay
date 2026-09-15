@@ -2,6 +2,7 @@ type PublicEnvironment = Readonly<Record<string, string | boolean | undefined>>;
 
 export type SamraPublicRuntimeConfig = Readonly<{
   VITE_SAMRA_DATA_MODE?: string;
+  VITE_SAMRA_ENVIRONMENT?: string;
   VITE_AUTH0_DOMAIN?: string;
   VITE_AUTH0_CLIENT_ID?: string;
   VITE_AUTH0_AUDIENCE?: string;
@@ -16,6 +17,7 @@ declare global {
 
 const PUBLIC_RUNTIME_KEYS = Object.freeze([
   "VITE_SAMRA_DATA_MODE",
+  "VITE_SAMRA_ENVIRONMENT",
   "VITE_AUTH0_DOMAIN",
   "VITE_AUTH0_CLIENT_ID",
   "VITE_AUTH0_AUDIENCE",
