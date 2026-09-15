@@ -44,8 +44,12 @@ Permanent database principals remain separate:
 
 The retired bootstrap database principal stays deleted, its service account
 stays disabled, and its secret version stays disabled with no direct accessor.
-The controller reads these facts back before preparing a release and never
-reads secret values.
+Preparation verifies its historical database retirement through the pinned
+predecessor evidence and reads the service-account, secret-version, and IAM
+state live. Cloud SQL cannot list database users while the instance is stopped.
+After the authorized SQL start, each normal candidate migration or privilege
+audit therefore verifies the bootstrap database principal is absent before
+deploying or executing its job. The controller never reads secret values.
 
 The customer web service is the public login shell. Customer API data still
 requires Auth0 and Samra admission. The API retains Cloud Run IAM enforcement,
@@ -324,10 +328,11 @@ python3 deploy/gcp/activate-dev-test.py dev prepare-release \
 `prepare-release` is a read-and-verify preflight. It requires an ACTIVE project
 with the configured project number and direct organization parent, no active
 Cloud Run job or Cloud SQL operation, a stopped database with activation
-`NEVER`, enabled numbered permanent secrets, a fully retired bootstrap
-boundary, and both exact predecessor revisions reconciled, ready, untagged,
+`NEVER`, enabled numbered permanent secrets, pinned historical bootstrap
+database retirement and live disabled bootstrap identity/secret access, and
+both exact predecessor revisions reconciled, ready, untagged,
 receiving 100% of traffic, and manually scaled to zero. It creates no cloud
-resources.
+resources and neither starts SQL nor queries its user list.
 
 ## Effective IAM gate
 
@@ -371,6 +376,22 @@ direct resource binding still looks correct.
 The receipt event history binds every action to the candidate migration image,
 ordered timestamps, result, and, for database jobs, a unique Cloud Run
 execution. Normal candidate actions cannot be replayed or run out of order.
+Each passed `migrate`, `audit-runtime`, and `audit-reader` event also contains
+the exact project, instance, retired principal, positive absence result, and
+timestamp of its live bootstrap database check. The check must fall within
+that job attempt. Missing, malformed, cross-environment, or non-passing evidence
+blocks subsequent deployment, session start, acceptance, and sealing.
+If an earlier controller already recorded passed candidate jobs without this
+evidence, close or recover that candidate with its original pinned controller
+before adopting this contract. Never retrofit a receipt or invent a missing
+live check. Legacy predecessor receipts still use their pinned baseline bridge.
+
+The live check runs after SQL becomes `RUNNABLE` and before job deployment or
+execution. Its sanitized result is saved with the attempt before work starts;
+the full user list is never retained. A failed listing or an existing bootstrap
+principal records a failed action requiring recovery and leaves SQL running.
+Stop-owned and recovery drains remain available without this check so an
+unavailable user-list API cannot prevent safe shutdown.
 
 | Order | Controller action | Resulting phase | Required result |
 | ---: | --- | --- | --- |
@@ -424,6 +445,10 @@ python3 deploy/gcp/activate-dev-test.py dev seal \
 Do not run `database-job --job-action drain` separately. `stop` closes the web
 service, waits for in-flight requests, invokes the bound drain action, and only
 then scales the API to zero and changes database activation to `NEVER`.
+The same persisted stop session must then record its terminal status and finish
+time, including after the child drain updates the receipt. A passed drain alone
+does not complete shutdown. Drain or pause failures retain a blocked session
+requiring recovery; a successful stop must leave evidence that can pass sealing.
 
 `start` first keeps the web shell closed, starts SQL, starts the API, and
 requires `/api/readyz` to identify the exact recorded Cloud Run revision. It

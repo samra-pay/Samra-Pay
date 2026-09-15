@@ -13,6 +13,18 @@ session times. Real tester login, account isolation, synthetic transactions and
 ledger acceptance remain pending. [Native error alerts](dev-test-monitoring.md)
 are configured; matching logs alone do not prove inbox delivery.
 
+September 14 reconciliation: both projects are now directly under company
+organization `993968777863` and remain paused on the same application images,
+revisions and numbered secrets. The retained receipts include a later
+post-move start/stop and drain execution than the original activation records.
+The inventory therefore pins new [Dev baseline](../../docs/operations/evidence/2026-09-14-dev-runtime-baseline-reconciliation.json)
+and [Test baseline](../../docs/operations/evidence/2026-09-14-test-runtime-baseline-reconciliation.json)
+records, preserving the original evidence unchanged. This metadata readback is
+not a new deployment, live HTTP check or tester acceptance. Organization IAM
+readback remains blocked for the configured operator pending separately
+approved read access; database-user absence must be rechecked after authorized
+SQL start, before candidate migrations or audits.
+
 Owner: David Haile. Resource inventory: [dev-test-environments.json](dev-test-environments.json).
 Dated [foundation read-back](../../docs/operations/evidence/2026-09-09-dev-test-foundation.json).
 Local backend implementation: [Dev Compose](../dev/README.md).

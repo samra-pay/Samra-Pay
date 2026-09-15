@@ -273,6 +273,8 @@ PHASE_TRANSITIONS = {
     'seal': ('stopped-tested', 'sealed'),
 }
 
+BOOTSTRAP_CHECKED_ACTIONS = {'migrate', 'audit-runtime', 'audit-reader'}
+
 ROLLBACK_PHASES = {
     'prepared-paused',
     'migrated',
@@ -291,6 +293,21 @@ def validate_timestamp(value):
     parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
     assert parsed.tzinfo is not None, 'Release event timestamp must include a timezone'
     return parsed
+
+
+def validate_bootstrap_database_absence(check, receipt, started_at, finished_at):
+    assert isinstance(check, dict) and set(check) == {
+        'project', 'instance', 'principal', 'absent', 'checkedAt',
+    }, 'Live bootstrap database absence evidence is missing or malformed'
+    project = receipt.get('project')
+    assert project in {'samra-pay-dev', 'samra-pay-test'}, 'Unexpected bootstrap check project'
+    env = project.removeprefix('samra-pay-')
+    assert check['project'] == project, 'Bootstrap database check project changed'
+    assert check['instance'] == 'samra-'+env+'-postgres', 'Bootstrap database check instance changed'
+    assert check['principal'] == 'samra_bootstrap_'+env, 'Bootstrap database check principal changed'
+    assert check['absent'] is True, 'Bootstrap database absence was not verified'
+    observed = validate_timestamp(check['checkedAt'])
+    assert validate_timestamp(started_at) <= observed <= validate_timestamp(finished_at), 'Bootstrap database check is outside its job attempt'
 
 
 def verify_candidate_history(receipt):
@@ -343,6 +360,13 @@ def verify_candidate_history(receipt):
             assert execution is None, 'Non-database event claims a database execution'
         if action == 'acceptance':
             assert re.fullmatch('[a-f0-9]{64}', event.get('details', {}).get('acceptanceEvidenceSha256', '')), 'Acceptance evidence hash is missing'
+        if status == 'passed' and action in BOOTSTRAP_CHECKED_ACTIONS:
+            details = event.get('details')
+            assert isinstance(details, dict), 'Live bootstrap database absence evidence is missing'
+            validate_bootstrap_database_absence(
+                details.get('bootstrapDatabaseAbsence'), receipt,
+                event['startedAt'], event['finishedAt'],
+            )
         if status == 'passed' and action == 'stop' and 'acceptance' not in seen_actions:
             phase = 'stopped-unaccepted'
         else:
@@ -448,6 +472,8 @@ def validate_database_job_bindings(receipt):
         assert job.get('image') == migration_image, 'Candidate database job image changed'
         assert job.get('startedAt') == event.get('startedAt'), 'Candidate database job start time changed'
         assert job.get('finishedAt') == event.get('finishedAt'), 'Candidate database job finish time changed'
+        if action in BOOTSTRAP_CHECKED_ACTIONS:
+            assert job.get('bootstrapDatabaseAbsence') == event.get('details', {}).get('bootstrapDatabaseAbsence'), 'Bootstrap database absence evidence changed after the job'
 
 
 def validate_acceptance_stop_and_drain(receipt):
@@ -1207,6 +1233,29 @@ def ensure_database_running(instance, project):
     assert database.get('settings', {}).get('activationPolicy') == 'ALWAYS', 'Database activation did not persist'
 
 
+def read_bootstrap_database_absence(env, project, instance):
+    """Read principals only after authorized SQL start; never retain the list."""
+    assert env in {'dev', 'test'} and project == 'samra-pay-'+env
+    assert instance == 'samra-'+env+'-postgres'
+    users = gcloud('sql', 'users', 'list', '--instance='+instance,
+                   '--project='+project)
+    assert isinstance(users, list), 'Database principal list is missing or malformed'
+    assert all(
+        isinstance(user, dict) and isinstance(user.get('name'), str)
+        and user['name']
+        for user in users
+    ), 'Database principal list contains a malformed entry'
+    principal = 'samra_bootstrap_'+env
+    assert not any(user['name'] == principal for user in users), 'Bootstrap database principal still exists'
+    return {
+        'project': project,
+        'instance': instance,
+        'principal': principal,
+        'absent': True,
+        'checkedAt': datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def control_session(action, env, inventory, receipt, save, drain_job, ready,
                     web_ready, pre_start_check=None):
     """Close ingress before draining; failures never stop the worker/database."""
@@ -1241,7 +1290,10 @@ def control_session(action, env, inventory, receipt, save, drain_job, ready,
         receipt['images']['customer-web'], 0,
     )
     session = {'action': action, 'startedAt': datetime.now(timezone.utc).isoformat(), 'status': 'in-progress'}
-    receipt.setdefault('sessions', []).append(session)
+    session_index = len(receipt.setdefault('sessions', []))
+    receipt['sessions'].append(session)
+    # A child drain event replaces the receipt with a validated deep copy.
+    # Reacquire this indexed session before updating its persisted outcome.
     save()
     try:
         if action == 'stop':
@@ -1277,8 +1329,10 @@ def control_session(action, env, inventory, receipt, save, drain_job, ready,
         db = gcloud('sql', 'instances', 'describe', instance, '--project=' + project)
         assert db['settings']['activationPolicy'] == ('NEVER' if action == 'stop' else 'ALWAYS')
         assert db.get('state') == ('STOPPED' if action == 'stop' else 'RUNNABLE'), 'Database runtime state changed'
+        session = receipt['sessions'][session_index]
         session['status'] = 'passed'
     except Exception as error:
+        session = receipt['sessions'][session_index]
         session['status'] = 'blocked-recovery-required'
         session['failureReason'] = safe_failure_reason(error)
         if action == 'start':
@@ -1288,6 +1342,7 @@ def control_session(action, env, inventory, receipt, save, drain_job, ready,
                 pass
         raise
     finally:
+        session = receipt['sessions'][session_index]
         session['finishedAt'] = datetime.now(timezone.utc).isoformat()
         if candidate and receipt.get('phase') != 'blocked-recovery-required':
             event_time = datetime.now(timezone.utc).isoformat()
@@ -1492,6 +1547,14 @@ def main(argv=None):
             # A failed job intentionally leaves SQL running so no unresolved
             # financial work is hidden by an automatic shutdown.
             ensure_database_running(instance, project)
+            if candidate and action in BOOTSTRAP_CHECKED_ACTIONS:
+                absence = read_bootstrap_database_absence(env, project, instance)
+                validate_bootstrap_database_absence(
+                    absence, receipt, started_at,
+                    datetime.now(timezone.utc).isoformat(),
+                )
+                attempt['bootstrapDatabaseAbsence'] = absence
+                save()
             gcloud(
                 'run', 'jobs', 'deploy', job,
                 '--project='+project, '--region='+region,
@@ -1541,6 +1604,8 @@ def main(argv=None):
                 finished_at=attempt['finishedAt'],
                 migration_image=images['images']['migrations'],
                 execution=attempt['execution'],
+                details=({'bootstrapDatabaseAbsence': attempt['bootstrapDatabaseAbsence']}
+                         if action in BOOTSTRAP_CHECKED_ACTIONS else None),
             )
         save()
         return attempt
@@ -1593,8 +1658,9 @@ def main(argv=None):
             assert not account.get('disabled', False), 'Required runtime identity is disabled'
         bootstrap_account = gcloud('iam', 'service-accounts', 'describe', identities['bootstrap'], '--project='+project)
         assert bootstrap_account.get('disabled') is True, 'Bootstrap identity must remain disabled'
-        users = gcloud('sql', 'users', 'list', '--instance='+instance, '--project='+project)
-        assert not any(user.get('name') == 'samra_bootstrap_'+env for user in users), 'Bootstrap database principal still exists'
+        # SQL users.list is unavailable while the instance is stopped. The
+        # pinned predecessor proves historical database-user retirement;
+        # every normal candidate database job checks live absence after start.
         assert_no_active_operations(
             gcloud('run', 'jobs', 'executions', 'list', '--project='+project,
                    '--region='+region) or [],
