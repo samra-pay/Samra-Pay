@@ -165,9 +165,9 @@
       },
       "functionalAcceptance": false,
       "sharedLoginStatus": "auth0-redirect-verified-no-human-login",
-      "runtimeEvidence": "docs/operations/evidence/2026-09-10-dev-runtime-activation.json",
-      "runtimeEvidenceSha256": "a3e9a963684a0082ed40ee50fed7d2d16a063d23bd66ab8d5a64acbaf1b8d5f2",
-      "runtimeEvidenceCommit": "e1dca8fdd21a75f46172435c9b114817de0e382a"
+      "runtimeEvidence": "docs/operations/evidence/2026-09-14-dev-runtime-baseline-reconciliation.json",
+      "runtimeEvidenceSha256": "f5e4d198578e6d7341a3f3cd2486bad3ce44871060f0c0bb9417d9ab2f260101",
+      "runtimeEvidenceCommit": "32286e63745d96adcb3f4b98dd4027a14ca86e25"
     },
     "test": {
       "projectId": "samra-pay-test",
@@ -319,9 +319,9 @@
       "functionalAcceptance": false,
       "sharedLogin": true,
       "sharedLoginStatus": "auth0-redirect-verified-no-human-login",
-      "runtimeEvidence": "docs/operations/evidence/2026-09-10-test-runtime-activation.json",
-      "runtimeEvidenceSha256": "0ec6b766d2b9ad903bcb4de10f0070d4eb89eb395272af4bdd8f954c88e89bd1",
-      "runtimeEvidenceCommit": "e1dca8fdd21a75f46172435c9b114817de0e382a"
+      "runtimeEvidence": "docs/operations/evidence/2026-09-14-test-runtime-baseline-reconciliation.json",
+      "runtimeEvidenceSha256": "80230ff7dab2ce5b4bb56ebcdff956ebb77ee9a1015783e6f68884871fea80db",
+      "runtimeEvidenceCommit": "32286e63745d96adcb3f4b98dd4027a14ca86e25"
     },
     "staging": {
       "projectId": "samra-pay-staging",

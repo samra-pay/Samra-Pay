@@ -15,6 +15,16 @@ activation = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(activation)
 
 
+def bootstrap_absence_fixture(env, checked_at):
+    return {
+        'project': 'samra-pay-'+env,
+        'instance': 'samra-'+env+'-postgres',
+        'principal': 'samra_bootstrap_'+env,
+        'absent': True,
+        'checkedAt': checked_at,
+    }
+
+
 class Sessions(unittest.TestCase):
     def setUp(self):
         registry = 'us-east4-docker.pkg.dev/samra-pay-test/samra-test/'
@@ -495,6 +505,11 @@ class Sessions(unittest.TestCase):
 
     def advance_candidate(self, receipt, action, number, *, status='passed',
                           execution=None, details=None, migration_image=None):
+        if status == 'passed' and action in activation.BOOTSTRAP_CHECKED_ACTIONS and details is None:
+            details = {'bootstrapDatabaseAbsence': bootstrap_absence_fixture(
+                receipt['project'].removeprefix('samra-pay-'),
+                f'2026-09-14T00:00:{number * 2:02d}+00:00',
+            )}
         return activation.advance_candidate_receipt(
             receipt,
             action,
@@ -538,6 +553,10 @@ class Sessions(unittest.TestCase):
                 'finishedAt': event['finishedAt'],
                 'status': {'succeededCount': 1},
             }
+            if action in activation.BOOTSTRAP_CHECKED_ACTIONS:
+                receipt['jobs'][action]['bootstrapDatabaseAbsence'] = copy.deepcopy(
+                    event['details']['bootstrapDatabaseAbsence'],
+                )
         receipt['functionalAcceptance'] = {
             'status': 'passed',
             'evidenceSha256': '7' * 64,
@@ -1480,6 +1499,10 @@ class PromotionAcceptance(unittest.TestCase):
                 'startedAt': f'2026-09-14T00:00:{started:02d}+00:00',
                 'finishedAt': f'2026-09-14T00:00:{finished:02d}+00:00',
             }
+            if action in activation.BOOTSTRAP_CHECKED_ACTIONS:
+                details = {'bootstrapDatabaseAbsence': bootstrap_absence_fixture(
+                    'dev', value['startedAt'],
+                )}
             if details:
                 value['details'] = details
             return value
@@ -1528,6 +1551,10 @@ class PromotionAcceptance(unittest.TestCase):
                 'finishedAt': bound_event['finishedAt'],
                 'status': {'succeededCount': 1},
             }
+            if action in activation.BOOTSTRAP_CHECKED_ACTIONS:
+                receipt['jobs'][action]['bootstrapDatabaseAbsence'] = copy.deepcopy(
+                    bound_event['details']['bootstrapDatabaseAbsence'],
+                )
         data = (json.dumps(receipt, indent=2) + '\n').encode()
         return receipt, data, hashlib.sha256(data).hexdigest()
 
@@ -1743,12 +1770,12 @@ class PromotionAcceptance(unittest.TestCase):
         )
         expected = {
             'dev': {
-                'path': 'docs/operations/evidence/2026-09-10-dev-runtime-activation.json',
-                'sha256': 'a3e9a963684a0082ed40ee50fed7d2d16a063d23bd66ab8d5a64acbaf1b8d5f2',
+                'path': 'docs/operations/evidence/2026-09-14-dev-runtime-baseline-reconciliation.json',
+                'sha256': 'f5e4d198578e6d7341a3f3cd2486bad3ce44871060f0c0bb9417d9ab2f260101',
             },
             'test': {
-                'path': 'docs/operations/evidence/2026-09-10-test-runtime-activation.json',
-                'sha256': '0ec6b766d2b9ad903bcb4de10f0070d4eb89eb395272af4bdd8f954c88e89bd1',
+                'path': 'docs/operations/evidence/2026-09-14-test-runtime-baseline-reconciliation.json',
+                'sha256': '80230ff7dab2ce5b4bb56ebcdff956ebb77ee9a1015783e6f68884871fea80db',
             },
         }
         for env, pinned in expected.items():
@@ -1758,7 +1785,7 @@ class PromotionAcceptance(unittest.TestCase):
                 self.assertEqual(configured['runtimeEvidenceSha256'], pinned['sha256'])
                 self.assertEqual(
                     configured['runtimeEvidenceCommit'],
-                    'e1dca8fdd21a75f46172435c9b114817de0e382a',
+                    '32286e63745d96adcb3f4b98dd4027a14ca86e25',
                 )
 
                 evidence_path = repository / pinned['path']
@@ -1774,6 +1801,34 @@ class PromotionAcceptance(unittest.TestCase):
                 )
                 self.assertIs(evidence['productionChanges'], False)
 
+                reconciliation = evidence['reconciliation']
+                original_pin = reconciliation['originalActivation']
+                original_bytes = (repository / original_pin['path']).read_bytes()
+                self.assertEqual(hashlib.sha256(original_bytes).hexdigest(), original_pin['sha256'])
+                original = json.loads(original_bytes)
+                for key in ('appSourceSha', 'images', 'secretVersions', 'bootstrapRetired',
+                            'revisions', 'protectedMainMerge'):
+                    self.assertEqual(evidence[key], original[key])
+                self.assertEqual(evidence['sessions'][:-2], original['sessions'])
+                self.assertEqual(evidence['sessions'][-1]['action'], 'stop')
+                self.assertEqual(evidence['sessions'][-1]['status'], 'passed')
+                drain = reconciliation['latestDrainLiveReadback']
+                self.assertEqual(evidence['databaseJobs']['drain'], drain['execution'])
+                self.assertNotEqual(drain['execution'], original['databaseJobs']['drain'])
+                self.assertEqual(drain['succeededCount'], 1)
+                self.assertLessEqual(
+                    activation.validate_timestamp(evidence['sessions'][-1]['startedAt']),
+                    activation.validate_timestamp(drain['startedAt']),
+                )
+                self.assertLessEqual(
+                    activation.validate_timestamp(drain['completedAt']),
+                    activation.validate_timestamp(evidence['sessions'][-1]['finishedAt']),
+                )
+                for action in ('bootstrap', 'migrate', 'audit-runtime', 'audit-reader'):
+                    self.assertEqual(evidence['databaseJobs'][action], original['databaseJobs'][action])
+                self.assertIs(evidence['functionalAcceptance'], False)
+                self.assertIs(reconciliation['noCloudMutationPerformed'], True)
+
                 provenance = subprocess.run(
                     [
                         'git', '-C', str(repository), 'show',
@@ -1786,6 +1841,273 @@ class PromotionAcceptance(unittest.TestCase):
                     provenance.returncode, 0, provenance.stderr.decode(),
                 )
                 self.assertEqual(provenance.stdout, evidence_bytes)
+
+
+class BootstrapDatabaseRetirement(unittest.TestCase):
+    def setUp(self):
+        fixture = Sessions()
+        fixture.setUp()
+        prior, services, _, images = fixture.release_fixture()
+        value = json.dumps([prior, services, images])
+        for before, after in [
+            ('samra-pay-test', 'samra-pay-dev'),
+            ('samra-test', 'samra-dev'),
+            ('samra-api-test', 'samra-api-dev'),
+            ('samra-customer-web-test', 'samra-customer-web-dev'),
+        ]:
+            value = value.replace(before, after)
+        self.prior, self.services, self.images = json.loads(value)
+        self.prior['services'] = copy.deepcopy(self.services)
+        self.boundary = {'schemaVersion': 1, 'targets': {'synthetic-test': {}}}
+        self.trust = fixture.trust_fixture()
+        self.candidate = activation.prepare_release_receipt(
+            self.prior, self.trust, 'samra-pay-dev', self.images,
+            self.services, {'state': 'STOPPED', 'settings': {'activationPolicy': 'NEVER'}},
+            self.boundary, '2026-09-14T00:00:00+00:00',
+        )
+        self.policy = 'NEVER'
+        self.calls = []
+        self.users = [{'name': 'postgres'}, {'name': 'samra_audit_dev'}]
+        self.invoker = {'bindings': [{'role': 'roles/run.invoker', 'members': [
+            'serviceAccount:samra-customer-web-dev@samra-pay-dev.iam.gserviceaccount.com',
+        ]}]}
+
+    def cloud(self, *args, **_kwargs):
+        self.calls.append(args)
+        if args[:4] == ('artifacts', 'docker', 'images', 'describe'):
+            return {}
+        if args[:2] == ('projects', 'describe'):
+            return {'projectId': 'samra-pay-dev', 'projectNumber': '829811168658',
+                    'lifecycleState': 'ACTIVE',
+                    'parent': {'type': 'organization', 'id': '993968777863'}}
+        if args[:3] == ('sql', 'instances', 'describe'):
+            return {'state': 'RUNNABLE' if self.policy == 'ALWAYS' else 'STOPPED',
+                    'settings': {'activationPolicy': self.policy, 'ipConfiguration': {
+                        'ipv4Enabled': False, 'sslMode': 'ENCRYPTED_ONLY',
+                        'serverCaMode': 'GOOGLE_MANAGED_INTERNAL_CA',
+                        'privateNetwork': 'projects/samra-pay-dev/global/networks/samra-dev-vpc',
+                    }}, 'ipAddresses': [{'type': 'PRIVATE', 'ipAddress': '10.61.0.3'}]}
+        if args[:3] == ('sql', 'instances', 'patch'):
+            self.policy = args[-1].split('=')[1]
+            return {}
+        if args[:3] == ('sql', 'users', 'list'):
+            if self.policy != 'ALWAYS':
+                raise RuntimeError('HTTP 400 Invalid request since instance is not running')
+            if isinstance(self.users, Exception):
+                raise self.users
+            return copy.deepcopy(self.users)
+        if args[:3] == ('secrets', 'versions', 'describe'):
+            return {'state': 'DISABLED' if '--secret=samra-dev-database-setup' in args else 'ENABLED'}
+        if args[:2] == ('secrets', 'get-iam-policy'):
+            roles = {
+                'samra-dev-database-url': ['api'],
+                'samra-dev-migration-database-url': ['migrations'],
+                'samra-dev-audit-database-url': ['audit'],
+                'samra-dev-database-ca': ['api', 'migrations', 'audit'],
+                'samra-dev-database-setup': [],
+            }[args[2]]
+            return {'bindings': [] if not roles else [{
+                'role': 'roles/secretmanager.secretAccessor',
+                'members': [f'serviceAccount:samra-{role}-dev@samra-pay-dev.iam.gserviceaccount.com' for role in roles],
+            }]}
+        if args[:3] == ('iam', 'service-accounts', 'describe'):
+            return {'disabled': args[3].startswith('samra-bootstrap-')}
+        if args[:4] == ('run', 'jobs', 'executions', 'list') or args[:3] == ('sql', 'operations', 'list'):
+            return []
+        if args[:3] == ('run', 'services', 'describe'):
+            return copy.deepcopy(self.services['api' if args[3] == 'samra-api-dev' else 'web'])
+        if args[:3] == ('run', 'services', 'update'):
+            self.assertEqual(args[3], 'samra-customer-web-dev')
+            self.assertEqual(args[-1], '--scaling=0')
+            self.services['web']['metadata']['annotations']['run.googleapis.com/manualInstanceCount'] = '0'
+            return {}
+        if args[:3] == ('run', 'services', 'get-iam-policy'):
+            return copy.deepcopy(self.invoker)
+        if args[:3] == ('run', 'jobs', 'deploy'):
+            saved = json.loads(self.receipt_path.read_text())
+            job = (saved['recoveryJobs'][-1] if args[3] == 'samra-db-drain-recovery-dev'
+                   else next(reversed(saved['jobs'].values())))
+            if args[3].startswith('samra-db-drain-'):
+                self.assertNotIn('bootstrapDatabaseAbsence', job)
+            else:
+                self.assertIs(job['bootstrapDatabaseAbsence']['absent'], True)
+            self.assertIsNone(job['execution'])
+            return {}
+        if args[:3] == ('run', 'jobs', 'execute'):
+            return {'metadata': {'name': args[3]+'-execution'}, 'status': {'succeededCount': 1}}
+        self.fail('Unexpected Google Cloud operation: '+repr(args))
+
+    def receipt_before(self, action):
+        receipt = copy.deepcopy(self.candidate)
+        for number, prior_action in enumerate(['migrate', 'audit-runtime', 'audit-reader'], 1):
+            if prior_action == action:
+                break
+            started = f'2026-09-14T00:00:0{number * 2}+00:00'
+            finished = f'2026-09-14T00:00:0{number * 2 + 1}+00:00'
+            absence = bootstrap_absence_fixture('dev', started)
+            activation.advance_candidate_receipt(
+                receipt, prior_action, status='passed', started_at=started,
+                finished_at=finished, migration_image=receipt['images']['migrations'],
+                execution=prior_action+'-prior-execution',
+                details={'bootstrapDatabaseAbsence': absence},
+            )
+            receipt['jobs'][prior_action] = {
+                'execution': prior_action+'-prior-execution',
+                'status': {'succeededCount': 1}, 'bootstrapDatabaseAbsence': absence,
+            }
+        return receipt
+
+    def command(self, action, job_action=None, receipt=None, missing_check=False, drain_only=False):
+        with tempfile.TemporaryDirectory(prefix='samra-bootstrap-check-test-') as directory:
+            root = Path(directory)
+            images_path, prior_path = root/'images.json', root/'prior.json'
+            self.receipt_path = root/'candidate.json'
+            images_path.write_text(json.dumps(self.images))
+            prior_path.write_text(json.dumps(self.prior))
+            args = ['dev', action, '--images', str(images_path), '--receipt', str(self.receipt_path)]
+            if action == 'prepare-release':
+                args += ['--prior-receipt', str(prior_path), '--prior-receipt-sha256', 'f'*64]
+            else:
+                self.receipt_path.write_text(json.dumps(receipt or self.candidate))
+            if job_action:
+                args += ['--job-action', job_action]
+            original_check = activation.read_bootstrap_database_absence
+            original_session = activation.control_session
+            original_rollback = activation.perform_candidate_rollback
+
+            def stop_drain(_action, _env, _inventory, receipt, save, drain_job, *_args):
+                receipt['sessions'] = [{'action': 'stop', 'status': 'in-progress'}]
+                save()
+                return drain_job()
+
+            def recovery_drain(_receipt, _env, _project, _region, _instance, drain_check, *_args):
+                return drain_check()
+
+            with patch.object(activation, 'gcloud', side_effect=self.cloud), \
+                 patch.object(activation, 'read_effective_iam_boundary', return_value=self.boundary), \
+                 patch.object(activation, 'prior_receipt_trust', return_value=self.trust), \
+                 patch.object(activation, 'acquire_environment_lock', return_value=True), \
+                 patch.object(activation, 'read_bootstrap_database_absence',
+                              side_effect=(lambda *_: None) if missing_check else original_check), \
+                 patch.object(activation, 'control_session', side_effect=stop_drain if drain_only else original_session), \
+                 patch.object(activation, 'perform_candidate_rollback', side_effect=recovery_drain if drain_only else original_rollback), \
+                 patch('builtins.print'):
+                error = None
+                try:
+                    activation.main(args)
+                except Exception as caught:
+                    error = caught
+            return json.loads(self.receipt_path.read_text()), error
+
+    def test_preparation_does_not_query_users_or_start_stopped_sql(self):
+        receipt, error = self.command('prepare-release')
+        self.assertIsNone(error)
+        self.assertEqual(receipt['phase'], 'prepared-paused')
+        self.assertTrue(receipt['bootstrapRetired'])
+        self.assertEqual(self.policy, 'NEVER')
+        self.assertFalse(any(call[:3] in {
+            ('sql', 'users', 'list'), ('sql', 'instances', 'patch'),
+        } for call in self.calls))
+
+    def test_normal_database_jobs_check_live_absence_after_start_before_deploy(self):
+        for action in ['migrate', 'audit-runtime', 'audit-reader']:
+            with self.subTest(action=action):
+                self.calls = []
+                self.policy = 'NEVER' if action == 'migrate' else 'ALWAYS'
+                receipt, error = self.command('database-job', action, self.receipt_before(action))
+                self.assertIsNone(error)
+                commands = [call[:3] for call in self.calls]
+                start = commands.index(('sql', 'instances', 'patch'))
+                running = commands.index(('sql', 'instances', 'describe'), start)
+                listed = commands.index(('sql', 'users', 'list'))
+                deployed = commands.index(('run', 'jobs', 'deploy'))
+                executed = commands.index(('run', 'jobs', 'execute'))
+                self.assertLess(start, running)
+                self.assertLess(running, listed)
+                self.assertLess(listed, deployed)
+                self.assertLess(deployed, executed)
+                event_check = receipt['events'][-1]['details']['bootstrapDatabaseAbsence']
+                self.assertEqual(event_check, receipt['jobs'][action]['bootstrapDatabaseAbsence'])
+                self.assertEqual(set(event_check), {'project','instance','principal','absent','checkedAt'})
+
+    def test_absence_failure_or_missing_result_blocks_every_normal_database_job(self):
+        invalid = [
+            [{'name': 'samra_bootstrap_dev'}],
+            RuntimeError('Google Cloud operation failed: sql users list'),
+            None, False, {}, {'items': []}, [None], [{}], [{'name': ''}], [{'name': False}],
+        ]
+        for action in ['migrate', 'audit-runtime', 'audit-reader']:
+            for users in invalid:
+                with self.subTest(action=action, result=users):
+                    self.calls = []
+                    self.policy = 'NEVER' if action == 'migrate' else 'ALWAYS'
+                    self.users = users
+                    receipt, error = self.command('database-job', action, self.receipt_before(action))
+                    self.assertIsNotNone(error)
+                    self.assertEqual(receipt['phase'], 'blocked-recovery-required')
+                    self.assertEqual(receipt['events'][-1]['status'], 'failed')
+                    self.assertIsNone(receipt['jobs'][action]['execution'])
+                    self.assertEqual(self.policy, 'ALWAYS')
+                    self.assertFalse(any(call[:3] in {
+                        ('run', 'jobs', 'deploy'), ('run', 'jobs', 'execute'),
+                    } for call in self.calls))
+        self.calls = []
+        self.policy = 'NEVER'
+        receipt, error = self.command('database-job', 'migrate', missing_check=True)
+        self.assertIsNotNone(error)
+        self.assertEqual(receipt['phase'], 'blocked-recovery-required')
+        self.assertFalse(any(call[:2] == ('run', 'jobs') and call[2] in {'deploy','execute'} for call in self.calls))
+
+    def session_receipt(self):
+        receipt = self.receipt_before('deploy')
+        for number, action in enumerate(['deploy', 'start'], 4):
+            activation.advance_candidate_receipt(
+                receipt, action, status='passed',
+                started_at=f'2026-09-14T00:00:{number * 2:02d}+00:00',
+                finished_at=f'2026-09-14T00:00:{number * 2 + 1:02d}+00:00',
+                migration_image=receipt['images']['migrations'],
+            )
+        return receipt
+
+    def test_missing_or_invalid_live_check_blocks_deployment_and_acceptance(self):
+        valid = bootstrap_absence_fixture('dev', '2026-09-14T00:00:02+00:00')
+        checks = [None, False, {}, {**valid, 'absent': False}, {**valid, 'absent': 1},
+                  {**valid, 'project': 'samra-pay-test'},
+                  {**valid, 'principal': 'samra_bootstrap_test'},
+                  {**valid, 'checkedAt': '2026-09-14T00:00:00+00:00'},
+                  {**valid, 'extra': True}]
+        for action in ['deploy', 'record-acceptance']:
+            for check in checks:
+                with self.subTest(action=action, check=check):
+                    self.calls = []
+                    receipt = self.receipt_before('deploy') if action == 'deploy' else self.session_receipt()
+                    receipt['events'][1]['details'] = {'bootstrapDatabaseAbsence': check}
+                    _, error = self.command(action, receipt=receipt)
+                    self.assertIsInstance(error, AssertionError)
+                    self.assertIn('bootstrap', str(error).lower())
+                    self.assertFalse(any(call[:3] in {
+                        ('run', 'jobs', 'deploy'), ('run', 'jobs', 'execute'),
+                        ('run', 'services', 'update'), ('sql', 'instances', 'patch'),
+                    } or call[:2] == ('run', 'deploy') for call in self.calls))
+
+    def test_stop_and_recovery_drains_do_not_depend_on_users_list(self):
+        for action in ['stop', 'rollback']:
+            for users in [[{'name': 'samra_bootstrap_dev'}], RuntimeError('users.list unavailable')]:
+                with self.subTest(action=action, users=users):
+                    self.calls = []
+                    self.users = users
+                    self.policy = 'ALWAYS'
+                    receipt, error = self.command(action, receipt=self.session_receipt(), drain_only=True)
+                    self.assertIsNone(error)
+                    self.assertFalse(any(call[:3] == ('sql', 'users', 'list') for call in self.calls))
+                    executed = [call for call in self.calls if call[:3] == ('run', 'jobs', 'execute')]
+                    self.assertEqual(len(executed), 1)
+                    self.assertTrue(executed[0][3].startswith('samra-db-drain-'))
+                    if action == 'stop':
+                        self.assertEqual(receipt['events'][-1]['action'], 'drain')
+                        self.assertEqual(receipt['events'][-1]['status'], 'passed')
+                    else:
+                        self.assertEqual(receipt['recoveryJobs'][-1]['status']['succeededCount'], 1)
 
 
 class EffectiveIamBoundary(unittest.TestCase):
