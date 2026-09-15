@@ -16,8 +16,9 @@ required, so the control works for this private repository.
 
 1. Open **Actions → Immutable release candidate → Run workflow**.
 2. Paste the full 40-character GitHub `main` commit into `candidate_sha`.
-3. Run the workflow from the default branch. Leave `report_to_qase` off unless
-   optional external reporting is wanted.
+3. Run the workflow from the default branch. `candidate_sha` is its only input;
+   external Qase reporting is disabled under the
+   [9 September retirement decision](user-testing.md).
 4. Accept the candidate only when `Immutable release-candidate evidence` passes,
    and the downloaded version 2 manifest says
    `"overallStatus": "passed"`.
@@ -39,8 +40,8 @@ required, so the control works for this private repository.
 - weekly concurrency, randomized-ledger, fault-injection, and migration-upgrade
   JUnit files;
 - 100,000/1,000,000-posting performance JUnit and JSON evidence;
-- required local Qase reporting state and actual step outcomes, with nullable
-  run ID/URL; external reporting is optional and disabled by default;
+- required legacy local Qase reporting state and actual step outcomes, with
+  null run ID/URL; no external Qase reporting is performed;
 - SHA-256, byte length, and path for every required evidence file;
 - an independent SHA-256 record for the manifest itself.
 
@@ -73,11 +74,17 @@ suite. The workflow does not deploy, access Replit, change cloud resources,
 migrate a shared database, use real providers, read customer data, authorize
 production money, or certify legal and regulatory readiness.
 
+Migration and recovery fixtures share a bounded physical-disconnect check for
+their PostgreSQL pools. Migration cleanup cannot force-drop its owned database
+while target connections are still closing; a disconnect timeout or cleanup
+error fails the gate.
+
 ## Reporting policy transition
 
-The [5 September decision](../architecture/optional-qase-reporting.md) makes
-external Qase failures non-blocking for release eligibility. All ten engineering
-gates and all 49 local evidence files remain mandatory. `qase-run.json` records
-disabled, failed, or successful reporting and remains content-addressed.
+The [9 September retirement decision](user-testing.md) supersedes the earlier
+[optional Qase policy](../architecture/optional-qase-reporting.md). The current
+workflow performs no external Qase reporting. All ten engineering gates and all
+49 local evidence files remain mandatory; the legacy `qase-run.json` records
+disabled reporting and remains content-addressed for contract compatibility.
 Version 1 artifacts and prior failed runs cannot be reclassified: merge the
 reviewed change, then issue fresh version 2 evidence for that exact commit.

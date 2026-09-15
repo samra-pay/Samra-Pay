@@ -20,6 +20,7 @@ import test, { type TestContext } from "node:test";
 import { createDatabase, type DatabaseConnection } from "@workspace/db";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { closeDisposableConnection } from "./disposable-postgres-cleanup.js";
 
 const execFileAsync = promisify(execFile);
 const workspaceRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -872,38 +873,10 @@ async function closeConnection(
   connection: Pick<DatabaseConnection, "pool"> | undefined,
   cleanupErrors: unknown[],
 ): Promise<void> {
-  if (!connection) return;
-  const pool = connection.pool;
-  let remaining = pool.totalCount;
-  let disconnected: () => void = () => undefined;
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  const physicalDisconnects = new Promise<void>((resolve, reject) => {
-    disconnected = resolve;
-    if (remaining === 0) resolve();
-    else {
-      timeout = setTimeout(() => {
-        reject(
-          new Error(
-            "Timed out waiting for disposable database connections to close.",
-          ),
-        );
-      }, databaseOperationTimeoutMs);
-    }
-  });
-  const onRemove = (): void => {
-    remaining -= 1;
-    if (remaining === 0) disconnected();
-  };
-  // The pool's end promise can resolve before its client end callbacks. Wait
-  // for every physical disconnect so DROP ... FORCE cannot race an idle client.
-  pool.on("remove", onRemove);
   try {
-    await Promise.all([pool.end(), physicalDisconnects]);
+    await closeDisposableConnection(connection, databaseOperationTimeoutMs);
   } catch (error) {
     cleanupErrors.push(error);
-  } finally {
-    if (timeout) clearTimeout(timeout);
-    pool.off("remove", onRemove);
   }
 }
 

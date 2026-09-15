@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
+import { EventEmitter, once } from "node:events";
 import {
   copyFile,
   mkdir,
@@ -12,6 +13,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setImmediate } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
@@ -19,12 +21,14 @@ import {
   ALPHA_ONBOARDING_CONSENT_BUNDLE,
   CUSTOMER_CONTROLLED_SANDBOX_DISCLOSURE,
   createDatabase,
+  type DatabaseConnection,
   PostgresCustomerOnboardingStore,
   PostgresCustomerWalletStore,
   PostgresPersistenceContext,
 } from "@workspace/db";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { closeDisposableConnection } from "./disposable-postgres-cleanup.js";
 
 const connectionString = process.env["TEST_DATABASE_URL"];
 if (!connectionString) {
@@ -52,6 +56,58 @@ function databaseUrl(database: string): string {
   const url = new URL(connectionString!);
   url.pathname = `/${database}`;
   return url.toString();
+}
+
+async function cleanupMigrationDatabase(
+  {
+    target,
+    admin,
+    databaseName,
+    temporaryFolders = [],
+  }: {
+    target: Pick<DatabaseConnection, "pool"> | undefined;
+    admin: Pick<DatabaseConnection, "pool">;
+    databaseName: string;
+    temporaryFolders?: (string | undefined)[];
+  },
+  timeoutMs = 60_000,
+): Promise<void> {
+  const cleanupErrors: unknown[] = [];
+  let targetClosed = false;
+  try {
+    await closeDisposableConnection(target, timeoutMs);
+    targetClosed = true;
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  for (const folder of temporaryFolders) {
+    try {
+      if (folder) await rm(folder, { recursive: true, force: true });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  if (targetClosed) {
+    try {
+      await admin.pool.query(
+        `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
+      );
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  // Always close the admin connection, even if target shutdown or DROP fails.
+  try {
+    await closeDisposableConnection(admin, timeoutMs);
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  if (cleanupErrors.length > 0) {
+    throw new AggregateError(
+      cleanupErrors,
+      "Migration compatibility disposable database cleanup failed.",
+    );
+  }
 }
 
 async function seed(url: string): Promise<void> {
@@ -747,15 +803,12 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
       pending_profile_columns: "2",
     });
   } finally {
-    if (target) await target.pool.end();
-    if (baselineFolder)
-      await rm(baselineFolder, { recursive: true, force: true });
-    if (preCurrentFolder)
-      await rm(preCurrentFolder, { recursive: true, force: true });
-    await admin.pool.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
-    await admin.pool.end();
+    await cleanupMigrationDatabase({
+      target,
+      admin,
+      databaseName,
+      temporaryFolders: [baselineFolder, preCurrentFolder],
+    });
   }
 });
 
@@ -880,13 +933,12 @@ test("migration 0021 refuses malformed staging-ready wallet evidence", async () 
       },
     ]);
   } finally {
-    if (target) await target.pool.end();
-    if (preCurrentFolder)
-      await rm(preCurrentFolder, { recursive: true, force: true });
-    await admin.pool.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
-    await admin.pool.end();
+    await cleanupMigrationDatabase({
+      target,
+      admin,
+      databaseName,
+      temporaryFolders: [preCurrentFolder],
+    });
   }
 });
 
@@ -1138,10 +1190,219 @@ test("migration 0021 preserves deployed synthetic rollback wallet writes while s
         ),
     );
   } finally {
-    if (target) await target.pool.end();
-    await admin.pool.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
-    await admin.pool.end();
+    await cleanupMigrationDatabase({ target, admin, databaseName });
   }
+});
+
+class ControlledClosingPool extends EventEmitter {
+  removed = 0;
+  endCalls = 0;
+  queries: string[] = [];
+  endError: Error | undefined;
+  queryError: Error | undefined;
+  endNeverResolves = false;
+
+  constructor(public totalCount: number) {
+    super();
+  }
+
+  async end(): Promise<void> {
+    this.endCalls += 1;
+    this.emit("closing");
+    // Reproduce pg-pool's ordering without depending on a PostgreSQL race.
+    this.totalCount = 0;
+    if (this.endError) throw this.endError;
+    if (this.endNeverResolves) await new Promise<void>(() => undefined);
+  }
+
+  disconnect(): void {
+    this.removed += 1;
+    this.emit("remove", {});
+  }
+
+  async query(statement: string): Promise<void> {
+    this.queries.push(statement);
+    if (this.queryError) throw this.queryError;
+  }
+
+  connection(): Pick<DatabaseConnection, "pool"> {
+    return { pool: this as unknown as DatabaseConnection["pool"] };
+  }
+}
+
+test("migration cleanup waits for target and admin physical disconnects", async () => {
+  const target = new ControlledClosingPool(2);
+  const admin = new ControlledClosingPool(1);
+  let finished = false;
+  const cleanup = cleanupMigrationDatabase({
+    target: target.connection(),
+    admin: admin.connection(),
+    databaseName: "samra_upgrade_cleanup_fixture",
+  }).then(() => {
+    finished = true;
+  });
+  await setImmediate();
+  const dropsBeforeTargetDisconnects = admin.queries.length;
+  target.disconnect();
+  await setImmediate();
+  const dropsWithOneTargetRemaining = admin.queries.length;
+  target.disconnect();
+  await setImmediate();
+  const finishedBeforeAdminDisconnect = finished;
+  admin.disconnect();
+  await cleanup;
+
+  assert.equal(dropsBeforeTargetDisconnects, 0);
+  assert.equal(dropsWithOneTargetRemaining, 0);
+  assert.deepEqual(admin.queries, [
+    'DROP DATABASE IF EXISTS "samra_upgrade_cleanup_fixture" WITH (FORCE)',
+  ]);
+  assert.equal(finishedBeforeAdminDisconnect, false);
+  assert.equal(finished, true);
+  assert.equal(target.endCalls, 1);
+  assert.equal(admin.endCalls, 1);
+  assert.equal(target.listenerCount("remove"), 0);
+  assert.equal(admin.listenerCount("remove"), 0);
+});
+
+test("migration cleanup refuses DROP after a target close error and still closes admin", async () => {
+  const target = new ControlledClosingPool(1);
+  const admin = new ControlledClosingPool(1);
+  const closeError = new Error("Synthetic target close failure.");
+  target.endError = closeError;
+  const temporaryFolder = await mkdtemp(join(tmpdir(), "samra-cleanup-test-"));
+  const adminClosing = once(admin, "closing", {
+    signal: AbortSignal.timeout(1_000),
+  });
+  let finished = false;
+  const rejection = assert.rejects(
+    cleanupMigrationDatabase({
+      target: target.connection(),
+      admin: admin.connection(),
+      databaseName: "samra_upgrade_cleanup_fixture",
+      temporaryFolders: [temporaryFolder],
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.deepEqual(error.errors, [closeError]);
+      return true;
+    },
+  ).then(() => {
+    finished = true;
+  });
+  await setImmediate();
+  const finishedBeforeAdminDisconnect = finished;
+  try {
+    // Folder removal is real asynchronous I/O; bound the wait for admin close.
+    await adminClosing;
+    admin.disconnect();
+    await rejection;
+    await assert.rejects(readdir(temporaryFolder), { code: "ENOENT" });
+  } finally {
+    await rm(temporaryFolder, { recursive: true, force: true });
+  }
+  assert.equal(finishedBeforeAdminDisconnect, false);
+  assert.deepEqual(admin.queries, []);
+  assert.equal(admin.endCalls, 1);
+  assert.equal(target.listenerCount("remove"), 0);
+  assert.equal(admin.listenerCount("remove"), 0);
+});
+
+test("migration cleanup fails closed on a missing physical disconnect", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const target = new ControlledClosingPool(1);
+  const admin = new ControlledClosingPool(0);
+  const rejection = assert.rejects(
+    cleanupMigrationDatabase({
+      target: target.connection(),
+      admin: admin.connection(),
+      databaseName: "samra_upgrade_cleanup_fixture",
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 1);
+      assert.match(
+        error.errors[0].message,
+        /Timed out waiting for disposable database connections to close/,
+      );
+      return true;
+    },
+  );
+  await setImmediate();
+  assert.equal(target.totalCount, 0);
+  assert.equal(target.removed, 0);
+  context.mock.timers.tick(60_000);
+  await rejection;
+  assert.deepEqual(admin.queries, []);
+  assert.equal(admin.endCalls, 1);
+  assert.equal(target.listenerCount("remove"), 0);
+  assert.equal(admin.listenerCount("remove"), 0);
+});
+
+test("migration cleanup bounds a pool end promise even after all physical disconnects", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const target = new ControlledClosingPool(1);
+  target.endNeverResolves = true;
+  const admin = new ControlledClosingPool(0);
+  const rejection = assert.rejects(
+    cleanupMigrationDatabase({
+      target: target.connection(),
+      admin: admin.connection(),
+      databaseName: "samra_upgrade_cleanup_fixture",
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 1);
+      assert.match(
+        error.errors[0].message,
+        /Timed out waiting for disposable database connections to close/,
+      );
+      return true;
+    },
+  );
+  target.disconnect();
+  await setImmediate();
+  context.mock.timers.tick(60_000);
+  await rejection;
+  assert.deepEqual(admin.queries, []);
+  assert.equal(admin.endCalls, 1);
+  assert.equal(target.listenerCount("remove"), 0);
+  assert.equal(admin.listenerCount("remove"), 0);
+});
+
+test("migration cleanup preserves DROP and admin close errors", async () => {
+  const target = new ControlledClosingPool(0);
+  const admin = new ControlledClosingPool(0);
+  const dropError = new Error("Synthetic DROP failure.");
+  const closeError = new Error("Synthetic admin close failure.");
+  admin.queryError = dropError;
+  admin.endError = closeError;
+  await assert.rejects(
+    cleanupMigrationDatabase({
+      target: target.connection(),
+      admin: admin.connection(),
+      databaseName: "samra_upgrade_cleanup_fixture",
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.deepEqual(error.errors, [dropError, closeError]);
+      return true;
+    },
+  );
+  assert.equal(admin.queries.length, 1);
+  assert.equal(admin.endCalls, 1);
+  assert.equal(target.listenerCount("remove"), 0);
+  assert.equal(admin.listenerCount("remove"), 0);
+});
+
+test("migration cleanup closes admin when target initialization did not complete", async () => {
+  const admin = new ControlledClosingPool(0);
+  await cleanupMigrationDatabase({
+    target: undefined,
+    admin: admin.connection(),
+    databaseName: "samra_upgrade_cleanup_fixture",
+  });
+  assert.equal(admin.queries.length, 1);
+  assert.equal(admin.endCalls, 1);
+  assert.equal(admin.listenerCount("remove"), 0);
 });
