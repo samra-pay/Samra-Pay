@@ -1,0 +1,157 @@
+{
+  "status": "paused-baseline-reconciled-not-new-release-readiness",
+  "observedAt": "2026-09-15T00:45:00.665462+00:00",
+  "appSourceSha": "836f76bd368e9d81c633d7483e48b907c42ef775",
+  "project": "samra-pay-test",
+  "region": "us-east4",
+  "images": {
+    "api": "sha256:d6041d74b9728b53bdef8136679e15ff1730d79fcd12bfc9ec5250937ed6966c",
+    "customer-web": "sha256:d18308bb633bc28aafd45d00cc9d10ee1062b38680fb47bc72eedd93fd9f1f1e",
+    "migrations": "sha256:008c9d4fea6831cd7c46f6cc3c0c95122b1cab83cd6a26f74c4356dfb97d6f46"
+  },
+  "secretVersions": {
+    "ca": "1",
+    "migration": "1",
+    "runtime": "1",
+    "audit": "1",
+    "bootstrap": "1"
+  },
+  "bootstrapRetired": {
+    "databaseUserDeleted": true,
+    "serviceAccountDisabled": true,
+    "setupSecretDisabled": true,
+    "readbackPassed": true
+  },
+  "databaseJobs": {
+    "bootstrap": "samra-db-bootstrap-test-7ms2q",
+    "migrate": "samra-db-migrate-test-trwkt",
+    "audit-runtime": "samra-db-audit-runtime-test-hwphz",
+    "audit-reader": "samra-db-audit-reader-test-lnkl9",
+    "drain": "samra-db-drain-test-kk68l"
+  },
+  "databaseJobsResult": "all-passed",
+  "revisions": {
+    "api": "samra-api-test-00001-rpd",
+    "customer-web": "samra-customer-web-test-00001-vjl"
+  },
+  "apiReadiness": "passed-on-recorded-revision",
+  "sessionShutdownRestart": "start-stop-restart-stop-passed",
+  "protectedMainMerge": {
+    "pr": 213,
+    "commit": "58122e04efcd706f1b6b79d62444da1fe192f3de",
+    "mergedAt": "2026-09-10T15:06:28Z",
+    "includesAppSourceAsParent": true,
+    "treeMatchesAppSource": true
+  },
+  "sessionOperatorSourceSha": "fe9062d2cec8895319e81b0afaa359d265b048cc",
+  "sessions": [
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T15:43:11.091281+00:00",
+      "finishedAt": "2026-09-10T15:44:19.150330+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:47:16.791468+00:00",
+      "finishedAt": "2026-09-10T15:50:02.995936+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T15:50:51.483806+00:00",
+      "finishedAt": "2026-09-10T15:57:21.625860+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T15:58:15.967017+00:00",
+      "finishedAt": "2026-09-10T16:01:05.275892+00:00",
+      "status": "passed"
+    },
+    {
+      "action": "start",
+      "startedAt": "2026-09-10T18:27:14.964224+00:00",
+      "status": "passed",
+      "finishedAt": "2026-09-10T18:28:22.913775+00:00"
+    },
+    {
+      "action": "stop",
+      "startedAt": "2026-09-10T18:29:46.109422+00:00",
+      "status": "passed",
+      "finishedAt": "2026-09-10T18:32:22.575722+00:00"
+    }
+  ],
+  "pausedReadback": {
+    "observedAt": "2026-09-15T00:45:00.665462+00:00",
+    "source": "Independent live Cloud SQL and Cloud Run metadata readback against retained receipt",
+    "databaseState": "STOPPED",
+    "activationPolicy": "NEVER",
+    "apiManualInstances": 0,
+    "webManualInstances": 0,
+    "revisionsUnchanged": true
+  },
+  "reconciliation": {
+    "reason": "The retained receipt includes the later post-organization-move start and stop. The original activation evidence predates these sessions and names the earlier drain execution.",
+    "originalActivation": {
+      "path": "docs/operations/evidence/2026-09-10-test-runtime-activation.json",
+      "sha256": "0ec6b766d2b9ad903bcb4de10f0070d4eb89eb395272af4bdd8f954c88e89bd1",
+      "commit": "e1dca8fdd21a75f46172435c9b114817de0e382a",
+      "unchanged": true
+    },
+    "postMoveHandoff": {
+      "path": "docs/operations/evidence/2026-09-10-dev-test-handoff-readback.json",
+      "recordedAt": "2026-09-10T20:13:23.040Z"
+    },
+    "migrationOwnerReadback": {
+      "record": "final-environment-audit.json",
+      "verifiedAt": "2026-09-10T18:48:14.428802+00:00"
+    },
+    "retainedReceiptSha256": "0bd6192c593906e529f4aa5568a9ae2766739624b2804d0505dc1eae3725df2e",
+    "latestDrainLiveReadback": {
+      "execution": "samra-db-drain-test-kk68l",
+      "startedAt": "2026-09-10T18:31:08.374678Z",
+      "completedAt": "2026-09-10T18:31:36.522850Z",
+      "succeededCount": 1
+    },
+    "unchangedFromOriginal": [
+      "appSourceSha",
+      "images",
+      "secretVersions",
+      "revisions",
+      "bootstrap",
+      "migrate",
+      "audit-runtime",
+      "audit-reader"
+    ],
+    "freshlyVerified": [
+      "private SQL stopped with activation NEVER",
+      "exact paused reconciled service revisions and images",
+      "no active Cloud Run executions or SQL operations",
+      "enabled numbered permanent secrets and exact direct accessors",
+      "disabled bootstrap service account and secret version with no direct accessor",
+      "direct private API and public login-shell access boundary",
+      "latest retained drain execution succeeded"
+    ],
+    "historicalOnly": [
+      "database bootstrap-user deletion and retirement readback",
+      "API readiness and HTTP/login-shell checks on recorded revisions",
+      "original migration and privilege-audit results",
+      "original start-stop-restart-stop session sequence"
+    ],
+    "notVerified": [
+      "Effective organization IAM: current operator received PERMISSION_DENIED",
+      "Live database-user absence: SQL users.list is unavailable while stopped; check after authorized start before normal candidate jobs",
+      "New release deployment or runtime behavior",
+      "Two-person functional acceptance"
+    ],
+    "artifactNote": "The retained receipt hash identifies the observed bytes; it is not presented as an independently pre-existing hash anchor. The reviewed Git commit and pinned bytes of this reconciliation record provide the baseline anchor.",
+    "noCloudMutationPerformed": true
+  },
+  "functionalAcceptance": false,
+  "costBoundary": {
+    "combinedMonthlyPlanningUsd": 50,
+    "hardCap": false
+  },
+  "productionChanges": false
+}
