@@ -733,6 +733,14 @@ export default function CustomerOnboardingPage() {
           </div>
         </Card>
 
+        {runtime.mode === "api" && onboarding ? (
+          <div className="mt-5 text-center">
+            <Button asChild variant="outline" className="min-h-11">
+              <Link href="/account">Your account</Link>
+            </Button>
+          </div>
+        ) : null}
+
         <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">
           Samra Pay owns the onboarding record and capability decision. Provider
           responses are evidence, not account authority.
@@ -981,6 +989,9 @@ function OnboardingFailure({
             }`}
           />
           {retrying ? "Retrying…" : "Retry"}
+        </Button>
+        <Button asChild variant="outline" className="mt-3 min-h-11 w-full">
+          <Link href="/account">Your account</Link>
         </Button>
       </Card>
     </main>

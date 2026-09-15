@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useCurrentCustomer } from "@workspace/samra-client/react";
+import { useCustomerAccount } from "@/lib/customer-account";
 import { customerSessionDestination } from "@/lib/customer-entry";
 import { useCustomerAuth } from "@/lib/customer-auth";
 import { localized, usePublicLanguage } from "@/lib/public-i18n";
@@ -8,21 +8,22 @@ import "@/components/customer-entry.css";
 import "./coming-soon.css";
 
 export default function CustomerSession() {
-  const customer = useCurrentCustomer();
+  const customer = useCustomerAccount();
   const auth = useCustomerAuth();
   const [, setLocation] = useLocation();
   const { text } = usePublicLanguage();
   // Do not route using cached customer data while revalidating the session.
-  const destination = customer.isFetching
-    ? null
-    : customerSessionDestination(customer.data, customer.error);
+  const destination =
+    customer.isPending || customer.isFetching
+      ? null
+      : customerSessionDestination(customer.data, customer.error);
   useEffect(() => {
     if (destination) setLocation(destination, { replace: true });
   }, [destination, setLocation]);
   return (
     <main className="coming-soon-site">
       <section className="customer-entry-status" aria-live="polite">
-        {customer.isError && !destination && !customer.isFetching ? (
+        {!customer.isPending && !destination && !customer.isFetching ? (
           <>
             <h1>
               {text(

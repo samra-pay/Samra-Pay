@@ -117,15 +117,17 @@ export function validateStagingRuntime(contract = readStagingRuntime()) {
     JSON.stringify(api.environment) ===
       JSON.stringify({
         NODE_ENV: "production",
+        SAMRA_RELEASE_PROFILE: "alpha-release-1",
         SAMRA_BACKEND_MODE: "demo",
         SAMRA_PROVIDER_MODE: "fake",
         SAMRA_PERSISTENCE_MODE: "postgres",
-        SAMRA_RUN_WORKER: "true",
+        SAMRA_RUN_WORKER: "false",
         SAMRA_INTERNAL_OPERATIONS_ENABLED: "false",
         SAMRA_CUSTOMER_AUTH_MODE: "auth0",
         SAMRA_CUSTOMER_IDENTITY_PROVIDER_MODE: "fake",
+        SAMRA_CUSTOMER_WALLET_PROVIDER_MODE: "fake",
       }),
-    "API must remain durable synthetic staging with Auth0 and vendor activation disabled",
+    "API must enforce invite-only account access with workers and live vendors disabled",
   );
   assert(
     api.databaseAccess === true &&

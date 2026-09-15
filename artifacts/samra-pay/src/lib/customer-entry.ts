@@ -1,4 +1,8 @@
 import type { RedirectLoginOptions } from "@auth0/auth0-spa-js";
+import {
+  CUSTOMER_ONBOARDING_STATES,
+  type CustomerOnboardingSnapshot,
+} from "@workspace/samra-client/onboarding";
 import { withApplicationPath } from "./auth0-config";
 
 export type CustomerEntryIntent = "login" | "signup" | "recovery";
@@ -31,7 +35,10 @@ export function hasAuth0RedirectParameters(search: string): boolean {
 
 // Only a fresh server response chooses the destination; a token or wallet is
 // not evidence that Samra has granted customer access.
-export function customerSessionDestination(customer: unknown, error: unknown) {
+export function customerSessionDestination(
+  customer: Pick<CustomerOnboardingSnapshot, "state"> | null | undefined,
+  error: unknown,
+) {
   if (error) {
     const problem = error as { status?: unknown; data?: { code?: unknown } };
     if (
@@ -42,7 +49,14 @@ export function customerSessionDestination(customer: unknown, error: unknown) {
       return "/onboarding";
     return null;
   }
-  return customer ? "/dashboard" : null;
+  if (customer === null) return "/onboarding";
+  if (
+    !customer ||
+    customer.state === "restricted" ||
+    !CUSTOMER_ONBOARDING_STATES.includes(customer.state)
+  )
+    return null;
+  return "/account";
 }
 
 export function shouldLoadCustomerApp(route: string | null, search: string) {

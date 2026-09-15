@@ -37,10 +37,20 @@ describe("customer entry routing", () => {
     expect(shouldLoadCustomerApp("home", "?utm_source=mail")).toBe(false);
     expect(shouldLoadCustomerApp("home", "?code=untrusted")).toBe(false);
   });
-  it("routes only server-authorized customers to the dashboard", () => {
-    expect(customerSessionDestination({ id: "synthetic" }, null)).toBe(
-      "/dashboard",
+  it("routes saved accounts without requiring financial activation", () => {
+    expect(customerSessionDestination({ state: "consent_pending" }, null)).toBe(
+      "/account",
     );
+    expect(customerSessionDestination({ state: "identity_review" }, null)).toBe(
+      "/account",
+    );
+    expect(customerSessionDestination({ state: "wallet_ready" }, null)).toBe(
+      "/account",
+    );
+    expect(
+      customerSessionDestination({ state: "restricted" }, null),
+    ).toBeNull();
+    expect(customerSessionDestination(null, null)).toBe("/onboarding");
     for (const code of [
       "CUSTOMER_IDENTITY_UNBOUND",
       "CUSTOMER_ONBOARDING_REQUIRED",
@@ -55,7 +65,9 @@ describe("customer entry routing", () => {
       { status: 503 },
       new Error("network"),
     ]) {
-      expect(customerSessionDestination({ id: "stale" }, error)).toBeNull();
+      expect(
+        customerSessionDestination({ state: "wallet_ready" }, error),
+      ).toBeNull();
     }
     expect(customerSessionDestination(undefined, null)).toBeNull();
   });

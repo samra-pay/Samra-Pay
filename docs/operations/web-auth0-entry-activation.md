@@ -26,11 +26,18 @@ activate an API, or create real customers.
   Auth0's hosted Forgot password flow. This parameter is a UI hint, not a
   security proof of reauthentication. Google users recover with Google.
   No password, email, reset ticket or provider error detail is collected here.
-- `/session` reads the current customer from Samra. A successful server
-  response permits dashboard navigation; the documented unbound-identity or
-  onboarding-required responses lead to onboarding. Restricted customers,
+- `/session` reads the caller's durable onboarding record from Samra. A fresh
+  saved record leads to `/account`, including while consent or KYC is pending.
+  It does not call the financially gated `/me` endpoint or send an incomplete
+  account to the financial dashboard. An unbound identity leads to onboarding.
+  Restricted customers,
   authentication errors, and network failures show a retry/logout state.
   There is no automatic customer creation or financial activation on login.
+- `/account` shows a masked reference to that saved Samra customer and allows
+  refresh, returning to setup and logout. It offers the existing read-only wallet
+  route only after the saved onboarding state permits it. Refresh, denied access,
+  provider failure and logout hide cached account details. The page never creates
+  a customer, starts KYC, provisions a wallet or submits a funding order.
 - In the default mock customer build, login opens the synthetic dashboard and
   signup opens synthetic onboarding, with an explicit demo disclosure.
 - Public analytics excludes `/login` and `/signup`. OAuth callback parameters
@@ -57,24 +64,40 @@ recovery delivery and deployed audience rejection remain unverified.
 
 ## Auth0-first read-back — 2026-09-07
 
-Baseline: main `ece64330ec8d28c60eee006b5eee8af0a5ca1509` (#189).
-Read-only Auth0 dashboard inspection; no provider settings changed, users
+The next private web slice corrects the existing staging API deployment to select
+`SAMRA_RELEASE_PROFILE=alpha-release-1`, disable the worker and explicitly keep
+both identity and wallet providers fake. This uses the admission controls and
+route allowlist already implemented; it introduces no workflow or cloud identity.
+Tests load the real deployment assignments through the API configuration parser
+so the deployed profile cannot silently fall back to unrestricted demo behavior.
+This is an undeployed code correction, not activation evidence.
+
+The GitHub configuration refresh for main `e79285a1f55a81483043c09ca163fdbb9824ace7`
+found no required Auth0/API/database-version variables in the repository or the
+`staging-zero-traffic-deployment` environment. The staging publication, migration,
+deployment, verification and traffic workflows remain manually disabled. These
+are separate deployment prerequisites; a successful local web test cannot resolve
+them. The earlier cloud inventory and provider read-back below remain dated.
+
+The original Auth0 read-back below used main
+`ece64330ec8d28c60eee006b5eee8af0a5ca1509` (#189).
+It was a read-only dashboard inspection; no provider settings changed, users
 created, emails sent, secret revealed or customer runtime activated.
 Persona production activation is paused at David's request pending his
 incorporation document. Approved KYC remains required for production wallets.
 
-| Setting | Observed development configuration |
-| --- | --- |
-| Tenant / issuer | Development; `https://dev-40h1kaj5488jqctu.us.auth0.com/` |
-| Web application | Samra One - Web - Development; Single Page Application; public client ID `1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0` |
-| Application login URI, callbacks, logout URLs, web origins, CORS origins | Empty |
-| API identifier / signing | `https://api.samrapay.com/development`; RS256 |
-| Web API access | Per-app authorization; a user-delegated grant exists, with zero defined API permissions. Samra still authorizes every account request |
-| API token lifetime / offline access | 86,400 seconds; offline access disabled. Browser code requests no refresh token |
-| Web connections | Username-Password-Authentication and google-oauth2 enabled |
-| Database connection | Disable Sign Ups is off; improved brute-force protection is on. Auth0 registration alone grants no Samra admission |
-| Recovery delivery | Use my own email provider is off; no configured custom delivery provider or inbox acceptance proof |
-| Tenant MFA | Never; all listed factors disabled. Action-based enforcement and verified-email policy remain unverified |
+| Setting                                                                  | Observed development configuration                                                                                                    |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenant / issuer                                                          | Development; `https://dev-40h1kaj5488jqctu.us.auth0.com/`                                                                             |
+| Web application                                                          | Samra One - Web - Development; Single Page Application; public client ID `1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0`                           |
+| Application login URI, callbacks, logout URLs, web origins, CORS origins | Empty                                                                                                                                 |
+| API identifier / signing                                                 | `https://api.samrapay.com/development`; RS256                                                                                         |
+| Web API access                                                           | Per-app authorization; a user-delegated grant exists, with zero defined API permissions. Samra still authorizes every account request |
+| API token lifetime / offline access                                      | 86,400 seconds; offline access disabled. Browser code requests no refresh token                                                       |
+| Web connections                                                          | Username-Password-Authentication and google-oauth2 enabled                                                                            |
+| Database connection                                                      | Disable Sign Ups is off; improved brute-force protection is on. Auth0 registration alone grants no Samra admission                    |
+| Recovery delivery                                                        | Use my own email provider is off; no configured custom delivery provider or inbox acceptance proof                                    |
+| Tenant MFA                                                               | Never; all listed factors disabled. Action-based enforcement and verified-email policy remain unverified                              |
 
 Sources: [web application](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/applications/1V3fZKx2xbKL5bsaymUPYVHP9VgWzFa0/settings),
 [API](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/apis/6a9b52e5261b4bde124b13fb/settings),
@@ -82,7 +105,7 @@ Sources: [web application](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488
 and [MFA](https://manage.auth0.com/dashboard/us/dev-40h1kaj5488jqctu/security/mfa).
 These are configuration observations, not evidence of a successful login.
 The audience is an identifier and does not prove an API is deployed at that URL.
-The staging Cloud Run inventory could not be refreshed in this session because
+The staging Cloud Run inventory could not be refreshed during that inspection because
 Google required interactive reauthentication. No current deployment/URL claim
 is inferred from the older cloud records.
 
