@@ -962,13 +962,21 @@ class Sessions(unittest.TestCase):
         )
 
     def test_candidate_stop_event_begins_after_child_drain_finishes(self):
-        receipt = self.open_candidate()
+        receipt = self.stopped_candidate()
+        receipt['events'] = receipt['events'][:-2]
+        receipt['phase'] = 'session-open'
+        del receipt['jobs']['drain']
+        receipt['sessions'] = []
         self.receipt = receipt
+        saved = []
 
         def drain():
             self.assertEqual(receipt['sessions'][-1]['status'], 'in-progress')
             receipt['jobs']['drain'] = {
                 'execution': 'drain-execution',
+                'image': receipt['images']['migrations'],
+                'startedAt': '2026-09-14T00:00:22+00:00',
+                'finishedAt': '2026-09-14T00:00:23+00:00',
                 'status': {'succeededCount': 1},
             }
             activation.advance_candidate_receipt(
@@ -991,7 +999,9 @@ class Sessions(unittest.TestCase):
              patch.object(activation.time, 'sleep'):
             activation.control_session(
                 'stop', 'test', {'projectNumber': '378050809796'},
-                receipt, lambda: None, drain, lambda *_: None,
+                receipt,
+                lambda: saved.append(json.loads(activation.serialized_receipt(receipt))),
+                drain, lambda *_: None,
                 lambda *_: None,
             )
 
@@ -1005,6 +1015,125 @@ class Sessions(unittest.TestCase):
         self.assertNotEqual(
             stop_event['startedAt'], receipt['sessions'][-1]['startedAt'],
         )
+        self.assertEqual(receipt['phase'], 'stopped-tested')
+        self.assertEqual(receipt['sessions'][-1], {
+            'action': 'stop',
+            'startedAt': '2026-09-14T00:00:20+00:00',
+            'finishedAt': '2026-09-14T00:00:24+00:00',
+            'status': 'passed',
+        })
+        self.assertEqual(saved[-1], receipt)
+        activation.validate_sealable_receipt(saved[-1])
+        with tempfile.TemporaryDirectory() as directory:
+            receipt_path = Path(directory) / 'candidate.json'
+            activation.seal_candidate_receipt(
+                receipt, receipt_path,
+                started_at='2026-09-14T00:00:26+00:00',
+                finished_at='2026-09-14T00:00:27+00:00',
+                migration_image=receipt['images']['migrations'],
+            )
+            activation.validate_sealed_candidate_receipt(
+                json.loads(receipt_path.read_bytes()),
+            )
+
+    def test_failed_candidate_drain_finalizes_current_stop_session(self):
+        receipt = self.open_candidate()
+        saved = []
+
+        def drain():
+            activation.advance_candidate_receipt(
+                receipt, 'drain', status='failed',
+                started_at='2026-09-14T00:00:22+00:00',
+                finished_at='2026-09-14T00:00:23+00:00',
+                migration_image=receipt['images']['migrations'],
+                execution='unresolved:drain-execution',
+                details={'failureReason': 'Unresolved synthetic transfer'},
+            )
+            raise RuntimeError('Unresolved synthetic transfer')
+
+        clock = self.controlled_datetime(
+            '2026-09-14T00:00:20+00:00',
+            '2026-09-14T00:00:24+00:00',
+        )
+        with patch.object(activation, 'gcloud', side_effect=self.cloud), \
+             patch.object(activation, 'datetime', clock), \
+             patch.object(activation.time, 'sleep'), \
+             self.assertRaisesRegex(RuntimeError, 'Unresolved synthetic transfer'):
+            activation.control_session(
+                'stop', 'test', {'projectNumber': '378050809796'},
+                receipt,
+                lambda: saved.append(json.loads(activation.serialized_receipt(receipt))),
+                drain, lambda *_: None, lambda *_: None,
+            )
+
+        self.assertEqual(receipt['phase'], 'blocked-recovery-required')
+        self.assertEqual(receipt['sessions'][-1], {
+            'action': 'stop',
+            'startedAt': '2026-09-14T00:00:20+00:00',
+            'finishedAt': '2026-09-14T00:00:24+00:00',
+            'status': 'blocked-recovery-required',
+            'failureReason': 'Unresolved synthetic transfer',
+        })
+        self.assertEqual(saved[-1], receipt)
+        self.assertEqual(receipt['events'][-1]['action'], 'drain')
+        self.assertEqual(receipt['events'][-1]['status'], 'failed')
+        self.assertEqual(self.policy, 'ALWAYS')
+        self.assertEqual(self.services['samra-api-test']['metadata']['annotations'][
+            'run.googleapis.com/manualInstanceCount'], '1')
+        self.assertEqual(self.services['samra-customer-web-test']['metadata']['annotations'][
+            'run.googleapis.com/manualInstanceCount'], '0')
+
+    def test_pause_failure_after_passed_drain_finalizes_current_stop_session(self):
+        receipt = self.open_candidate()
+        saved = []
+
+        def drain():
+            activation.advance_candidate_receipt(
+                receipt, 'drain', status='passed',
+                started_at='2026-09-14T00:00:22+00:00',
+                finished_at='2026-09-14T00:00:23+00:00',
+                migration_image=receipt['images']['migrations'],
+                execution='drain-execution',
+            )
+
+        def cloud(*args, **kwargs):
+            if args[:3] == ('sql', 'instances', 'patch'):
+                raise RuntimeError('Database pause failed')
+            return self.cloud(*args, **kwargs)
+
+        clock = self.controlled_datetime(
+            '2026-09-14T00:00:20+00:00',
+            '2026-09-14T00:00:24+00:00',
+            '2026-09-14T00:00:25+00:00',
+        )
+        with patch.object(activation, 'gcloud', side_effect=cloud), \
+             patch.object(activation, 'datetime', clock), \
+             patch.object(activation.time, 'sleep'), \
+             self.assertRaisesRegex(RuntimeError, 'Database pause failed'):
+            activation.control_session(
+                'stop', 'test', {'projectNumber': '378050809796'},
+                receipt,
+                lambda: saved.append(json.loads(activation.serialized_receipt(receipt))),
+                drain, lambda *_: None, lambda *_: None,
+            )
+
+        self.assertEqual(receipt['phase'], 'blocked-recovery-required')
+        self.assertEqual(receipt['sessions'][-1], {
+            'action': 'stop',
+            'startedAt': '2026-09-14T00:00:20+00:00',
+            'finishedAt': '2026-09-14T00:00:24+00:00',
+            'status': 'blocked-recovery-required',
+            'failureReason': 'Database pause failed',
+        })
+        self.assertEqual(saved[-1], receipt)
+        self.assertEqual(
+            [(event['action'], event['status']) for event in receipt['events'][-2:]],
+            [('drain', 'passed'), ('stop', 'failed')],
+        )
+        self.assertEqual(self.policy, 'ALWAYS')
+        for name in ['samra-api-test', 'samra-customer-web-test']:
+            self.assertEqual(self.services[name]['metadata']['annotations'][
+                'run.googleapis.com/manualInstanceCount'], '0')
 
     def test_partial_start_rollback_drains_before_pausing_and_routing(self):
         receipt = self.add_predecessor(

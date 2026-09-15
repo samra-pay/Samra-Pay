@@ -445,6 +445,10 @@ python3 deploy/gcp/activate-dev-test.py dev seal \
 Do not run `database-job --job-action drain` separately. `stop` closes the web
 service, waits for in-flight requests, invokes the bound drain action, and only
 then scales the API to zero and changes database activation to `NEVER`.
+The same persisted stop session must then record its terminal status and finish
+time, including after the child drain updates the receipt. A passed drain alone
+does not complete shutdown. Drain or pause failures retain a blocked session
+requiring recovery; a successful stop must leave evidence that can pass sealing.
 
 `start` first keeps the web shell closed, starts SQL, starts the API, and
 requires `/api/readyz` to identify the exact recorded Cloud Run revision. It

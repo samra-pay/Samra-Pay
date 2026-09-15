@@ -1290,7 +1290,10 @@ def control_session(action, env, inventory, receipt, save, drain_job, ready,
         receipt['images']['customer-web'], 0,
     )
     session = {'action': action, 'startedAt': datetime.now(timezone.utc).isoformat(), 'status': 'in-progress'}
-    receipt.setdefault('sessions', []).append(session)
+    session_index = len(receipt.setdefault('sessions', []))
+    receipt['sessions'].append(session)
+    # A child drain event replaces the receipt with a validated deep copy.
+    # Reacquire this indexed session before updating its persisted outcome.
     save()
     try:
         if action == 'stop':
@@ -1326,8 +1329,10 @@ def control_session(action, env, inventory, receipt, save, drain_job, ready,
         db = gcloud('sql', 'instances', 'describe', instance, '--project=' + project)
         assert db['settings']['activationPolicy'] == ('NEVER' if action == 'stop' else 'ALWAYS')
         assert db.get('state') == ('STOPPED' if action == 'stop' else 'RUNNABLE'), 'Database runtime state changed'
+        session = receipt['sessions'][session_index]
         session['status'] = 'passed'
     except Exception as error:
+        session = receipt['sessions'][session_index]
         session['status'] = 'blocked-recovery-required'
         session['failureReason'] = safe_failure_reason(error)
         if action == 'start':
@@ -1337,6 +1342,7 @@ def control_session(action, env, inventory, receipt, save, drain_job, ready,
                 pass
         raise
     finally:
+        session = receipt['sessions'][session_index]
         session['finishedAt'] = datetime.now(timezone.utc).isoformat()
         if candidate and receipt.get('phase') != 'blocked-recovery-required':
             event_time = datetime.now(timezone.utc).isoformat()
