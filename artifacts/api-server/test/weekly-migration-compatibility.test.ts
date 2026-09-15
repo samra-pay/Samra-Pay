@@ -381,6 +381,24 @@ function errorChainIncludes(error: unknown, expected: string): boolean {
   return false;
 }
 
+async function dropDisconnectedDisposableDatabase(
+  admin: ReturnType<typeof createDatabase>,
+  databaseName: string,
+): Promise<void> {
+  const activeConnections = await admin.pool.query<{ count: string }>(
+    `SELECT count(*)::text AS count
+       FROM pg_stat_activity
+      WHERE datname = $1`,
+    [databaseName],
+  );
+  assert.equal(
+    activeConnections.rows[0]?.count,
+    "0",
+    `Disposable database ${databaseName} still has active connections after pool shutdown.`,
+  );
+  await admin.pool.query(`DROP DATABASE IF EXISTS "${databaseName}"`);
+}
+
 test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current replay is idempotent", async () => {
   const journal = await readAndValidateMigrationJournal();
   const currentMigrationCount = String(journal.entries.length);
@@ -752,9 +770,7 @@ test("RESILIENCE-WEEKLY-006 migration 0007 data upgrades to current and current 
       await rm(baselineFolder, { recursive: true, force: true });
     if (preCurrentFolder)
       await rm(preCurrentFolder, { recursive: true, force: true });
-    await admin.pool.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
+    await dropDisconnectedDisposableDatabase(admin, databaseName);
     await admin.pool.end();
   }
 });
@@ -883,9 +899,7 @@ test("migration 0021 refuses malformed staging-ready wallet evidence", async () 
     if (target) await target.pool.end();
     if (preCurrentFolder)
       await rm(preCurrentFolder, { recursive: true, force: true });
-    await admin.pool.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
+    await dropDisconnectedDisposableDatabase(admin, databaseName);
     await admin.pool.end();
   }
 });
@@ -1139,9 +1153,7 @@ test("migration 0021 preserves deployed synthetic rollback wallet writes while s
     );
   } finally {
     if (target) await target.pool.end();
-    await admin.pool.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
+    await dropDisconnectedDisposableDatabase(admin, databaseName);
     await admin.pool.end();
   }
 });
