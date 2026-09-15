@@ -43,6 +43,10 @@ the project IDs, application revisions and billing account were preserved. The
 the post-move checks and returned runtime control.
 
 Human sign-in, account isolation and synthetic ledger UAT remain unverified.
+The [local synthetic persona lab](testing/synthetic-persona-lab.md) coordinates
+two artificial identities through onboarding, wallets and money-movement checks
+using a disposable local database. Authentication is simulated; its reports are
+not shared Dev/Test deployment evidence or human acceptance.
 The separate Auth0 Native clients and callbacks are saved and read back in
 [PR #215](https://github.com/samra-pay/Samra-Pay/pull/215), now merged. iOS 26.5 and
 base Android tools are installed; native compilation and installed-device

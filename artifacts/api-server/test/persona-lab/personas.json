@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "personas": [
+    {
+      "alias": "sender",
+      "displayName": "Mekdes (synthetic)",
+      "openingBalanceMinor": "50000"
+    },
+    {
+      "alias": "limited",
+      "displayName": "Dawit (synthetic)",
+      "openingBalanceMinor": "100"
+    }
+  ]
+}

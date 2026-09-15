@@ -22,6 +22,7 @@
     "test:operational-readiness": "pnpm --filter @workspace/scripts run validate-operational-readiness",
     "test:experience-budgets": "pnpm --filter @workspace/scripts run validate-experience-budgets",
     "test:gcp-platform": "node --test deploy/gcp/*.test.mjs",
+    "test:personas": "pnpm --filter @workspace/api-server run test:personas",
     "test:gcp-build-source": "node --test deploy/gcp/build-inputs.test.mjs deploy/gcp/container-contract.test.mjs",
     "commercial:typecheck": "pnpm --filter @workspace/samra-pay-commercial run typecheck",
     "commercial:build": "pnpm --filter @workspace/samra-pay-commercial run build",

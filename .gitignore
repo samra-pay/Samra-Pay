@@ -11,6 +11,7 @@ artifacts/samra-pay/src/assets/coming-soon/generated/
 
 # Generated release evidence is retained in GitHub artifacts, not source Git.
 /artifacts/release-candidate/
+/artifacts/api-server/test-results/personas/
 
 # dependencies
 node_modules

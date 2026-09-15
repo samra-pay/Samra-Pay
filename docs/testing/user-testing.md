@@ -33,6 +33,9 @@ or paid subscription is required.
 
 ## Scenario catalog and first session
 
+- [Local synthetic persona lab](synthetic-persona-lab.md): repeatable artificial
+  customer journeys through the API and ledger in disposable local PostgreSQL.
+  Its simulated authentication is engineering evidence, not participant acceptance.
 - [Onboarding and synthetic ledger scenarios](scenarios/onboarding-ledger.md):
   admission, login/recovery, account isolation, simulated KYC/wallet, synthetic
   funding, transfer failures, repeat requests, refunds and restart consistency.
