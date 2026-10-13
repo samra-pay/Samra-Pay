@@ -81,7 +81,7 @@ jobs:
           node -e 'const fs = require("node:fs"); fs.writeFileSync("artifacts/samra-pay-ds/dist/preview-metadata.json", JSON.stringify({ commit: process.env.PREVIEW_COMMIT, ref: process.env.PREVIEW_REF }, null, 2) + "\n")'
 
       - name: Upload design-system preview
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: samra-design-system-preview-${{ github.sha }}
           path: artifacts/samra-pay-ds/dist
