@@ -351,7 +351,7 @@ jobs:
           inputs.mode == 'apply' &&
           inputs.operation == 'promote' &&
           steps.apply_traffic_operation.outputs.automatic_rollback_attempted == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: staging-automatic-rollback-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
@@ -366,7 +366,7 @@ jobs:
 
       - name: Preserve immutable promotion history
         if: inputs.mode == 'apply' && inputs.operation == 'promote' && success()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: staging-traffic-promotion-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
@@ -379,7 +379,7 @@ jobs:
 
       - name: Preserve immutable rollback history
         if: inputs.mode == 'apply' && inputs.operation == 'rollback' && always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: staging-traffic-rollback-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
@@ -392,7 +392,7 @@ jobs:
 
       - name: Preserve post-rollback infrastructure verification
         if: inputs.mode == 'apply' && inputs.operation == 'rollback' && success()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: staging-rollback-verification-${{ inputs.service }}-${{ inputs.candidate_sha }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
