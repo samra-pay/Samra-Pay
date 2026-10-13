@@ -120,7 +120,7 @@ jobs:
             --output-prefix zero_traffic
 
       - name: Download immutable API zero-traffic evidence
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ steps.verify_upstream.outputs.zero_traffic_artifact_id }}
           digest-mismatch: error
